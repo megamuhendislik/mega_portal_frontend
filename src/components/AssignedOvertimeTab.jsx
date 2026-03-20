@@ -143,7 +143,7 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
         <div className="rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all overflow-hidden">
             <div className="flex">
                 {/* Left: Date column */}
-                <div className={`w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 ${isOffDay ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                <div className={`w-[56px] sm:w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 ${isOffDay ? 'bg-amber-50' : 'bg-slate-50'}`}>
                     <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
                     <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName} {year}</span>
                     <span className={`text-[10px] font-bold mt-0.5 ${isOffDay ? 'text-amber-600' : 'text-slate-400'}`}>{dayName}</span>
@@ -255,7 +255,7 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                         <div className="text-[11px] text-slate-400 mt-1">Atayan: {item.manager_name}</div>
                     )}
                     {item.task_description && (
-                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-sm">{item.task_description}</div>
                     )}
                     {item.is_rejected && item.rejection_reason && (
                         <div className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
@@ -265,7 +265,7 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                 </div>
 
                 {/* Action */}
-                <div className="flex flex-col items-end justify-center gap-1.5 px-3 flex-shrink-0">
+                <div className="flex flex-col items-end justify-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
                     {item.claim_status === 'APPROVED' ? (
                         <Pill color="emerald">Onaylandı</Pill>
                     ) : item.claim_status === 'PENDING' ? (
@@ -375,7 +375,7 @@ const RequestCard = ({ req }) => {
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all overflow-hidden">
             <div className="flex">
-                <div className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
+                <div className="w-[56px] sm:w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
                     <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
                     <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
                     <span className="text-[10px] font-bold text-slate-400 mt-0.5">{dayName}</span>
@@ -407,7 +407,7 @@ const RequestCard = ({ req }) => {
                         )}
                     </div>
                     {req.reason && (
-                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-sm">{req.reason}</div>
+                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-xs sm:max-w-sm">{req.reason}</div>
                     )}
                     {req.rejection_reason && req.status === 'REJECTED' && (
                         <div className="text-[11px] text-red-500 mt-0.5 flex items-center gap-1">
@@ -415,7 +415,7 @@ const RequestCard = ({ req }) => {
                         </div>
                     )}
                 </div>
-                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0">
+                <div className="flex flex-col items-end justify-center px-2 sm:px-3 flex-shrink-0">
                 </div>
             </div>
         </div>
@@ -435,7 +435,7 @@ const AssignmentCard = ({ assignment, onCancel, onEdit }) => {
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-emerald-200 transition-all overflow-hidden">
             <div className="flex">
-                <div className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
+                <div className="w-[56px] sm:w-[72px] flex-shrink-0 flex flex-col items-center justify-center py-3 bg-slate-50">
                     <span className="text-[22px] font-black text-slate-800 leading-none">{dayNum}</span>
                     <span className="text-[10px] font-bold text-slate-500 mt-0.5">{monthName}</span>
                     <span className="text-[10px] font-bold text-slate-400 mt-0.5">{dayName}</span>
@@ -455,10 +455,10 @@ const AssignmentCard = ({ assignment, onCancel, onEdit }) => {
                         )}
                     </div>
                     {assignment.task_description && (
-                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-sm">{assignment.task_description}</div>
+                        <div className="text-[11px] text-slate-400 mt-1 truncate max-w-xs sm:max-w-sm">{assignment.task_description}</div>
                     )}
                 </div>
-                <div className="flex flex-col items-end justify-center px-3 flex-shrink-0 gap-1">
+                <div className="flex flex-col items-end justify-center px-2 sm:px-3 flex-shrink-0 gap-1">
                     {assignment.status === 'ASSIGNED' && (
                         <>
                             {onEdit && (
@@ -519,7 +519,7 @@ const TeamItemCard = ({ item, onCancel, onEdit }) => {
                         )}
                     </div>
                     {(item.task_description || item.reason) && (
-                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm">{item.task_description || item.reason}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-sm">{item.task_description || item.reason}</div>
                     )}
                 </div>
                 {item._type === 'assignment' && item.status === 'ASSIGNED' && (
@@ -561,7 +561,7 @@ const ClaimModal = ({ isOpen, title, subtitle, onClose, onSubmit, loading, manag
 
     return (
         <ModalOverlay open={isOpen} onClose={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs sm:max-w-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{title}</h3>
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>

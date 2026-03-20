@@ -624,7 +624,7 @@ export default function TeamAttendanceAnalytics({ stats, year, month, secondaryT
                         </div>
 
                         {/* Charts Row */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
                             {/* Pie: Source Distribution */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                 <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">

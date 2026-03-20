@@ -139,10 +139,10 @@ export default function TeamOvertimeAnalytics() {
         return (
             <div className="space-y-6 animate-pulse">
                 <div className="h-16 bg-slate-100 rounded-2xl" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                     {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-2xl" />)}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
                     <div className="h-72 bg-slate-100 rounded-3xl" />
                     <div className="h-72 bg-slate-100 rounded-3xl" />
                 </div>
@@ -224,7 +224,7 @@ export default function TeamOvertimeAnalytics() {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
                 {/* Pie: Source Distribution */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">

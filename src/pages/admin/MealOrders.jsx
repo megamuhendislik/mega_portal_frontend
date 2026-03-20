@@ -198,22 +198,22 @@ const MealOrders = () => {
             <p className="text-sm text-slate-500 -mt-3">{formatDate(date)}</p>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                <div className="bg-white p-3 sm:p-5 rounded-xl shadow-sm border border-slate-200">
                     <p className="text-sm text-slate-500">Toplam Talep</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-1">{summary.total_requests || 0}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-slate-800 mt-1">{summary.total_requests || 0}</p>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500 border border-slate-200">
+                <div className="bg-white p-3 sm:p-5 rounded-xl shadow-sm border-l-4 border-green-500 border border-slate-200">
                     <p className="text-sm text-slate-500">Sipariş Verilen</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">{summary.ordered_count || 0}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-green-600 mt-1">{summary.ordered_count || 0}</p>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-400 border border-slate-200">
+                <div className="bg-white p-3 sm:p-5 rounded-xl shadow-sm border-l-4 border-amber-400 border border-slate-200">
                     <p className="text-sm text-slate-500">Bekleyen</p>
-                    <p className="text-3xl font-bold text-amber-600 mt-1">{summary.pending_count || 0}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-amber-600 mt-1">{summary.pending_count || 0}</p>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-400 border border-slate-200">
+                <div className="bg-white p-3 sm:p-5 rounded-xl shadow-sm border-l-4 border-red-400 border border-slate-200">
                     <p className="text-sm text-slate-500">İptal Edilen</p>
-                    <p className="text-3xl font-bold text-red-600 mt-1">{summary.rejected_count || 0}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-red-600 mt-1">{summary.rejected_count || 0}</p>
                 </div>
             </div>
 
@@ -314,14 +314,14 @@ const MealOrders = () => {
             {/* Cancel Modal */}
             <ModalOverlay open={!!cancellingRecord} onClose={() => setCancellingRecord(null)}>
                 {cancellingRecord && (
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                    <div className="bg-white rounded-xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Yemek Talebi İptal</h3>
                             <button onClick={() => setCancellingRecord(null)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-5">
+                        <div className="p-3 sm:p-5">
                             <p className="text-sm text-slate-600 mb-3">
                                 <strong>{cancellingRecord.employee?.full_name}</strong> adlı personelin yemek talebini iptal etmek istediğinize emin misiniz?
                             </p>
@@ -348,14 +348,14 @@ const MealOrders = () => {
             {/* Note Edit Modal */}
             <ModalOverlay open={!!editingNote} onClose={() => setEditingNote(null)}>
                 {editingNote && (
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                    <div className="bg-white rounded-xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Sipariş Notu</h3>
                             <button onClick={() => setEditingNote(null)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-5">
+                        <div className="p-3 sm:p-5">
                             <p className="text-sm text-slate-500 mb-2">{editingNote.employee?.full_name} için sipariş notu</p>
                             <textarea
                                 rows={4}
@@ -380,14 +380,14 @@ const MealOrders = () => {
             {/* Create On Behalf Modal */}
             <ModalOverlay open={showCreateModal} onClose={() => { setShowCreateModal(false); setSelectedEmployee(null); setEmployeeSearch(''); setNewMealDesc(''); }}>
                 {showCreateModal && (
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                    <div className="bg-white rounded-xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-lg">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
                             <h3 className="text-lg font-bold text-slate-800">Personel Adına Yemek Talebi</h3>
                             <button onClick={() => { setShowCreateModal(false); setSelectedEmployee(null); setEmployeeSearch(''); setNewMealDesc(''); }} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-5 space-y-4">
+                        <div className="p-3 sm:p-5 space-y-4">
                             <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
                                 <strong>{formatDate(date)}</strong> için yemek talebi oluşturulacak.
                             </div>

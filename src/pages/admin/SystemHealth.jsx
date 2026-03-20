@@ -81,7 +81,7 @@ export default function SystemHealth() {
         <div className="space-y-6">
 
             {/* header */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <ServerStackIcon className="w-7 h-7 text-indigo-600" />
@@ -892,7 +892,7 @@ function TestSuiteTab() {
             </div>
 
             <div className="lg:col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[350px] md:h-[600px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[250px] sm:h-[350px] md:h-[600px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">root@mega-engine:~# python comprehensive_test.py</span>
                         {error && <span className="text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">{error}</span>}
@@ -1024,7 +1024,7 @@ function SyntheticDataTab() {
 
             {/* Console Output */}
             <div className="col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[350px] md:h-[600px]">
+                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[250px] sm:h-[350px] md:h-[600px]">
                     <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
                         <span className="text-xs font-mono text-gray-400">root@mega-engine:~# ./generate_synthetic_data.py</span>
                         <div className="flex gap-1.5">

@@ -234,7 +234,7 @@ const CompanyDirectory = () => {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 {statCards.map(s => (
                     <button
                         key={s.key}
@@ -310,7 +310,7 @@ const CompanyDirectory = () => {
 
             {/* Content */}
             {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
                     {Array.from({ length: 12 }).map((_, i) => (
                         <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
                             <div className="flex items-start gap-3">
@@ -333,7 +333,7 @@ const CompanyDirectory = () => {
                     <p className="text-sm mt-1">Arama kriterlerini değiştirmeyi deneyin.</p>
                 </div>
             ) : viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
                     {employees.map(renderEmployeeCard)}
                 </div>
             ) : (

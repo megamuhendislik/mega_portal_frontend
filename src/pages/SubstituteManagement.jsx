@@ -336,7 +336,7 @@ const SubstituteManagement = () => {
           </div>
           <div className="h-12 w-36 bg-slate-200/60 rounded-2xl" />
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6">
               <div className="flex justify-between">
@@ -362,7 +362,7 @@ const SubstituteManagement = () => {
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
       {/* ─── Header ─── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-100/50">
@@ -408,7 +408,7 @@ const SubstituteManagement = () => {
       )}
 
       {/* ─── Stat Cards ─── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <StatCard
           icon={CheckCircle2}
           title="Aktif"
@@ -836,7 +836,7 @@ const SubstituteManagement = () => {
 
       {/* ─── Delete Confirmation Modal ─── */}
       <ModalOverlay open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-sm overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-red-400 to-rose-500" />
             <div className="p-6 space-y-5">
               <div className="flex items-start gap-4">
@@ -869,7 +869,7 @@ const SubstituteManagement = () => {
       {/* ─── Toggle Confirmation Modal ─── */}
       <ModalOverlay open={!!confirmToggle} onClose={() => setConfirmToggle(null)}>
           {confirmToggle && (
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-sm overflow-hidden">
             <div className={`h-1 bg-gradient-to-r ${confirmToggle.is_active ? 'from-amber-400 to-orange-400' : 'from-emerald-400 to-teal-400'}`} />
             <div className="p-6 space-y-5">
               <div className="flex items-start gap-4">

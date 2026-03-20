@@ -933,7 +933,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           {!loading && (
             <>
               {/* ===== TWO COLUMN LAYOUT ===== */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {/* ─── LEFT COLUMN: Calendar ─── */}
                 <div className="space-y-4">
                   {/* Weekly OT Progress Bar */}
@@ -1540,7 +1540,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
       {/* ===== DETAIL MODAL ===== */}
       <ModalOverlay open={!!detailModal} onClose={() => setDetailModal(null)} level="primary">
         {detailModal && (
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -1566,7 +1566,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               </div>
 
               {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 <div className="bg-slate-50 rounded-xl p-3">
                   <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tarih</div>
                   <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -1667,7 +1667,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   {detailModal.request_detail.claimed && (
                     <div className="bg-blue-50/60 rounded-xl p-3 space-y-2">
                       <div className="text-[10px] font-bold text-blue-500 uppercase mb-1">Talep Bilgileri</div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs">
                         {detailModal.request_detail.requested_hours != null && (
                           <div>
                             <span className="text-slate-400">Talep Edilen:</span>{' '}
@@ -1736,7 +1736,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                       <div className="text-[10px] font-bold text-emerald-600 uppercase mb-1 flex items-center gap-1">
                         <CircleCheck size={12} /> Gerçekleşme Bilgisi
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs">
                         {detailModal.request_detail.check_in && (
                           <div>
                             <span className="text-slate-400">Giriş:</span>{' '}

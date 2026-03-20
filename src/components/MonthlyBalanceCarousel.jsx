@@ -80,7 +80,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
             </div>
 
             {/* Cards Grid — always 3 columns */}
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
                 {visibleSlice.map((md) => {
                     const m = md.month;
                     const isCurrent = m === currentFiscalMonth;

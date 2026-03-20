@@ -532,7 +532,7 @@ const WorkSchedules = () => {
                                         </div>
 
                                         {/* Template Editor */}
-                                        <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-5 overflow-y-auto">
+                                        <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-3 sm:p-5 overflow-y-auto">
                                             <TemplateEditor
                                                 template={editingTemplate}
                                                 onChange={setEditingTemplate}
@@ -739,7 +739,7 @@ const GeneralSettingsForm = ({ data, onChange }) => {
                 <input className="input-field w-full bg-white" value={data.name || ''} onChange={e => handleChange('name', e.target.value)} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Yıl</label>
                     <input className="input-field w-full bg-white" type="number" value={data.year || ''} onChange={e => handleChange('year', parseInt(e.target.value))} />
@@ -939,7 +939,7 @@ const UsersSettingsForm = ({ assignedIds, onChange }) => {
                 <input placeholder="Personel ara..." className="input-field max-w-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[300px] md:h-[500px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[200px] sm:h-[300px] md:h-[500px]">
                 <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 flex flex-col">
                     <h3 className="font-bold mb-3 text-indigo-700 flex justify-between items-center">
                         <span>Bu Takvime Dahil ({assigned.length})</span>

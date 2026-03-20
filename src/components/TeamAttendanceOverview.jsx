@@ -90,7 +90,7 @@ const GroupAverageRow = ({ children, depth = 1 }) => {
 
     return (
         <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-slate-200 border-t border-dashed">
-            <div className="grid grid-cols-12 gap-4 items-center p-3">
+            <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center p-2 sm:p-3">
                 {/* Col 1: Label */}
                 <div className="col-span-4 flex items-center gap-3" style={{ paddingLeft: `${depth * 32}px` }}>
                     <div className="w-6 shrink-0" />
@@ -191,7 +191,7 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                     />
                 )}
 
-                <div className="grid grid-cols-12 gap-4 items-center p-3">
+                <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center p-2 sm:p-3">
 
                     {/* Column 1: Employee Info (Dynamic Padding for Depth) */}
                     <div className="col-span-4 flex items-center gap-3" style={{ paddingLeft: `${depth * 32}px` }}>
@@ -681,7 +681,7 @@ const TeamAttendanceOverview = ({ teamData, onMemberClick }) => {
                 hierarchy.length > 0 ? (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         {/* Static Table Header */}
-                        <div className="grid grid-cols-12 gap-4 p-3 bg-gradient-to-r from-blue-50 to-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                        <div className="grid grid-cols-12 gap-2 sm:gap-4 p-2 sm:p-3 bg-gradient-to-r from-blue-50 to-slate-50 border-b border-slate-200 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             <div className="col-span-4 pl-12">Çalışan</div>
                             <div className="col-span-2">Durum & Bugünkü Mesai</div>
                             <div className="col-span-3">Aylık İlerleme (Sa)</div>

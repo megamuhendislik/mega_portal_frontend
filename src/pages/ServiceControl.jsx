@@ -45,7 +45,7 @@ const ServiceControl = () => {
     };
 
     return (
-        <div className="p-6 md:p-10 space-y-8 max-w-4xl mx-auto">
+        <div className="p-3 sm:p-6 md:p-10 space-y-8 max-w-4xl mx-auto">
             <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200">
                     <Monitor className="text-white w-8 h-8" />
@@ -56,7 +56,7 @@ const ServiceControl = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {/* Card 1: Daily Calculation Trigger */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                     <div className="flex items-center gap-3 mb-6">
@@ -163,14 +163,14 @@ const ServiceControl = () => {
 
             {/* Live Logs Console */}
             <div className="bg-slate-900 rounded-xl shadow-lg border border-slate-700 overflow-hidden">
-                <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
                     <h3 className="text-slate-100 font-mono text-sm font-semibold flex items-center gap-2">
                         <Activity size={16} className="text-green-400" />
                         CANLI SERVIS LOGLARI (Son 100 İşlem)
                     </h3>
                     <span className="text-xs text-slate-500 font-mono">Otomatik Yenileniyor...</span>
                 </div>
-                <div className="h-64 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
+                <div className="h-48 sm:h-56 md:h-64 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
                     {logs.length === 0 ? (
                         <div className="text-slate-500 text-center py-10">
                             Henüz log kaydı yok. Sistem Sağlığı &gt; Sistem Ayarları'ndan Servis Loglarını aktif edin.

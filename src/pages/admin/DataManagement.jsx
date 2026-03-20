@@ -78,7 +78,7 @@ export default function DataManagement() {
     ];
 
     return (
-        <div className="p-3 md:p-6 max-w-[1800px] mx-auto min-h-screen">
+        <div className="p-2 sm:p-3 md:p-6 max-w-[1800px] mx-auto min-h-screen">
             <div className="mb-6">
                 <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded-lg">
@@ -86,7 +86,7 @@ export default function DataManagement() {
                     </div>
                     Sistem Veri Yönetimi
                 </h1>
-                <p className="text-sm text-slate-500 mt-1 ml-12">
+                <p className="text-sm text-slate-500 mt-1 ml-0 sm:ml-12">
                     Personel verilerini görüntüleyin, düzenleyin ve yönetin
                 </p>
             </div>

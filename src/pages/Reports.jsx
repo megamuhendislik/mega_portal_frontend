@@ -144,11 +144,11 @@ const Reports = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-slate-800">Raporlar</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Raporlar</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {/* Monthly Reconciliation Card */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex items-center gap-4 mb-5">
                         <div className="p-3 bg-green-50 text-green-600 rounded-lg">
                             <FileDown size={24} />
@@ -159,7 +159,7 @@ const Reports = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                         {/* Calendar Selector */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Çalışma Takvimi</label>
@@ -221,7 +221,7 @@ const Reports = () => {
 
                         {/* Period Info Box */}
                         {selectedPeriod && (
-                            <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-2">
+                            <div className="bg-blue-50 p-2 sm:p-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
                                 <Calendar size={16} className="text-blue-600 flex-shrink-0" />
                                 <span className="text-xs text-blue-700">
                                     Rapor Aralığı: <strong>{formatDate(selectedPeriod.start_date)}</strong> — <strong>{formatDate(selectedPeriod.end_date)}</strong>
@@ -229,7 +229,7 @@ const Reports = () => {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                             <button
                                 onClick={handleDownload}
                                 disabled={loading || !selectedPeriod}

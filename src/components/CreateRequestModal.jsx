@@ -1059,7 +1059,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 </div>
 
                 {/* Body */}
-                <div className="p-6 overflow-y-auto custom-scrollbar">
+                <div className="p-3 sm:p-6 overflow-y-auto custom-scrollbar">
                     {error && (
                         <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm animate-in slide-in-from-top-2">
                             <AlertCircle className="shrink-0 mt-0.5" size={18} />
@@ -1135,8 +1135,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 />
                             )}
                             {selectedType === 'HEALTH_REPORT' && (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Tarihi *</label>
                                             <input type="date" required value={healthReportForm.start_date}
@@ -1185,7 +1185,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 </div>
                             )}
                             {selectedType === 'HOSPITAL_VISIT' && (
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Tarih *</label>
                                         <input type="date" required value={hospitalVisitForm.date}
@@ -1193,7 +1193,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                             className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Saati *</label>
                                             <input type="time" required value={hospitalVisitForm.start_time}

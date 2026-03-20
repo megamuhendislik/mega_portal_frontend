@@ -239,7 +239,7 @@ const HelpLibrary = () => {
                                 <currentSection.icon size={22} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h1 className="text-xl font-bold text-slate-800 tracking-tight">{currentSection.title}</h1>
+                                <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">{currentSection.title}</h1>
                                 <p className="text-sm text-slate-400 mt-0.5">{currentSection.description}</p>
                             </div>
                             {currentSection.link && (
@@ -259,7 +259,7 @@ const HelpLibrary = () => {
                             {currentSection.images?.length > 0 && (
                                 <div>
                                     <SectionHeading>Ekran Görüntüleri</SectionHeading>
-                                    <div className={`grid gap-3 ${currentSection.images.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-2 md:grid-cols-3'}`}>
+                                    <div className={`grid gap-3 ${currentSection.images.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
                                         {currentSection.images.map((img, i) => (
                                             <div
                                                 key={i}
@@ -299,7 +299,7 @@ const HelpLibrary = () => {
                                                         <div className="w-0.5 flex-1 bg-indigo-100 mt-1.5" />
                                                     )}
                                                 </div>
-                                                <div className="bg-white rounded-xl border border-slate-200/80 p-4 flex-1 hover:shadow-sm transition-shadow mb-1">
+                                                <div className="bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 flex-1 hover:shadow-sm transition-shadow mb-1">
                                                     <h3 className="text-sm font-bold text-slate-700 mb-1">{step.title}</h3>
                                                     <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
                                                     {step.image && (
@@ -337,7 +337,7 @@ const HelpLibrary = () => {
                                             const style = tipStyles[tip.type] || tipStyles.info;
                                             const TipIcon = style.icon;
                                             return (
-                                                <div key={i} className={`flex items-start gap-3 p-4 rounded-xl border ${style.bg} ${style.border}`}>
+                                                <div key={i} className={`flex items-start gap-3 p-3 sm:p-4 rounded-xl border ${style.bg} ${style.border}`}>
                                                     <TipIcon size={18} className={`${style.iconColor} shrink-0 mt-0.5`} />
                                                     <p className={`text-sm leading-relaxed ${style.text}`}>{tip.text}</p>
                                                 </div>
