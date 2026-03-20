@@ -96,7 +96,7 @@ const SpecialLeaves = () => {
             window.open(url, '_blank');
             setTimeout(() => URL.revokeObjectURL(url), 120000);
         } catch {
-            toast.error('Dosya goruntulenemedi.');
+            toast.error('Dosya görüntülenemedi.');
         } finally {
             setDownloadingDocId(null);
         }
@@ -137,7 +137,7 @@ const SpecialLeaves = () => {
                 setSummary(summaryRes.value.data);
             }
         } catch {
-            toast.error('Veriler yuklenirken hata olustu.');
+            toast.error('Veriler yüklenirken hata oluştu.');
         } finally {
             setLoading(false);
         }
@@ -160,11 +160,11 @@ const SpecialLeaves = () => {
         setActionLoading(true);
         try {
             const res = await api.post(`/special-leaves/${id}/approve/`);
-            toast.success('Ozel izin onaylandi.');
+            toast.success('Özel izin onaylandı.');
             setDetailModal(res.data);
             fetchData();
         } catch (error) {
-            toast.error(error.response?.data?.detail || 'Onaylama basarisiz.');
+            toast.error(error.response?.data?.detail || 'Onaylama başarısız.');
         } finally {
             setActionLoading(false);
         }
@@ -178,13 +178,13 @@ const SpecialLeaves = () => {
         setActionLoading(true);
         try {
             const res = await api.post(`/special-leaves/${rejectModal.id}/reject/`, { reason: rejectReason });
-            toast.success('Ozel izin reddedildi.');
+            toast.success('Özel izin reddedildi.');
             setRejectModal(null);
             setRejectReason('');
             setDetailModal(res.data);
             fetchData();
         } catch (error) {
-            toast.error(error.response?.data?.detail || 'Reddetme basarisiz.');
+            toast.error(error.response?.data?.detail || 'Reddetme başarısız.');
         } finally {
             setActionLoading(false);
         }
@@ -223,9 +223,9 @@ const SpecialLeaves = () => {
                         <HeartHandshake size={24} className="text-indigo-600" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Ozel Izinler</h1>
+                        <h1 className="text-2xl font-bold text-slate-800">Özel İzinler</h1>
                         <p className="text-sm text-slate-500">
-                            Babalik, olum, evlilik ve ucretsiz izin taleplerini goruntuleyin ve yonetin
+                            Babalık, ölüm, evlilik ve ücretsiz izin taleplerini görüntüleyin ve yönetin
                         </p>
                     </div>
                 </div>
@@ -245,7 +245,7 @@ const SpecialLeaves = () => {
                         activeTab === 'ALL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'
                     }`}>
                     <HeartHandshake size={16} />
-                    Tumu
+                    Tümü
                 </button>
                 <button
                     onClick={() => { setActiveTab('PATERNITY'); setPage(1); }}
@@ -253,7 +253,7 @@ const SpecialLeaves = () => {
                         activeTab === 'PATERNITY' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'
                     }`}>
                     <Baby size={16} />
-                    Babalik
+                    Babalık
                 </button>
                 <button
                     onClick={() => { setActiveTab('BEREAVEMENT'); setPage(1); }}
@@ -261,7 +261,7 @@ const SpecialLeaves = () => {
                         activeTab === 'BEREAVEMENT' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'
                     }`}>
                     <Flower2 size={16} />
-                    Olum
+                    Ölüm
                 </button>
                 <button
                     onClick={() => { setActiveTab('UNPAID'); setPage(1); }}
@@ -269,7 +269,7 @@ const SpecialLeaves = () => {
                         activeTab === 'UNPAID' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'
                     }`}>
                     <Wallet size={16} />
-                    Ucretsiz
+                    Ücretsiz
                 </button>
                 <button
                     onClick={() => { setActiveTab('MARRIAGE'); setPage(1); }}
@@ -309,7 +309,7 @@ const SpecialLeaves = () => {
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Calisan adi veya aciklama ile ara..."
+                            placeholder="Çalışan adı veya açıklama ile ara..."
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
@@ -322,11 +322,11 @@ const SpecialLeaves = () => {
                         onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 bg-white"
                     >
-                        <option value="">Tum Durumlar</option>
+                        <option value="">Tüm Durumlar</option>
                         <option value="PENDING">Onay Bekleyen</option>
                         <option value="APPROVED">Onaylanan</option>
                         <option value="REJECTED">Reddedilen</option>
-                        <option value="CANCELLED">Iptal Edilen</option>
+                        <option value="CANCELLED">İptal Edilen</option>
                     </select>
 
                     {/* Date from */}
@@ -335,7 +335,7 @@ const SpecialLeaves = () => {
                         value={dateFrom}
                         onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
                         className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300"
-                        title="Baslangic tarihi"
+                        title="Başlangıç tarihi"
                     />
 
                     {/* Date to */}
@@ -344,7 +344,7 @@ const SpecialLeaves = () => {
                         value={dateTo}
                         onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
                         className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300"
-                        title="Bitis tarihi"
+                        title="Bitiş tarihi"
                     />
 
                     {/* Clear filters */}
@@ -363,12 +363,12 @@ const SpecialLeaves = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center py-16 text-slate-400">
-                        <Loader2 size={24} className="animate-spin mr-2" /> Yukleniyor...
+                        <Loader2 size={24} className="animate-spin mr-2" /> Yükleniyor...
                     </div>
                 ) : leaves.length === 0 ? (
                     <div className="text-center py-16 text-slate-400">
                         <HeartHandshake size={40} className="mx-auto mb-2 opacity-30" />
-                        <p>Ozel izin talebi bulunamadi</p>
+                        <p>Özel izin talebi bulunamadı</p>
                     </div>
                 ) : (
                     <>
@@ -376,13 +376,13 @@ const SpecialLeaves = () => {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
-                                        <th className="px-5 py-3 text-left font-semibold">Calisan</th>
-                                        <th className="px-5 py-3 text-left font-semibold">Izin Turu</th>
-                                        <th className="px-5 py-3 text-left font-semibold">Tarih Araligi</th>
-                                        <th className="px-5 py-3 text-center font-semibold">Gun</th>
+                                        <th className="px-5 py-3 text-left font-semibold">Çalışan</th>
+                                        <th className="px-5 py-3 text-left font-semibold">İzin Türü</th>
+                                        <th className="px-5 py-3 text-left font-semibold">Tarih Aralığı</th>
+                                        <th className="px-5 py-3 text-center font-semibold">Gün</th>
                                         <th className="px-5 py-3 text-center font-semibold">Dosya</th>
                                         <th className="px-5 py-3 text-center font-semibold">Durum</th>
-                                        <th className="px-5 py-3 text-left font-semibold">Olusturma</th>
+                                        <th className="px-5 py-3 text-left font-semibold">Oluşturma</th>
                                         <th className="px-5 py-3 text-center font-semibold">Aksiyonlar</th>
                                     </tr>
                                 </thead>
@@ -515,7 +515,7 @@ const SpecialLeaves = () => {
                                     <HeartHandshake size={20} className="text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-800">Ozel Izin Detayi</h3>
+                                    <h3 className="text-lg font-bold text-slate-800">Özel İzin Detayı</h3>
                                     <p className="text-xs text-slate-500">#{detailModal.id}</p>
                                 </div>
                             </div>
@@ -547,30 +547,30 @@ const SpecialLeaves = () => {
 
                             {/* Leave Type */}
                             <div className="bg-slate-50 p-3 rounded-lg">
-                                <div className="text-xs text-slate-500 mb-1">Izin Turu</div>
+                                <div className="text-xs text-slate-500 mb-1">İzin Türü</div>
                                 <div>{getLeaveTypeBadge(detailModal.leave_type)}</div>
                             </div>
 
                             {/* Date & Duration */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                                 <div className="bg-slate-50 p-3 rounded-lg">
-                                    <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Baslangic</div>
+                                    <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Başlangıç</div>
                                     <div className="font-medium text-slate-800">{formatDate(detailModal.start_date)}</div>
                                 </div>
                                 <div className="bg-slate-50 p-3 rounded-lg">
-                                    <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Bitis</div>
+                                    <div className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={12} /> Bitiş</div>
                                     <div className="font-medium text-slate-800">{formatDate(detailModal.end_date)}</div>
                                 </div>
                                 <div className="col-span-2 bg-slate-50 p-3 rounded-lg">
-                                    <div className="text-xs text-slate-500 mb-1">Toplam Gun</div>
-                                    <div className="font-bold text-indigo-600 text-xl">{detailModal.total_days} gun</div>
+                                    <div className="text-xs text-slate-500 mb-1">Toplam Gün</div>
+                                    <div className="font-bold text-indigo-600 text-xl">{detailModal.total_days} gün</div>
                                 </div>
                             </div>
 
                             {/* Description */}
                             {detailModal.description && (
                                 <div className="bg-slate-50 p-3 rounded-lg">
-                                    <div className="text-xs text-slate-500 mb-1">Aciklama</div>
+                                    <div className="text-xs text-slate-500 mb-1">Açıklama</div>
                                     <div className="text-sm text-slate-700">{detailModal.description}</div>
                                 </div>
                             )}
@@ -589,7 +589,7 @@ const SpecialLeaves = () => {
                                     <FileText size={14} /> Dosyalar
                                 </h4>
                                 {(detailModal.documents || []).length === 0 ? (
-                                    <p className="text-sm text-slate-400">Dosya yuklenmemis.</p>
+                                    <p className="text-sm text-slate-400">Dosya yüklenmemiş.</p>
                                 ) : (
                                     <div className="space-y-2">
                                         {detailModal.documents.map(doc => (
@@ -606,13 +606,13 @@ const SpecialLeaves = () => {
                                                         <button
                                                             onClick={() => viewDocumentProxy(detailModal.id, doc.id)}
                                                             className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-blue-100 rounded-lg text-blue-500 text-xs font-medium transition-colors disabled:opacity-50"
-                                                            title="Goruntule"
+                                                            title="Görüntüle"
                                                             disabled={downloadingDocId === doc.id}
                                                         >
                                                             {downloadingDocId === doc.id ? (
-                                                                <><Loader2 size={14} className="animate-spin" /> Aciliyor...</>
+                                                                <><Loader2 size={14} className="animate-spin" /> Açılıyor...</>
                                                             ) : (
-                                                                <><ExternalLink size={14} /> Belgeyi Ac</>
+                                                                <><ExternalLink size={14} /> Belgeyi Aç</>
                                                             )}
                                                         </button>
                                                     )}
@@ -687,7 +687,7 @@ const SpecialLeaves = () => {
                 {rejectModal && (
                     <div className="bg-white rounded-xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-100">
-                            <h3 className="text-lg font-bold text-slate-800">Ozel Izin Reddet</h3>
+                            <h3 className="text-lg font-bold text-slate-800">Özel İzni Reddet</h3>
                             <button onClick={() => setRejectModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                                 <X size={20} />
                             </button>
@@ -695,8 +695,8 @@ const SpecialLeaves = () => {
                         <div className="p-3 sm:p-5">
                             <div className="bg-red-50 p-3 rounded-lg mb-4">
                                 <p className="text-sm text-red-700">
-                                    <strong>{rejectModal.employee_detail?.full_name || `${rejectModal.employee_detail?.first_name} ${rejectModal.employee_detail?.last_name}`}</strong> adli calisanin{' '}
-                                    {formatDate(rejectModal.start_date)} - {formatDate(rejectModal.end_date)} tarihli ozel iznini reddetmek uzeresiniz.
+                                    <strong>{rejectModal.employee_detail?.full_name || `${rejectModal.employee_detail?.first_name} ${rejectModal.employee_detail?.last_name}`}</strong> adlı çalışanın{' '}
+                                    {formatDate(rejectModal.start_date)} - {formatDate(rejectModal.end_date)} tarihli özel iznini reddetmek üzeresiniz.
                                 </p>
                             </div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Red Sebebi *</label>
@@ -704,7 +704,7 @@ const SpecialLeaves = () => {
                                 rows={3}
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
-                                placeholder="Red sebebini yaziniz..."
+                                placeholder="Red sebebini yazınız..."
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none text-sm"
                             />
                         </div>
@@ -713,7 +713,7 @@ const SpecialLeaves = () => {
                                 onClick={() => setRejectModal(null)}
                                 className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm"
                             >
-                                Vazgec
+                                Vazgeç
                             </button>
                             <button
                                 onClick={handleReject}
