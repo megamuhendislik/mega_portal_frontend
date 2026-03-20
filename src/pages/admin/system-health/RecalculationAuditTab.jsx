@@ -56,6 +56,25 @@ export default function RecalculationAuditTab() {
     const [uniResult, setUniResult] = useState(null);
     const [uniError, setUniError] = useState(null);
 
+    const downloadUnifiedLog = async () => {
+        try {
+            const body = { date_from: startDate, date_to: endDate, download: true };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/unified-audit/', body, {
+                responseType: 'blob',
+                timeout: 300000,
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `birlesik_denetim_${startDate}_${endDate}.txt`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Log indirme hatasi: ' + (e.message || 'Bilinmeyen hata'));
+        }
+    };
+
     const runUnifiedAudit = async (fix = false) => {
         if (fix && !window.confirm(
             'Birlesik Denetim (FIX modu)\n\n' +
@@ -246,6 +265,14 @@ export default function RecalculationAuditTab() {
                     >
                         <WrenchScrewdriverIcon className="w-4 h-4" />
                         {uniFixing ? 'Duzeltiliyor...' : 'Birlesik Duzelt'}
+                    </button>
+                    <button
+                        onClick={downloadUnifiedLog}
+                        disabled={isProcessing || uniLoading || uniFixing}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 active:scale-95 transition-all"
+                    >
+                        <DocumentArrowDownIcon className="w-4 h-4" />
+                        TXT Log
                     </button>
                 </div>
             </div>
