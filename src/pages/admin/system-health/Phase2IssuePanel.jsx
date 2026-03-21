@@ -173,6 +173,22 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                                     <span className="text-green-500 block">Dogru Split</span>
                                     <span className="font-bold text-green-700">{issue.correct_split || '?'}</span>
                                 </div>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">Hedef</span>
+                                    <span className="font-bold">{issue.expected_min || '?'}dk</span>
+                                </div>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">Normal</span>
+                                    <span className="font-bold">{issue.total_normal_min || 0}dk</span>
+                                </div>
+                                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                                    <span className="text-blue-500 block">OT</span>
+                                    <span className="font-bold text-blue-700">{issue.total_ot_min || 0}dk</span>
+                                </div>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">Mola</span>
+                                    <span className="font-bold">{issue.total_break_min || 0}dk</span>
+                                </div>
                             </>
                         ) : (
                             <>
@@ -241,6 +257,72 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
 
                     {/* Kart session'lari */}
                     <CardSessionList sessions={issue.card_sessions} />
+
+                    {/* SPLIT_CHECK: Attendance kayitlari + OT talepleri */}
+                    {issue.type === 'SPLIT_CHECK' && issue.attendance_records?.length > 0 && (
+                        <details className="bg-white border border-violet-200 rounded-lg" open>
+                            <summary className="p-2 cursor-pointer text-[10px] font-bold text-violet-700 hover:bg-violet-50">
+                                Attendance Kayitlari ({issue.attendance_records.length})
+                            </summary>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-[10px] border-collapse">
+                                    <thead className="bg-violet-50">
+                                        <tr>
+                                            <th className="p-1 border-b text-left">ID</th>
+                                            <th className="p-1 border-b text-left">Giris</th>
+                                            <th className="p-1 border-b text-left">Cikis</th>
+                                            <th className="p-1 border-b text-left">Kaynak</th>
+                                            <th className="p-1 border-b text-right">Normal</th>
+                                            <th className="p-1 border-b text-right">OT</th>
+                                            <th className="p-1 border-b text-right">Eksik</th>
+                                            <th className="p-1 border-b text-right">Mola</th>
+                                            <th className="p-1 border-b text-left">Durum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {issue.attendance_records.map((a, i) => (
+                                            <tr key={i} className={`${a.is_ot ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                                <td className="p-1 border-b font-mono">#{a.id}</td>
+                                                <td className="p-1 border-b font-mono">{a.check_in}</td>
+                                                <td className="p-1 border-b font-mono">{a.check_out}</td>
+                                                <td className="p-1 border-b">{a.source}{a.is_ot ? ' [OT]' : ''}</td>
+                                                <td className="p-1 border-b text-right">{a.normal_min}dk</td>
+                                                <td className="p-1 border-b text-right text-blue-600">{a.ot_min}dk</td>
+                                                <td className="p-1 border-b text-right text-red-600">{a.missing_min}dk</td>
+                                                <td className="p-1 border-b text-right">{a.break_min}dk</td>
+                                                <td className="p-1 border-b text-[9px]">{a.status}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    )}
+
+                    {issue.type === 'SPLIT_CHECK' && issue.ot_requests?.length > 0 && (
+                        <details className="bg-white border border-blue-200 rounded-lg">
+                            <summary className="p-2 cursor-pointer text-[10px] font-bold text-blue-700 hover:bg-blue-50">
+                                OT Talepleri ({issue.ot_requests.length})
+                            </summary>
+                            <div className="p-2 space-y-1">
+                                {issue.ot_requests.map((o, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-[10px] p-1 bg-gray-50 rounded">
+                                        <span className="font-mono font-bold">OT#{o.id}</span>
+                                        <span className={`px-1 py-0.5 rounded font-bold ${
+                                            o.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                            o.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                            o.status === 'POTENTIAL' ? 'bg-gray-100 text-gray-600' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>{o.status}</span>
+                                        <span>{o.start}-{o.end}</span>
+                                        <span className="font-bold">{o.duration_min}dk</span>
+                                        {o.manual && <span className="px-1 bg-yellow-100 text-yellow-700 rounded">Manuel</span>}
+                                        <span className="text-gray-500 truncate flex-1">{o.reason}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </details>
+                    )}
 
                     {/* Action Buttons */}
                     {!isDone && (
