@@ -39,12 +39,12 @@ export function toIstanbulParts(date) {
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return null;
     const opts = { timeZone: TZ };
-    const year = parseInt(d.toLocaleDateString('en-CA', { ...opts, year: 'numeric' }).split('-')[0], 10);
-    const month = parseInt(d.toLocaleDateString('en-CA', { ...opts, month: '2-digit' }).split('-')[1], 10);
-    const day = parseInt(d.toLocaleDateString('en-CA', { ...opts, day: '2-digit' }).split('-')[2], 10);
+    // Single call for full date — individual options return only that component (e.g., "02" not "2026-02-28")
+    const dateStr = d.toLocaleDateString('en-CA', opts); // "YYYY-MM-DD"
+    const [year, month, day] = dateStr.split('-').map(Number);
     const timeParts = d.toLocaleTimeString('en-GB', { ...opts, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     const [hour, minute, second] = timeParts.split(':').map(Number);
-    const dayOfWeek = new Date(d.toLocaleDateString('en-CA', opts) + 'T12:00:00').getDay(); // 0=Sun
+    const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay(); // 0=Sun
     return { year, month, day, hour, minute, second, dayOfWeek };
 }
 
