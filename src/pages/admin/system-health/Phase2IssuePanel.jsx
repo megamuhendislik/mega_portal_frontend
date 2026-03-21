@@ -79,11 +79,16 @@ function CardSessionList({ sessions }) {
         <div className="mt-2">
             <p className="text-[10px] font-semibold text-gray-500 mb-1">Kart Session'lari:</p>
             <div className="flex flex-wrap gap-1">
-                {sessions.map((s, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] font-mono text-blue-700">
-                        {s.start?.substring(11, 19) || '?'} - {s.end?.substring(11, 19) || '?'} ({s.duration_min}dk)
-                    </span>
-                ))}
+                {sessions.map((s, i) => {
+                    // Backend HH:MM veya full ISO gonderebilir
+                    const startTime = s.start?.includes('T') ? s.start.substring(11, 19) : (s.start || '?');
+                    const endTime = s.end?.includes('T') ? s.end.substring(11, 19) : (s.end || '?');
+                    return (
+                        <span key={i} className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] font-mono text-blue-700">
+                            {startTime} - {endTime} ({s.duration_min}dk)
+                        </span>
+                    );
+                })}
             </div>
         </div>
     );
@@ -176,10 +181,37 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                         )}
                     </div>
 
-                    {/* Kaynak bilgisi */}
+                    {/* OT detay bilgileri */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">OT Turu</span>
+                            <span className="font-bold">{issue.source_label || issue.source || '-'}</span>
+                        </div>
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">OT Saatleri</span>
+                            <span className="font-bold">{issue.ot_start || '?'} - {issue.ot_end || '?'}</span>
+                        </div>
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">Hedef Onaylayici</span>
+                            <span className="font-bold">{issue.target_approver || '-'}</span>
+                        </div>
+                        {issue.approval_manager && issue.approval_manager !== '-' && (
+                            <div className="p-2 bg-green-50 border border-green-200 rounded">
+                                <span className="text-green-600 block">Onaylayan</span>
+                                <span className="font-bold text-green-800">{issue.approval_manager}</span>
+                            </div>
+                        )}
+                        {issue.is_manual && (
+                            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                <span className="text-yellow-600 block">Giris Tipi</span>
+                                <span className="font-bold text-yellow-800">Manuel (elle girildi)</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Kaynak + ID */}
                     <div className="text-xs text-gray-500">
-                        <span className="font-semibold">Kaynak: </span>{issue.source || '-'} |
-                        <span className="font-semibold ml-2">ID: </span>#{issue.id} |
+                        <span className="font-semibold">ID: </span>#{issue.id} |
                         <span className="font-semibold ml-2">Durum: </span>{issue.status}
                         {issue.is_off && <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold">TATIL</span>}
                     </div>
