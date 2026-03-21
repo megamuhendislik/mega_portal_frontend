@@ -56,6 +56,9 @@ function CategoryTabs({ byMatch, active, onSelect }) {
         { key: 'KISMEN', label: 'Kismen', count: byMatch.KISMEN || 0,
           activeClass: 'bg-amber-600 text-white border-amber-600',
           inactiveClass: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50' },
+        ...(byMatch.HESAPLAMA_FARKI ? [{ key: 'HESAPLAMA_FARKI', label: 'Hesaplama Farki', count: byMatch.HESAPLAMA_FARKI,
+          activeClass: 'bg-rose-600 text-white border-rose-600',
+          inactiveClass: 'bg-white text-rose-700 border-rose-300 hover:bg-rose-50' }] : []),
     ];
     return (
         <div className="flex gap-2 flex-wrap">
@@ -410,6 +413,49 @@ export default function Phase2IssuePanel({ phase2 }) {
                     <div className="animate-spin w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full" />
                     <span className="ml-2 text-xs text-gray-500">Islem yapiliyor...</span>
                 </div>
+            )}
+
+            {/* Aylik Ozet Tablosu */}
+            {phase2.monthly_summaries?.length > 0 && (
+                <details className="bg-white border border-purple-200 rounded-lg">
+                    <summary className="p-3 cursor-pointer text-xs font-bold text-purple-700 hover:bg-purple-50">
+                        Aylik Mesai Hedefleri ({phase2.monthly_summaries.length} calisan)
+                    </summary>
+                    <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                        <table className="w-full text-[11px] border-collapse">
+                            <thead className="sticky top-0 bg-purple-100">
+                                <tr>
+                                    <th className="text-left p-1.5 border-b">Calisan</th>
+                                    <th className="text-left p-1.5 border-b">Ay</th>
+                                    <th className="text-right p-1.5 border-b">Hedef</th>
+                                    <th className="text-right p-1.5 border-b">Normal</th>
+                                    <th className="text-right p-1.5 border-b">OT</th>
+                                    <th className="text-right p-1.5 border-b">Eksik</th>
+                                    <th className="text-right p-1.5 border-b">Toplam</th>
+                                    <th className="text-right p-1.5 border-b">Bakiye</th>
+                                    <th className="text-right p-1.5 border-b">Izin</th>
+                                    <th className="text-right p-1.5 border-b">Rapor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {phase2.monthly_summaries.map((ms, i) => (
+                                    <tr key={i} className={`hover:bg-gray-50 ${ms.missing_h > ms.target_h ? 'bg-red-50' : ''}`}>
+                                        <td className="p-1.5 border-b font-medium">{ms.employee_name}</td>
+                                        <td className="p-1.5 border-b font-mono">{ms.month}</td>
+                                        <td className="p-1.5 border-b text-right">{ms.target_h}h</td>
+                                        <td className="p-1.5 border-b text-right">{ms.normal_h}h</td>
+                                        <td className="p-1.5 border-b text-right text-blue-600">{ms.ot_h}h</td>
+                                        <td className="p-1.5 border-b text-right text-red-600">{ms.missing_h}h</td>
+                                        <td className="p-1.5 border-b text-right font-bold">{ms.total_h}h</td>
+                                        <td className={`p-1.5 border-b text-right font-bold ${ms.balance_h >= 0 ? 'text-green-600' : 'text-red-600'}`}>{ms.balance_h}h</td>
+                                        <td className="p-1.5 border-b text-right">{ms.leave_days}g</td>
+                                        <td className="p-1.5 border-b text-right">{ms.health_days}g</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
             )}
 
             {/* Issue List */}
