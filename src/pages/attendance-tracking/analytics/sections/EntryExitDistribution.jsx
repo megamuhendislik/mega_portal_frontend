@@ -217,10 +217,33 @@ function IndividualScatter({ scatterData }) {
 }
 
 /* ═══════════════════════════════════════════════════
-   PUNCTUALITY TABLE
+   PERFORMANCE RANKING TABLE — Composite Score
+   Dakiklik %25 + Çalışma Saati %30 + Devam %20 +
+   Tutarlılık %15 + EK Mesai %10
    ═══════════════════════════════════════════════════ */
-function PunctualityTable({ ranking, onEmployeeClick }) {
-    const { sortCol, sortDir, handleSort, SortIcon } = useSortable('on_time_pct');
+const LEVEL_STYLES = {
+    excellent: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Mukemmel' },
+    good: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Iyi' },
+    average: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Orta' },
+    low: { bg: 'bg-red-100', text: 'text-red-700', label: 'Dusuk' },
+};
+
+function ScoreBar({ value, max = 100, color = 'bg-indigo-500', label, showValue = true }) {
+    const pct = Math.min(100, Math.max(0, (value / max) * 100));
+    return (
+        <div className="flex items-center gap-2">
+            {label && <span className="text-[9px] text-slate-400 w-14 shrink-0 text-right">{label}</span>}
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+            </div>
+            {showValue && <span className="text-[9px] font-bold text-slate-600 w-7 text-right">{Math.round(value)}</span>}
+        </div>
+    );
+}
+
+function PerformanceRankingTable({ ranking, weights, onEmployeeClick }) {
+    const { sortCol, sortDir, handleSort, SortIcon } = useSortable('total_score');
+    const [expandedRow, setExpandedRow] = useState(null);
 
     const sortedRanking = useMemo(() => {
         if (!ranking?.length) return [];
@@ -228,9 +251,7 @@ function PunctualityTable({ ranking, onEmployeeClick }) {
         sorted.sort((a, b) => {
             const aVal = a[sortCol] ?? 0;
             const bVal = b[sortCol] ?? 0;
-            if (typeof aVal === 'string') {
-                return sortDir === 'desc' ? bVal.localeCompare(aVal, 'tr') : aVal.localeCompare(bVal, 'tr');
-            }
+            if (typeof aVal === 'string') return sortDir === 'desc' ? bVal.localeCompare(aVal, 'tr') : aVal.localeCompare(bVal, 'tr');
             return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
         });
         return sorted;
@@ -242,15 +263,32 @@ function PunctualityTable({ ranking, onEmployeeClick }) {
         { key: 'rank', label: '#', sortable: false },
         { key: 'name', label: 'Calisan', sortable: true },
         { key: 'department', label: 'Departman', sortable: true },
-        { key: 'on_time_pct', label: 'Zamaninda%', sortable: true },
-        { key: 'early_pct', label: 'Erken%', sortable: true },
-        { key: 'late_pct', label: 'Gec%', sortable: true },
-        { key: 'avg_deviation_min', label: 'Ort.Sapma', sortable: true },
+        { key: 'total_score', label: 'Toplam', sortable: true },
+        { key: 'punctuality_score', label: 'Dakiklik', sortable: true },
+        { key: 'work_score', label: 'Calisma', sortable: true },
+        { key: 'attendance_score', label: 'Devam', sortable: true },
+        { key: 'consistency_score', label: 'Tutarlilik', sortable: true },
+        { key: 'ot_score', label: 'EK Mesai', sortable: true },
     ];
+
+    const scoreColor = (v) => v >= 85 ? 'text-emerald-600' : v >= 70 ? 'text-blue-600' : v >= 50 ? 'text-amber-600' : 'text-red-600';
+    const barColor = (v) => v >= 85 ? 'bg-emerald-500' : v >= 70 ? 'bg-blue-500' : v >= 50 ? 'bg-amber-500' : 'bg-red-500';
 
     return (
         <div className="bg-slate-50 rounded-xl p-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Dakiklik Siralamasi</h4>
+            {/* Header with weight legend */}
+            <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Performans Siralamasi</h4>
+                {weights && (
+                    <div className="hidden lg:flex items-center gap-3 text-[9px] text-slate-400">
+                        {Object.entries(weights).map(([k, w]) => (
+                            <span key={k} className="flex items-center gap-1">
+                                <span className="font-bold">%{Math.round(w.weight * 100)}</span> {w.label}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
@@ -260,10 +298,10 @@ function PunctualityTable({ ranking, onEmployeeClick }) {
                             {columns.map(col => (
                                 <th
                                     key={col.key}
-                                    className={`px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-slate-700 select-none' : ''}`}
+                                    className={`px-2 py-2 text-left font-bold text-slate-500 uppercase tracking-wider text-[10px] ${col.sortable ? 'cursor-pointer hover:text-slate-700 select-none' : ''}`}
                                     onClick={() => col.sortable && handleSort(col.key)}
                                 >
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-0.5">
                                         {col.label}
                                         {col.sortable && <SortIcon col={col.key} />}
                                     </div>
@@ -272,82 +310,121 @@ function PunctualityTable({ ranking, onEmployeeClick }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedRanking.map((row, idx) => (
-                            <tr
-                                key={row.employee_id}
-                                className="border-b border-slate-100 last:border-0 hover:bg-white/60 cursor-pointer transition-colors"
-                                onClick={() => onEmployeeClick?.(row.employee_id)}
-                            >
-                                <td className="px-3 py-2.5">
-                                    <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold ${
-                                        idx < 3 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                                    }`}>
-                                        {idx + 1}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2.5 font-semibold text-slate-700">{row.name}</td>
-                                <td className="px-3 py-2.5 text-slate-500">{row.department}</td>
-                                <td className="px-3 py-2.5">
-                                    <span className={`font-bold ${
-                                        row.on_time_pct >= 90 ? 'text-emerald-600'
-                                        : row.on_time_pct >= 70 ? 'text-amber-600'
-                                        : 'text-red-600'
-                                    }`}>
-                                        %{row.on_time_pct}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2.5 text-blue-600 font-semibold">%{row.early_pct}</td>
-                                <td className="px-3 py-2.5 text-red-600 font-semibold">%{row.late_pct}</td>
-                                <td className="px-3 py-2.5">
-                                    <span className={`font-bold ${
-                                        row.avg_deviation_min <= 0 ? 'text-emerald-600'
-                                        : row.avg_deviation_min <= 10 ? 'text-amber-600'
-                                        : 'text-red-600'
-                                    }`}>
-                                        {row.avg_deviation_min > 0 ? '+' : ''}{row.avg_deviation_min}dk
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
+                        {sortedRanking.map((row, idx) => {
+                            const lvl = LEVEL_STYLES[row.level] || LEVEL_STYLES.low;
+                            const isExpanded = expandedRow === row.employee_id;
+                            return (
+                                <React.Fragment key={row.employee_id}>
+                                    <tr
+                                        className={`border-b border-slate-100 last:border-0 hover:bg-white/60 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/30' : ''}`}
+                                        onClick={() => setExpandedRow(isExpanded ? null : row.employee_id)}
+                                    >
+                                        <td className="px-2 py-2">
+                                            <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold ${
+                                                idx < 3 ? 'bg-emerald-100 text-emerald-700' : idx < 10 ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'
+                                            }`}>{idx + 1}</span>
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-slate-700">{row.name}</span>
+                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${lvl.bg} ${lvl.text}`}>{lvl.label}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-2 py-2 text-slate-400 text-[10px]">{row.department}</td>
+                                        <td className="px-2 py-2">
+                                            <span className={`text-sm font-black ${scoreColor(row.total_score)}`}>{row.total_score}</span>
+                                        </td>
+                                        {['punctuality_score', 'work_score', 'attendance_score', 'consistency_score', 'ot_score'].map(key => (
+                                            <td key={key} className="px-2 py-2">
+                                                <div className="w-16">
+                                                    <ScoreBar value={row[key]} color={barColor(row[key])} showValue />
+                                                </div>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    {/* Expanded detail row */}
+                                    {isExpanded && (
+                                        <tr className="bg-indigo-50/20">
+                                            <td colSpan={columns.length} className="px-4 py-3">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-[10px]">
+                                                    <div><span className="text-slate-400">Zamaninda:</span> <span className="font-bold">%{row.on_time_pct}</span></div>
+                                                    <div><span className="text-slate-400">Erken:</span> <span className="font-bold text-blue-600">%{row.early_pct}</span></div>
+                                                    <div><span className="text-slate-400">Gec:</span> <span className="font-bold text-red-600">%{row.late_pct}</span></div>
+                                                    <div><span className="text-slate-400">Ort. Sapma:</span> <span className={`font-bold ${row.avg_deviation_min <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{row.avg_deviation_min > 0 ? '+' : ''}{row.avg_deviation_min}dk</span></div>
+                                                    <div><span className="text-slate-400">Calisilan:</span> <span className="font-bold">{row.worked_hours}s</span></div>
+                                                    <div><span className="text-slate-400">Hedef:</span> <span className="font-bold">{row.target_hours}s</span></div>
+                                                    <div><span className="text-slate-400">Eksik:</span> <span className="font-bold text-red-600">{row.missing_hours}s</span></div>
+                                                    <div><span className="text-slate-400">EK Mesai:</span> <span className="font-bold text-amber-600">{row.overtime_hours}s</span></div>
+                                                    <div><span className="text-slate-400">Onayli OT:</span> <span className="font-bold text-emerald-600">{row.approved_ot_hours}s</span></div>
+                                                    <div><span className="text-slate-400">Devamsizlik:</span> <span className="font-bold">{row.absent_days} gun</span></div>
+                                                    <div><span className="text-slate-400">Ort. Mola:</span> <span className="font-bold">{row.avg_break_minutes}dk</span></div>
+                                                    <div><span className="text-slate-400">Tutarlilik StdDev:</span> <span className="font-bold">{row.consistency_std}s</span></div>
+                                                    {row.cumulative && (
+                                                        <>
+                                                            <div className="col-span-2 border-t border-slate-200 pt-1 mt-1"><span className="text-slate-400 font-bold">Kumulatif (YTD):</span></div>
+                                                            <div><span className="text-slate-400">Hedef:</span> <span className="font-bold">{row.cumulative.target}s</span></div>
+                                                            <div><span className="text-slate-400">Gerceklesen:</span> <span className="font-bold">{row.cumulative.worked}s</span></div>
+                                                            <div><span className="text-slate-400">EK Mesai:</span> <span className="font-bold">{row.cumulative.ot}s</span></div>
+                                                            <div><span className="text-slate-400">Karsilama:</span> <span className={`font-bold ${row.cumulative.fulfillment_pct >= 90 ? 'text-emerald-600' : 'text-amber-600'}`}>%{row.cumulative.fulfillment_pct}</span></div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onEmployeeClick?.(row.employee_id); }}
+                                                    className="mt-2 text-[10px] text-indigo-600 font-bold hover:underline"
+                                                >
+                                                    Detayli Profil →
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
-                {sortedRanking.slice(0, 10).map((row, idx) => (
-                    <div
-                        key={row.employee_id}
-                        className="bg-white rounded-xl p-3 border border-slate-100 cursor-pointer hover:border-indigo-200 transition-colors"
-                        onClick={() => onEmployeeClick?.(row.employee_id)}
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                    idx < 3 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                                }`}>
-                                    {idx + 1}
-                                </span>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-700">{row.name}</p>
-                                    <p className="text-[10px] text-slate-400">{row.department}</p>
+                {sortedRanking.slice(0, 15).map((row, idx) => {
+                    const lvl = LEVEL_STYLES[row.level] || LEVEL_STYLES.low;
+                    return (
+                        <div
+                            key={row.employee_id}
+                            className="bg-white rounded-xl p-3 border border-slate-100 cursor-pointer hover:border-indigo-200 transition-colors"
+                            onClick={() => onEmployeeClick?.(row.employee_id)}
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                        idx < 3 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                                    }`}>{idx + 1}</span>
+                                    <div>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-xs font-bold text-slate-700">{row.name}</p>
+                                            <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${lvl.bg} ${lvl.text}`}>{lvl.label}</span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400">{row.department}</p>
+                                    </div>
                                 </div>
+                                <span className={`text-lg font-black ${scoreColor(row.total_score)}`}>{row.total_score}</span>
                             </div>
-                            <span className={`text-sm font-black ${
-                                row.on_time_pct >= 90 ? 'text-emerald-600'
-                                : row.on_time_pct >= 70 ? 'text-amber-600'
-                                : 'text-red-600'
-                            }`}>
-                                %{row.on_time_pct}
-                            </span>
+                            <div className="space-y-1">
+                                <ScoreBar value={row.punctuality_score} color={barColor(row.punctuality_score)} label="Dakiklik" />
+                                <ScoreBar value={row.work_score} color={barColor(row.work_score)} label="Calisma" />
+                                <ScoreBar value={row.attendance_score} color={barColor(row.attendance_score)} label="Devam" />
+                                <ScoreBar value={row.consistency_score} color={barColor(row.consistency_score)} label="Tutarlilik" />
+                                <ScoreBar value={row.ot_score} color={barColor(row.ot_score)} label="EK Mesai" />
+                            </div>
+                            <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
+                                <span>{row.worked_hours}s/{row.target_hours}s</span>
+                                <span>OT: {row.approved_ot_hours}s</span>
+                                <span>{row.absent_days} devamsiz</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4 text-[10px]">
-                            <span className="text-blue-600">Erken: %{row.early_pct}</span>
-                            <span className="text-red-600">Gec: %{row.late_pct}</span>
-                            <span className="text-slate-500">Sapma: {row.avg_deviation_min > 0 ? '+' : ''}{row.avg_deviation_min}dk</span>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -450,10 +527,11 @@ export default function EntryExitDistribution() {
                             <IndividualScatter scatterData={data.individual_scatter} />
                         )}
 
-                        {/* ─── Punctuality Table ─────────────── */}
-                        {data.punctuality_ranking?.length > 0 && (
-                            <PunctualityTable
-                                ranking={data.punctuality_ranking}
+                        {/* ─── Performance Ranking ─────────────── */}
+                        {data.performance_ranking?.length > 0 && (
+                            <PerformanceRankingTable
+                                ranking={data.performance_ranking}
+                                weights={data.score_weights}
                                 onEmployeeClick={handleEmployeeClick}
                             />
                         )}
