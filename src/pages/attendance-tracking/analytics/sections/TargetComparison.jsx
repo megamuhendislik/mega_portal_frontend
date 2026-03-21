@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Legend, ReferenceLine
+    ResponsiveContainer, Legend
 } from 'recharts';
 import CollapsibleSection from '../shared/CollapsibleSection';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
@@ -38,6 +38,53 @@ const LINE_COLORS = [
     '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316',
 ];
 
+/* ═══════════════════════════════════════════════════
+   Build comparison metrics from backend structure
+   Backend: { current: {...}, previous: {...}, delta: {...} }
+   We transform into a displayable array of metric rows.
+   ═══════════════════════════════════════════════════ */
+const COMPARISON_METRIC_KEYS = [
+    { key: 'worked_hours', label: 'Calisan Saat', suffix: 's' },
+    { key: 'target_hours', label: 'Hedef Saat', suffix: 's' },
+    { key: 'efficiency_pct', label: 'Verimlilik', suffix: '%' },
+    { key: 'overtime_hours', label: 'Ek Mesai', suffix: 's' },
+    { key: 'absent_days', label: 'Devamsiz Gun', suffix: '' },
+    { key: 'leave_days', label: 'Izin Gun', suffix: '' },
+    { key: 'headcount', label: 'Kisi Sayisi', suffix: '' },
+    { key: 'avg_worked', label: 'Ort. Calisma', suffix: 's' },
+];
+
+function buildComparisonMetrics(periodComparison) {
+    if (!periodComparison) return [];
+
+    // If backend already provides a metrics array, use it directly
+    if (Array.isArray(periodComparison.metrics) && periodComparison.metrics.length > 0) {
+        return periodComparison.metrics;
+    }
+
+    // Otherwise build from current/previous/delta objects
+    const { current, previous, delta } = periodComparison;
+    if (!current && !previous) return [];
+
+    const metrics = [];
+    COMPARISON_METRIC_KEYS.forEach(({ key, label, suffix }) => {
+        const curVal = current?.[key];
+        const prevVal = previous?.[key];
+        const deltaVal = delta?.[key];
+        // Only include if at least one value exists
+        if (curVal != null || prevVal != null) {
+            metrics.push({
+                label,
+                current: curVal ?? '-',
+                previous: prevVal ?? '-',
+                delta: deltaVal ?? 0,
+                suffix,
+            });
+        }
+    });
+    return metrics;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
@@ -64,6 +111,7 @@ export default function TargetComparison() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     // Efficiency trend multi-line data
+    // Backend: [{ month, label, team_avg, employees: {name: pct} }]
     const trendData = useMemo(() => {
         if (!data?.efficiency_trend?.length) return { chartData: [], employees: [] };
         const dates = data.efficiency_trend;
@@ -78,7 +126,7 @@ export default function TargetComparison() {
         const employees = Array.from(employeeSet).slice(0, 10);
 
         const chartData = dates.map(d => {
-            const point = { name: d.label || d.date?.substring(5) };
+            const point = { name: d.label || d.month || d.date?.substring(5) };
             employees.forEach(emp => {
                 point[emp] = d.employees?.[emp] ?? null;
             });
@@ -92,6 +140,7 @@ export default function TargetComparison() {
     const projection = data?.projection;
     const employeeTargets = data?.employee_targets || [];
     const periodComparison = data?.period_comparison;
+    const comparisonMetrics = useMemo(() => buildComparisonMetrics(periodComparison), [periodComparison]);
 
     return (
         <CollapsibleSection
@@ -122,7 +171,7 @@ export default function TargetComparison() {
             {/* Data */}
             {data && !loading && (
                 <div className="space-y-5">
-                    {/* ─── 1. Projection Card ─────────────────── */}
+                    {/* --- 1. Projection Card ------------------- */}
                     {projection && (
                         <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                             <div className="absolute -right-4 -bottom-4 opacity-10">
@@ -147,6 +196,25 @@ export default function TargetComparison() {
                                     <p className="text-2xl font-black">{projection.required_daily ?? '-'}<span className="text-xs ml-0.5 opacity-80">s</span></p>
                                 </div>
                             </div>
+
+                            {/* Extra info row */}
+                            {(projection.total_days_in_period != null || projection.elapsed_days != null) && (
+                                <div className="flex items-center gap-4 mb-3 text-[10px] opacity-70">
+                                    {projection.total_days_in_period != null && (
+                                        <span>Toplam gun: {projection.total_days_in_period}</span>
+                                    )}
+                                    {projection.elapsed_days != null && (
+                                        <span>Gecen gun: {projection.elapsed_days}</span>
+                                    )}
+                                    {projection.current_worked_hours != null && (
+                                        <span>Calisan: {projection.current_worked_hours}s</span>
+                                    )}
+                                    {projection.target_hours != null && (
+                                        <span>Hedef: {projection.target_hours}s</span>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Completion progress */}
                             {projection.completion_pct != null && (
                                 <div>
@@ -165,7 +233,8 @@ export default function TargetComparison() {
                         </div>
                     )}
 
-                    {/* ─── 2. Employee Target Status ──────────── */}
+                    {/* --- 2. Employee Target Status ------------ */}
+                    {/* Backend: [{ employee_id, name, department, worked_hours, target_hours, efficiency_pct, status }] */}
                     {employeeTargets.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Calisan Hedef Durumu</h4>
@@ -177,9 +246,21 @@ export default function TargetComparison() {
                                     return (
                                         <div key={emp.employee_id || emp.name}>
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[11px] font-semibold text-slate-600 truncate max-w-[150px]" title={emp.name}>
-                                                    {emp.name}
-                                                </span>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="text-[11px] font-semibold text-slate-600 truncate max-w-[150px]" title={emp.name}>
+                                                        {emp.name}
+                                                    </span>
+                                                    {emp.status && (
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                                                            emp.status === 'on_track' ? 'bg-emerald-100 text-emerald-700'
+                                                            : emp.status === 'at_risk' ? 'bg-amber-100 text-amber-700'
+                                                            : emp.status === 'behind' ? 'bg-red-100 text-red-700'
+                                                            : 'bg-slate-100 text-slate-500'
+                                                        }`}>
+                                                            {emp.status === 'on_track' ? 'Yolunda' : emp.status === 'at_risk' ? 'Risk' : emp.status === 'behind' ? 'Geride' : emp.status}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] text-slate-400">{emp.worked_hours ?? 0}/{emp.target_hours ?? 0}s</span>
                                                     <span className={`text-xs font-bold ${textColor}`}>%{pct}</span>
@@ -198,8 +279,9 @@ export default function TargetComparison() {
                         </div>
                     )}
 
-                    {/* ─── 3. Period Comparison ────────────────── */}
-                    {periodComparison && (
+                    {/* --- 3. Period Comparison ------------------ */}
+                    {/* Backend: { current: {...}, previous: {...}, delta: {...} } */}
+                    {comparisonMetrics.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Donem Karsilastirma</h4>
                             <div className="hidden md:block overflow-x-auto">
@@ -213,8 +295,8 @@ export default function TargetComparison() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(periodComparison.metrics || []).map(m => {
-                                            const delta = m.delta ?? 0;
+                                        {comparisonMetrics.map(m => {
+                                            const delta = typeof m.delta === 'number' ? m.delta : 0;
                                             const DeltaIcon = delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : null;
                                             const deltaColor = delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-slate-400';
                                             return (
@@ -237,8 +319,8 @@ export default function TargetComparison() {
 
                             {/* Mobile */}
                             <div className="md:hidden space-y-2">
-                                {(periodComparison.metrics || []).map(m => {
-                                    const delta = m.delta ?? 0;
+                                {comparisonMetrics.map(m => {
+                                    const delta = typeof m.delta === 'number' ? m.delta : 0;
                                     const deltaColor = delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-slate-400';
                                     return (
                                         <div key={m.label} className="bg-white rounded-xl p-3 border border-slate-100">
@@ -257,7 +339,7 @@ export default function TargetComparison() {
                         </div>
                     )}
 
-                    {/* ─── 4. Efficiency Trend LineChart ───────── */}
+                    {/* --- 4. Efficiency Trend LineChart --------- */}
                     {trendData.chartData.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Verimlilik Trendi</h4>

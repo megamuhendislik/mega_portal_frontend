@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Network, Loader2, AlertCircle, RefreshCw,
-    ChevronRight, ChevronDown, User, Building2
+    ChevronRight, ChevronDown, User, Building2, Clock, TrendingUp
 } from 'lucide-react';
+import {
+    RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+    ResponsiveContainer, Legend
+} from 'recharts';
 import CollapsibleSection from '../shared/CollapsibleSection';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
@@ -19,12 +23,13 @@ function StatusDot({ pct }) {
    EMPLOYEE NODE
    ═══════════════════════════════════════════════════ */
 function EmployeeNode({ employee, onEmployeeClick }) {
+    const eff = employee.efficiency_pct ?? 0;
     return (
         <div
             className="flex items-center gap-2 px-3 py-2 ml-8 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group"
             onClick={() => onEmployeeClick?.(employee.employee_id)}
         >
-            <StatusDot pct={employee.efficiency_pct ?? 0} />
+            <StatusDot pct={eff} />
             <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500 shrink-0">
                 {(employee.name || '?').charAt(0)}
             </div>
@@ -35,13 +40,16 @@ function EmployeeNode({ employee, onEmployeeClick }) {
             </div>
             <div className="flex items-center gap-3 text-[10px] text-slate-400 shrink-0">
                 <span className={`font-bold ${
-                    employee.efficiency_pct >= 90 ? 'text-emerald-600'
-                    : employee.efficiency_pct >= 70 ? 'text-amber-600'
+                    eff >= 90 ? 'text-emerald-600'
+                    : eff >= 70 ? 'text-amber-600'
                     : 'text-red-600'
                 }`}>
-                    %{employee.efficiency_pct ?? 0}
+                    %{eff}
                 </span>
                 <span>{employee.worked_hours ?? 0}/{employee.target_hours ?? 0}s</span>
+                {(employee.ot_hours != null && employee.ot_hours > 0) && (
+                    <span className="text-violet-600 font-semibold">+{employee.ot_hours}s OT</span>
+                )}
             </div>
         </div>
     );
@@ -53,21 +61,18 @@ function EmployeeNode({ employee, onEmployeeClick }) {
 function DepartmentGroup({ department, employees, onEmployeeClick }) {
     const [expanded, setExpanded] = useState(true);
 
-    // Calculate department avg efficiency
-    const avgEfficiency = useMemo(() => {
-        if (!employees?.length) return 0;
+    const stats = useMemo(() => {
+        if (!employees?.length) return { avgEfficiency: 0, totalWorked: 0, totalTarget: 0, totalOT: 0 };
         const sum = employees.reduce((s, e) => s + (e.efficiency_pct ?? 0), 0);
-        return Math.round(sum / employees.length);
-    }, [employees]);
-
-    const totalWorked = useMemo(() => {
-        if (!employees?.length) return 0;
-        return employees.reduce((s, e) => s + (e.worked_hours ?? 0), 0);
-    }, [employees]);
-
-    const totalTarget = useMemo(() => {
-        if (!employees?.length) return 0;
-        return employees.reduce((s, e) => s + (e.target_hours ?? 0), 0);
+        const totalWorked = employees.reduce((s, e) => s + (e.worked_hours ?? 0), 0);
+        const totalTarget = employees.reduce((s, e) => s + (e.target_hours ?? 0), 0);
+        const totalOT = employees.reduce((s, e) => s + (e.ot_hours ?? 0), 0);
+        return {
+            avgEfficiency: Math.round(sum / employees.length),
+            totalWorked: Math.round(totalWorked * 10) / 10,
+            totalTarget: Math.round(totalTarget * 10) / 10,
+            totalOT: Math.round(totalOT * 10) / 10,
+        };
     }, [employees]);
 
     return (
@@ -87,16 +92,19 @@ function DepartmentGroup({ department, employees, onEmployeeClick }) {
                     <p className="text-xs font-bold text-slate-700 truncate">{department}</p>
                     <p className="text-[10px] text-slate-400">{employees?.length || 0} calisan</p>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                    <StatusDot pct={avgEfficiency} />
+                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                    <StatusDot pct={stats.avgEfficiency} />
                     <span className={`text-xs font-bold ${
-                        avgEfficiency >= 90 ? 'text-emerald-600'
-                        : avgEfficiency >= 70 ? 'text-amber-600'
+                        stats.avgEfficiency >= 90 ? 'text-emerald-600'
+                        : stats.avgEfficiency >= 70 ? 'text-amber-600'
                         : 'text-red-600'
                     }`}>
-                        %{avgEfficiency}
+                        %{stats.avgEfficiency}
                     </span>
-                    <span className="text-[10px] text-slate-400">{totalWorked}/{totalTarget}s</span>
+                    <span className="text-[10px] text-slate-400 hidden sm:inline">{stats.totalWorked}/{stats.totalTarget}s</span>
+                    {stats.totalOT > 0 && (
+                        <span className="text-[10px] text-violet-600 font-semibold hidden sm:inline">+{stats.totalOT}s OT</span>
+                    )}
                 </div>
             </button>
 
@@ -111,6 +119,88 @@ function DepartmentGroup({ department, employees, onEmployeeClick }) {
                     ))}
                 </div>
             )}
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════
+   DEPARTMENT COMPARISON RADAR
+   ═══════════════════════════════════════════════════ */
+const RADAR_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+function DepartmentRadar({ departmentGroups }) {
+    if (!departmentGroups || departmentGroups.length < 2) return null;
+
+    // Build radar axes from department stats
+    const depts = departmentGroups.slice(0, 6); // max 6 departments for readability
+
+    // Build per-department metrics
+    const deptStats = depts.map(g => {
+        const emps = g.employees;
+        const len = emps.length || 1;
+        return {
+            name: g.department,
+            avgEff: Math.round(emps.reduce((s, e) => s + (e.efficiency_pct ?? 0), 0) / len),
+            avgWorked: Math.round((emps.reduce((s, e) => s + (e.worked_hours ?? 0), 0) / len) * 10) / 10,
+            avgOT: Math.round((emps.reduce((s, e) => s + (e.ot_hours ?? 0), 0) / len) * 10) / 10,
+            headcount: emps.length,
+        };
+    });
+
+    // Determine max values for normalization
+    const maxWorked = Math.max(...deptStats.map(d => d.avgWorked), 1);
+    const maxOT = Math.max(...deptStats.map(d => d.avgOT), 1);
+    const maxHC = Math.max(...deptStats.map(d => d.headcount), 1);
+
+    // Radar data: each axis is a metric, each department is a series
+    const radarAxes = ['Verimlilik', 'Ort. Calisma', 'Ort. OT', 'Kisi Sayisi'];
+    const radarData = radarAxes.map((axis, ai) => {
+        const point = { subject: axis };
+        deptStats.forEach((ds, di) => {
+            let val;
+            switch (ai) {
+                case 0: val = ds.avgEff; break;
+                case 1: val = Math.round((ds.avgWorked / maxWorked) * 100); break;
+                case 2: val = Math.round((ds.avgOT / maxOT) * 100); break;
+                case 3: val = Math.round((ds.headcount / maxHC) * 100); break;
+                default: val = 0;
+            }
+            point[ds.name] = val;
+        });
+        return point;
+    });
+
+    return (
+        <div className="bg-slate-50 rounded-xl p-4">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Departman Karsilastirmasi</h4>
+            <ResponsiveContainer width="100%" height={280}>
+                <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                    <PolarGrid stroke="#e2e8f0" />
+                    <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{ fontSize: 10, fill: '#64748b' }}
+                    />
+                    <PolarRadiusAxis
+                        angle={90}
+                        domain={[0, 100]}
+                        tick={{ fontSize: 8, fill: '#94a3b8' }}
+                        axisLine={false}
+                    />
+                    {deptStats.map((ds, i) => (
+                        <Radar
+                            key={ds.name}
+                            name={ds.name}
+                            dataKey={ds.name}
+                            stroke={RADAR_COLORS[i % RADAR_COLORS.length]}
+                            fill={RADAR_COLORS[i % RADAR_COLORS.length]}
+                            fillOpacity={0.08}
+                            strokeWidth={2}
+                            strokeDasharray={i > 2 ? '4 3' : undefined}
+                        />
+                    ))}
+                    <Legend wrapperStyle={{ fontSize: '10px' }} iconSize={8} />
+                </RadarChart>
+            </ResponsiveContainer>
         </div>
     );
 }
@@ -182,14 +272,16 @@ export default function OrgHierarchyTree() {
         const green = allEmps.filter(e => (e.efficiency_pct ?? 0) >= 90).length;
         const orange = allEmps.filter(e => (e.efficiency_pct ?? 0) >= 70 && (e.efficiency_pct ?? 0) < 90).length;
         const red = allEmps.filter(e => (e.efficiency_pct ?? 0) < 70).length;
-        return { totalEmp, avgEff, green, orange, red, deptCount: departmentGroups.length };
+        const totalWorked = Math.round(allEmps.reduce((s, e) => s + (e.worked_hours ?? 0), 0) * 10) / 10;
+        const totalOT = Math.round(allEmps.reduce((s, e) => s + (e.ot_hours ?? 0), 0) * 10) / 10;
+        return { totalEmp, avgEff, green, orange, red, deptCount: departmentGroups.length, totalWorked, totalOT };
     }, [departmentGroups]);
 
     return (
         <>
             <CollapsibleSection
                 title="Organizasyon Agaci"
-                subtitle="Departman bazli verimlilik"
+                subtitle="Departman bazli verimlilik ve ekip hiyerarsisi"
                 icon={Network}
                 iconGradient="from-slate-500 to-slate-700"
                 defaultOpen={false}
@@ -216,7 +308,7 @@ export default function OrgHierarchyTree() {
                 {/* Data */}
                 {data && !loading && (
                     <div className="space-y-4">
-                        {/* ─── Summary Bar ────────────────────── */}
+                        {/* --- Summary Bar ---------------------- */}
                         {summary && (
                             <div className="bg-slate-50 rounded-xl p-4">
                                 <div className="flex flex-wrap items-center gap-4 text-xs">
@@ -233,6 +325,16 @@ export default function OrgHierarchyTree() {
                                             : 'text-red-600'
                                         }`}>%{summary.avgEff}</span>
                                     </span>
+                                    <span className="text-slate-500 hidden sm:inline">
+                                        <Clock size={11} className="inline mr-0.5" />
+                                        {summary.totalWorked}s
+                                    </span>
+                                    {summary.totalOT > 0 && (
+                                        <span className="text-violet-600 font-semibold hidden sm:inline">
+                                            <TrendingUp size={11} className="inline mr-0.5" />
+                                            +{summary.totalOT}s OT
+                                        </span>
+                                    )}
                                     <div className="flex items-center gap-3 ml-auto">
                                         <div className="flex items-center gap-1">
                                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -251,7 +353,10 @@ export default function OrgHierarchyTree() {
                             </div>
                         )}
 
-                        {/* ─── Department Groups ──────────────── */}
+                        {/* --- Department Comparison Radar ------- */}
+                        <DepartmentRadar departmentGroups={departmentGroups} />
+
+                        {/* --- Department Groups ---------------- */}
                         {departmentGroups.map(group => (
                             <DepartmentGroup
                                 key={group.department}

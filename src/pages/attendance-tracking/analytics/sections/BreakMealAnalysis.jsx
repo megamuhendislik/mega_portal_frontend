@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Coffee, Loader2, AlertCircle, RefreshCw,
-    UtensilsCrossed, Clock, AlertTriangle
+    UtensilsCrossed, Clock, AlertTriangle, Info
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -43,6 +43,27 @@ function KPICard({ label, value, suffix, icon: Icon, gradient }) {
             </h3>
             {Icon && <div className="absolute -right-3 -bottom-3 opacity-10 group-hover:opacity-15 transition-opacity"><Icon size={48} /></div>}
         </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════
+   MINI SPARKLINE (SVG-based, no recharts dependency)
+   ═══════════════════════════════════════════════════ */
+function MiniSparkline({ data, width = 60, height = 20, threshold = 30 }) {
+    if (!data?.length) return null;
+    const max = Math.max(...data, threshold + 5);
+    const min = Math.min(...data, 0);
+    const range = max - min || 1;
+    const step = width / Math.max(data.length - 1, 1);
+
+    const points = data.map((v, i) => `${i * step},${height - ((v - min) / range) * height}`).join(' ');
+    const thresholdY = height - ((threshold - min) / range) * height;
+
+    return (
+        <svg width={width} height={height} className="inline-block">
+            <line x1={0} y1={thresholdY} x2={width} y2={thresholdY} stroke="#ef4444" strokeWidth={0.5} strokeDasharray="2 1" />
+            <polyline points={points} fill="none" stroke="#10b981" strokeWidth={1.5} />
+        </svg>
     );
 }
 
@@ -112,6 +133,78 @@ function BreakHeatmap({ heatmapData }) {
     );
 }
 
+/* ═══════════════════════════════════════════════════
+   BREAK vs OT INSIGHT
+   ═══════════════════════════════════════════════════ */
+function BreakOTInsight({ kpi, otMealCorrelation, rValue }) {
+    if (!kpi) return null;
+
+    const insights = [];
+
+    // Break exceeding insight
+    if (kpi.break_over_30_pct != null) {
+        if (kpi.break_over_30_pct > 40) {
+            insights.push({
+                type: 'warning',
+                text: `Calisanlarin %${kpi.break_over_30_pct}'i 30 dakika mola limitini asiyor. Ekibin mola aliskanliklari gozden gecirilmeli.`,
+            });
+        } else if (kpi.break_over_30_pct > 20) {
+            insights.push({
+                type: 'info',
+                text: `%${kpi.break_over_30_pct} oraninda calisan 30dk mola limitinin uzerinde. Genel olarak kabul edilebilir seviyede.`,
+            });
+        } else {
+            insights.push({
+                type: 'success',
+                text: `Mola aliskanliklari iyi durumda: yalnizca %${kpi.break_over_30_pct} calisan 30dk limitini asiyor.`,
+            });
+        }
+    }
+
+    // OT-Meal correlation insight
+    if (rValue != null) {
+        const r = parseFloat(rValue);
+        if (r > 0.6) {
+            insights.push({
+                type: 'info',
+                text: `OT ile yemek siparisi arasinda guclu pozitif korelasyon (R=${rValue}). Fazla mesai yapanlar daha fazla yemek siparis ediyor.`,
+            });
+        } else if (r > 0.3) {
+            insights.push({
+                type: 'info',
+                text: `OT ile yemek siparisi arasinda orta duzey korelasyon (R=${rValue}).`,
+            });
+        }
+    }
+
+    // OT-meal overlap insight
+    if (kpi.ot_meal_overlap_pct != null && kpi.ot_meal_overlap_pct > 50) {
+        insights.push({
+            type: 'info',
+            text: `Ek mesai yapan calisanlarin %${kpi.ot_meal_overlap_pct}'i ayni zamanda yemek siparisi veriyor.`,
+        });
+    }
+
+    if (insights.length === 0) return null;
+
+    return (
+        <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Analiz Notlari</h4>
+            {insights.map((insight, i) => (
+                <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg text-xs ${
+                    insight.type === 'warning' ? 'bg-amber-50 text-amber-800'
+                    : insight.type === 'success' ? 'bg-emerald-50 text-emerald-800'
+                    : 'bg-blue-50 text-blue-800'
+                }`}>
+                    {insight.type === 'warning' ? <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                     : <Info size={13} className="shrink-0 mt-0.5" />}
+                    <span>{insight.text}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
@@ -146,14 +239,24 @@ export default function BreakMealAnalysis() {
         }));
     }, [data?.break_distribution]);
 
-    // Employee break averages
+    // Employee break averages with sparkline data and warning badges
     const employeeBreaks = useMemo(() => {
         if (!data?.employee_breaks?.length) return [];
         return data.employee_breaks.slice(0, 15).map(e => ({
             name: e.name,
+            employee_id: e.employee_id,
+            avgBreakMin: e.avg_break_min,
+            exceeds30: (e.avg_break_min ?? 0) > 30,
+            // daily_breaks is an optional array of daily break minutes for sparkline
+            dailyBreaks: e.daily_breaks || [],
             'Ort. Mola': e.avg_break_min,
         }));
     }, [data?.employee_breaks]);
+
+    // Count of employees exceeding 30dk
+    const exceeding30Count = useMemo(() => {
+        return employeeBreaks.filter(e => e.exceeds30).length;
+    }, [employeeBreaks]);
 
     // Meal order trend
     const mealTrend = useMemo(() => {
@@ -176,6 +279,7 @@ export default function BreakMealAnalysis() {
     }, [data?.ot_meal_correlation]);
 
     const kpi = data?.kpi;
+    const hasAnyData = kpi || breakDistribution.length > 0 || employeeBreaks.length > 0 || mealTrend.length > 0;
 
     return (
         <CollapsibleSection
@@ -206,7 +310,7 @@ export default function BreakMealAnalysis() {
             {/* Data */}
             {data && !loading && (
                 <div className="space-y-5">
-                    {/* ─── 1. 5 KPI Cards ─────────────────────── */}
+                    {/* --- 1. 5 KPI Cards ---------------------- */}
                     {kpi && (
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                             <KPICard label="Ort. Mola" value={kpi.avg_break_min} suffix="dk" icon={Coffee} gradient="bg-gradient-to-br from-emerald-500 to-emerald-600" />
@@ -217,7 +321,7 @@ export default function BreakMealAnalysis() {
                         </div>
                     )}
 
-                    {/* ─── 2 & 3: Distribution + Employee Breaks ── */}
+                    {/* --- 2 & 3: Distribution + Employee Breaks ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Break Duration Distribution */}
                         {breakDistribution.length > 0 && (
@@ -244,41 +348,61 @@ export default function BreakMealAnalysis() {
                             </div>
                         )}
 
-                        {/* Employee Break Averages */}
+                        {/* Employee Break Averages with sparklines and warning badges */}
                         {employeeBreaks.length > 0 && (
                             <div className="bg-slate-50 rounded-xl p-4">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Calisan Mola Ortalamalari</h4>
-                                <div className="overflow-x-auto -mx-2">
-                                    <ResponsiveContainer width="100%" height={Math.max(220, employeeBreaks.length * 28)} minWidth={300}>
-                                        <BarChart data={employeeBreaks} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                                            <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                                            <YAxis
-                                                type="category"
-                                                dataKey="name"
-                                                tick={{ fontSize: 10, fill: '#64748b' }}
-                                                width={90}
-                                            />
-                                            <Tooltip content={<ChartTooltip />} />
-                                            <ReferenceLine
-                                                x={30}
-                                                stroke="#ef4444"
-                                                strokeDasharray="4 2"
-                                                strokeWidth={1.5}
-                                                label={{ value: '30dk', fontSize: 9, fill: '#ef4444', position: 'top' }}
-                                            />
-                                            <Bar dataKey="Ort. Mola" name="Ort. Mola (dk)" fill="#14b8a6" radius={[0, 4, 4, 0]} maxBarSize={16} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Calisan Mola Ortalamalari</h4>
+                                    {exceeding30Count > 0 && (
+                                        <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                            {exceeding30Count} kisi 30dk+
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="space-y-1.5 max-h-[350px] overflow-y-auto pr-1">
+                                    {employeeBreaks.map((emp, i) => (
+                                        <div key={emp.name || i} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-white/60 transition-colors">
+                                            {/* Name + warning badge */}
+                                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                                <span className="text-[11px] font-semibold text-slate-600 truncate max-w-[100px]" title={emp.name}>
+                                                    {emp.name}
+                                                </span>
+                                                {emp.exceeds30 && (
+                                                    <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                                                        30dk asim
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {/* Sparkline */}
+                                            {emp.dailyBreaks.length > 1 && (
+                                                <MiniSparkline data={emp.dailyBreaks} />
+                                            )}
+                                            {/* Value */}
+                                            <span className={`text-xs font-bold shrink-0 ${
+                                                emp.avgBreakMin > 30 ? 'text-red-600' : 'text-emerald-600'
+                                            }`}>
+                                                {emp.avgBreakMin}dk
+                                            </span>
+                                            {/* Bar indicator */}
+                                            <div className="w-16 h-2 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${
+                                                        emp.avgBreakMin > 30 ? 'bg-red-400' : 'bg-emerald-400'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (emp.avgBreakMin / 45) * 100)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* ─── 4. Break Heatmap ───────────────────── */}
+                    {/* --- 4. Break Heatmap --------------------- */}
                     <BreakHeatmap heatmapData={data.break_heatmap} />
 
-                    {/* ─── 5. Meal Order Trend ────────────────── */}
+                    {/* --- 5. Meal Order Trend ------------------ */}
                     {mealTrend.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yemek Siparis Trendi</h4>
@@ -313,7 +437,7 @@ export default function BreakMealAnalysis() {
                         </div>
                     )}
 
-                    {/* ─── 6. OT-Meal Correlation Scatter ────── */}
+                    {/* --- 6. OT-Meal Correlation Scatter ------- */}
                     {scatterData.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <div className="flex items-center justify-between mb-3">
@@ -363,11 +487,19 @@ export default function BreakMealAnalysis() {
                         </div>
                     )}
 
+                    {/* --- 7. Break vs OT Insight --------------- */}
+                    <BreakOTInsight
+                        kpi={kpi}
+                        otMealCorrelation={data.ot_meal_correlation}
+                        rValue={data.ot_meal_r_value}
+                    />
+
                     {/* Empty state */}
-                    {!kpi && !breakDistribution.length && (
+                    {!hasAnyData && (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                             <Coffee size={32} className="mb-2 opacity-50" />
-                            <p className="text-sm">Bu donem icin mola/yemek verisi bulunamadi.</p>
+                            <p className="text-sm font-semibold mb-1">Mola/yemek verisi bulunamadi</p>
+                            <p className="text-xs text-slate-300">Secilen donem icin yeterli veri yok. Farkli bir tarih araligi secmeyi deneyin.</p>
                         </div>
                     )}
                 </div>

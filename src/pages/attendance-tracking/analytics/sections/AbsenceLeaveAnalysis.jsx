@@ -25,29 +25,44 @@ const HEATMAP_DAYS = ['Pzt', 'Sal', 'Car', 'Per', 'Cum'];
 /* ═══════════════════════════════════════════════════
    KPI CARD
    ═══════════════════════════════════════════════════ */
-function KPICard({ label, value, suffix, icon: Icon, gradient }) {
+function KPICard({ label, value, suffix, icon: Icon, gradient, vsLabel }) {
     return (
         <div className={`${gradient} text-white p-4 rounded-2xl shadow-lg relative overflow-hidden group hover:shadow-xl transition-shadow`}>
             <p className="opacity-70 text-[10px] font-bold uppercase tracking-wider mb-1">{label}</p>
             <h3 className="text-xl font-black leading-tight">
                 {value ?? '-'}{suffix && <span className="text-xs ml-1 font-bold opacity-80">{suffix}</span>}
             </h3>
+            {vsLabel && (
+                <p className="text-[9px] opacity-60 mt-0.5">{vsLabel}</p>
+            )}
             {Icon && <div className="absolute -right-3 -bottom-3 opacity-10 group-hover:opacity-15 transition-opacity"><Icon size={48} /></div>}
         </div>
     );
 }
 
 /* ═══════════════════════════════════════════════════
-   ABSENCE HEATMAP (Week × Day)
+   ABSENCE HEATMAP (Week x Day)
+   Backend returns: [{ "day": "Pzt", "weeks": {"1": count, "2": count, ...} }]
    ═══════════════════════════════════════════════════ */
 function AbsenceHeatmap({ heatmapData }) {
     if (!heatmapData?.length) return null;
 
-    const weeks = heatmapData;
+    // Determine the number of weeks from the data
+    const weekNumbers = new Set();
+    heatmapData.forEach(dayEntry => {
+        if (dayEntry.weeks) {
+            Object.keys(dayEntry.weeks).forEach(w => weekNumbers.add(w));
+        }
+    });
+    const sortedWeeks = Array.from(weekNumbers).sort((a, b) => Number(a) - Number(b));
+
+    if (sortedWeeks.length === 0) return null;
+
+    // Find max value for color scaling
     let maxVal = 0;
-    weeks.forEach(week => {
-        HEATMAP_DAYS.forEach((_, di) => {
-            const val = week.days?.[di] ?? 0;
+    heatmapData.forEach(dayEntry => {
+        sortedWeeks.forEach(w => {
+            const val = dayEntry.weeks?.[w] ?? 0;
             if (val > maxVal) maxVal = val;
         });
     });
@@ -66,22 +81,24 @@ function AbsenceHeatmap({ heatmapData }) {
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Devamsizlik Gun Isi Haritasi</h4>
             <div className="overflow-x-auto">
                 <div className="min-w-[350px]">
+                    {/* Week headers */}
                     <div className="flex items-center mb-1">
                         <div className="w-14 shrink-0" />
-                        {HEATMAP_DAYS.map(d => (
-                            <div key={d} className="flex-1 text-center text-[9px] text-slate-400 font-semibold">{d}</div>
+                        {sortedWeeks.map(w => (
+                            <div key={w} className="flex-1 text-center text-[9px] text-slate-400 font-semibold">Hafta {w}</div>
                         ))}
                     </div>
-                    {weeks.map((week, wi) => (
-                        <div key={wi} className="flex items-center gap-0.5 mb-0.5">
-                            <div className="w-14 shrink-0 text-[9px] font-semibold text-slate-400">{week.label || `Hafta ${wi + 1}`}</div>
-                            {HEATMAP_DAYS.map((_, di) => {
-                                const val = week.days?.[di] ?? 0;
+                    {/* Day rows */}
+                    {heatmapData.map((dayEntry, di) => (
+                        <div key={di} className="flex items-center gap-0.5 mb-0.5">
+                            <div className="w-14 shrink-0 text-[9px] font-semibold text-slate-400">{dayEntry.day || HEATMAP_DAYS[di] || `Gun ${di + 1}`}</div>
+                            {sortedWeeks.map(w => {
+                                const val = dayEntry.weeks?.[w] ?? 0;
                                 return (
                                     <div
-                                        key={di}
+                                        key={w}
                                         className={`flex-1 h-7 rounded-sm ${getColor(val)} transition-colors`}
-                                        title={`${week.label || `Hafta ${wi+1}`} ${HEATMAP_DAYS[di]}: ${val} kisi`}
+                                        title={`${dayEntry.day || HEATMAP_DAYS[di]} Hafta ${w}: ${val} kisi`}
                                     />
                                 );
                             })}
@@ -127,27 +144,32 @@ export default function AbsenceLeaveAnalysis() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     // Leave type pie data
+    // Backend: [{ "name", "label", "count", "days" }]
     const pieData = useMemo(() => {
         if (!data?.leave_type_distribution?.length) return [];
         return data.leave_type_distribution.map((lt, i) => ({
-            name: lt.name || lt.label,
-            value: lt.count || lt.days,
+            name: lt.label || lt.name,
+            value: lt.days || lt.count,
             color: LEAVE_COLORS[i % LEAVE_COLORS.length],
         }));
     }, [data?.leave_type_distribution]);
 
     // Monthly absence trend
+    // Backend: [{ "month", "label", "absent_days", "leave_days" }]
     const trendData = useMemo(() => {
         if (!data?.monthly_absence_trend?.length) return [];
         return data.monthly_absence_trend.map(m => ({
             name: m.label,
-            Devamsiz: m.absent_count ?? m.absent_days,
-            Izinli: m.leave_count ?? m.leave_days,
+            Devamsiz: m.absent_days ?? 0,
+            Izinli: m.leave_days ?? 0,
         }));
     }, [data?.monthly_absence_trend]);
 
     const kpi = data?.kpi;
+    const vsPrev = kpi?.vs_prev;
+    // Backend: employee_leave_table: [{ employee_id, name, department, annual_used, annual_total, excuse_used_hours, excuse_total_hours, health_report_days, absent_days, warning }]
     const employees = data?.employee_leave_table || [];
+    // Backend: annual_leave_burndown: [{ employee_id, name, department, total_days, used_days, remaining_days }]
     const burnDown = data?.annual_leave_burndown || [];
 
     return (
@@ -179,18 +201,50 @@ export default function AbsenceLeaveAnalysis() {
             {/* Data */}
             {data && !loading && (
                 <div className="space-y-5">
-                    {/* ─── 1. 5 KPI Cards ─────────────────────── */}
+                    {/* --- 1. 5 KPI Cards ---------------------- */}
                     {kpi && (
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <KPICard label="Devam Orani" value={kpi.attendance_rate} suffix="%" icon={CheckCircle2} gradient="bg-gradient-to-br from-emerald-500 to-emerald-600" />
-                            <KPICard label="Toplam Izin" value={kpi.total_leave_days} suffix="gun" icon={CalendarOff} gradient="bg-gradient-to-br from-blue-500 to-blue-600" />
-                            <KPICard label="Ort/Kisi" value={kpi.avg_leave_per_person} suffix="gun" icon={Clock} gradient="bg-gradient-to-br from-violet-500 to-violet-600" />
-                            <KPICard label="Mazeret Bakiye" value={kpi.excuse_balance_avg} suffix="s" icon={AlertTriangle} gradient="bg-gradient-to-br from-amber-500 to-amber-600" />
-                            <KPICard label="Saglik Raporu" value={kpi.health_report_count} suffix="" icon={Heart} gradient="bg-gradient-to-br from-rose-500 to-rose-600" />
+                            <KPICard
+                                label="Devam Orani"
+                                value={kpi.attendance_rate}
+                                suffix="%"
+                                icon={CheckCircle2}
+                                gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+                                vsLabel={vsPrev?.attendance_rate != null ? `Onceki: %${vsPrev.attendance_rate}` : undefined}
+                            />
+                            <KPICard
+                                label="Toplam Izin"
+                                value={kpi.total_leave_days}
+                                suffix="gun"
+                                icon={CalendarOff}
+                                gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+                                vsLabel={vsPrev?.total_leave_days != null ? `Onceki: ${vsPrev.total_leave_days} gun` : undefined}
+                            />
+                            <KPICard
+                                label="Ort/Kisi"
+                                value={kpi.avg_leave_per_person}
+                                suffix="gun"
+                                icon={Clock}
+                                gradient="bg-gradient-to-br from-violet-500 to-violet-600"
+                            />
+                            <KPICard
+                                label="Mazeret Kullanim"
+                                value={kpi.excuse_hours_used}
+                                suffix="s"
+                                icon={AlertTriangle}
+                                gradient="bg-gradient-to-br from-amber-500 to-amber-600"
+                            />
+                            <KPICard
+                                label="Saglik Raporu"
+                                value={kpi.health_report_count}
+                                suffix=""
+                                icon={Heart}
+                                gradient="bg-gradient-to-br from-rose-500 to-rose-600"
+                            />
                         </div>
                     )}
 
-                    {/* ─── 2 & 3: Leave Pie + BurnDown ────────── */}
+                    {/* --- 2 & 3: Leave Pie + BurnDown ---------- */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Leave Type Pie */}
                         {pieData.length > 0 && (
@@ -238,13 +292,15 @@ export default function AbsenceLeaveAnalysis() {
                         )}
 
                         {/* Annual Leave Burn-Down */}
+                        {/* Backend fields: total_days, used_days, remaining_days */}
                         {burnDown.length > 0 && (
                             <div className="bg-slate-50 rounded-xl p-4">
                                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yillik Izin Burn-Down</h4>
                                 <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
                                     {burnDown.map(emp => {
-                                        const total = (emp.used ?? 0) + (emp.remaining ?? 0);
-                                        const usedPct = total > 0 ? Math.round((emp.used / total) * 100) : 0;
+                                        const total = emp.total_days ?? ((emp.used_days ?? 0) + (emp.remaining_days ?? 0));
+                                        const used = emp.used_days ?? emp.used ?? 0;
+                                        const usedPct = total > 0 ? Math.round((used / total) * 100) : 0;
                                         return (
                                             <div key={emp.employee_id || emp.name}>
                                                 <div className="flex items-center justify-between mb-1">
@@ -252,7 +308,7 @@ export default function AbsenceLeaveAnalysis() {
                                                         {emp.name}
                                                     </span>
                                                     <span className="text-[10px] text-slate-400">
-                                                        {emp.used}/{total} gun
+                                                        {used}/{total} gun
                                                     </span>
                                                 </div>
                                                 <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
@@ -273,7 +329,7 @@ export default function AbsenceLeaveAnalysis() {
                         )}
                     </div>
 
-                    {/* ─── 4. Monthly Absence Trend ───────────── */}
+                    {/* --- 4. Monthly Absence Trend ------------- */}
                     {trendData.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aylik Devamsizlik Trendi</h4>
@@ -323,10 +379,11 @@ export default function AbsenceLeaveAnalysis() {
                         </div>
                     )}
 
-                    {/* ─── 5. Absence Day Heatmap ────────────── */}
+                    {/* --- 5. Absence Day Heatmap --------------- */}
                     <AbsenceHeatmap heatmapData={data.absence_heatmap} />
 
-                    {/* ─── 6. Employee Leave Table ────────────── */}
+                    {/* --- 6. Employee Leave Table --------------- */}
+                    {/* Backend fields: employee_id, name, department, annual_used, annual_total, excuse_used_hours, excuse_total_hours, health_report_days, absent_days, warning */}
                     {employees.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Calisan Izin Tablosu</h4>
@@ -337,6 +394,7 @@ export default function AbsenceLeaveAnalysis() {
                                     <thead>
                                         <tr className="border-b border-slate-200">
                                             <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Calisan</th>
+                                            <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Departman</th>
                                             <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Yillik</th>
                                             <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Mazeret</th>
                                             <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Saglik</th>
@@ -346,13 +404,16 @@ export default function AbsenceLeaveAnalysis() {
                                     </thead>
                                     <tbody>
                                         {employees.map(emp => {
-                                            const totalAbsence = (emp.absent_days ?? 0);
-                                            const hasWarning = totalAbsence >= 3 || (emp.excuse_used ?? 0) >= 15;
+                                            const totalAbsence = emp.absent_days ?? 0;
+                                            const excuseUsed = emp.excuse_used_hours ?? emp.excuse_used ?? 0;
+                                            const excuseTotal = emp.excuse_total_hours ?? 18;
+                                            const hasWarning = emp.warning || totalAbsence >= 3 || excuseUsed >= 15;
                                             return (
                                                 <tr key={emp.employee_id || emp.name} className="border-b border-slate-100 last:border-0 hover:bg-white/60 transition-colors">
                                                     <td className="px-3 py-2.5 font-semibold text-slate-700">{emp.name}</td>
+                                                    <td className="px-3 py-2.5 text-slate-500">{emp.department || '-'}</td>
                                                     <td className="px-3 py-2.5 text-blue-600 font-semibold">{emp.annual_used ?? 0}/{emp.annual_total ?? 0}</td>
-                                                    <td className="px-3 py-2.5 text-amber-600 font-semibold">{emp.excuse_used ?? 0}s</td>
+                                                    <td className="px-3 py-2.5 text-amber-600 font-semibold">{excuseUsed}/{excuseTotal}s</td>
                                                     <td className="px-3 py-2.5 text-rose-600 font-semibold">{emp.health_report_days ?? 0}</td>
                                                     <td className="px-3 py-2.5 text-red-600 font-bold">{totalAbsence}</td>
                                                     <td className="px-3 py-2.5">
@@ -376,12 +437,16 @@ export default function AbsenceLeaveAnalysis() {
                             {/* Mobile */}
                             <div className="md:hidden space-y-2">
                                 {employees.slice(0, 10).map(emp => {
-                                    const totalAbsence = (emp.absent_days ?? 0);
-                                    const hasWarning = totalAbsence >= 3 || (emp.excuse_used ?? 0) >= 15;
+                                    const totalAbsence = emp.absent_days ?? 0;
+                                    const excuseUsed = emp.excuse_used_hours ?? emp.excuse_used ?? 0;
+                                    const hasWarning = emp.warning || totalAbsence >= 3 || excuseUsed >= 15;
                                     return (
                                         <div key={emp.employee_id || emp.name} className="bg-white rounded-xl p-3 border border-slate-100">
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-bold text-slate-700">{emp.name}</p>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-700">{emp.name}</p>
+                                                    {emp.department && <p className="text-[10px] text-slate-400">{emp.department}</p>}
+                                                </div>
                                                 {hasWarning ? (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
                                                         <AlertTriangle size={10} /> Dikkat
@@ -394,7 +459,7 @@ export default function AbsenceLeaveAnalysis() {
                                             </div>
                                             <div className="flex items-center gap-3 text-[10px]">
                                                 <span className="text-blue-600">Yillik: {emp.annual_used ?? 0}/{emp.annual_total ?? 0}</span>
-                                                <span className="text-amber-600">Mazeret: {emp.excuse_used ?? 0}s</span>
+                                                <span className="text-amber-600">Mazeret: {excuseUsed}s</span>
                                                 <span className="text-red-600">Devamsiz: {totalAbsence}</span>
                                             </div>
                                         </div>
