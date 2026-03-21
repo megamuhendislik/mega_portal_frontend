@@ -46,7 +46,7 @@ const ProgramManagement = lazyRetry(() => import('./pages/admin/ProgramManagemen
 const Feedback = lazyRetry(() => import('./pages/Feedback'));
 const HealthReports = lazyRetry(() => import('./pages/admin/HealthReports'));
 const SpecialLeaves = lazyRetry(() => import('./pages/admin/SpecialLeaves'));
-const RequestAnalytics = lazyRetry(() => import('./pages/RequestAnalytics'));
+const RequestAnalytics = lazyRetry(() => import('./pages/request-analytics/RequestAnalyticsPage'));
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
 
 const PageLoader = () => (
