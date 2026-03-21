@@ -125,15 +125,63 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
 
             {/* Expanded Detail */}
             {expanded && (
-                <div className="px-4 pb-3 border-t border-gray-100 space-y-2">
-                    <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                        <span className="font-semibold">Detay: </span>{issue.detail}
+                <div className="px-4 pb-3 border-t border-gray-100 space-y-3">
+                    {/* Aciklama — neden sorunlu */}
+                    {issue.explanation && (
+                        <div className={`text-xs p-3 rounded-lg border ${
+                            issue.match === 'UYUMSUZ' ? 'bg-red-50 border-red-200 text-red-800' :
+                            issue.match === 'KART_YOK' ? 'bg-gray-50 border-gray-200 text-gray-700' :
+                            'bg-amber-50 border-amber-200 text-amber-800'
+                        }`}>
+                            <span className="font-bold block mb-1">
+                                {issue.match === 'UYUMSUZ' ? 'Neden Uyumsuz?' :
+                                 issue.match === 'KART_YOK' ? 'Neden Kart Yok?' : 'Neden Kismi?'}
+                            </span>
+                            {issue.explanation}
+                        </div>
+                    )}
+
+                    {/* Ozet bilgiler */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">Vardiya</span>
+                            <span className="font-bold">{issue.shift || '-'}</span>
+                        </div>
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">Son Kart Cikis</span>
+                            <span className="font-bold text-red-600">{issue.last_card_out || 'Yok'}</span>
+                        </div>
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">OT Talep</span>
+                            <span className="font-bold">{issue.ot_duration_min || '?'}dk</span>
+                        </div>
+                        <div className="p-2 bg-white border border-gray-200 rounded">
+                            <span className="text-gray-500 block">Kart Toplam</span>
+                            <span className="font-bold">{issue.card_net_min || 0}dk</span>
+                        </div>
+                        {issue.gap_min > 0 && (
+                            <div className="p-2 bg-red-50 border border-red-200 rounded col-span-2">
+                                <span className="text-red-500 block">Bosluk (son cikis → OT baslangic)</span>
+                                <span className="font-bold text-red-700">{Math.floor(issue.gap_min/60)}sa {issue.gap_min%60}dk</span>
+                            </div>
+                        )}
+                        {issue.reason && (
+                            <div className="p-2 bg-blue-50 border border-blue-200 rounded col-span-2">
+                                <span className="text-blue-500 block">OT Nedeni</span>
+                                <span className="font-bold text-blue-700">{issue.reason}</span>
+                            </div>
+                        )}
                     </div>
+
+                    {/* Kaynak bilgisi */}
                     <div className="text-xs text-gray-500">
                         <span className="font-semibold">Kaynak: </span>{issue.source || '-'} |
                         <span className="font-semibold ml-2">ID: </span>#{issue.id} |
                         <span className="font-semibold ml-2">Durum: </span>{issue.status}
+                        {issue.is_off && <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold">TATIL</span>}
                     </div>
+
+                    {/* Kart session'lari */}
                     <CardSessionList sessions={issue.card_sessions} />
 
                     {/* Action Buttons */}
