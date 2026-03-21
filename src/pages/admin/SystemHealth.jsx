@@ -25,7 +25,8 @@ import {
     CakeIcon,
     BeakerIcon,
     BoltIcon,
-    BugAntIcon
+    BugAntIcon,
+    MoonIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -55,6 +56,7 @@ import E2ETestTab from './system-health/E2ETestTab';
 import OTAnalysisTab from './system-health/OTAnalysisTab';
 import ErrorLogsTab from './system-health/ErrorLogsTab';
 import RecalculationAuditTab from './system-health/RecalculationAuditTab';
+import NightlyAuditTab from './system-health/NightlyAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -137,6 +139,7 @@ export default function SystemHealth() {
                         { id: 'ot_analysis_panel', name: 'Ek Mesai Analizi', icon: BoltIcon },
                         { id: 'e2e_tests', name: 'E2E Testleri', icon: BeakerIcon },
                         { id: 'recalc_audit', name: 'Hesaplama Denetimi', icon: ArrowPathIcon },
+                        { id: 'nightly_logs', name: 'Gece Denetim', icon: MoonIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -191,6 +194,7 @@ export default function SystemHealth() {
                 {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
                 {activeTab === 'e2e_tests' && <E2ETestTab />}
                 {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
+                {activeTab === 'nightly_logs' && <NightlyAuditTab />}
             </div>
 
         </div>
