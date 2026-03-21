@@ -686,6 +686,40 @@ export default function RecalculationAuditTab() {
 
             {uniResult && (
                 <div className="space-y-6 mt-6 border-t-2 border-emerald-300 pt-6">
+                    {/* Puan Sistemi */}
+                    {uniResult.health_score && (
+                        <div className="flex flex-wrap items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-black text-white ${
+                                    uniResult.health_score.overall_score >= 90 ? 'bg-green-500' :
+                                    uniResult.health_score.overall_score >= 70 ? 'bg-amber-500' :
+                                    'bg-red-500'
+                                }`}>
+                                    %{uniResult.health_score.overall_score}
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-gray-800">Hesaplama Sagligi</div>
+                                    <div className="text-[10px] text-gray-500">{uniResult.date_range}</div>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-3 flex-1">
+                                {Object.entries(uniResult.health_score.categories || {}).map(([key, cat]) => (
+                                    <div key={key} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                                            cat.score >= 90 ? 'bg-green-500' : cat.score >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                                        }`}>
+                                            {cat.score}
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-gray-700">{cat.label}</div>
+                                            <div className="text-[10px] text-gray-400">{cat.issues}/{cat.total} sorun</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between flex-wrap gap-3">
                         <div className="flex items-center gap-3">
                             <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
