@@ -163,18 +163,33 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                             <span className="text-gray-500 block">Vardiya</span>
                             <span className="font-bold">{issue.shift || '-'}</span>
                         </div>
-                        <div className="p-2 bg-white border border-gray-200 rounded">
-                            <span className="text-gray-500 block">Son Kart Cikis</span>
-                            <span className="font-bold text-red-600">{issue.last_card_out || 'Yok'}</span>
-                        </div>
-                        <div className="p-2 bg-white border border-gray-200 rounded">
-                            <span className="text-gray-500 block">OT Talep</span>
-                            <span className="font-bold">{issue.ot_duration_min || '?'}dk</span>
-                        </div>
-                        <div className="p-2 bg-white border border-gray-200 rounded">
-                            <span className="text-gray-500 block">Kart Toplam</span>
-                            <span className="font-bold">{issue.card_net_min || 0}dk</span>
-                        </div>
+                        {issue.type === 'SPLIT_CHECK' ? (
+                            <>
+                                <div className="p-2 bg-red-50 border border-red-200 rounded">
+                                    <span className="text-red-500 block">Mevcut Split</span>
+                                    <span className="font-bold text-red-700">{issue.actual_split || '?'}</span>
+                                </div>
+                                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                                    <span className="text-green-500 block">Dogru Split</span>
+                                    <span className="font-bold text-green-700">{issue.correct_split || '?'}</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">Son Kart Cikis</span>
+                                    <span className="font-bold text-red-600">{issue.last_card_out || 'Yok'}</span>
+                                </div>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">OT Talep</span>
+                                    <span className="font-bold">{issue.ot_duration_min || '?'}dk</span>
+                                </div>
+                                <div className="p-2 bg-white border border-gray-200 rounded">
+                                    <span className="text-gray-500 block">Kart Toplam</span>
+                                    <span className="font-bold">{issue.card_net_min || 0}dk</span>
+                                </div>
+                            </>
+                        )}
                         {issue.gap_min > 0 && (
                             <div className="p-2 bg-red-50 border border-red-200 rounded col-span-2">
                                 <span className="text-red-500 block">Bosluk (son cikis → OT baslangic)</span>
@@ -230,29 +245,51 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                     {/* Action Buttons */}
                     {!isDone && (
                         <div className="flex gap-2 mt-3 flex-wrap">
-                            <button
-                                onClick={() => onAction(issueKey, issue, 'KABUL')}
-                                disabled={loading}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all"
-                            >
-                                <CheckCircleIcon className="w-3.5 h-3.5" /> Kabul Et
-                            </button>
-                            {issue.type === 'OT' && (
-                                <button
-                                    onClick={() => onAction(issueKey, issue, 'RED')}
-                                    disabled={loading}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-all"
-                                >
-                                    <XCircleIcon className="w-3.5 h-3.5" /> Iptal Et
-                                </button>
+                            {/* SPLIT_CHECK icin ozel butonlar */}
+                            {issue.type === 'SPLIT_CHECK' ? (
+                                <>
+                                    <button
+                                        onClick={() => onAction(issueKey, issue, 'RECALCULATE')}
+                                        disabled={loading}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 transition-all"
+                                    >
+                                        <WrenchScrewdriverIcon className="w-3.5 h-3.5" /> Yeniden Hesapla
+                                    </button>
+                                    <button
+                                        onClick={() => onAction(issueKey, issue, 'KABUL')}
+                                        disabled={loading}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all"
+                                    >
+                                        <CheckCircleIcon className="w-3.5 h-3.5" /> Boyle Kalsin
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => onAction(issueKey, issue, 'KABUL')}
+                                        disabled={loading}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all"
+                                    >
+                                        <CheckCircleIcon className="w-3.5 h-3.5" /> Kabul Et
+                                    </button>
+                                    {issue.type === 'OT' && (
+                                        <button
+                                            onClick={() => onAction(issueKey, issue, 'RED')}
+                                            disabled={loading}
+                                            className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-all"
+                                        >
+                                            <XCircleIcon className="w-3.5 h-3.5" /> Iptal Et
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => onAction(issueKey, issue, 'INCELE')}
+                                        disabled={loading}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded border border-blue-300 text-xs font-bold text-blue-700 hover:bg-blue-50 transition-all"
+                                    >
+                                        <BellAlertIcon className="w-3.5 h-3.5" /> Yoneticiye Gonder
+                                    </button>
+                                </>
                             )}
-                            <button
-                                onClick={() => onAction(issueKey, issue, 'INCELE')}
-                                disabled={loading}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded border border-blue-300 text-xs font-bold text-blue-700 hover:bg-blue-50 transition-all"
-                            >
-                                <BellAlertIcon className="w-3.5 h-3.5" /> Yoneticiye Gonder
-                            </button>
                             {issue.match === 'KISMEN' && issue.type === 'OT' && cardSeconds > 0 && (
                                 <>
                                     {!confirmDuzelt ? (
