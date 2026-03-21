@@ -234,10 +234,10 @@ export default function PersonalAttendanceAnalytics() {
         const checkIn = [];
         const checkOut = [];
         data.entry_exit.forEach((d, i) => {
-            const ci = timeToDecimal(d.check_in);
-            if (ci != null) checkIn.push({ x: i, y: ci, date: d.date, time: d.check_in });
-            const co = timeToDecimal(d.check_out);
-            if (co != null) checkOut.push({ x: i, y: co, date: d.date, time: d.check_out });
+            const ci = timeToDecimal(d.first_check_in || d.check_in);
+            if (ci != null) checkIn.push({ x: i, y: ci, date: d.date, time: d.first_check_in || d.check_in });
+            const co = timeToDecimal(d.last_check_out || d.check_out);
+            if (co != null) checkOut.push({ x: i, y: co, date: d.date, time: d.last_check_out || d.check_out });
         });
         return { checkIn, checkOut };
     }, [data?.entry_exit]);

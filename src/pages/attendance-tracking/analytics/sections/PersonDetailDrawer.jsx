@@ -165,13 +165,13 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
         const checkIn = [];
         const checkOut = [];
         data.entry_exit_scatter.forEach((d, i) => {
-            const ciMin = timeToMinutes(d.check_in);
+            const ciMin = timeToMinutes(d.first_check_in || d.check_in);
             if (ciMin != null) {
-                checkIn.push({ x: i, y: minutesToDecimal(ciMin), date: d.date, time: d.check_in });
+                checkIn.push({ x: i, y: minutesToDecimal(ciMin), date: d.date, time: d.first_check_in || d.check_in });
             }
-            const coMin = timeToMinutes(d.check_out);
+            const coMin = timeToMinutes(d.last_check_out || d.check_out);
             if (coMin != null) {
-                checkOut.push({ x: i, y: minutesToDecimal(coMin), date: d.date, time: d.check_out });
+                checkOut.push({ x: i, y: minutesToDecimal(coMin), date: d.date, time: d.last_check_out || d.check_out });
             }
         });
         return { checkIn, checkOut };

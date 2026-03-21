@@ -166,22 +166,22 @@ function IndividualScatter({ scatterData }) {
                                 <div className="absolute top-0 bottom-0 border-l border-dashed border-amber-300" style={{ left: `${timeToX('18:00')}%` }} />
                                 {/* Dots */}
                                 {emp.records.map((rec, j) => {
-                                    const ciX = timeToX(rec.check_in);
-                                    const coX = timeToX(rec.check_out);
+                                    const ciX = timeToX(rec.first_check_in || rec.check_in);
+                                    const coX = timeToX(rec.last_check_out || rec.check_out);
                                     return (
                                         <React.Fragment key={j}>
                                             {ciX != null && (
                                                 <div
                                                     className="absolute w-2 h-2 rounded-full bg-blue-500 top-1/2 -translate-y-1/2 hover:scale-150 transition-transform"
                                                     style={{ left: `${ciX}%` }}
-                                                    title={`Giris: ${rec.check_in} (${rec.date})`}
+                                                    title={`Ilk Giris: ${rec.first_check_in || rec.check_in} (${rec.date})`}
                                                 />
                                             )}
                                             {coX != null && (
                                                 <div
                                                     className="absolute w-2 h-2 rounded-full bg-amber-500 top-1/2 -translate-y-1/2 hover:scale-150 transition-transform"
                                                     style={{ left: `${coX}%` }}
-                                                    title={`Cikis: ${rec.check_out} (${rec.date})`}
+                                                    title={`Son Cikis: ${rec.last_check_out || rec.check_out} (${rec.date})`}
                                                 />
                                             )}
                                         </React.Fragment>
