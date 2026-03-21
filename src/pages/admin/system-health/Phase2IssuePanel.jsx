@@ -19,6 +19,7 @@ function MatchBadge({ match }) {
         KISMEN: 'bg-amber-200 text-amber-800',
         UYUMSUZ: 'bg-red-200 text-red-800',
         KART_YOK: 'bg-gray-200 text-gray-800',
+        SPLIT_YANLIS: 'bg-violet-200 text-violet-800',
     };
     return (
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${styles[match] || 'bg-gray-200 text-gray-700'}`}>
@@ -33,6 +34,7 @@ function TypeBadge({ type }) {
         LEAVE: 'bg-teal-100 text-teal-700 border-teal-300',
         HEALTH_REPORT: 'bg-pink-100 text-pink-700 border-pink-300',
         CARDLESS: 'bg-orange-100 text-orange-700 border-orange-300',
+        SPLIT_CHECK: 'bg-violet-100 text-violet-700 border-violet-300',
     };
     return (
         <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${styles[type] || 'bg-gray-100'}`}>
@@ -59,6 +61,9 @@ function CategoryTabs({ byMatch, active, onSelect }) {
         ...(byMatch.HESAPLAMA_FARKI ? [{ key: 'HESAPLAMA_FARKI', label: 'Hesaplama Farki', count: byMatch.HESAPLAMA_FARKI,
           activeClass: 'bg-rose-600 text-white border-rose-600',
           inactiveClass: 'bg-white text-rose-700 border-rose-300 hover:bg-rose-50' }] : []),
+        ...(byMatch.SPLIT_YANLIS ? [{ key: 'SPLIT_YANLIS', label: 'Split Yanlis', count: byMatch.SPLIT_YANLIS,
+          activeClass: 'bg-violet-600 text-white border-violet-600',
+          inactiveClass: 'bg-white text-violet-700 border-violet-300 hover:bg-violet-50' }] : []),
     ];
     return (
         <div className="flex gap-2 flex-wrap">
@@ -101,6 +106,7 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
         UYUMSUZ: 'border-l-red-500',
         KISMEN: 'border-l-amber-500',
         KART_YOK: 'border-l-gray-400',
+        SPLIT_YANLIS: 'border-l-violet-500',
     }[issue.match] || 'border-l-gray-300';
 
     const isDone = !!result;
@@ -139,11 +145,13 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                         <div className={`text-xs p-3 rounded-lg border ${
                             issue.match === 'UYUMSUZ' ? 'bg-red-50 border-red-200 text-red-800' :
                             issue.match === 'KART_YOK' ? 'bg-gray-50 border-gray-200 text-gray-700' :
+                            issue.match === 'SPLIT_YANLIS' ? 'bg-violet-50 border-violet-200 text-violet-800' :
                             'bg-amber-50 border-amber-200 text-amber-800'
                         }`}>
                             <span className="font-bold block mb-1">
                                 {issue.match === 'UYUMSUZ' ? 'Neden Uyumsuz?' :
-                                 issue.match === 'KART_YOK' ? 'Neden Kart Yok?' : 'Neden Kismi?'}
+                                 issue.match === 'KART_YOK' ? 'Neden Kart Yok?' :
+                                 issue.match === 'SPLIT_YANLIS' ? 'Split Noktasi Neden Yanlis?' : 'Neden Kismi?'}
                             </span>
                             {issue.explanation}
                         </div>
