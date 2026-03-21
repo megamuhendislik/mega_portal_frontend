@@ -14,12 +14,33 @@ import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
 import { getIstanbulToday, getIstanbulTodayDate, getIstanbulMonth } from '../utils/dateUtils';
 
+// Safe date validation: returns true if Date is valid
+const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime());
+
+// Safe format wrapper — returns fallback string if date is invalid
+const safeFormat = (date, pattern, options) => {
+    try {
+        if (!isValidDate(date)) return '-';
+        return format(date, pattern, options);
+    } catch {
+        return '-';
+    }
+};
+
+// Safe Date parser from string — returns null if invalid
+const safeParse = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return isValidDate(d) ? d : null;
+};
+
 // ─── Weekly View (Günlük) ─────────────────────────────────────────────
 const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
     const isMobile = useIsMobile();
     const [weekStart, setWeekStart] = useState(() => {
-        if (logs && logs.length > 0) {
-            return startOfWeek(new Date(logs[0].work_date), { weekStartsOn: 1 });
+        if (logs && logs.length > 0 && logs[0].work_date) {
+            const d = safeParse(logs[0].work_date);
+            if (d) return startOfWeek(d, { weekStartsOn: 1 });
         }
         return startOfWeek(getIstanbulTodayDate(), { weekStartsOn: 1 });
     });
@@ -29,9 +50,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (logs && logs.length > 0) {
-            const firstLog = new Date(logs[0].work_date);
-            if (Math.abs(weekStart - firstLog) > 1000 * 60 * 60 * 24 * 45) {
+        if (logs && logs.length > 0 && logs[0].work_date) {
+            const firstLog = safeParse(logs[0].work_date);
+            if (firstLog && Math.abs(weekStart - firstLog) > 1000 * 60 * 60 * 24 * 45) {
                 setWeekStart(startOfWeek(firstLog, { weekStartsOn: 1 }));
                 setFetchedLogs([]);
             }
@@ -50,14 +71,15 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
 
     useEffect(() => {
         const checkAndFetch = async () => {
-            if (!employeeId) return;
-            const startStr = format(weekStart, 'yyyy-MM-dd');
-            const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+            if (!employeeId || !isValidDate(weekStart)) return;
+            const startStr = safeFormat(weekStart, 'yyyy-MM-dd');
+            const endStr = safeFormat(addDays(weekStart, 6), 'yyyy-MM-dd');
+            if (startStr === '-' || endStr === '-') return;
             let needsFetch = false;
             if (logs && logs.length > 0) {
-                const logsMin = new Date(logs[0].work_date);
-                const logsMax = new Date(logs[logs.length - 1].work_date);
-                if (addDays(weekStart, 6) < logsMin || weekStart > logsMax) needsFetch = true;
+                const logsMin = safeParse(logs[0].work_date);
+                const logsMax = safeParse(logs[logs.length - 1].work_date);
+                if (logsMin && logsMax && (addDays(weekStart, 6) < logsMin || weekStart > logsMax)) needsFetch = true;
             } else {
                 needsFetch = true;
             }
@@ -80,9 +102,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
 
     useEffect(() => {
         const fetchTargets = async () => {
-            if (!employeeId) return;
-            const startStr = format(weekStart, 'yyyy-MM-dd');
-            const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+            if (!employeeId || !isValidDate(weekStart)) return;
+            const startStr = safeFormat(weekStart, 'yyyy-MM-dd');
+            const endStr = safeFormat(addDays(weekStart, 6), 'yyyy-MM-dd');
+            if (startStr === '-' || endStr === '-') return;
             try {
                 const res = await api.get(`/attendance/daily-targets/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`);
                 const targetMap = {};
@@ -96,10 +119,12 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
     }, [weekStart, employeeId]);
 
     const data = useMemo(() => {
+        if (!isValidDate(weekStart)) return [];
         const days = [];
         for (let i = 0; i < 7; i++) {
             const d = addDays(weekStart, i);
-            const dateStr = format(d, 'yyyy-MM-dd');
+            const dateStr = safeFormat(d, 'yyyy-MM-dd');
+            if (dateStr === '-') continue;
             const dayLogs = allLogs.filter(l => l.work_date === dateStr);
 
             const totalNormal = dayLogs.reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
@@ -117,8 +142,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
 
             days.push({
                 date: dateStr,
-                name: format(d, 'EEE', { locale: tr }),
-                fullDate: format(d, 'd MMM yyyy', { locale: tr }),
+                name: safeFormat(d, 'EEE', { locale: tr }),
+                fullDate: safeFormat(d, 'd MMM yyyy', { locale: tr }),
                 normal: isLeaveDay ? 0 : parseFloat((totalNormal / 3600).toFixed(1)),
                 leave: isLeaveDay ? parseFloat((totalNormal / 3600).toFixed(1)) : 0,
                 ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
@@ -138,7 +163,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             {loading && <div className="absolute top-2 right-12 text-xs text-indigo-500 font-bold animate-pulse">Veri yükleniyor...</div>}
             <div className="flex justify-between items-center mb-4 px-2">
                 <span className="text-xs font-bold text-slate-500">
-                    {format(weekStart, 'd MMM', { locale: tr })} - {format(addDays(weekStart, 6), 'd MMM', { locale: tr })}
+                    {safeFormat(weekStart, 'd MMM', { locale: tr })} - {safeFormat(addDays(weekStart, 6), 'd MMM', { locale: tr })}
                 </span>
                 <div className="flex bg-slate-100 rounded-lg p-0.5 gap-1">
                     <button onClick={() => setWeekStart(d => addDays(d, -7))} className="p-1 hover:bg-white rounded shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"><ChevronLeft size={16} /></button>

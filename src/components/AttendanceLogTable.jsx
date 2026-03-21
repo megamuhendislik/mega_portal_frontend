@@ -4,12 +4,20 @@ import { LeaveBadge } from '../pages/attendance-tracking/AttendanceComponents';
 
 const formatTime = (isoString) => {
     if (!isoString) return '-';
-    return new Date(isoString).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
+    try {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
+    } catch { return '-'; }
 };
 
 const formatDate = (isoString) => {
     if (!isoString) return '-';
-    return new Date(isoString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', timeZone: 'Europe/Istanbul' });
+    try {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', timeZone: 'Europe/Istanbul' });
+    } catch { return '-'; }
 };
 
 // --- RecordTypeBadge ---

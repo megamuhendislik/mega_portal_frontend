@@ -6,9 +6,6 @@ import {
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AttendanceLogTable from '../components/AttendanceLogTable';
-import WeeklyAttendanceChart from '../components/WeeklyAttendanceChart';
-
-
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import HeroDailySummary from '../components/HeroDailySummary';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
