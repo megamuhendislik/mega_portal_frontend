@@ -535,6 +535,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 { key: 'CARDLESS_ENTRY', label: 'Kartsız' },
                 { key: 'HEALTH_REPORT', label: 'Sağlık R.' },
                 { key: 'HOSPITAL_VISIT', label: 'Hastane' },
+                { key: 'SPECIAL_LEAVE', label: 'Özel İzin' },
             ];
 
     // Approve/reject handler wrapper

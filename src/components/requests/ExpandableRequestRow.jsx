@@ -2,7 +2,7 @@ import React from 'react';
 import {
     ChevronDown, ChevronRight, Clock, FileText, Utensils,
     CreditCard, CheckCircle2, XCircle, AlertCircle, User, ArrowRight,
-    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield
+    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield, CalendarHeart
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
 
@@ -62,6 +62,7 @@ const getTypeIcon = (type) => {
         case 'CARDLESS_ENTRY': return <CreditCard size={16} className="text-purple-600" />;
         case 'HEALTH_REPORT': return <HeartPulse size={16} className="text-red-600" />;
         case 'HOSPITAL_VISIT': return <Stethoscope size={16} className="text-rose-600" />;
+        case 'SPECIAL_LEAVE': return <CalendarHeart size={16} className="text-indigo-600" />;
         default: return <FileText size={16} className="text-slate-500" />;
     }
 };
@@ -73,6 +74,7 @@ const getTypeLabel = (req) => {
     if (req.type === 'CARDLESS_ENTRY') return 'Kartsız Giriş';
     if (req.type === 'HEALTH_REPORT') return 'Sağlık Raporu';
     if (req.type === 'HOSPITAL_VISIT') return 'Hastane Ziyareti';
+    if (req.type === 'SPECIAL_LEAVE') return req.leave_type_name || 'Özel İzin';
     return 'Talep';
 };
 
@@ -83,6 +85,7 @@ const typeBgLookup = {
     CARDLESS_ENTRY: 'bg-purple-50',
     HEALTH_REPORT: 'bg-red-50',
     HOSPITAL_VISIT: 'bg-rose-50',
+    SPECIAL_LEAVE: 'bg-indigo-50',
 };
 
 // ─── Status badge config (static Tailwind classes) ────────────────────────
@@ -211,6 +214,14 @@ const TimeRange = ({ req }) => {
             </span>
         );
     }
+    if (req.type === 'SPECIAL_LEAVE') {
+        const days = req.total_days || 1;
+        return (
+            <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                {days} gün
+            </span>
+        );
+    }
     if (req.type === 'MEAL') {
         return <span className="text-xs text-slate-300">&mdash;</span>;
     }
@@ -260,6 +271,10 @@ const DurationCell = ({ req }) => {
     if ((req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT') && !req.start_time) {
         return <span className="text-xs font-bold text-red-600">Tam Gün</span>;
     }
+    if (req.type === 'SPECIAL_LEAVE') {
+        const days = req.total_days || 1;
+        return <span className="text-xs font-bold text-indigo-700">{days} Gün</span>;
+    }
     return <span className="text-xs text-slate-400">-</span>;
 };
 
@@ -284,7 +299,8 @@ const ExpandableRequestRow = ({
     const isPending = req.status === 'PENDING';
     const colCount = 7 + (showEmployeeColumn ? 1 : 0) + (mode === 'incoming' ? 1 : 0);
     const isHealthType = req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT';
-    const isReadOnlyType = isHealthType || req.type === 'MEAL';
+    const isSpecialLeave = req.type === 'SPECIAL_LEAVE';
+    const isReadOnlyType = isHealthType || isSpecialLeave || req.type === 'MEAL';
 
     return (
         <>
@@ -466,9 +482,13 @@ const ExpandableRequestRow = ({
                             </button>
                         )}
 
-                        {/* Sağlık raporu / yemek: bilgi badge */}
+                        {/* Sağlık raporu / yemek / özel izin: bilgi badge */}
                         {mode === 'incoming' && isReadOnlyType && (
-                            <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap">
+                            <span className={`px-2 py-1 border rounded-lg text-[10px] font-bold whitespace-nowrap ${
+                                isSpecialLeave
+                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                            }`}>
                                 {req.type === 'MEAL' ? 'Bilgi amaçlı' : 'Muhasebe onayı'}
                             </span>
                         )}

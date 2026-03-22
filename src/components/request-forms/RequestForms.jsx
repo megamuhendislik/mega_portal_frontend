@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
+import { DatePicker, ConfigProvider } from 'antd';
+import dayjs from 'dayjs';
+import 'dayjs/locale/tr';
+import trTR from 'antd/locale/tr_TR';
+
+dayjs.locale('tr');
 
 // ============================================================
 // LeaveRequestForm
@@ -538,27 +544,91 @@ export const LeaveRequestForm = ({
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
-                        <input
-                            required
-                            type="date"
-                            value={leaveForm.start_date}
-                            onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih Aralığı <span className="text-red-500">*</span></label>
+                    <ConfigProvider locale={trTR}>
+                        <DatePicker.RangePicker
+                            value={
+                                leaveForm.start_date && leaveForm.end_date
+                                    ? [dayjs(leaveForm.start_date), dayjs(leaveForm.end_date)]
+                                    : leaveForm.start_date
+                                        ? [dayjs(leaveForm.start_date), null]
+                                        : null
+                            }
+                            onChange={(dates) => {
+                                if (dates && dates[0] && dates[1]) {
+                                    setLeaveForm({
+                                        ...leaveForm,
+                                        start_date: dates[0].format('YYYY-MM-DD'),
+                                        end_date: dates[1].format('YYYY-MM-DD'),
+                                    });
+                                } else {
+                                    setLeaveForm({ ...leaveForm, start_date: '', end_date: '' });
+                                }
+                            }}
+                            placeholder={['Başlangıç', 'Bitiş']}
+                            format="DD.MM.YYYY"
+                            size="large"
+                            style={{ width: '100%' }}
+                            className="leave-range-picker"
+                            cellRender={(current, info) => {
+                                if (info.type !== 'date') return info.originNode;
+                                const dateStr = current.format('YYYY-MM-DD');
+                                const dayOfWeek = current.day();
+                                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+                                // Check if this date falls within any existing leave
+                                const matchingLeave = recentLeaveHistory?.find(h =>
+                                    ['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status) &&
+                                    h.start_date <= dateStr && h.end_date >= dateStr
+                                );
+
+                                const dotColor = matchingLeave
+                                    ? matchingLeave.status === 'APPROVED' ? '#10b981'
+                                    : matchingLeave.status === 'PENDING' ? '#f59e0b'
+                                    : '#6366f1'
+                                    : null;
+
+                                return (
+                                    <div
+                                        className="ant-picker-cell-inner"
+                                        style={{
+                                            ...(isWeekend ? { backgroundColor: '#f1f5f9', borderRadius: 4 } : {}),
+                                            position: 'relative',
+                                        }}
+                                        title={matchingLeave ? `${matchingLeave.leave_type_name || 'İzin'} (${matchingLeave.status === 'APPROVED' ? 'Onaylı' : 'Bekliyor'})` : undefined}
+                                    >
+                                        {current.date()}
+                                        {dotColor && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                bottom: 2,
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                width: 5,
+                                                height: 5,
+                                                borderRadius: '50%',
+                                                backgroundColor: dotColor,
+                                            }} />
+                                        )}
+                                    </div>
+                                );
+                            }}
                         />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş <span className="text-red-500">*</span></label>
-                        <input
-                            required
-                            type="date"
-                            value={leaveForm.end_date}
-                            onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                        />
-                    </div>
+                    </ConfigProvider>
+                    {recentLeaveHistory?.length > 0 && (
+                        <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
+                            <span className="flex items-center gap-1">
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} /> Onaylı
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} /> Bekliyor
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#f1f5f9', display: 'inline-block', border: '1px solid #cbd5e1' }} /> Hafta sonu
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 

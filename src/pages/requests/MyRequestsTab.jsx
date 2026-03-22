@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info
+    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info, FileText
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import api from '../../services/api';
@@ -18,6 +18,7 @@ const filterChipColors = {
     purple:  { bg50: 'bg-purple-50',  text700: 'text-purple-700',  ring200: 'ring-purple-200',  text600: 'text-purple-600' },
     red:     { bg50: 'bg-red-50',     text700: 'text-red-700',     ring200: 'ring-red-200',     text600: 'text-red-600' },
     slate:   { bg50: 'bg-slate-50',   text700: 'text-slate-700',   ring200: 'ring-slate-200',   text600: 'text-slate-600' },
+    indigo:  { bg50: 'bg-indigo-50',  text700: 'text-indigo-700',  ring200: 'ring-indigo-200',  text600: 'text-indigo-600' },
 };
 
 const FilterChip = ({ active, onClick, label, icon, count, color = 'blue' }) => {
@@ -70,6 +71,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [mealRequests, setMealRequests] = useState([]);
     const [cardlessEntryRequests, setCardlessEntryRequests] = useState([]);
     const [healthReports, setHealthReports] = useState([]);
+    const [specialLeaves, setSpecialLeaves] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [birthdayBalance, setBirthdayBalance] = useState(null);
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
@@ -110,9 +112,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 api.get('/cardless-entry-requests/'),
                 api.get('/health-reports/'),
                 api.get('/leave-requests/birthday-balance/'),
+                api.get('/special-leaves/'),
             ]);
 
-            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes, birthdayRes] = results;
+            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes, birthdayRes, specialLeavesRes] = results;
 
             if (meRes.status === 'fulfilled') {
                 const me = meRes.value.data;
@@ -142,6 +145,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             }
             if (birthdayRes.status === 'fulfilled') {
                 setBirthdayBalance(birthdayRes.value.data);
+            }
+            if (specialLeavesRes.status === 'fulfilled') {
+                setSpecialLeaves(specialLeavesRes.value.data.results || specialLeavesRes.value.data);
             }
         } catch (e) {
             console.error('MyRequestsTab fetchData error:', e);
@@ -291,9 +297,22 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
             approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
         }));
+        specialLeaves.filter(isMyRequest).forEach(r => items.push({
+            ...r, ...myInfo,
+            _type: 'SPECIAL_LEAVE',
+            type: 'SPECIAL_LEAVE',
+            _sortDate: r.created_at || r.start_date,
+            _displayDate: r.start_date,
+            type_label: `Özel İzin - ${r.leave_type_display || r.leave_type}`,
+            start_date: r.start_date,
+            end_date: r.end_date,
+            status: r.status,
+            reason: r.description || r.reason || '',
+            total_days: r.total_days,
+        }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
         return items;
-    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, healthReports, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
+    }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, healthReports, specialLeaves, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
@@ -338,6 +357,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             cardless: actual.filter(r => r._type === 'CARDLESS_ENTRY').length,
             health_report: actual.filter(r => r._type === 'HEALTH_REPORT').length,
             hospital_visit: actual.filter(r => r._type === 'HOSPITAL_VISIT').length,
+            special_leave: actual.filter(r => r._type === 'SPECIAL_LEAVE').length,
             pending: actual.filter(r => r.status === 'PENDING').length,
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => r.status === 'REJECTED').length,
@@ -433,6 +453,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />
                     <FilterChip active={typeFilter === 'HEALTH_REPORT'} onClick={() => setTypeFilter(typeFilter === 'HEALTH_REPORT' ? 'ALL' : 'HEALTH_REPORT')} label="Sağlık Raporu" icon={<HeartPulse size={14} />} count={counts.health_report} color="red" />
                     <FilterChip active={typeFilter === 'HOSPITAL_VISIT'} onClick={() => setTypeFilter(typeFilter === 'HOSPITAL_VISIT' ? 'ALL' : 'HOSPITAL_VISIT')} label="Hastane Ziyareti" icon={<Stethoscope size={14} />} count={counts.hospital_visit} color="red" />
+                    <FilterChip active={typeFilter === 'SPECIAL_LEAVE'} onClick={() => setTypeFilter(typeFilter === 'SPECIAL_LEAVE' ? 'ALL' : 'SPECIAL_LEAVE')} label="Özel İzin" icon={<FileText size={14} />} count={counts.special_leave} color="indigo" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <FilterChip active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} label="Tümü" color="slate" />
