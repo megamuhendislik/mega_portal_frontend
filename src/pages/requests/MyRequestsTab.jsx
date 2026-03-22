@@ -304,6 +304,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             _sortDate: r.created_at || r.start_date,
             _displayDate: r.start_date,
             type_label: `Özel İzin - ${r.leave_type_display || r.leave_type}`,
+            leave_type_name: `Özel İzin - ${r.leave_type_display || r.leave_type}`,
             start_date: r.start_date,
             end_date: r.end_date,
             status: r.status,
