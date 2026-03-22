@@ -166,6 +166,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Excuse leave balance
     const [excuseBalance, setExcuseBalance] = useState(null);
 
+    // Special leave (Özel İzin) state
+    const [specialLeaveType, setSpecialLeaveType] = useState('');
+    const [specialLeaveForm, setSpecialLeaveForm] = useState({ start_date: '', end_date: '', description: '' });
+    const [specialLeaveFiles, setSpecialLeaveFiles] = useState([]);
+
     useEffect(() => {
         if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
             setCardlessSchedule(null);
