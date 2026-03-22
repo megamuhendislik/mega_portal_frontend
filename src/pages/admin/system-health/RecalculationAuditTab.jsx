@@ -100,10 +100,13 @@ export default function RecalculationAuditTab() {
 
     const runUnifiedAudit = async (fix = false) => {
         if (fix && !window.confirm(
-            'Birlesik Denetim (FIX modu)\n\n' +
-            'Faz 1: Talep sorunlarini duzeltir (fragment, duplikat, yanlis saat)\n' +
-            'Faz 2: PDKS dogrulama raporu\n' +
-            'Faz 3: Butunluk kontrolu\n\n' +
+            'Kesin Hatalari Duzelt\n\n' +
+            'Sadece kesin hesaplama hatalarini duzeltir:\n' +
+            '- Split yanlis noktada bolunmus -> dogru noktada yeniden bol\n' +
+            '- Fragment/duplikat talepler -> birlestir\n' +
+            '- Izin cift sayim -> recalculate\n' +
+            '- Aylik ozetler -> cascade guncelle\n\n' +
+            'PDKS uyumsuzluklarina (saha/evden calisma) DOKUNMAZ.\n' +
             'Devam etmek istiyor musunuz?'
         )) return;
 
@@ -738,7 +741,7 @@ export default function RecalculationAuditTab() {
                                     }`}
                                 >
                                     <WrenchScrewdriverIcon className="w-4 h-4" />
-                                    {uniFixing ? 'Duzeltiliyor...' : 'Tumunu Duzelt'}
+                                    {uniFixing ? 'Duzeltiliyor...' : 'Kesin Hatalari Duzelt'}
                                 </button>
                             )}
                             <button
