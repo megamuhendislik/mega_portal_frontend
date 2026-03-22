@@ -458,12 +458,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 const s = searchText.toLowerCase();
                 if (!r.employee_name?.toLowerCase().includes(s)) return false;
             }
-            // Date range filter
-            if (dateFrom) {
+            // Date range filter (SPECIAL_LEAVE with PENDING status bypasses — manager should always see pending special leaves)
+            const skipDateFilter = r.type === 'SPECIAL_LEAVE' && r.status === 'PENDING';
+            if (!skipDateFilter && dateFrom) {
                 const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
                 if (reqDateStr && reqDateStr < dateFrom) return false;
             }
-            if (dateTo) {
+            if (!skipDateFilter && dateTo) {
                 const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
                 if (reqDateStr && reqDateStr > dateTo) return false;
             }
@@ -494,11 +495,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 const s = searchText.toLowerCase();
                 if (!r.employee_name?.toLowerCase().includes(s)) return false;
             }
-            if (dateFrom) {
+            const skipDateFilter2 = r.type === 'SPECIAL_LEAVE' && r.status === 'PENDING';
+            if (!skipDateFilter2 && dateFrom) {
                 const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
                 if (reqDateStr && reqDateStr < dateFrom) return false;
             }
-            if (dateTo) {
+            if (!skipDateFilter2 && dateTo) {
                 const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
                 if (reqDateStr && reqDateStr > dateTo) return false;
             }
