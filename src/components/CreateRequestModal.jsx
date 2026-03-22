@@ -342,13 +342,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         fetchEntitlement();
     }, [selectedType]);
 
-    // Fetch recent leave history
+    // Fetch recent leave history (active requests for overlap detection + display)
     useEffect(() => {
         if (selectedType === 'LEAVE') {
-            api.get('/leave/requests/my_requests/')
+            api.get('/leave/requests/my_requests/?page_size=50')
                 .then(res => {
                     const data = res.data?.results || res.data || [];
-                    setRecentLeaveHistory(data.slice(0, 5));
+                    // Keep all PENDING/APPROVED for overlap check, show last 5 in history
+                    setRecentLeaveHistory(data.filter(h => ['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status)).slice(0, 20));
                 })
                 .catch(() => setRecentLeaveHistory([]));
         } else {

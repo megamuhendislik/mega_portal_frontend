@@ -32,6 +32,17 @@ export const LeaveRequestForm = ({
     const isBirthdayLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'BIRTHDAY_LEAVE';
     const isInsufficient = isSpecialLeave ? false : isInsufficientBalance;
 
+    // Proactive overlap detection
+    const conflictingLeaves = React.useMemo(() => {
+        if (!recentLeaveHistory?.length || !leaveForm.start_date) return [];
+        const reqStart = leaveForm.start_date;
+        const reqEnd = leaveForm.end_date || leaveForm.start_date;
+        return recentLeaveHistory.filter(h =>
+            ['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status) &&
+            h.start_date <= reqEnd && h.end_date >= reqStart
+        );
+    }, [recentLeaveHistory, leaveForm.start_date, leaveForm.end_date]);
+
     return (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
             {/* Balance Info Box */}
@@ -270,10 +281,10 @@ export const LeaveRequestForm = ({
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <h4 className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
                         <Clock size={12} />
-                        Son İzin Talepleriniz
+                        Aktif İzin Talepleriniz ({recentLeaveHistory.length})
                     </h4>
                     <div className="space-y-1.5">
-                        {recentLeaveHistory.map((h, i) => (
+                        {recentLeaveHistory.slice(0, 5).map((h, i) => (
                             <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -551,6 +562,36 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
+            {/* Overlap Warning */}
+            {conflictingLeaves.length > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <AlertCircle size={16} className="text-red-600 shrink-0" />
+                        <span className="text-sm font-bold text-red-700">Tarih Çakışması!</span>
+                    </div>
+                    <p className="text-xs text-red-600 mb-2">Seçtiğiniz tarih aralığında mevcut izin talepleriniz var:</p>
+                    <div className="space-y-1">
+                        {conflictingLeaves.map((h, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-white/70 p-2 rounded-lg">
+                                <span className="font-medium text-slate-700">{h.leave_type_name || h.request_type_detail?.name || 'İzin'}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-500">
+                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }) : ''}
+                                        {h.end_date && h.end_date !== h.start_date ? ` - ${new Date(h.end_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}` : ''}
+                                    </span>
+                                    <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+                                        h.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                                        h.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        {h.status === 'APPROVED' ? 'Onaylı' : h.status === 'PENDING' ? 'Bekliyor' : h.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Duration Display */}
             {leaveForm.start_date && leaveForm.end_date && (
                 <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
@@ -587,38 +628,42 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
-                <textarea
-                    required
-                    rows="3"
-                    value={leaveForm.reason}
-                    onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none font-medium text-slate-700"
-                    placeholder="İzin gerekçenizi detaylıca belirtiniz..."
-                ></textarea>
-            </div>
+            {!isSpecialLeave && (
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                    <textarea
+                        required
+                        rows="3"
+                        value={leaveForm.reason}
+                        onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none font-medium text-slate-700"
+                        placeholder="İzin gerekçenizi detaylıca belirtiniz..."
+                    ></textarea>
+                </div>
+            )}
 
-            <div className="grid grid-cols-2 gap-5">
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer</label>
-                    <input
-                        value={leaveForm.destination}
-                        onChange={e => setLeaveForm({ ...leaveForm, destination: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                        placeholder="Opsiyonel"
-                    />
+            {!isSpecialLeave && !isBirthdayLeave && !isExcuseLeave && (
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer</label>
+                        <input
+                            value={leaveForm.destination}
+                            onChange={e => setLeaveForm({ ...leaveForm, destination: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                            placeholder="Opsiyonel"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
+                        <input
+                            value={leaveForm.contact_phone}
+                            onChange={e => setLeaveForm({ ...leaveForm, contact_phone: e.target.value })}
+                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                            placeholder="Opsiyonel"
+                        />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
-                    <input
-                        value={leaveForm.contact_phone}
-                        onChange={e => setLeaveForm({ ...leaveForm, contact_phone: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                        placeholder="Opsiyonel"
-                    />
-                </div>
-            </div>
+            )}
 
 
             {!isSpecialLeave && approverDropdown}
