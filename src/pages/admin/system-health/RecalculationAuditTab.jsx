@@ -131,6 +131,25 @@ export default function RecalculationAuditTab() {
         }
     };
 
+    const downloadFrcLog = async () => {
+        try {
+            const body = { date_from: startDate, date_to: endDate, mode: 'dry_run', download: true };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/full-recalculation/', body, {
+                responseType: 'blob',
+                timeout: 600000,
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tam_yeniden_hesaplama_${startDate}_${endDate}.txt`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Log indirme hatasi: ' + (e.message || 'Bilinmeyen hata'));
+        }
+    };
+
     const toggleFrcEmp = (id) => {
         setFrcExpandedEmps(prev => {
             const next = new Set(prev);
@@ -971,16 +990,25 @@ export default function RecalculationAuditTab() {
                                 </p>
                             </div>
                         </div>
-                        {frcResult.mode === 'dry_run' && frcResult.summary?.total_employees_changed > 0 && (
+                        <div className="flex gap-2">
+                            {frcResult.mode === 'dry_run' && frcResult.summary?.total_employees_changed > 0 && (
+                                <button
+                                    onClick={() => runFullRecalculation('apply')}
+                                    disabled={frcLoading}
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
+                                >
+                                    <WrenchScrewdriverIcon className="w-4 h-4" />
+                                    Onayla ve Uygula
+                                </button>
+                            )}
                             <button
-                                onClick={() => runFullRecalculation('apply')}
-                                disabled={frcLoading}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
+                                onClick={downloadFrcLog}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-violet-700 bg-violet-50 border border-violet-300 hover:bg-violet-100 active:scale-95 transition-all"
                             >
-                                <WrenchScrewdriverIcon className="w-4 h-4" />
-                                Onayla ve Uygula
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                TXT Indir
                             </button>
-                        )}
+                        </div>
                         {frcResult.mode === 'apply' && (
                             <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
                                 <CheckCircleIcon className="w-5 h-5" />
