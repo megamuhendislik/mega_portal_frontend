@@ -60,6 +60,13 @@ export default function RecalculationAuditTab() {
     const [uniLogLoading, setUniLogLoading] = useState(false);
     const [showUniLog, setShowUniLog] = useState(false);
 
+    // Full recalculation state
+    const [frcLoading, setFrcLoading] = useState(false);
+    const [frcResult, setFrcResult] = useState(null);
+    const [frcError, setFrcError] = useState(null);
+    const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
+    const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
+
     const fetchUnifiedLogText = async () => {
         if (uniLogText) { setShowUniLog(!showUniLog); return; }
         setUniLogLoading(true);
@@ -96,6 +103,48 @@ export default function RecalculationAuditTab() {
         } catch (e) {
             alert('Log indirme hatasi: ' + (e.message || 'Bilinmeyen hata'));
         }
+    };
+
+    // ── Full Recalculation ──────────────────────────────────────────
+    const runFullRecalculation = async (mode = 'dry_run') => {
+        if (mode === 'apply' && !window.confirm(
+            'DIKKAT: Tum degisiklikler kalici olarak uygulanacak!\n\n' +
+            'Dry-run raporundaki tum split duzeltmeleri, normal mesai yeniden hesaplamalari,\n' +
+            'OT ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
+            'Bu islem geri alinamaz. Devam etmek istiyor musunuz?'
+        )) return;
+
+        setFrcLoading(true);
+        setFrcError(null);
+        setFrcResult(null);
+        setFrcExpandedEmps(new Set());
+        setFrcExpandedDays(new Set());
+        try {
+            const body = { date_from: startDate, date_to: endDate, mode };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/full-recalculation/', body, { timeout: 600000 });
+            setFrcResult(res.data);
+        } catch (e) {
+            setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
+        } finally {
+            setFrcLoading(false);
+        }
+    };
+
+    const toggleFrcEmp = (id) => {
+        setFrcExpandedEmps(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleFrcDay = (key) => {
+        setFrcExpandedDays(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
     };
 
     const runUnifiedAudit = async (fix = false) => {
@@ -255,13 +304,23 @@ export default function RecalculationAuditTab() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => runUnifiedAudit(false)}
-                        disabled={isProcessing || uniLoading || uniFixing}
+                        disabled={isProcessing || uniLoading || uniFixing || frcLoading}
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
                             uniLoading || uniFixing ? 'bg-gray-400 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
                         }`}
                     >
                         <MagnifyingGlassIcon className="w-4 h-4" />
                         {uniLoading ? 'Tarama...' : uniFixing ? 'Duzeltiliyor...' : 'Hesaplama Denetimi'}
+                    </button>
+                    <button
+                        onClick={() => runFullRecalculation('dry_run')}
+                        disabled={isProcessing || uniLoading || uniFixing || frcLoading}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            frcLoading ? 'bg-gray-400 cursor-wait' : 'bg-violet-600 hover:bg-violet-700 active:scale-95'
+                        }`}
+                    >
+                        <ArrowPathIcon className="w-4 h-4" />
+                        {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
                     </button>
                 </div>
             </div>
@@ -876,6 +935,264 @@ export default function RecalculationAuditTab() {
                     )}
                 </div>
             )}
+
+            {/* ══════ Tam Yeniden Hesaplama ══════ */}
+            {frcLoading && (
+                <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                        <ArrowPathIcon className="w-8 h-8 text-violet-500 animate-spin" />
+                        <p className="text-sm text-gray-500 font-medium">
+                            Tam yeniden hesaplama yapiliyor (split + normal + OT + aylik)...
+                        </p>
+                        <p className="text-xs text-gray-400">Bu islem birkac dakika surebilir.</p>
+                    </div>
+                </div>
+            )}
+
+            {frcError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <XCircleIcon className="w-5 h-5 shrink-0" />
+                    {frcError}
+                </div>
+            )}
+
+            {frcResult && !frcLoading && (
+                <div className="space-y-6 mt-6 border-t-2 border-violet-300 pt-6">
+                    {/* Header + Apply Button */}
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                            <ArrowPathIcon className="w-6 h-6 text-violet-600" />
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">
+                                    Tam Yeniden Hesaplama Raporu
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                    {frcResult.date_range} | Mod: {frcResult.mode === 'dry_run' ? 'SIMULASYON' : 'UYGULANDI'} | Sure: {frcResult.elapsed}s
+                                </p>
+                            </div>
+                        </div>
+                        {frcResult.mode === 'dry_run' && frcResult.summary?.total_employees_changed > 0 && (
+                            <button
+                                onClick={() => runFullRecalculation('apply')}
+                                disabled={frcLoading}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
+                            >
+                                <WrenchScrewdriverIcon className="w-4 h-4" />
+                                Onayla ve Uygula
+                            </button>
+                        )}
+                        {frcResult.mode === 'apply' && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
+                                <CheckCircleIcon className="w-5 h-5" />
+                                Degisiklikler basariyla uygulandi!
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <SummaryCard
+                            icon={<MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />}
+                            label="Taranan Calisan"
+                            value={frcResult.summary?.total_employees_scanned || 0}
+                            color="gray"
+                        />
+                        <SummaryCard
+                            icon={<ExclamationTriangleIcon className="w-5 h-5 text-violet-500" />}
+                            label="Degisen Calisan"
+                            value={frcResult.summary?.total_employees_changed || 0}
+                            color={frcResult.summary?.total_employees_changed > 0 ? 'purple' : 'green'}
+                        />
+                        <SummaryCard
+                            icon={<ClockIcon className="w-5 h-5 text-amber-500" />}
+                            label="Degisen Gun"
+                            value={frcResult.summary?.total_days_changed || 0}
+                            color={frcResult.summary?.total_days_changed > 0 ? 'amber' : 'green'}
+                        />
+                        <SummaryCard
+                            icon={<WrenchScrewdriverIcon className="w-5 h-5 text-orange-500" />}
+                            label="Split Duzeltme"
+                            value={frcResult.summary?.split_fixes || 0}
+                            color={frcResult.summary?.split_fixes > 0 ? 'red' : 'green'}
+                        />
+                    </div>
+
+                    {/* Global Diff Summary */}
+                    {(frcResult.summary?.normal_diff || frcResult.summary?.ot_diff || frcResult.summary?.missing_diff) ? (
+                        <div className="flex flex-wrap gap-4 p-3 bg-violet-50 border border-violet-200 rounded-lg text-sm">
+                            <span className="font-bold text-violet-800">Toplam Fark:</span>
+                            {frcResult.summary.normal_diff !== 0 && (
+                                <span className={frcResult.summary.normal_diff > 0 ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>
+                                    Normal: {frcResult.summary.normal_diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(frcResult.summary.normal_diff))}
+                                </span>
+                            )}
+                            {frcResult.summary.ot_diff !== 0 && (
+                                <span className={frcResult.summary.ot_diff > 0 ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>
+                                    Mesai: {frcResult.summary.ot_diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(frcResult.summary.ot_diff))}
+                                </span>
+                            )}
+                            {frcResult.summary.missing_diff !== 0 && (
+                                <span className={frcResult.summary.missing_diff < 0 ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>
+                                    Eksik: {frcResult.summary.missing_diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(frcResult.summary.missing_diff))}
+                                </span>
+                            )}
+                        </div>
+                    ) : null}
+
+                    {/* No changes */}
+                    {frcResult.summary?.total_employees_changed === 0 && (
+                        <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-bold">
+                            <CheckCircleIcon className="w-5 h-5" />
+                            Tum hesaplamalar dogru — degisiklik gerekmiyor!
+                        </div>
+                    )}
+
+                    {/* Employee List */}
+                    {frcResult.employees?.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-bold text-gray-800">
+                                Degisen Calisanlar ({frcResult.employees.length})
+                            </h4>
+                            {frcResult.employees.map((emp) => (
+                                <div key={emp.id} className="border border-violet-200 rounded-xl overflow-hidden">
+                                    {/* Employee Header */}
+                                    <button
+                                        onClick={() => toggleFrcEmp(emp.id)}
+                                        className="w-full flex items-center justify-between p-3 bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                                    >
+                                        <div className="flex items-center gap-3 text-xs">
+                                            <span className="font-bold text-violet-800">{emp.name}</span>
+                                            <span className="text-gray-500">{emp.dept}</span>
+                                            <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded-full text-[10px] font-bold">
+                                                {emp.cd} gun degisti
+                                            </span>
+                                        </div>
+                                        {frcExpandedEmps.has(emp.id) ?
+                                            <ChevronUpIcon className="w-4 h-4 text-gray-400" /> :
+                                            <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                                        }
+                                    </button>
+
+                                    {/* Employee Detail */}
+                                    {frcExpandedEmps.has(emp.id) && (
+                                        <div className="p-4 space-y-4 bg-white">
+                                            {/* Days */}
+                                            {emp.days?.map((day) => {
+                                                const dayKey = `${emp.id}-${day.date}`;
+                                                return (
+                                                    <div key={day.date} className="border border-gray-200 rounded-lg overflow-hidden">
+                                                        {/* Day Header */}
+                                                        <button
+                                                            onClick={() => toggleFrcDay(dayKey)}
+                                                            className="w-full flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                                                        >
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <span className="font-bold text-gray-800">{day.date}</span>
+                                                                <span className="text-gray-500">{day.wd}</span>
+                                                                {day.rules?.off && (
+                                                                    <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[9px] font-bold">TATIL</span>
+                                                                )}
+                                                                {day.rules?.hol && (
+                                                                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold">{day.rules.hol}</span>
+                                                                )}
+                                                                <span className="text-gray-400">|</span>
+                                                                {day.ch?.map((c, ci) => (
+                                                                    <span key={ci} className="text-gray-600">{c}</span>
+                                                                ))}
+                                                            </div>
+                                                            {frcExpandedDays.has(dayKey) ?
+                                                                <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" /> :
+                                                                <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" />
+                                                            }
+                                                        </button>
+
+                                                        {/* Day Detail */}
+                                                        {frcExpandedDays.has(dayKey) && (
+                                                            <div className="p-3 space-y-3 border-t border-gray-100">
+                                                                {/* Rules */}
+                                                                <div className="flex flex-wrap gap-3 text-[11px] text-gray-600 bg-slate-50 p-2 rounded">
+                                                                    <span>Vardiya: {day.rules?.shift || '-'}</span>
+                                                                    <span>Ogle: {day.rules?.lunch || '-'}</span>
+                                                                    <span>Tolerans: {day.rules?.tol || 0}dk</span>
+                                                                    <span>Mola: {day.rules?.brk || 0}dk</span>
+                                                                </div>
+
+                                                                {/* Requests */}
+                                                                {day.reqs?.length > 0 && (
+                                                                    <div>
+                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Talepler</h6>
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {day.reqs.map((r, ri) => (
+                                                                                <span key={ri} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                                                    r.st === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                                                    r.st === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                                                                    r.st === 'POTENTIAL' ? 'bg-blue-100 text-blue-700' :
+                                                                                    r.st === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                                                                    'bg-gray-100 text-gray-700'
+                                                                                }`}>
+                                                                                    [{r.st}] {r.tp}{r.nm ? ` ${r.nm}` : ''} {r.s}-{r.e}
+                                                                                    {r.d ? ` (${fmtSeconds(r.d)})` : ''}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Before / After Tables */}
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <FrcRecordTable title="ONCE" data={day.before} color="gray" />
+                                                                    <FrcRecordTable title="SONRA" data={day.after} color="violet" />
+                                                                </div>
+
+                                                                {/* Changes */}
+                                                                {day.ch?.length > 0 && (
+                                                                    <div className="p-2 bg-amber-50 border border-amber-200 rounded">
+                                                                        <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1">Degisiklikler</h6>
+                                                                        {day.ch.map((c, ci) => (
+                                                                            <div key={ci} className="text-[11px] text-amber-800 font-mono">{c}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* Monthly Summary Diff */}
+                                            {emp.mb && emp.ma && (
+                                                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                                    <h6 className="text-[10px] font-bold text-indigo-700 uppercase mb-2">Aylik Ozet Degisiklikleri</h6>
+                                                    {Object.keys({ ...emp.mb, ...emp.ma }).sort().map((key) => {
+                                                        const b = emp.mb[key];
+                                                        const a = emp.ma[key];
+                                                        if (!b && !a) return null;
+                                                        return (
+                                                            <div key={key} className="mb-2">
+                                                                <div className="text-xs font-bold text-indigo-800 mb-1">{key}</div>
+                                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                                                    <FrcMonthlyField label="Tamamlanan" before={b?.cmp} after={a?.cmp} />
+                                                                    <FrcMonthlyField label="Mesai" before={b?.ot} after={a?.ot} />
+                                                                    <FrcMonthlyField label="Eksik" before={b?.mis} after={a?.mis} />
+                                                                    <FrcMonthlyField label="Net Bakiye" before={b?.nb} after={a?.nb} />
+                                                                    <FrcMonthlyField label="Toplam Is" before={b?.tw} after={a?.tw} />
+                                                                    <FrcMonthlyField label="Kumulatif" before={b?.cum} after={a?.cum} />
+                                                                    <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} />
+                                                                    <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -929,6 +1246,93 @@ function Row({ label, value }) {
         <div className="flex justify-between">
             <span className="text-gray-500">{label}</span>
             <span className="font-medium text-gray-700">{value}</span>
+        </div>
+    );
+}
+
+// ─── Full Recalculation Sub-components ──────────────────────────────────────
+
+const SRC_COLORS = {
+    CARD: 'bg-blue-100 text-blue-700',
+    SPLIT: 'bg-orange-100 text-orange-700',
+    AUTO_SPLIT: 'bg-amber-100 text-amber-700',
+    DUTY: 'bg-green-100 text-green-700',
+    MANUAL: 'bg-purple-100 text-purple-700',
+    MANUAL_OT: 'bg-pink-100 text-pink-700',
+    HEALTH_REPORT: 'bg-rose-100 text-rose-700',
+    HOSPITAL_VISIT: 'bg-red-100 text-red-700',
+    SYSTEM: 'bg-slate-100 text-slate-700',
+    SPECIAL_LEAVE: 'bg-teal-100 text-teal-700',
+};
+
+function FrcRecordTable({ title, data, color }) {
+    if (!data) return null;
+    const borderCls = color === 'violet' ? 'border-violet-200' : 'border-gray-200';
+    const bgCls = color === 'violet' ? 'bg-violet-50' : 'bg-gray-50';
+    const titleCls = color === 'violet' ? 'text-violet-700' : 'text-gray-600';
+
+    return (
+        <div className={`border ${borderCls} ${bgCls} rounded-lg overflow-hidden`}>
+            <div className={`px-2 py-1 text-[10px] font-bold uppercase ${titleCls} border-b ${borderCls}`}>
+                {title} ({data.rc || 0} kayit)
+            </div>
+            {data.recs?.length > 0 ? (
+                <table className="w-full text-[10px]">
+                    <thead>
+                        <tr className={`border-b ${borderCls} text-left text-gray-500`}>
+                            <th className="py-0.5 px-1">Giris</th>
+                            <th className="py-0.5 px-1">Cikis</th>
+                            <th className="py-0.5 px-1">Kaynak</th>
+                            <th className="py-0.5 px-1 text-right">Normal</th>
+                            <th className="py-0.5 px-1 text-right">Mesai</th>
+                            <th className="py-0.5 px-1 text-right">Eksik</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.recs.map((r, i) => (
+                            <tr key={i} className={`border-b border-gray-100 ${r.ot ? 'bg-amber-50/50' : ''}`}>
+                                <td className="py-0.5 px-1 font-mono">{r.ci || '-'}</td>
+                                <td className="py-0.5 px-1 font-mono">{r.co || '-'}</td>
+                                <td className="py-0.5 px-1">
+                                    <span className={`px-1 py-0 rounded text-[8px] font-bold ${SRC_COLORS[r.src] || 'bg-gray-100 text-gray-700'}`}>
+                                        {r.src}
+                                    </span>
+                                </td>
+                                <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.ns)}</td>
+                                <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.os)}</td>
+                                <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.ms)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            ) : (
+                <div className="p-2 text-[10px] text-gray-400 italic">Kayit yok</div>
+            )}
+            <div className={`px-2 py-1 border-t ${borderCls} text-[10px] font-bold flex justify-between`}>
+                <span>Normal: {fmtSeconds(data.tn)}</span>
+                <span>Mesai: {fmtSeconds(data.to)}</span>
+                <span>Eksik: {fmtSeconds(data.tm)}</span>
+            </div>
+        </div>
+    );
+}
+
+function FrcMonthlyField({ label, before, after }) {
+    const diff = (after || 0) - (before || 0);
+    if (before === after || (!before && !after)) return null;
+    return (
+        <div className="flex flex-col">
+            <span className="text-gray-500 text-[9px]">{label}</span>
+            <div className="flex items-center gap-1">
+                <span className="text-gray-600">{fmtSeconds(before || 0)}</span>
+                <span className="text-gray-400">&rarr;</span>
+                <span className="font-bold text-indigo-700">{fmtSeconds(after || 0)}</span>
+                {diff !== 0 && (
+                    <span className={`text-[9px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ({diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(diff))})
+                    </span>
+                )}
+            </div>
         </div>
     );
 }
