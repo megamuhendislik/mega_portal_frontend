@@ -132,23 +132,19 @@ export default function RecalculationAuditTab() {
         }
     };
 
-    const downloadFrcLog = async () => {
-        try {
-            const body = { date_from: startDate, date_to: endDate, mode: 'dry_run', download: true, show_all_days: showAllDays };
-            if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/full-recalculation/', body, {
-                responseType: 'blob',
-                timeout: 600000,
-            });
-            const url = window.URL.createObjectURL(new Blob([res.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `tam_yeniden_hesaplama_${startDate}_${endDate}.txt`;
-            link.click();
-            window.URL.revokeObjectURL(url);
-        } catch (e) {
-            alert('Log indirme hatasi: ' + (e.message || 'Bilinmeyen hata'));
+    const downloadFrcLog = () => {
+        // İkinci API çağrısı yerine mevcut sonuçtan indir (timeout sorunu çözümü)
+        if (!frcResult?.text_log) {
+            alert('Önce hesaplama çalıştırın.');
+            return;
         }
+        const blob = new Blob([frcResult.text_log], { type: 'text/plain;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `tam_yeniden_hesaplama_${startDate}_${endDate}.txt`;
+        link.click();
+        window.URL.revokeObjectURL(url);
     };
 
     const toggleFrcEmp = (id) => {
