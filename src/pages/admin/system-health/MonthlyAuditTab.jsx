@@ -1,0 +1,737 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    MagnifyingGlassIcon,
+    DocumentArrowDownIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
+    ClockIcon,
+} from '@heroicons/react/24/outline';
+import api from '../../../services/api';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtSec(s) {
+    if (s === null || s === undefined) return '-';
+    const sign = s < 0 ? '-' : '';
+    const abs = Math.abs(s);
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    return `${sign}${h}:${m.toString().padStart(2, '0')}`;
+}
+
+function fmtSecReadable(s) {
+    if (s === null || s === undefined) return '-';
+    const sign = s < 0 ? '-' : '';
+    const abs = Math.abs(s);
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    if (h > 0 && m > 0) return `${sign}${h} sa ${m} dk`;
+    if (h > 0) return `${sign}${h} sa`;
+    return `${sign}${m} dk`;
+}
+
+const WEEKDAY_TR = {
+    Monday: 'Pazartesi',
+    Tuesday: 'Sali',
+    Wednesday: 'Carsamba',
+    Thursday: 'Persembe',
+    Friday: 'Cuma',
+    Saturday: 'Cumartesi',
+    Sunday: 'Pazar',
+};
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+export default function MonthlyAuditTab() {
+    const [employees, setEmployees] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
+    const [expandedDays, setExpandedDays] = useState(new Set());
+    const [filterMismatch, setFilterMismatch] = useState(false);
+
+    // Fetch employees
+    useEffect(() => {
+        api.get('/employees/', { params: { page_size: 500 } }).then(r => {
+            const list = Array.isArray(r.data) ? r.data : r.data?.results || [];
+            setEmployees(list.map(e => ({
+                id: e.id,
+                name: e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                department: e.department_name || e.department?.name || '',
+            })));
+        }).catch(() => {});
+    }, []);
+
+    const filteredEmployees = employees.filter(e =>
+        e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.department.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const runAudit = async () => {
+        if (!selectedEmployee) return;
+        setLoading(true);
+        setResult(null);
+        setError(null);
+        setExpandedDays(new Set());
+        try {
+            const resp = await api.post('/system/health-check/monthly-audit/', {
+                employee_id: selectedEmployee.id, year, month
+            }, { timeout: 120000 });
+            setResult(resp.data);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Denetim basarisiz.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const downloadTxt = () => {
+        if (!result?.text_log) return;
+        const blob = new Blob([result.text_log], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit_${result.employee_id}_${result.year}_${String(result.month).padStart(2, '0')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const toggleDay = (date) => {
+        setExpandedDays(prev => {
+            const next = new Set(prev);
+            if (next.has(date)) next.delete(date);
+            else next.add(date);
+            return next;
+        });
+    };
+
+    const expandAll = () => {
+        if (!result?.daily_logs) return;
+        setExpandedDays(new Set(result.daily_logs.map(d => d.date)));
+    };
+    const collapseAll = () => setExpandedDays(new Set());
+
+    const displayDays = result?.daily_logs
+        ? (filterMismatch ? result.daily_logs.filter(d => d.has_mismatch) : result.daily_logs)
+        : [];
+
+    // ─── Summary Card ────────────────────────────────────────────────────────
+
+    const SummaryCard = ({ title, data, compareData, color }) => {
+        const fields = [
+            { key: 'target_seconds', label: 'Hedef' },
+            { key: 'completed_seconds', label: 'Tamamlanan' },
+            { key: 'overtime_seconds', label: 'Fazla Mesai' },
+            { key: 'missing_seconds', label: 'Eksik' },
+            { key: 'total_work_seconds', label: 'Toplam Calisma' },
+            { key: 'net_balance_seconds', label: 'Net Bakiye' },
+            { key: 'leave_days', label: 'Izin Gunu' },
+            { key: 'leave_seconds', label: 'Izin Suresi' },
+            { key: 'health_report_days', label: 'Rapor Gunu' },
+            { key: 'health_report_seconds', label: 'Rapor Suresi' },
+            { key: 'hospital_visit_count', label: 'Hastane Ziyareti' },
+            { key: 'special_leave_days', label: 'Ozel Izin Gunu' },
+            { key: 'total_break_seconds', label: 'Toplam Mola' },
+            { key: 'worked_days', label: 'Calisan Gun' },
+        ];
+
+        if (data?.error) {
+            return (
+                <div className={`rounded-xl border p-5 ${color === 'blue' ? 'border-blue-200 bg-blue-50/50' : 'border-emerald-200 bg-emerald-50/50'}`}>
+                    <h4 className={`font-bold text-sm mb-3 ${color === 'blue' ? 'text-blue-800' : 'text-emerald-800'}`}>{title}</h4>
+                    <p className="text-sm text-red-600">{data.error}</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className={`rounded-xl border p-5 ${color === 'blue' ? 'border-blue-200 bg-blue-50/50' : 'border-emerald-200 bg-emerald-50/50'}`}>
+                <h4 className={`font-bold text-sm mb-3 ${color === 'blue' ? 'text-blue-800' : 'text-emerald-800'}`}>{title}</h4>
+                <div className="space-y-1.5">
+                    {fields.map(f => {
+                        if (data?.[f.key] === undefined) return null;
+                        const val = data[f.key];
+                        const compareVal = compareData?.[f.key];
+                        const isSec = f.key.includes('seconds');
+                        const hasMismatch = compareVal !== undefined && isSec && Math.abs((val || 0) - (compareVal || 0)) > 60;
+                        return (
+                            <div
+                                key={f.key}
+                                className={`flex justify-between text-xs py-1 px-2 rounded ${hasMismatch ? 'bg-red-100 text-red-800 font-semibold' : ''}`}
+                            >
+                                <span className="text-gray-600">{f.label}</span>
+                                <span className="font-mono font-medium">
+                                    {isSec ? fmtSecReadable(val) : val}
+                                    {isSec && <span className="text-gray-400 ml-1">({val}s)</span>}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    // ─── Render ──────────────────────────────────────────────────────────────
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <ClockIcon className="w-6 h-6 text-indigo-600" />
+                <div>
+                    <h3 className="text-lg font-bold text-gray-800">Aylik Hesap Denetimi</h3>
+                    <p className="text-xs text-gray-500">
+                        MonthlyWorkSummary ile gunluk hesaplama karsilastirmasi
+                    </p>
+                </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                {/* Employee Search */}
+                <div className="relative flex-1 min-w-[240px]">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Calisan</label>
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            value={selectedEmployee ? selectedEmployee.name : searchTerm}
+                            onChange={e => {
+                                setSearchTerm(e.target.value);
+                                setSelectedEmployee(null);
+                                setShowDropdown(true);
+                            }}
+                            onFocus={() => setShowDropdown(true)}
+                            placeholder="Calisan ara..."
+                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        />
+                        {selectedEmployee && (
+                            <button
+                                onClick={() => { setSelectedEmployee(null); setSearchTerm(''); }}
+                                className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                            >
+                                &times;
+                            </button>
+                        )}
+                    </div>
+                    {showDropdown && !selectedEmployee && searchTerm.length >= 1 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {filteredEmployees.length === 0 ? (
+                                <div className="px-4 py-3 text-sm text-gray-400">Sonuc bulunamadi</div>
+                            ) : (
+                                filteredEmployees.slice(0, 20).map(emp => (
+                                    <button
+                                        key={emp.id}
+                                        onClick={() => {
+                                            setSelectedEmployee(emp);
+                                            setSearchTerm('');
+                                            setShowDropdown(false);
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm transition-colors"
+                                    >
+                                        <span className="font-medium text-gray-800">{emp.name}</span>
+                                        {emp.department && (
+                                            <span className="ml-2 text-xs text-gray-400">({emp.department})</span>
+                                        )}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Year */}
+                <div className="w-24">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Yil</label>
+                    <input
+                        type="number"
+                        value={year}
+                        onChange={e => setYear(parseInt(e.target.value) || 2026)}
+                        min={2024}
+                        max={2030}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                </div>
+
+                {/* Month */}
+                <div className="w-24">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Ay</label>
+                    <select
+                        value={month}
+                        onChange={e => setMonth(parseInt(e.target.value))}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                            <option key={m} value={m}>
+                                {['Ocak','Subat','Mart','Nisan','Mayis','Haziran','Temmuz','Agustos','Eylul','Ekim','Kasim','Aralik'][m-1]}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Run Button */}
+                <button
+                    onClick={runAudit}
+                    disabled={!selectedEmployee || loading}
+                    className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                    {loading ? (
+                        <>
+                            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Denetleniyor...
+                        </>
+                    ) : (
+                        <>
+                            <MagnifyingGlassIcon className="w-4 h-4" />
+                            Denetle
+                        </>
+                    )}
+                </button>
+            </div>
+
+            {/* Error */}
+            {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                    <ExclamationTriangleIcon className="w-5 h-5" />
+                    {error}
+                </div>
+            )}
+
+            {/* Results */}
+            {result && !result.error && (
+                <div className="space-y-6">
+                    {/* Top Info Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="text-sm text-gray-700">
+                            <span className="font-semibold">{result.employee}</span>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <span>{result.period}</span>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <span>{result.total_days} gun</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={downloadTxt}
+                                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-1.5 transition-colors"
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                TXT Indir
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mismatch Banner */}
+                    {result.mismatches && result.mismatches.length > 0 ? (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                            <div className="flex items-center gap-2 mb-2">
+                                <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                                <span className="font-bold text-red-800 text-sm">
+                                    Ozet Uyusmazliklari ({result.mismatches.length})
+                                </span>
+                            </div>
+                            <div className="space-y-1">
+                                {result.mismatches.map((m, i) => (
+                                    <div key={i} className="text-xs text-red-700 font-mono pl-7">{m}</div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                            <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                            <span className="text-green-800 text-sm font-medium">
+                                Ozet karsilastirmasi uyumlu - uyusmazlik bulunamadi.
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <SummaryCard
+                            title="DB Durumu (MonthlyWorkSummary)"
+                            data={result.summary_db}
+                            compareData={result.summary_recalculated}
+                            color="blue"
+                        />
+                        <SummaryCard
+                            title="Hesaplanan (Recalculated)"
+                            data={result.summary_recalculated}
+                            compareData={result.summary_db}
+                            color="emerald"
+                        />
+                    </div>
+
+                    {/* Daily Mismatch Count Badge */}
+                    {result.mismatch_count > 0 && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <ExclamationTriangleIcon className="w-4 h-4 text-amber-600" />
+                            <span className="text-amber-800 font-medium">
+                                {result.mismatch_count} / {result.total_days} gunde gunluk uyusmazlik
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Daily Detail Controls */}
+                    <div className="flex items-center justify-between gap-3">
+                        <h4 className="font-bold text-gray-800 text-sm">Gunluk Detay</h4>
+                        <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={filterMismatch}
+                                    onChange={e => setFilterMismatch(e.target.checked)}
+                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Sadece uyusmazliklar
+                            </label>
+                            <button onClick={expandAll} className="text-xs text-indigo-600 hover:text-indigo-800">Tumu Ac</button>
+                            <span className="text-gray-300">|</span>
+                            <button onClick={collapseAll} className="text-xs text-indigo-600 hover:text-indigo-800">Tumu Kapat</button>
+                        </div>
+                    </div>
+
+                    {/* Daily Table */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 w-8"></th>
+                                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Tarih</th>
+                                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Gun</th>
+                                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Vardiya</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB Normal</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB OT</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB Eksik</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC Normal</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC OT</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC Eksik</th>
+                                    <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Durum</th>
+                                    <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Bilgi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {displayDays.map(day => {
+                                    const isExpanded = expandedDays.has(day.date);
+                                    const db = day.db || {};
+                                    const rc = day.recalculated || {};
+                                    const hasErr = rc.error;
+                                    return (
+                                        <React.Fragment key={day.date}>
+                                            <tr
+                                                className={`border-b border-gray-100 cursor-pointer transition-colors ${
+                                                    day.has_mismatch
+                                                        ? 'bg-red-50 hover:bg-red-100'
+                                                        : day.is_off_day
+                                                            ? 'bg-gray-50 hover:bg-gray-100'
+                                                            : 'hover:bg-gray-50'
+                                                }`}
+                                                onClick={() => toggleDay(day.date)}
+                                            >
+                                                <td className="px-3 py-2">
+                                                    {isExpanded
+                                                        ? <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" />
+                                                        : <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" />
+                                                    }
+                                                </td>
+                                                <td className="px-3 py-2 font-mono font-medium text-gray-800">{day.date}</td>
+                                                <td className="px-3 py-2 text-gray-600">
+                                                    {WEEKDAY_TR[day.weekday] || day.weekday}
+                                                    {day.is_off_day && (
+                                                        <span className="ml-1 px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[10px] font-medium">
+                                                            TATIL
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-500">{day.shift || '-'}</td>
+                                                <td className="text-right px-3 py-2 font-mono">{fmtSec(db.normal_seconds)}</td>
+                                                <td className="text-right px-3 py-2 font-mono">{fmtSec(db.ot_seconds)}</td>
+                                                <td className="text-right px-3 py-2 font-mono">{fmtSec(db.missing_seconds)}</td>
+                                                <td className={`text-right px-3 py-2 font-mono ${hasErr ? 'text-red-500' : ''}`}>
+                                                    {hasErr ? 'ERR' : fmtSec(rc.normal_seconds)}
+                                                </td>
+                                                <td className={`text-right px-3 py-2 font-mono ${hasErr ? 'text-red-500' : ''}`}>
+                                                    {hasErr ? '-' : fmtSec(rc.ot_seconds)}
+                                                </td>
+                                                <td className={`text-right px-3 py-2 font-mono ${hasErr ? 'text-red-500' : ''}`}>
+                                                    {hasErr ? '-' : fmtSec(rc.missing_seconds)}
+                                                </td>
+                                                <td className="text-center px-3 py-2">
+                                                    <StatusBadge status={db.status} />
+                                                </td>
+                                                <td className="text-center px-3 py-2">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        {day.has_mismatch && (
+                                                            <span className="w-2 h-2 rounded-full bg-red-500" title="Uyusmazlik" />
+                                                        )}
+                                                        {day.approved_ot && (
+                                                            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-medium"
+                                                                title={`${day.approved_ot.count} OT`}>
+                                                                OT
+                                                            </span>
+                                                        )}
+                                                        {day.leave && (
+                                                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium">
+                                                                Izin
+                                                            </span>
+                                                        )}
+                                                        {day.health_report && (
+                                                            <span className="px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-[10px] font-medium">
+                                                                Rapor
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Expanded Detail */}
+                                            {isExpanded && (
+                                                <tr>
+                                                    <td colSpan={12} className="bg-gray-50/70 px-6 py-3 border-b border-gray-200">
+                                                        <DayDetail day={day} />
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                                {displayDays.length === 0 && (
+                                    <tr>
+                                        <td colSpan={12} className="text-center py-8 text-gray-400 text-sm">
+                                            {filterMismatch ? 'Uyusmazlik bulunamadi.' : 'Veri yok.'}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Error result */}
+            {result?.error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                    <ExclamationTriangleIcon className="w-5 h-5" />
+                    {result.error}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function StatusBadge({ status }) {
+    if (!status) return <span className="text-gray-300">-</span>;
+    const colors = {
+        OPEN: 'bg-yellow-100 text-yellow-800',
+        CALCULATED: 'bg-blue-100 text-blue-800',
+        APPROVED: 'bg-green-100 text-green-800',
+        AUTO_APPROVED: 'bg-green-100 text-green-800',
+        PENDING_MANAGER_APPROVAL: 'bg-amber-100 text-amber-800',
+        REJECTED: 'bg-red-100 text-red-800',
+        ABSENT: 'bg-gray-200 text-gray-700',
+        ON_LEAVE: 'bg-sky-100 text-sky-800',
+        HEALTH_REPORT: 'bg-pink-100 text-pink-800',
+        HOSPITAL_VISIT: 'bg-rose-100 text-rose-800',
+    };
+    const short = {
+        OPEN: 'ACIK',
+        CALCULATED: 'HESAP',
+        APPROVED: 'ONAY',
+        AUTO_APPROVED: 'OTO',
+        PENDING_MANAGER_APPROVAL: 'BEKLE',
+        REJECTED: 'RED',
+        ABSENT: 'YOK',
+        ON_LEAVE: 'IZIN',
+        HEALTH_REPORT: 'RAPOR',
+        HOSPITAL_VISIT: 'HAST',
+    };
+    return (
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>
+            {short[status] || status}
+        </span>
+    );
+}
+
+function DayDetail({ day }) {
+    const db = day.db || {};
+    const rc = day.recalculated || {};
+
+    return (
+        <div className="space-y-3 text-xs">
+            {/* Mismatch Alert */}
+            {day.has_mismatch && (
+                <div className="p-2 bg-red-100 border border-red-200 rounded-lg">
+                    <span className="font-semibold text-red-800">Uyusmazliklar: </span>
+                    {day.mismatch_fields.map((f, i) => (
+                        <span key={i} className="font-mono text-red-700">
+                            {i > 0 && ', '}{f}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* DB Records */}
+            {db.records && db.records.length > 0 && (
+                <div>
+                    <h5 className="font-semibold text-gray-700 mb-1">DB Kayitlari ({db.records.length})</h5>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                            <thead>
+                                <tr className="bg-blue-50">
+                                    <th className="text-left px-2 py-1 font-medium text-blue-700">ID</th>
+                                    <th className="text-left px-2 py-1 font-medium text-blue-700">Giris</th>
+                                    <th className="text-left px-2 py-1 font-medium text-blue-700">Cikis</th>
+                                    <th className="text-right px-2 py-1 font-medium text-blue-700">Normal</th>
+                                    <th className="text-right px-2 py-1 font-medium text-blue-700">OT</th>
+                                    <th className="text-right px-2 py-1 font-medium text-blue-700">Eksik</th>
+                                    <th className="text-right px-2 py-1 font-medium text-blue-700">Mola</th>
+                                    <th className="text-left px-2 py-1 font-medium text-blue-700">Kaynak</th>
+                                    <th className="text-left px-2 py-1 font-medium text-blue-700">Durum</th>
+                                    <th className="text-center px-2 py-1 font-medium text-blue-700">OT Kayit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {db.records.map(rec => (
+                                    <tr key={rec.id} className={`border-b border-blue-100 ${rec.is_overtime_record ? 'bg-purple-50' : ''}`}>
+                                        <td className="px-2 py-1 font-mono text-gray-500">#{rec.id}</td>
+                                        <td className="px-2 py-1 font-mono">{rec.check_in || '-'}</td>
+                                        <td className="px-2 py-1 font-mono">{rec.check_out || '-'}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.normal_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.ot_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.missing_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.break_seconds)}</td>
+                                        <td className="px-2 py-1">
+                                            <span className="px-1 py-0.5 bg-gray-100 rounded text-gray-600">{rec.source || '-'}</span>
+                                        </td>
+                                        <td className="px-2 py-1"><StatusBadge status={rec.status} /></td>
+                                        <td className="text-center px-2 py-1">
+                                            {rec.is_overtime_record && (
+                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">OT</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Recalculated Records */}
+            {rc.records && rc.records.length > 0 && (
+                <div>
+                    <h5 className="font-semibold text-gray-700 mb-1">Hesaplanan Kayitlar ({rc.records.length})</h5>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                            <thead>
+                                <tr className="bg-emerald-50">
+                                    <th className="text-left px-2 py-1 font-medium text-emerald-700">ID</th>
+                                    <th className="text-left px-2 py-1 font-medium text-emerald-700">Giris</th>
+                                    <th className="text-left px-2 py-1 font-medium text-emerald-700">Cikis</th>
+                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">Normal</th>
+                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">OT</th>
+                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">Eksik</th>
+                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">Mola</th>
+                                    <th className="text-left px-2 py-1 font-medium text-emerald-700">Kaynak</th>
+                                    <th className="text-left px-2 py-1 font-medium text-emerald-700">Durum</th>
+                                    <th className="text-center px-2 py-1 font-medium text-emerald-700">OT Kayit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rc.records.map(rec => (
+                                    <tr key={rec.id} className={`border-b border-emerald-100 ${rec.is_overtime_record ? 'bg-purple-50' : ''}`}>
+                                        <td className="px-2 py-1 font-mono text-gray-500">#{rec.id}</td>
+                                        <td className="px-2 py-1 font-mono">{rec.check_in || '-'}</td>
+                                        <td className="px-2 py-1 font-mono">{rec.check_out || '-'}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.normal_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.ot_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.missing_seconds)}</td>
+                                        <td className="text-right px-2 py-1 font-mono">{fmtSec(rec.break_seconds)}</td>
+                                        <td className="px-2 py-1">
+                                            <span className="px-1 py-0.5 bg-gray-100 rounded text-gray-600">{rec.source || '-'}</span>
+                                        </td>
+                                        <td className="px-2 py-1"><StatusBadge status={rec.status} /></td>
+                                        <td className="text-center px-2 py-1">
+                                            {rec.is_overtime_record && (
+                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">OT</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Recalc Error */}
+            {rc.error && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    Hesaplama hatasi: {rc.error}
+                </div>
+            )}
+
+            {/* Approved OT */}
+            {day.approved_ot && (
+                <div>
+                    <h5 className="font-semibold text-gray-700 mb-1">Onayli Ek Mesai ({day.approved_ot.count})</h5>
+                    <div className="flex flex-wrap gap-2">
+                        {day.approved_ot.items.map((item, i) => (
+                            <div key={i} className="px-2 py-1 bg-purple-50 border border-purple-200 rounded text-[11px]">
+                                <span className="font-mono">{item.start}-{item.end}</span>
+                                <span className="mx-1 text-gray-400">|</span>
+                                <span className="font-medium">{fmtSec(item.seconds)}</span>
+                                <span className="mx-1 text-gray-400">|</span>
+                                <span className="text-purple-600">{item.source}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Leave */}
+            {day.leave && (
+                <div className="flex flex-wrap gap-2">
+                    {day.leave.map((lv, i) => (
+                        <span key={i} className="px-2 py-1 bg-sky-50 border border-sky-200 rounded text-[11px]">
+                            Izin: {lv.type} ({lv.start} - {lv.end})
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Health Report */}
+            {day.health_report && (
+                <div className="flex flex-wrap gap-2">
+                    {day.health_report.map((hr, i) => (
+                        <span key={i} className="px-2 py-1 bg-pink-50 border border-pink-200 rounded text-[11px]">
+                            Rapor: {hr.type} ({hr.start} - {hr.end})
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Debug Logs */}
+            {day.debug_logs && day.debug_logs.length > 0 && (
+                <details className="mt-2">
+                    <summary className="text-[11px] text-gray-500 cursor-pointer hover:text-gray-700">
+                        Debug Loglari ({day.debug_logs.length})
+                    </summary>
+                    <pre className="mt-1 p-2 bg-gray-900 text-green-400 rounded text-[10px] max-h-48 overflow-auto font-mono">
+                        {day.debug_logs.join('\n')}
+                    </pre>
+                </details>
+            )}
+        </div>
+    );
+}
