@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, ZoomIn, ArrowRight, Hash, X } from 'lucide-react';
+import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, AlertTriangle, CheckCircle2, ZoomIn, ArrowRight, Hash, X, Star } from 'lucide-react';
 import ModalOverlay from '../components/ui/ModalOverlay';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,7 @@ const tipStyles = {
     success: { bg: 'bg-emerald-50', border: 'border-emerald-200/60', text: 'text-emerald-700', icon: CheckCircle2, iconColor: 'text-emerald-500' },
 };
 
-const FaqItem = ({ question, answer }) => {
+const FaqItem = ({ question, answer, highlightFn }) => {
     const [open, setOpen] = useState(false);
     return (
         <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white">
@@ -19,12 +19,12 @@ const FaqItem = ({ question, answer }) => {
                 onClick={() => setOpen(!open)}
                 className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
             >
-                <span className="text-sm font-semibold text-slate-700 pr-4 leading-snug">{question}</span>
+                <span className="text-sm font-semibold text-slate-700 pr-4 leading-snug">{highlightFn ? highlightFn(question) : question}</span>
                 <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
             </button>
             {open && (
                 <div className="px-5 pb-4 border-t border-slate-100">
-                    <p className="text-sm text-slate-500 leading-relaxed pt-3">{answer}</p>
+                    <p className="text-sm text-slate-500 leading-relaxed pt-3">{highlightFn ? highlightFn(answer) : answer}</p>
                 </div>
             )}
         </div>
@@ -46,6 +46,38 @@ const HelpLibrary = () => {
     const [lightboxImage, setLightboxImage] = useState(null);
     const [lightboxVisible, setLightboxVisible] = useState(false);
     const contentRef = useRef(null);
+
+    const [favorites, setFavorites] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('help_favorites') || '[]');
+        } catch { return []; }
+    });
+
+    const toggleFavorite = (sectionId, e) => {
+        e.stopPropagation();
+        setFavorites(prev => {
+            const next = prev.includes(sectionId)
+                ? prev.filter(id => id !== sectionId)
+                : [...prev, sectionId];
+            localStorage.setItem('help_favorites', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const highlightText = (text, query) => {
+        if (!query || query.length < 2) return text;
+        try {
+            const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+            return parts.map((part, i) =>
+                part.toLowerCase() === query.toLowerCase()
+                    ? <mark key={i} className="bg-yellow-200/80 rounded px-0.5">{part}</mark>
+                    : part
+            );
+        } catch { return text; }
+    };
+
+    const hl = (text) => highlightText(text, searchQuery);
 
     const openLightbox = (img) => {
         setLightboxImage(img);
@@ -165,7 +197,7 @@ const HelpLibrary = () => {
                             </div>
                             <div>
                                 <h2 className="text-sm font-bold text-slate-800 leading-tight">Yardım Rehberi</h2>
-                                <p className="text-[10px] text-slate-400 font-medium">{filteredSections.length} bölüm</p>
+                                <p className="text-[10px] text-slate-400 font-medium">{searchQuery.trim() ? `${filteredSections.length} / ${sections.length} bölüm` : `${filteredSections.length} bölüm`}</p>
                             </div>
                         </div>
                         <button className="md:hidden p-1.5 hover:bg-slate-100 rounded-lg" onClick={() => setMobileSidebarOpen(false)}>
@@ -178,18 +210,83 @@ const HelpLibrary = () => {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Ara..."
+                            placeholder="Yardım konularında ara..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50/80 border border-slate-200/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 placeholder:text-slate-400 transition-all"
+                            className="w-full pl-8 pr-8 py-2 text-xs bg-slate-50/80 border border-slate-200/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 placeholder:text-slate-400 transition-all"
                         />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X size={13} />
+                            </button>
+                        )}
                     </div>
+                    {searchQuery.trim().length >= 2 && (
+                        <p className="text-[10px] text-slate-400 mt-1.5 px-1">{filteredSections.length} bölüm bulundu</p>
+                    )}
                 </div>
 
                 {/* Nav items */}
                 <nav className="flex-1 overflow-y-auto px-1.5 pb-4 space-y-0.5">
+                    {/* Favorilerim grubu */}
+                    {(() => {
+                        const favSections = filteredSections.filter(s => favorites.includes(s.id));
+                        if (favSections.length === 0) return null;
+                        return (
+                            <>
+                                <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                                    <Star size={12} className="fill-amber-400 text-amber-400" />
+                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Favorilerim</span>
+                                </div>
+                                {favSections.map(section => {
+                                    const isActive = section.id === activeSection;
+                                    const Icon = section.icon;
+                                    return (
+                                        <button
+                                            key={`fav-${section.id}`}
+                                            onClick={() => handleSectionClick(section.id)}
+                                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all duration-150 group ${
+                                                isActive
+                                                    ? 'bg-indigo-50 text-indigo-700'
+                                                    : 'text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                                isActive
+                                                    ? 'bg-indigo-600 text-white'
+                                                    : 'bg-slate-100 text-slate-400 group-hover:text-slate-500'
+                                            }`}>
+                                                <Icon size={14} />
+                                            </div>
+                                            <span className={`text-[13px] font-medium truncate flex-1 ${
+                                                isActive ? 'text-indigo-700' : 'text-slate-600'
+                                            }`}>
+                                                {searchQuery.trim() ? hl(section.title) : section.title}
+                                            </span>
+                                            <button
+                                                onClick={(e) => toggleFavorite(section.id, e)}
+                                                className="p-0.5 shrink-0"
+                                                title="Favorilerden kaldır"
+                                            >
+                                                <Star size={13} className="fill-amber-400 text-amber-400" />
+                                            </button>
+                                            {isActive && (
+                                                <ChevronRight size={12} className="text-indigo-400 shrink-0" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                                <div className="mx-3 my-2 border-t border-slate-200/60" />
+                            </>
+                        );
+                    })()}
+
                     {filteredSections.map(section => {
                         const isActive = section.id === activeSection;
+                        const isFav = favorites.includes(section.id);
                         const Icon = section.icon;
                         return (
                             <button
@@ -208,13 +305,21 @@ const HelpLibrary = () => {
                                 }`}>
                                     <Icon size={14} />
                                 </div>
-                                <span className={`text-[13px] font-medium truncate ${
+                                <span className={`text-[13px] font-medium truncate flex-1 ${
                                     isActive ? 'text-indigo-700' : 'text-slate-600'
                                 }`}>
-                                    {section.title}
+                                    {searchQuery.trim() ? hl(section.title) : section.title}
                                 </span>
+                                <button
+                                    onClick={(e) => toggleFavorite(section.id, e)}
+                                    className="p-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    style={isFav ? { opacity: 1 } : undefined}
+                                    title={isFav ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+                                >
+                                    <Star size={13} className={isFav ? 'fill-amber-400 text-amber-400' : 'text-slate-300 hover:text-amber-400'} />
+                                </button>
                                 {isActive && (
-                                    <ChevronRight size={12} className="text-indigo-400 shrink-0 ml-auto" />
+                                    <ChevronRight size={12} className="text-indigo-400 shrink-0" />
                                 )}
                             </button>
                         );
@@ -239,7 +344,16 @@ const HelpLibrary = () => {
                                 <currentSection.icon size={22} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">{currentSection.title}</h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">{currentSection.title}</h1>
+                                    <button
+                                        onClick={(e) => toggleFavorite(currentSection.id, e)}
+                                        className="p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+                                        title={favorites.includes(currentSection.id) ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+                                    >
+                                        <Star size={18} className={favorites.includes(currentSection.id) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 hover:text-amber-400'} />
+                                    </button>
+                                </div>
                                 <p className="text-sm text-slate-400 mt-0.5">{currentSection.description}</p>
                             </div>
                             {currentSection.link && (
@@ -300,8 +414,8 @@ const HelpLibrary = () => {
                                                     )}
                                                 </div>
                                                 <div className="bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 flex-1 hover:shadow-sm transition-shadow mb-1">
-                                                    <h3 className="text-sm font-bold text-slate-700 mb-1">{step.title}</h3>
-                                                    <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
+                                                    <h3 className="text-sm font-bold text-slate-700 mb-1">{hl(step.title)}</h3>
+                                                    <p className="text-sm text-slate-500 leading-relaxed">{hl(step.description)}</p>
                                                     {step.image && (
                                                         <div
                                                             className="mt-3 rounded-lg border border-slate-200/80 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 group/img"
@@ -339,7 +453,7 @@ const HelpLibrary = () => {
                                             return (
                                                 <div key={i} className={`flex items-start gap-3 p-3 sm:p-4 rounded-xl border ${style.bg} ${style.border}`}>
                                                     <TipIcon size={18} className={`${style.iconColor} shrink-0 mt-0.5`} />
-                                                    <p className={`text-sm leading-relaxed ${style.text}`}>{tip.text}</p>
+                                                    <p className={`text-sm leading-relaxed ${style.text}`}>{hl(tip.text)}</p>
                                                 </div>
                                             );
                                         })}
@@ -353,7 +467,7 @@ const HelpLibrary = () => {
                                     <SectionHeading>Sıkça Sorulan Sorular</SectionHeading>
                                     <div className="space-y-2">
                                         {currentSection.faq.map((item, i) => (
-                                            <FaqItem key={i} question={item.q} answer={item.a} />
+                                            <FaqItem key={i} question={item.q} answer={item.a} highlightFn={hl} />
                                         ))}
                                     </div>
                                 </div>
