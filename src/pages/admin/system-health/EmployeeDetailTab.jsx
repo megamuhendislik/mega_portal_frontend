@@ -454,37 +454,54 @@ export default function EmployeeDetailTab() {
                                     <th className="py-1 px-2">Donem</th>
                                     <th className="py-1 px-2 text-right">Hedef</th>
                                     <th className="py-1 px-2 text-right">Tamamlanan</th>
-                                    <th className="py-1 px-2 text-right">Mesai</th>
+                                    <th className="py-1 px-2 text-right">Izin (sa)</th>
+                                    <th className="py-1 px-2 text-right">Rapor (sa)</th>
                                     <th className="py-1 px-2 text-right">Eksik</th>
+                                    <th className="py-1 px-2 text-right">Kalan</th>
+                                    <th className="py-1 px-2 text-right">Mesai</th>
                                     <th className="py-1 px-2 text-right">Toplam Is</th>
                                     <th className="py-1 px-2 text-right">Net Bakiye</th>
                                     <th className="py-1 px-2 text-right">Kumulatif</th>
-                                    <th className="py-1 px-2 text-right">Izin</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.monthly_summaries?.map((ms, i) => (
-                                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                                        <td className="py-1 px-2 font-bold">{ms.year}-{String(ms.month).padStart(2, '0')}</td>
-                                        <td className="py-1 px-2 text-right font-mono">{fmtH(ms.target_h)}</td>
-                                        <td className="py-1 px-2 text-right font-mono">{fmtH(ms.completed_h)}</td>
-                                        <td className="py-1 px-2 text-right font-mono text-amber-700">{fmtH(ms.overtime_h)}</td>
-                                        <td className="py-1 px-2 text-right font-mono text-red-600">{ms.missing_h > 0 ? fmtH(ms.missing_h) : '-'}</td>
-                                        <td className="py-1 px-2 text-right font-mono">{fmtH(ms.total_work_h)}</td>
-                                        <td className={`py-1 px-2 text-right font-mono font-bold ${ms.net_balance_h >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                            {ms.net_balance_h > 0 ? '+' : ''}{fmtH(ms.net_balance_h)}
-                                        </td>
-                                        <td className={`py-1 px-2 text-right font-mono ${ms.cumulative_h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {ms.cumulative_h > 0 ? '+' : ''}{fmtH(ms.cumulative_h)}
-                                        </td>
-                                        <td className="py-1 px-2 text-right">{ms.leave_days > 0 ? `${ms.leave_days} gun` : '-'}</td>
-                                    </tr>
-                                ))}
+                                {data.monthly_summaries?.map((ms, i) => {
+                                    const check = (ms.completed_h || 0) + (ms.missing_h || 0) + (ms.leave_h || 0) + (ms.health_report_h || 0) + (ms.remaining_h || 0);
+                                    const balanced = ms.target_h > 0 ? Math.abs(check - ms.target_h) < 0.2 : true;
+                                    return (
+                                        <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${!balanced ? 'bg-red-50' : ''}`}>
+                                            <td className="py-1 px-2 font-bold">{ms.year}-{String(ms.month).padStart(2, '0')}</td>
+                                            <td className="py-1 px-2 text-right font-mono font-bold">{fmtH(ms.target_h)}</td>
+                                            <td className="py-1 px-2 text-right font-mono">{fmtH(ms.completed_h)}</td>
+                                            <td className="py-1 px-2 text-right font-mono text-teal-700">
+                                                {ms.leave_h > 0 ? fmtH(ms.leave_h) : '-'}
+                                                {ms.leave_days > 0 && <span className="text-[9px] text-gray-400 ml-1">({ms.leave_days}g)</span>}
+                                            </td>
+                                            <td className="py-1 px-2 text-right font-mono text-rose-600">
+                                                {ms.health_report_h > 0 ? fmtH(ms.health_report_h) : '-'}
+                                                {ms.health_report_days > 0 && <span className="text-[9px] text-gray-400 ml-1">({ms.health_report_days}g)</span>}
+                                            </td>
+                                            <td className="py-1 px-2 text-right font-mono text-red-600">{ms.missing_h > 0 ? fmtH(ms.missing_h) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono text-gray-400">{ms.remaining_h > 0 ? fmtH(ms.remaining_h) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono text-amber-700">{ms.overtime_h > 0 ? fmtH(ms.overtime_h) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono">{fmtH(ms.total_work_h)}</td>
+                                            <td className={`py-1 px-2 text-right font-mono font-bold ${ms.net_balance_h >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                {ms.net_balance_h > 0 ? '+' : ''}{fmtH(ms.net_balance_h)}
+                                            </td>
+                                            <td className={`py-1 px-2 text-right font-mono ${ms.cumulative_h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {ms.cumulative_h > 0 ? '+' : ''}{fmtH(ms.cumulative_h)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 {(!data.monthly_summaries || data.monthly_summaries.length === 0) && (
-                                    <tr><td colSpan={9} className="py-4 text-center text-gray-400 italic">Aylik ozet yok</td></tr>
+                                    <tr><td colSpan={11} className="py-4 text-center text-gray-400 italic">Aylik ozet yok</td></tr>
                                 )}
                             </tbody>
                         </table>
+                        <div className="mt-2 p-2 bg-slate-50 rounded text-[10px] text-gray-500">
+                            Denge: Hedef = Tamamlanan + Izin + Rapor + Eksik + Kalan. Satir kirmizi ise denge tutmuyor.
+                        </div>
                     </SectionToggle>
 
                     {/* ═══ OT Assignments ═══ */}
