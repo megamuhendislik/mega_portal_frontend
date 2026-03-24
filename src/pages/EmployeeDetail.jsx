@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle, Clock
+    ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle, Clock,
+    UserX, UserCheck, Snowflake
 } from 'lucide-react';
+import { Modal } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
@@ -32,6 +34,9 @@ const EmployeeDetail = () => {
     const [allPermissions, setAllPermissions] = useState([]);
     const [allRoles, setAllRoles] = useState([]);
     const [showManagerValidation, setShowManagerValidation] = useState(false);
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+    const [deactivationPreview, setDeactivationPreview] = useState(null);
+    const [lifecycleLoading, setLifecycleLoading] = useState(false);
 
     // Form Data State (Unified)
     const [formData, setFormData] = useState({
@@ -45,6 +50,7 @@ const EmployeeDetail = () => {
         hired_date: '', employee_code: '',
         primary_managers: [], secondary_managers: [],
         is_active: true,
+        is_frozen: false,
         is_profile_editable: false,
 
         // Work Schedule
@@ -112,6 +118,7 @@ const EmployeeDetail = () => {
                 hired_date: emp.hired_date || '',
                 employee_code: emp.employee_code || '',
                 is_active: emp.is_active,
+                is_frozen: emp.is_frozen || false,
                 is_profile_editable: emp.is_profile_editable || false,
 
                 // Map managers to structured format
@@ -233,6 +240,89 @@ const EmployeeDetail = () => {
                 toast.error('Güncelleme sırasında hata oluştu: ' + (data?.detail || error.message));
             }
         }
+    };
+
+    // --- Lifecycle Handlers ---
+    const handleDeactivateClick = async () => {
+        setLifecycleLoading(true);
+        try {
+            const res = await api.get(`/employees/${id}/deactivation-preview/`);
+            setDeactivationPreview(res.data);
+            setShowDeactivateModal(true);
+        } catch (err) {
+            toast.error('Önizleme yüklenemedi.');
+        } finally {
+            setLifecycleLoading(false);
+        }
+    };
+
+    const handleDeactivateConfirm = async () => {
+        setLifecycleLoading(true);
+        try {
+            await api.post(`/employees/${id}/deactivate/`);
+            toast.success('Çalışan pasife alındı.');
+            setShowDeactivateModal(false);
+            fetchInitialData();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Pasife alma başarısız.');
+        } finally {
+            setLifecycleLoading(false);
+        }
+    };
+
+    const handleActivate = () => {
+        Modal.confirm({
+            title: 'Çalışanı Aktif Et',
+            content: 'Bu çalışanı tekrar aktif etmek istediğinize emin misiniz? Sisteme giriş yapabilecek.',
+            okText: 'Aktif Et',
+            cancelText: 'Vazgeç',
+            okButtonProps: { className: 'bg-emerald-600' },
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${id}/activate/`);
+                    toast.success('Çalışan aktif edildi.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'Aktivasyon başarısız.');
+                }
+            },
+        });
+    };
+
+    const handleFreeze = () => {
+        Modal.confirm({
+            title: 'Çalışanı Dondur',
+            content: 'Bu çalışanı dondurmak istediğinize emin misiniz? Sisteme giriş yapamayacak.',
+            okText: 'Dondur',
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${id}/freeze/`);
+                    toast.success('Çalışan donduruldu.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'Dondurma başarısız.');
+                }
+            },
+        });
+    };
+
+    const handleUnfreeze = () => {
+        Modal.confirm({
+            title: 'Dondurmayı Kaldır',
+            content: 'Bu çalışanın dondurma durumunu kaldırmak istediğinize emin misiniz?',
+            okText: 'Kaldır',
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${id}/unfreeze/`);
+                    toast.success('Dondurma kaldırıldı.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'İşlem başarısız.');
+                }
+            },
+        });
     };
 
     // Board muafiyet kontrolü
@@ -506,7 +596,7 @@ const EmployeeDetail = () => {
                                                             className="w-full p-2 bg-white border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                                         >
                                                             <option value="">Opsiyonel...</option>
-                                                            {allEmployees.filter(e => e.id !== parseInt(id)).map(emp => (
+                                                            {allEmployees.filter(e => e.id !== parseInt(id) && e.is_active !== false).map(emp => (
                                                                 <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
                                                             ))}
                                                         </select>
@@ -788,9 +878,47 @@ const EmployeeDetail = () => {
                             <p className="text-slate-500 font-medium">
                                 {jobPositions.find(p => p.id === parseInt(formData.job_position))?.name || '-'}
                             </p>
-                            <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${formData.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                {formData.is_active ? 'Aktif Çalışan' : 'Pasif'}
+                            <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${formData.is_frozen ? 'bg-blue-100 text-blue-700' : formData.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                {formData.is_frozen ? 'Dondurulmuş' : formData.is_active ? 'Aktif Çalışan' : 'Pasif'}
                             </div>
+                            {/* Status Management Buttons */}
+                            {hasPermission('SENSITIVE_DATA_CHANGE') && (
+                                <div className="mt-3 flex flex-col gap-2">
+                                    {formData.is_active && !formData.is_frozen && (
+                                        <>
+                                            <button
+                                                onClick={handleDeactivateClick}
+                                                disabled={lifecycleLoading}
+                                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
+                                            >
+                                                <UserX size={14} /> Pasife Al
+                                            </button>
+                                            <button
+                                                onClick={handleFreeze}
+                                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                                            >
+                                                <Snowflake size={14} /> Dondur
+                                            </button>
+                                        </>
+                                    )}
+                                    {!formData.is_active && (
+                                        <button
+                                            onClick={handleActivate}
+                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                        >
+                                            <UserCheck size={14} /> Aktif Et
+                                        </button>
+                                    )}
+                                    {formData.is_frozen && (
+                                        <button
+                                            onClick={handleUnfreeze}
+                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                                        >
+                                            <Snowflake size={14} /> Dondurmayı Kaldır
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3 border-t border-slate-100 pt-6">
@@ -821,6 +949,48 @@ const EmployeeDetail = () => {
                     </div>
                 </div>
             </div>
+            {/* Deactivation Confirmation Modal */}
+            <Modal
+                open={showDeactivateModal}
+                title="Çalışanı Pasife Al"
+                onCancel={() => setShowDeactivateModal(false)}
+                onOk={handleDeactivateConfirm}
+                confirmLoading={lifecycleLoading}
+                okText="Pasife Al"
+                cancelText="Vazgeç"
+                okButtonProps={{ danger: true }}
+            >
+                {deactivationPreview && (
+                    <div className="space-y-3 text-sm">
+                        <p className="font-medium text-slate-800">
+                            {formData.first_name} {formData.last_name} pasife alınacak.
+                        </p>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
+                            <p className="font-medium text-amber-800">Etkilenecek kayıtlar:</p>
+                            {Object.entries(deactivationPreview.pending_requests).map(([key, count]) => count > 0 && (
+                                <p key={key} className="text-amber-700">
+                                    {count} bekleyen {key === 'overtime' ? 'ek mesai' : key === 'leave' ? 'izin' : key === 'cardless' ? 'kartsız giriş' : key === 'health_report' ? 'sağlık raporu' : 'özel izin'} talebi iptal edilecek
+                                </p>
+                            ))}
+                            {deactivationPreview.subordinates_with_pending > 0 && (
+                                <p className="text-amber-700">
+                                    {deactivationPreview.subordinates_with_pending} subordinate talebi
+                                    {deactivationPreview.fallback_manager
+                                        ? ` ${deactivationPreview.fallback_manager.name}'e devredilecek`
+                                        : ' iptal edilecek (yedek yönetici bulunamadı)'}
+                                </p>
+                            )}
+                            {deactivationPreview.active_manager_relations > 0 && (
+                                <p className="text-amber-700">{deactivationPreview.active_manager_relations} yönetici ilişkisi pasife alınacak</p>
+                            )}
+                            {deactivationPreview.active_substitute_authorities > 0 && (
+                                <p className="text-amber-700">{deactivationPreview.active_substitute_authorities} vekalet yetkisi pasife alınacak</p>
+                            )}
+                        </div>
+                        <p className="text-red-600 font-medium">Bu çalışan artık sisteme giriş yapamayacak.</p>
+                    </div>
+                )}
+            </Modal>
         </div >
     );
 };
