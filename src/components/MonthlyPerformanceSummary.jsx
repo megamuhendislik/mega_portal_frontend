@@ -3,14 +3,13 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 import { Popover, Tooltip } from 'antd';
 import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
-// Saniye → "Xsa" (sadece saat, dakika gizli — hesap arkada dk bazlı)
+// Saniye → "X.XX saat" (2 ondalık, dakika gizli)
 function fmtSec(s) {
-    if (!s) return '0sa';
+    if (!s) return '0 saat';
     const neg = s < 0;
-    const abs = Math.abs(Math.round(s));
-    const h = Math.round(abs / 3600);
+    const h = Math.abs(s) / 3600;
     const sign = neg ? '-' : '';
-    return `${sign}${h}sa`;
+    return `${sign}${h.toFixed(2)} saat`;
 }
 
 const EffortDetailPopover = ({ stats }) => {

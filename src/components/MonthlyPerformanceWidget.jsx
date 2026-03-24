@@ -3,12 +3,11 @@ import { PieChart, Briefcase, Calendar, Star, TrendingUp, AlertCircle, Clock } f
 import clsx from 'clsx';
 
 function fmtSec(s) {
-    if (!s) return '0sa';
+    if (!s) return '0 saat';
     const neg = s < 0;
-    const abs = Math.abs(Math.round(s));
-    const h = Math.round(abs / 3600);
+    const h = Math.abs(s) / 3600;
     const sign = neg ? '-' : '';
-    return `${sign}${h}sa`;
+    return `${sign}${h.toFixed(2)} saat`;
 }
 
 const MonthlyPerformanceWidget = ({ summary, loading }) => {
