@@ -3,6 +3,7 @@ import { BookOpen, Search, ChevronRight, ExternalLink, ChevronDown, Lightbulb, A
 import ModalOverlay from '../components/ui/ModalOverlay';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import helpContent from '../data/helpContent';
 
 const tipStyles = {
@@ -53,6 +54,19 @@ const HelpLibrary = () => {
         } catch { return []; }
     });
 
+    // Backend'den favorileri yükle
+    useEffect(() => {
+        api.get('/employees/me/')
+            .then(res => {
+                const backendFavs = res.data?.help_favorites;
+                if (Array.isArray(backendFavs) && backendFavs.length > 0) {
+                    setFavorites(backendFavs);
+                    localStorage.setItem('help_favorites', JSON.stringify(backendFavs));
+                }
+            })
+            .catch(() => {/* localStorage fallback zaten aktif */});
+    }, []);
+
     const toggleFavorite = (sectionId, e) => {
         e.stopPropagation();
         setFavorites(prev => {
@@ -60,6 +74,8 @@ const HelpLibrary = () => {
                 ? prev.filter(id => id !== sectionId)
                 : [...prev, sectionId];
             localStorage.setItem('help_favorites', JSON.stringify(next));
+            // Backend'e kaydet (arka planda, hata olursa sessizce devam et)
+            api.patch('/employees/me/', { help_favorites: next }).catch(() => {});
             return next;
         });
     };
