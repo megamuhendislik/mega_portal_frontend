@@ -3,46 +3,59 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 import { Popover, Tooltip } from 'antd';
 import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
+// Saniye → "Xsa Ydk" (yuvarlama yok, truncate)
+function fmtSec(s) {
+    if (!s) return '0dk';
+    const neg = s < 0;
+    const abs = Math.abs(Math.round(s));
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    const sign = neg ? '-' : '';
+    if (h > 0 && m > 0) return `${sign}${h}sa ${m}dk`;
+    if (h > 0) return `${sign}${h}sa`;
+    return `${sign}${m}dk`;
+}
+
 const EffortDetailPopover = ({ stats }) => {
     if (!stats) return null;
     const rows = [
-        { label: 'Aylık Hedef', value: `${stats.targetHours} sa` },
-        { label: 'Bugüne Kadar Hedef', value: `${stats.pastTargetHours} sa` },
+        { label: 'Aylık Hedef', value: stats.targetDisplay },
+        { label: 'Bugüne Kadar Hedef', value: stats.pastTargetDisplay },
         { type: 'divider' },
-        { label: 'Normal Çalışma', value: `${stats.completedHours} sa` },
-        { label: 'Onaylı OT', value: `${stats.overtimeHours} sa` },
+        { label: 'Normal Çalışma', value: stats.completedDisplay },
+        { label: 'Onaylı OT', value: stats.overtimeDisplay },
     ];
-    if (parseFloat(stats.leaveHours) > 0) {
-        rows.push({ label: 'İzin', value: `${stats.leaveHours} sa`, color: 'text-cyan-600' });
+    if (stats._leaveSec > 0) {
+        rows.push({ label: 'İzin', value: stats.leaveDisplay, color: 'text-cyan-600' });
     }
-    if (parseFloat(stats.healthReportHours) > 0) {
-        rows.push({ label: 'Rapor', value: `${stats.healthReportHours} sa`, color: 'text-sky-600' });
+    if (stats._hrSec > 0) {
+        rows.push({ label: 'Rapor', value: stats.healthReportDisplay, color: 'text-sky-600' });
     }
     rows.push(
-        { label: stats.hasCredited ? 'Toplam Efor' : 'Onaylı Toplam', value: `${stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} sa`, bold: true },
+        { label: stats.hasCredited ? 'Toplam Efor' : 'Onaylı Toplam', value: stats.hasCredited ? stats.displayTotalDisplay : stats.netWorkDisplay, bold: true },
         { type: 'divider' },
         {
             label: stats.isNetNeutral ? 'Durum' : (stats.isNetSurplus ? 'Net Fazla' : 'Net Eksik'),
             value: stats.isNetNeutral
                 ? 'Hedefe Ulaşıldı'
-                : `${stats.isNetSurplus ? '+' : '-'}${stats.netBalanceForLabelHours} sa`,
+                : `${stats.isNetSurplus ? '+' : '-'}${stats.netBalanceForLabelDisplay}`,
             bold: true,
             color: stats.isNetNeutral ? 'text-slate-600' : (stats.isNetSurplus ? 'text-emerald-600' : 'text-rose-600')
         },
     );
 
-    if (parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) {
+    if (stats._otPendingSec > 0 || stats._otPotentialSec > 0) {
         rows.push({ type: 'divider' });
-        if (parseFloat(stats.otPendingHours) > 0) {
-            rows.push({ label: 'Bekleyen OT', value: `${stats.otPendingHours} sa`, color: 'text-amber-600', muted: true });
+        if (stats._otPendingSec > 0) {
+            rows.push({ label: 'Bekleyen OT', value: stats.otPendingDisplay, color: 'text-amber-600', muted: true });
         }
-        if (parseFloat(stats.otPotentialHours) > 0) {
-            rows.push({ label: 'Potansiyel OT', value: `${stats.otPotentialHours} sa`, color: 'text-slate-500', muted: true });
+        if (stats._otPotentialSec > 0) {
+            rows.push({ label: 'Potansiyel OT', value: stats.otPotentialDisplay, color: 'text-slate-500', muted: true });
         }
     }
-    if (parseFloat(stats.remainingHours) > 0) {
+    if (stats._remainingSec > 0) {
         rows.push({ type: 'divider' });
-        rows.push({ label: 'Kalan Tam Çalışılırsa', value: `${stats.projectionIfFullHours} sa`, bold: true, color: 'text-indigo-600' });
+        rows.push({ label: 'Kalan Tam Çalışılırsa', value: stats.projectionIfFullDisplay, bold: true, color: 'text-indigo-600' });
     }
 
     return (
@@ -149,22 +162,40 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             const otBreakdownTotal = otApprovedSec + otPendingSec + otPotentialSec;
 
             return {
+                // Raw seconds for calculations
+                _targetSec: targetSec,
+                _realizedSec: realizedSec,
+                _missingSec: missingSec,
+                _remainingSec: remainingSec,
+                _overtimeSec: overtimeSec,
+                _leaveSec: leaveSec,
+                _hrSec: healthReportSec,
+                _otPendingSec: otPendingSec,
+                _otPotentialSec: otPotentialSec,
+
+                // Display formatted (saniye → Xsa Ydk)
+                targetDisplay: fmtSec(targetSec),
+                completedDisplay: fmtSec(realizedSec),
+                missingDisplay: fmtSec(missingSec),
+                remainingDisplay: fmtSec(remainingSec),
+                overtimeDisplay: fmtSec(overtimeSec),
+                netWorkDisplay: fmtSec(netWorkSec),
+                netBalanceDisplay: fmtSec(netBalanceReal),
+                leaveDisplay: fmtSec(leaveSec),
+                healthReportDisplay: fmtSec(healthReportSec),
+                displayTotalDisplay: fmtSec(netWorkSec + creditedSec),
+
+                // Legacy compat (bar chart still needs numeric)
                 targetHours: (targetSec / 3600).toFixed(1),
                 completedHours: (realizedSec / 3600).toFixed(1),
-
-                // Visual Improvement: Formatting missing hours (remove negative sign if confusing, but kept for clarity in formula context)
-                // User confusingly sees -107.7. Let's make it absolute for the label "X hours missing"
                 missingHours: (missingSec / 3600).toFixed(1),
-
                 remainingHours: (remainingSec / 3600).toFixed(1),
-
                 overtimeHours: (overtimeSec / 3600).toFixed(1),
                 netWorkHours: (netWorkSec / 3600).toFixed(1),
-
                 surplusHours: (surplusSec / 3600).toFixed(1),
-                isSurplus,
                 netBalanceHours: (netBalanceReal / 3600).toFixed(1),
 
+                isSurplus,
                 breakHours: (breakSec / 3600).toFixed(1),
                 lateMinutes: Math.floor(lateSec / 60),
 
@@ -178,6 +209,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 lateCount,
 
                 // OT Breakdown
+                otApprovedDisplay: fmtSec(otApprovedSec),
+                otPendingDisplay: fmtSec(otPendingSec),
+                otPotentialDisplay: fmtSec(otPotentialSec),
+                otTotalDisplay: fmtSec(otBreakdownTotal),
                 otApprovedHours: (otApprovedSec / 3600).toFixed(1),
                 otPendingHours: (otPendingSec / 3600).toFixed(1),
                 otPotentialHours: (otPotentialSec / 3600).toFixed(1),
@@ -192,7 +227,6 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 healthReportHours: (healthReportSec / 3600).toFixed(1),
                 creditedHours: (creditedSec / 3600).toFixed(1),
                 hasCredited: creditedSec > 0,
-                // Display total = actual work + OT + leave/report credits
                 displayTotalHours: ((netWorkSec + creditedSec) / 3600).toFixed(1),
 
                 // Projected totals (approved + pending + potential)
@@ -201,11 +235,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pPending: targetSec > 0 ? Math.min(100 - pTotal, (otPendingSec / targetSec) * 100) : 0,
                 pPotential: targetSec > 0 ? Math.min(100 - Math.min(100, ((totalEforSec + otPendingSec) / targetSec) * 100), (otPotentialSec / targetSec) * 100) : 0,
 
-                // Past target = completed + missing + leave + report = what should have been accounted for by today
+                // Past target
                 pastTargetSec: realizedSec + missingSec + leaveSec + healthReportSec,
+                pastTargetDisplay: fmtSec(realizedSec + missingSec + leaveSec + healthReportSec),
                 pastTargetHours: ((realizedSec + missingSec + leaveSec + healthReportSec) / 3600).toFixed(1),
-
-                // Adjusted remaining for display
                 adjustedRemainingHours: (Math.max(0, targetSec - realizedSec - leaveSec - healthReportSec - missingSec) / 3600).toFixed(1),
 
                 // Indicator position: past_target (including leave+report credits) as % of full month target
@@ -215,38 +248,50 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 // totalEffort = normal + OT + leave + report
                 // pastTarget = normal + missing + leave + report
                 // netBalance = OT - missing (leave+report cancel out)
+                netBalanceForLabelDisplay: fmtSec(Math.abs(overtimeSec - missingSec)),
                 netBalanceForLabelHours: (Math.abs(overtimeSec - missingSec) / 3600).toFixed(1),
                 isNetSurplus: overtimeSec - missingSec > 0,
                 isNetNeutral: Math.abs(overtimeSec - missingSec) < 360, // ±0.1 sa threshold
 
-                // Projection: if all remaining hours fully worked
+                // Projection
+                projectionIfFullDisplay: fmtSec(netWorkSec + remainingSec),
                 projectionIfFullHours: ((netWorkSec + remainingSec) / 3600).toFixed(1),
 
                 // Fiscal month from backend (not JS Date)
                 fiscalMonth: periodSummary.fiscal_month || getIstanbulMonth(),
 
+                // Projected work display
+                projectedWorkDisplay: fmtSec(netWorkSec + otPendingSec + otPotentialSec),
+
                 cumulative: periodSummary.cumulative ? {
                     carryOver: periodSummary.cumulative.carry_over_seconds,
                     carryOverHours: (periodSummary.cumulative.carry_over_seconds / 3600).toFixed(1),
+                    carryOverDisplay: fmtSec(periodSummary.cumulative.carry_over_seconds),
 
                     prevYearBalance: (periodSummary.cumulative.previous_year_balance_seconds / 3600).toFixed(1),
+                    prevYearBalanceDisplay: fmtSec(periodSummary.cumulative.previous_year_balance_seconds),
 
-                    // Added for "From Previous Month" View (Total History until Start of Month)
                     prevMonthCarryOver: ((periodSummary.cumulative.previous_year_balance_seconds + periodSummary.cumulative.carry_over_seconds) / 3600).toFixed(1),
+                    prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative.previous_year_balance_seconds + periodSummary.cumulative.carry_over_seconds),
 
                     totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
+                    totalNetBalanceDisplay: fmtSec(periodSummary.cumulative.total_net_balance_seconds),
 
                     // YTD values
                     ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
+                    ytdTargetDisplay: fmtSec(periodSummary.cumulative.ytd_target_seconds),
                     ytdCompletedHours: (periodSummary.cumulative.ytd_completed_seconds / 3600).toFixed(1),
+                    ytdCompletedDisplay: fmtSec(periodSummary.cumulative.ytd_completed_seconds),
                     ytdNetBalanceHours: (periodSummary.cumulative.ytd_net_balance_seconds / 3600).toFixed(1),
+                    ytdNetBalanceDisplay: fmtSec(periodSummary.cumulative.ytd_net_balance_seconds),
 
                     ytdTarget: periodSummary.cumulative.ytd_target_seconds,
                     ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
 
-                    // Annual target (full year, respects system start date)
+                    // Annual target
                     annualTargetSeconds: periodSummary.cumulative.annual_target_seconds || 0,
                     annualTargetHours: ((periodSummary.cumulative.annual_target_seconds || 0) / 3600).toFixed(1),
+                    annualTargetDisplay: fmtSec(periodSummary.cumulative.annual_target_seconds || 0),
 
                     // Current fiscal month from backend
                     currentFiscalMonth: periodSummary.cumulative.current_fiscal_month || periodSummary.fiscal_month || getIstanbulMonth(),
@@ -336,8 +381,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <p className="text-sm text-slate-500 font-medium">Normal çalışma ve fazla mesai detaylı dökümü.</p>
                 </div>
                 <div className="text-right">
-                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.targetHours}</span>
-                    <span className="text-sm text-slate-400 font-bold ml-1 uppercase">saat</span>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.targetDisplay}</span>
                 </div>
             </div>
 
@@ -386,14 +430,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         {/* ENHANCED BAR VISUALS — with leave + report segments */}
                         <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
                             {/* Tamamlanan — Mavi */}
-                            <Tooltip title={`Tamamlanan: ${stats.completedHours} sa`}>
+                            <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}>
                                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)] relative group" style={{ width: `${stats.pCompleted}%` }}>
                                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 </div>
                             </Tooltip>
                             {/* İzin — Cyan */}
                             {stats.pLeaveBar1 > 0 && (
-                                <Tooltip title={`İzin: ${stats.leaveHours} sa`}>
+                                <Tooltip title={`İzin: ${stats.leaveDisplay}`}>
                                     <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.4)] relative group" style={{ width: `${stats.pLeaveBar1}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     </div>
@@ -401,7 +445,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             )}
                             {/* Rapor — Turuncu */}
                             {stats.pReportBar1 > 0 && (
-                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportHours} sa`}>
+                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportDisplay}`}>
                                     <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(249,115,22,0.4)] relative group" style={{ width: `${stats.pReportBar1}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     </div>
@@ -409,7 +453,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             )}
                             {/* Eksik — Kırmızı çizgili */}
                             {stats.pMissing > 0 && (
-                                <Tooltip title={`Eksik: ${stats.missingHours} sa`}>
+                                <Tooltip title={`Eksik: ${stats.missingDisplay}`}>
                                     <div className="bg-gradient-to-r from-rose-400 to-rose-500 h-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(244,63,94,0.4)]" style={{ width: `${stats.pMissing}%` }}>
                                         <div className="absolute inset-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.2)_50%,rgba(255,255,255,.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-60"></div>
                                     </div>
@@ -420,19 +464,19 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
                         <div className="flex items-center justify-between mt-2.5 px-1">
                             <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
-                                <span className="flex items-center gap-1.5 text-blue-700"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.completedHours} sa <span className="font-medium text-slate-400">tamamlanan</span></span>
+                                <span className="flex items-center gap-1.5 text-blue-700"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.completedDisplay} <span className="font-medium text-slate-400">tamamlanan</span></span>
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveHours} sa <span className="font-medium text-slate-400">izin</span></span>
+                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveDisplay} <span className="font-medium text-slate-400">izin</span></span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportHours} sa <span className="font-medium text-slate-400">rapor</span></span>
+                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportDisplay} <span className="font-medium text-slate-400">rapor</span></span>
                                 )}
                             </div>
                             <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
                                 {parseFloat(stats.missingHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>-{stats.missingHours} sa <span className="font-medium text-slate-400">eksik</span></span>
+                                    <span className="flex items-center gap-1.5 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>-{stats.missingDisplay} <span className="font-medium text-slate-400">eksik</span></span>
                                 )}
-                                <span className="flex items-center gap-1.5 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>{stats.adjustedRemainingHours} sa <span className="font-medium">kalan</span></span>
+                                <span className="flex items-center gap-1.5 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>{stats.remainingDisplay} <span className="font-medium">kalan</span></span>
                             </div>
                         </div>
                     </div>
@@ -448,14 +492,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 </Tooltip>
                                 {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                             </span>
-                            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} / {stats.targetHours} sa</span>
+                            <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.hasCredited ? stats.displayTotalDisplay : stats.netWorkDisplay} / {stats.targetDisplay}</span>
                         </div>
 
                         {/* Stacked Progress Bar */}
                         <div className="relative h-6 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50 flex">
                             {/* Normal Mesai — Mavi */}
                             {stats.pNormal > 0 && (
-                                <Tooltip title={`Normal Mesai: ${stats.normalHours} sa`}>
+                                <Tooltip title={`Normal Mesai: ${stats.completedDisplay}`}>
                                     <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.4)] relative group"
                                         style={{ width: `${stats.pNormal}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -464,7 +508,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             )}
                             {/* Onaylı Ek Mesai — Yeşil */}
                             {stats.pOtApproved > 0 && (
-                                <Tooltip title={`Onaylı Ek Mesai: ${stats.overtimeHours} sa`}>
+                                <Tooltip title={`Onaylı Ek Mesai: ${stats.overtimeDisplay}`}>
                                     <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.4)] relative group"
                                         style={{ width: `${stats.pOtApproved}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -473,7 +517,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             )}
                             {/* İzin — Cyan */}
                             {stats.pLeave > 0 && (
-                                <Tooltip title={`İzin: ${stats.leaveHours} sa`}>
+                                <Tooltip title={`İzin: ${stats.leaveDisplay}`}>
                                     <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.4)] relative group"
                                         style={{ width: `${stats.pLeave}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -482,7 +526,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             )}
                             {/* Sağlık Raporu — Turuncu */}
                             {stats.pHealthReport > 0 && (
-                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportHours} sa`}>
+                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportDisplay}`}>
                                     <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(249,115,22,0.4)] relative group"
                                         style={{ width: `${stats.pHealthReport}%` }}>
                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -504,26 +548,26 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         {/* Summary row below bar */}
                         <div className="flex items-center justify-between mt-2.5 px-1">
                             <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
-                                <span className="flex items-center gap-1.5 text-blue-600"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.normalHours} sa <span className="font-medium text-slate-400">normal</span></span>
+                                <span className="flex items-center gap-1.5 text-blue-600"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.completedDisplay} <span className="font-medium text-slate-400">normal</span></span>
                                 {parseFloat(stats.overtimeHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>+ {stats.overtimeHours} sa <span className="font-medium text-slate-400">ek mesai</span></span>
+                                    <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>+ {stats.overtimeDisplay} <span className="font-medium text-slate-400">ek mesai</span></span>
                                 )}
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveHours} sa <span className="font-medium text-slate-400">izin</span></span>
+                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveDisplay} <span className="font-medium text-slate-400">izin</span></span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportHours} sa <span className="font-medium text-slate-400">rapor</span></span>
+                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportDisplay} <span className="font-medium text-slate-400">rapor</span></span>
                                 )}
                                 {parseFloat(stats.otPendingHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>+ {stats.otPendingHours} sa <span className="font-medium text-slate-400">bekleyen</span></span>
+                                    <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>+ {stats.otPendingDisplay} <span className="font-medium text-slate-400">bekleyen</span></span>
                                 )}
                                 {parseFloat(stats.otPotentialHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>+ {stats.otPotentialHours} sa <span className="font-medium text-slate-400">potansiyel</span></span>
+                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>+ {stats.otPotentialDisplay} <span className="font-medium text-slate-400">potansiyel</span></span>
                                 )}
                             </div>
-                            {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
+                            {(stats._otPendingSec > 0 || stats._otPotentialSec > 0) && (
                                 <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100 whitespace-nowrap shrink-0">
-                                    Potansiyel Dahil: {stats.projectedWorkHours} sa
+                                    Potansiyel Dahil: {stats.projectedWorkDisplay}
                                 </span>
                             )}
                         </div>
@@ -536,8 +580,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         : 'bg-rose-50 text-rose-600 border-rose-200'
                                 }`}>
                                     {stats.isNetSurplus
-                                        ? <><TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa</>
-                                        : <><AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa</>
+                                        ? <><TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelDisplay}</>
+                                        : <><AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelDisplay}</>
                                     }
                                 </span>
                             </div>
@@ -569,12 +613,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 )}
                             </div>
                             <div className="flex justify-between text-[10px] font-bold mt-2.5 px-1">
-                                <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>{stats.otApprovedHours} sa <span className="font-medium text-slate-400">onaylı</span></span>
-                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>{stats.otPendingHours} sa <span className="font-medium text-slate-400">bekleyen</span></span>
-                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>{stats.otPotentialHours} sa <span className="font-medium text-slate-400">potansiyel</span></span>
+                                <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>{stats.otApprovedDisplay} <span className="font-medium text-slate-400">onaylı</span></span>
+                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>{stats.otPendingDisplay} <span className="font-medium text-slate-400">bekleyen</span></span>
+                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>{stats.otPotentialDisplay} <span className="font-medium text-slate-400">potansiyel</span></span>
                             </div>
                             <div className="text-right mt-1">
-                                <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalHours} sa</span>
+                                <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalDisplay}</span>
                             </div>
                         </>
                     ) : (
@@ -617,18 +661,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <div className="p-5 rounded-2xl border border-slate-100 bg-white hover:shadow-lg transition-shadow duration-300 shadow-sm">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK HEDEF</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.annualTargetHours}</span>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
+                                    <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.annualTargetDisplay}</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdCompletedHours}</span> sa (YTD)</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdCompletedDisplay}</span> (YTD)</p>
                             </div>
 
                             {/* 3. YTD Completed */}
                             <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/30 hover:shadow-lg transition-shadow duration-300 group">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK GERÇEKLEŞEN</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform">{stats.cumulative.ytdCompletedHours}</span>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
+                                    <span className="text-3xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform">{stats.cumulative.ytdCompletedDisplay}</span>
                                 </div>
                                 <div className="w-full bg-indigo-100 rounded-full h-1.5 mt-3 overflow-hidden">
                                     <div className="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${stats.cumulative.progressPercent}%` }}></div>
@@ -734,10 +776,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             if (isFuture) containerBg = 'bg-slate-100/60';
                                             else if (completed >= target && target > 0) containerBg = 'bg-emerald-50/30';
 
-                                            const balanceHours = (balance / 3600).toFixed(1);
+                                            const balanceDisplay = fmtSec(Math.abs(balance));
                                             // Cumulative from reduced breakdown
-                                            const cumulativeHours = m.cumulativeBalance || '0.0';
-                                            const isCumulativePos = m.cumulativeBalance >= 0;
+                                            const cumulativeBalanceSec = typeof m.cumulativeBalance === 'number' ? m.cumulativeBalance * 3600 : 0;
+                                            const cumulativeDisplay = fmtSec(Math.abs(cumulativeBalanceSec));
+                                            const isCumulativePos = (typeof m.cumulativeBalance === 'number' ? m.cumulativeBalance : 0) >= 0;
 
                                             return (
                                                 <div
@@ -802,7 +845,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             <div className="flex flex-col items-center">
                                                                 <span className="text-emerald-500 text-xs font-black leading-none">&#10003;</span>
                                                                 <span className={`text-[9px] font-black drop-shadow-sm leading-tight ${balance >= 0 ? 'text-white' : 'text-rose-600/90'}`}>
-                                                                    {balance > 0 ? `+${balanceHours}` : balance < 0 ? balanceHours : '0'}
+                                                                    {balance > 0 ? `+${balanceDisplay}` : balance < 0 ? `-${balanceDisplay}` : '0'}
                                                                 </span>
                                                             </div>
                                                         ) : isCurrentMonth ? (
@@ -831,22 +874,22 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                             <div className="space-y-2">
                                                                 <div className="flex justify-between">
                                                                     <span className="text-slate-400">Hedef:</span>
-                                                                    <span className="font-mono text-slate-200">{(target / 3600).toFixed(1)} sa</span>
+                                                                    <span className="font-mono text-slate-200">{fmtSec(target)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
                                                                     <span className="text-slate-400">Gerçekleşen:</span>
-                                                                    <span className="font-mono font-bold text-indigo-400">{((Math.min(completed, target)) / 3600).toFixed(1)} sa</span>
+                                                                    <span className="font-mono font-bold text-indigo-400">{fmtSec(Math.min(completed, target))}</span>
                                                                 </div>
                                                                 {(m.leave_seconds || 0) > 0 && (
                                                                     <div className="flex justify-between">
                                                                         <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span><span className="text-cyan-400">İzin:</span></span>
-                                                                        <span className="font-mono font-bold text-cyan-300">{((m.leave_seconds || 0) / 3600).toFixed(1)} sa</span>
+                                                                        <span className="font-mono font-bold text-cyan-300">{fmtSec(m.leave_seconds || 0)}</span>
                                                                     </div>
                                                                 )}
                                                                 {(m.health_report_seconds || 0) > 0 && (
                                                                     <div className="flex justify-between">
                                                                         <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block"></span><span className="text-sky-400">Rapor:</span></span>
-                                                                        <span className="font-mono font-bold text-sky-300">{((m.health_report_seconds || 0) / 3600).toFixed(1)} sa</span>
+                                                                        <span className="font-mono font-bold text-sky-300">{fmtSec(m.health_report_seconds || 0)}</span>
                                                                     </div>
                                                                 )}
                                                                 {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
@@ -855,19 +898,19 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                         {otApprovedSec > 0 && (
                                                                             <div className="flex justify-between">
                                                                                 <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span><span className="text-emerald-400">Onaylı:</span></span>
-                                                                                <span className="font-mono font-bold text-emerald-300">{(otApprovedSec / 3600).toFixed(1)} sa</span>
+                                                                                <span className="font-mono font-bold text-emerald-300">{fmtSec(otApprovedSec)}</span>
                                                                             </div>
                                                                         )}
                                                                         {otPendingSec > 0 && (
                                                                             <div className="flex justify-between">
                                                                                 <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span><span className="text-amber-400">Bekleyen:</span></span>
-                                                                                <span className="font-mono font-bold text-amber-300">{(otPendingSec / 3600).toFixed(1)} sa</span>
+                                                                                <span className="font-mono font-bold text-amber-300">{fmtSec(otPendingSec)}</span>
                                                                             </div>
                                                                         )}
                                                                         {otPotentialSec > 0 && (
                                                                             <div className="flex justify-between">
                                                                                 <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span><span className="text-slate-400">Potansiyel:</span></span>
-                                                                                <span className="font-mono font-bold text-slate-300">{(otPotentialSec / 3600).toFixed(1)} sa</span>
+                                                                                <span className="font-mono font-bold text-slate-300">{fmtSec(otPotentialSec)}</span>
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -875,7 +918,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
                                                                     <span className={balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
                                                                     <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                                        {balance > 0 ? '+' : ''}{balanceHours}
+                                                                        {balance > 0 ? '+' : balance < 0 ? '-' : ''}{balanceDisplay}
                                                                     </span>
                                                                 </div>
 
@@ -884,7 +927,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     <div className="flex justify-between pt-2 mt-2 border-t border-white/5 bg-white/5 -mx-5 px-5 py-2 -mb-4 rounded-b-xl">
                                                                         <span className="text-slate-300 font-bold">Kümülatif Bakiye:</span>
                                                                         <span className={`font-mono font-black ${isCumulativePos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                                            {isCumulativePos ? '+' : ''}{cumulativeHours} sa
+                                                                            {isCumulativePos ? '+' : '-'}{cumulativeDisplay}
                                                                         </span>
                                                                     </div>
                                                                 )}

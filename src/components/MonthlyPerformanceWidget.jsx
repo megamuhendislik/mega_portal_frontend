@@ -2,6 +2,18 @@ import React from 'react';
 import { PieChart, Briefcase, Calendar, Star, TrendingUp, AlertCircle, Clock } from 'lucide-react';
 import clsx from 'clsx';
 
+function fmtSec(s) {
+    if (!s) return '0dk';
+    const neg = s < 0;
+    const abs = Math.abs(Math.round(s));
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    const sign = neg ? '-' : '';
+    if (h > 0 && m > 0) return `${sign}${h}sa ${m}dk`;
+    if (h > 0) return `${sign}${h}sa`;
+    return `${sign}${m}dk`;
+}
+
 const MonthlyPerformanceWidget = ({ summary, loading }) => {
     if (loading) {
         return (
@@ -55,7 +67,7 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
                     {isPositiveBalance ? <TrendingUp size={14} /> : <AlertCircle size={14} />}
                     <div className="text-right">
                         <p className="text-[10px] uppercase font-bold opacity-70 leading-none mb-0.5">Net Mesai</p>
-                        <p className="text-sm font-black leading-none">{isPositiveBalance ? '+' : ''}{netBalance.toFixed(1)} sa</p>
+                        <p className="text-sm font-black leading-none">{isPositiveBalance ? '+' : ''}{fmtSec(summary.net_balance_seconds)}</p>
                     </div>
                 </div>
             </div>
@@ -64,8 +76,8 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
             <div className="mb-8 z-10 relative">
                 <div className="flex justify-between items-end mb-2">
                     <div>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">{completed.toFixed(1)}</span>
-                        <span className="text-sm font-bold text-slate-400 ml-1">/ {target.toFixed(0)} sa</span>
+                        <span className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">{fmtSec(summary.completed_seconds)}</span>
+                        <span className="text-sm font-bold text-slate-400 ml-1">/ {fmtSec(summary.target_seconds)}</span>
                     </div>
                 </div>
 
@@ -95,21 +107,21 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Tamamlanan</p>
-                            <p className="text-xs font-bold text-emerald-600">{completed.toFixed(1)} sa</p>
+                            <p className="text-xs font-bold text-emerald-600">{fmtSec(summary.completed_seconds)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-sm"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Eksik</p>
-                            <p className="text-xs font-bold text-red-500">{missing.toFixed(1)} sa</p>
+                            <p className="text-xs font-bold text-red-500">{fmtSec(summary.missing_seconds)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-slate-300 shadow-sm"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Kalan</p>
-                            <p className="text-xs font-bold text-slate-500">{remaining.toFixed(1)} sa</p>
+                            <p className="text-xs font-bold text-slate-500">{fmtSec(summary.remaining_seconds)}</p>
                         </div>
                     </div>
                 </div>
@@ -120,7 +132,7 @@ const MonthlyPerformanceWidget = ({ summary, loading }) => {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                     <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Toplam Mesai</p>
-                        <p className="text-lg font-bold text-blue-600">{overtime.toFixed(1)} sa</p>
+                        <p className="text-lg font-bold text-blue-600">{fmtSec(summary.overtime_seconds || summary.total_overtime_seconds)}</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                         <Clock size={16} />
