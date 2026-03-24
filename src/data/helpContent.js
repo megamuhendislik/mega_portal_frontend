@@ -14,7 +14,11 @@ const helpContent = [
         permission: null,
         link: '/',
         images: [
-            { src: '/help-images/help-giris-01.png', caption: 'Ana sayfa tam görünüm — özet kartları, puantaj grafiği, son aktiviteler ve yaklaşan etkinlikler' }
+            { src: '/help-images/help-login-01.png', caption: 'Giriş sayfası — kullanıcı adı ve şifre ile oturum açma' },
+            { src: '/help-images/help-giris-01.png', caption: 'Ana sayfa tam görünüm — özet kartları, puantaj grafiği, son aktiviteler ve yaklaşan etkinlikler' },
+            { src: '/help-images/help-giris-02.png', caption: 'Ana sayfa üst kartlar — bugün çalışma, mola, fazla mesai, izin durumu ve haftalık limit' },
+            { src: '/help-images/help-giris-03.png', caption: 'Puantaj grafiği bölgesi — günlük çalışma süreleri ve hedef çizgisi' },
+            { src: '/help-images/help-giris-04.png', caption: 'Aylık performans bölgesi — hedef, gerçekleşen, bakiye ve dönem detayları' }
         ],
         steps: [
             {
@@ -164,7 +168,8 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/help-talepler-03.png', caption: 'Ek mesai sekmesi — planli, algılanan ve manuel mesai talepleri' }
+            { src: '/help-images/help-talepler-03.png', caption: 'Ek mesai sekmesi — planli, algılanan ve manuel mesai talepleri' },
+            { src: '/help-images/help-talepler-06.png', caption: 'Ek mesai alt sekmeler — atanan mesailer, potansiyel mesailer ve manuel giriş detayları' }
         ],
         steps: [
             {
@@ -299,7 +304,8 @@ const helpContent = [
         permission: null,
         link: '/directory',
         images: [
-            { src: '/help-images/help-rehber-01.png', caption: 'Şirket rehberi — çalışankartları, arama çubuğu ve departman süzgeçi' }
+            { src: '/help-images/help-rehber-01.png', caption: 'Şirket rehberi — çalışan kartları, arama çubuğu ve departman süzgeçi' },
+            { src: '/help-images/help-rehber-02.png', caption: 'Şirket rehberi kartlar — çalışan detay bilgileri ve iletişim' }
         ],
         steps: [
             {
@@ -340,7 +346,8 @@ const helpContent = [
         permission: null,
         link: '/feedback',
         images: [
-            { src: '/help-images/help-geribildirim-01.png', caption: 'Dilek ve şikayetler sayfası — bildirim listesi, durum süzgeçleri ve yeni bildirim oluşturma' }
+            { src: '/help-images/help-geribildirim-01.png', caption: 'Dilek ve şikayetler sayfası — bildirim listesi, durum süzgeçleri ve yeni bildirim oluşturma' },
+            { src: '/help-images/help-geribildirim-02.png', caption: 'Yeni geri bildirim oluşturma modalı — tür seçimi, başlık, açıklama ve dosya ekleme' }
         ],
         steps: [
             {
@@ -381,7 +388,8 @@ const helpContent = [
         permission: null,
         link: '/substitutes',
         images: [
-            { src: '/help-images/help-vekalet-01.png', caption: 'Vekalet yönetimi — aktif vekaletler, geçmiş ve yeni vekalet atama' }
+            { src: '/help-images/help-vekalet-01.png', caption: 'Vekalet yönetimi — aktif vekaletler, geçmiş ve yeni vekalet atama' },
+            { src: '/help-images/help-vekalet-02.png', caption: 'Vekalet yönetimi detay — vekalet süresi, vekil bilgileri ve işlem geçmişi' }
         ],
         steps: [
             {
@@ -469,7 +477,8 @@ const helpContent = [
         permission: 'PAGE_REPORTS',
         link: '/reports',
         images: [
-            { src: '/help-images/help-raporlar-01.png', caption: 'Raporlar sayfası — rapor türleri, tarih süzgeçi ve dışa aktarma seçenekleri' }
+            { src: '/help-images/help-raporlar-01.png', caption: 'Raporlar sayfası — rapor türleri, tarih süzgeçi ve dışa aktarma seçenekleri' },
+            { src: '/help-images/help-raporlar-02.png', caption: 'Raporlar grafik ve tablo — puantaj verileri, grafiksel özet ve detay tablosu' }
         ],
         steps: [
             {
@@ -510,7 +519,8 @@ const helpContent = [
         permission: 'PAGE_WORK_SCHEDULES',
         link: '/work-schedules',
         images: [
-            { src: '/help-images/help-programlar-01.png', caption: 'Çalışma takvimleri — mali takvim listesi, şablon detayları ve günatamaları' }
+            { src: '/help-images/help-programlar-01.png', caption: 'Çalışma takvimleri — mali takvim listesi, şablon detayları ve gün atamaları' },
+            { src: '/help-images/help-programlar-02.png', caption: 'Çalışma takvimleri detay — vardiya şablonu, gün kuralları ve tolerans ayarları' }
         ],
         steps: [
             {
@@ -555,7 +565,8 @@ const helpContent = [
         permission: 'PAGE_SYSTEM_HEALTH',
         link: '/system-health',
         images: [
-            { src: '/help-images/help-sistem-01.png', caption: 'Sistem sagligi — denetim sekmeleri, durum kartları ve işlem düğmeleri' }
+            { src: '/help-images/help-sistem-01.png', caption: 'Sistem sagligi — denetim sekmeleri, durum kartları ve işlem düğmeleri' },
+            { src: '/help-images/help-sistem-02.png', caption: 'Sistem sagligi detay — denetim sonuçları, düzeltme önerileri ve test çıktıları' }
         ],
         steps: [
             {
@@ -687,7 +698,8 @@ const helpContent = [
         permission: 'PAGE_SERVICE_MANAGEMENT',
         link: '/service-management',
         images: [
-            { src: '/help-images/help-servis-01.png', caption: 'Servis yönetimi — güzergah listesi, duraklar ve çalışaneslesmeleri' }
+            { src: '/help-images/help-servis-01.png', caption: 'Servis yönetimi — güzergah listesi, duraklar ve çalışan eşleşmeleri' },
+            { src: '/help-images/help-servis-02.png', caption: 'Servis yönetimi detay — güzergah düzenleme, durak yönetimi ve tolerans ayarları' }
         ],
         steps: [
             {
@@ -728,7 +740,8 @@ const helpContent = [
         permission: 'PAGE_DATA_MANAGEMENT',
         link: '/data-management',
         images: [
-            { src: '/help-images/help-veri-01.png', caption: 'Veri yönetimi — dışa aktarma, ice aktarma ve toplu işlem seçenekleri' }
+            { src: '/help-images/help-veri-01.png', caption: 'Veri yönetimi — dışa aktarma, içe aktarma ve toplu işlem seçenekleri' },
+            { src: '/help-images/help-veri-02.png', caption: 'Veri yönetimi detay — PDKS yükleme, kuru çalıştırma ve doğrulama sonuçları' }
         ],
         steps: [
             {
@@ -769,13 +782,14 @@ const helpContent = [
         permission: 'PAGE_HEALTH_REPORTS',
         link: '/health-reports',
         images: [
-            { src: '/help-images/help-sağlık-01.png', caption: 'Sağlık raporları — özet kartlar, rapor listesi, detay ve onay işlemleri' }
+            { src: '/help-images/help-saglik-01.png', caption: 'Sağlık raporları — özet kartlar, rapor listesi, detay ve onay işlemleri' },
+            { src: '/help-images/help-saglik-02.png', caption: 'Sağlık raporları detay — rapor türü, belge yükleme, onay süreci ve puantaj etkisi' }
         ],
         steps: [
             {
                 title: 'Sayfaya Erişim',
                 description: 'Sol menüden "Sağlık Raporları" seçeneğine tıklayın. Özet kartları (toplam rapor, bekleyen, onaylanan), süzgeçler ve rapor listesi görürsünüz.',
-                image: { src: '/help-images/help-sağlık-01.png', caption: 'Sağlık raporları sayfası' }
+                image: { src: '/help-images/help-saglik-01.png', caption: 'Sağlık raporları sayfası' }
             },
             {
                 title: 'Yeni Sağlık Raporu Oluşturma',
@@ -810,13 +824,14 @@ const helpContent = [
         permission: 'PAGE_SPECIAL_LEAVES',
         link: '/special-leaves',
         images: [
-            { src: '/help-images/help-özel-izin-01.png', caption: 'Özel izinler — izin türü listesi, başvuru durumu ve özet bilgiler' }
+            { src: '/help-images/help-ozel-izin-01.png', caption: 'Özel izinler — izin türü listesi, başvuru durumu ve özet bilgiler' },
+            { src: '/help-images/help-ozel-izin-02.png', caption: 'Özel izinler detay — başvuru formu, belge yükleme ve onay durumu' }
         ],
         steps: [
             {
                 title: 'Sayfaya Erişim',
                 description: 'Sol menüden "Özel İzinler" seçeneğine tıklayın. Özel izin türleri, başvuru durumunuz ve özet bilgiler görünür.',
-                image: { src: '/help-images/help-özel-izin-01.png', caption: 'Özel izinler sayfası' }
+                image: { src: '/help-images/help-ozel-izin-01.png', caption: 'Özel izinler sayfası' }
             },
             {
                 title: 'Özel İzin Türleri',
@@ -896,8 +911,10 @@ const helpContent = [
         permission: 'PAGE_ATTENDANCE',
         link: '/attendance',
         images: [
-            { src: '/help-images/help-mesai-01.png', caption: 'Mesai takibi ekip tablosu — çalışanpuantaj listesi, durum sütunları ve işlem düğmeleri' },
-            { src: '/help-images/help-mesai-02.png', caption: 'Mesai takibi analiz sekmesi — katilim, mesai, yemek ve izin grafikleri' }
+            { src: '/help-images/help-mesai-01.png', caption: 'Mesai takibi ekip tablosu — çalışan puantaj listesi, durum sütunları ve işlem düğmeleri' },
+            { src: '/help-images/help-mesai-02.png', caption: 'Mesai takibi tablo sağ sütunlar — ek mesai, mola, durum ve işlem detayları' },
+            { src: '/help-images/help-mesai-03.png', caption: 'Mesai takibi analitik modu — katılım, mesai, yemek ve izin grafikleri' },
+            { src: '/help-images/help-mesai-04.png', caption: 'Mesai takibi analitik detay — departman karşılaştırması ve sıralama tablosu' }
         ],
         steps: [
             {
@@ -958,7 +975,8 @@ const helpContent = [
         permission: 'PAGE_PROGRAM_MANAGEMENT',
         link: '/programs',
         images: [
-            { src: '/help-images/help-program-01.png', caption: 'Program yönetimi — program listesi, detay paneli, cihazlar ve erişim logları' }
+            { src: '/help-images/help-program-01.png', caption: 'Program yönetimi — program listesi, detay paneli, cihazlar ve erişim logları' },
+            { src: '/help-images/help-program-02.png', caption: 'Program yönetimi detay — API anahtarı, cihaz listesi ve erişim log detayları' }
         ],
         steps: [
             {
