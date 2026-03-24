@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2 } from 'lucide-react';
+import { Modal, message } from 'antd';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -9,7 +10,7 @@ import ModalOverlay from './ui/ModalOverlay';
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 
 const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate }) => {
-  const { hasPermission, user } = useAuth();
+  const { user } = useAuth();
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideAction, setOverrideAction] = useState('approve');
   const [overrideReason, setOverrideReason] = useState('');
@@ -24,6 +25,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [weeklyOtStatus, setWeeklyOtStatus] = useState(null);
   const [weeklyOtLoading, setWeeklyOtLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const toggleSection = (key) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -92,6 +97,14 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     }
   }, [isOpen, request, requestType]);
 
+  // Reset edit state when modal closes/reopens
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditing(false);
+      setEditForm({});
+    }
+  }, [isOpen]);
+
   const fetchTimeLockInfo = async () => {
     if (!request) return;
 
@@ -121,6 +134,140 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       lock_date: lockDate.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' }),
       days_until_lock: daysUntilLock > 0 ? daysUntilLock : 0
     });
+  };
+
+  // --- Edit/Cancel logic ---
+  const REQUEST_API_MAP = {
+    LEAVE: '/leave/requests',
+    OVERTIME: '/overtime-requests',
+    CARDLESS_ENTRY: '/cardless-entry-requests',
+    MEAL: '/meal-requests',
+    HEALTH_REPORT: '/health-reports',
+    HOSPITAL_VISIT: '/health-reports',
+    SPECIAL_LEAVE: '/special-leaves',
+  };
+
+  const EDIT_FIELDS_MAP = {
+    LEAVE: ['start_date', 'end_date', 'reason'],
+    OVERTIME: ['start_time', 'end_time', 'reason'],
+    CARDLESS_ENTRY: ['check_in', 'check_out', 'reason'],
+    MEAL: ['date'],
+    HEALTH_REPORT: ['start_date', 'end_date', 'report_type', 'description'],
+    HOSPITAL_VISIT: ['start_date', 'end_date', 'report_type', 'description'],
+    SPECIAL_LEAVE: ['start_time', 'end_time', 'description'],
+  };
+
+  const isOwner = (() => {
+    if (!request || !user) return false;
+    const empId = typeof request.employee === 'object' ? request.employee?.id : request.employee;
+    return empId === user.id;
+  })();
+
+  const canEditOrCancel = request?.status === 'PENDING' && isOwner;
+
+  const startEditing = () => {
+    const fields = EDIT_FIELDS_MAP[requestType] || [];
+    const form = {};
+    fields.forEach(f => { form[f] = request[f] || ''; });
+    setEditForm(form);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    const endpoint = REQUEST_API_MAP[requestType];
+    if (!endpoint) return;
+
+    setEditLoading(true);
+    try {
+      await api.patch(`${endpoint}/${request.id}/`, editForm);
+      message.success('Talep güncellendi.');
+      setIsEditing(false);
+      onUpdate?.();
+      onClose();
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Güncelleme başarısız.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    const endpoint = REQUEST_API_MAP[requestType];
+    if (!endpoint) return;
+
+    setCancelLoading(true);
+    try {
+      await api.post(`${endpoint}/${request.id}/cancel/`);
+      message.success('Talep iptal edildi.');
+      onUpdate?.();
+      onClose();
+    } catch (err) {
+      message.error(err.response?.data?.error || 'İptal işlemi başarısız.');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const confirmCancel = () => {
+    Modal.confirm({
+      title: 'Talebi İptal Et',
+      content: 'Bu talebi iptal etmek istediğinize emin misiniz?',
+      okText: 'Evet, İptal Et',
+      cancelText: 'Vazgeç',
+      okButtonProps: { danger: true },
+      onOk: handleCancelRequest,
+    });
+  };
+
+  const FIELD_LABELS = {
+    start_date: 'Başlangıç Tarihi', end_date: 'Bitiş Tarihi',
+    start_time: 'Başlangıç Saati', end_time: 'Bitiş Saati',
+    check_in: 'Giriş Saati', check_out: 'Çıkış Saati',
+    description: 'Açıklama', reason: 'Sebep/Açıklama',
+    date: 'Tarih', report_type: 'Rapor Türü',
+  };
+
+  const renderEditField = (field) => {
+    const value = editForm[field] ?? '';
+    const onChange = (val) => setEditForm(prev => ({ ...prev, [field]: val }));
+
+    if (field.includes('date') || field === 'date') {
+      return (
+        <div key={field} className="space-y-1">
+          <label className="text-xs font-medium text-slate-500">{FIELD_LABELS[field]}</label>
+          <input type="date" value={value} onChange={e => onChange(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+      );
+    }
+    if (field.includes('time') || field === 'check_in' || field === 'check_out') {
+      return (
+        <div key={field} className="space-y-1">
+          <label className="text-xs font-medium text-slate-500">{FIELD_LABELS[field]}</label>
+          <input type="time" value={typeof value === 'string' ? value.substring(0, 5) : value} onChange={e => onChange(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+      );
+    }
+    if (field === 'report_type') {
+      return (
+        <div key={field} className="space-y-1">
+          <label className="text-xs font-medium text-slate-500">{FIELD_LABELS[field]}</label>
+          <select value={value} onChange={e => onChange(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="HEALTH_REPORT">Sağlık Raporu</option>
+            <option value="HOSPITAL_VISIT">Hastane Ziyareti</option>
+          </select>
+        </div>
+      );
+    }
+    return (
+      <div key={field} className="space-y-1">
+        <label className="text-xs font-medium text-slate-500">{FIELD_LABELS[field]}</label>
+        <textarea value={value} onChange={e => onChange(e.target.value)} rows={2}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" />
+      </div>
+    );
   };
 
   const handleOverrideSubmit = async () => {
@@ -1041,10 +1188,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
           )}
         </div>
 
+        {/* Edit Form */}
+        {isEditing && (
+          <div className="p-4 bg-blue-50 border-t border-blue-200">
+            <h4 className="text-sm font-semibold text-blue-800 mb-3">Talebi Düzenle</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(EDIT_FIELDS_MAP[requestType] || []).map(field => renderEditField(field))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
-          <div>
-            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && (
+          <div className="flex items-center gap-2">
+            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && !isEditing && (
               <button
                 onClick={() => handleDownloadDocx(request.id)}
                 disabled={downloadLoading}
@@ -1055,12 +1212,52 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               </button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium"
-          >
-            Kapat
-          </button>
+          <div className="flex items-center gap-2">
+            {canEditOrCancel && !isEditing && (
+              <>
+                <button
+                  onClick={startEditing}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm flex items-center gap-1.5"
+                >
+                  <Edit3 size={14} />
+                  Düzenle
+                </button>
+                <button
+                  onClick={confirmCancel}
+                  disabled={cancelLoading}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium text-sm flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                  {cancelLoading ? 'İptal ediliyor...' : 'İptal Et'}
+                </button>
+              </>
+            )}
+            {isEditing && (
+              <>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium text-sm"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={editLoading}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-medium text-sm disabled:opacity-50"
+                >
+                  {editLoading ? 'Kaydediliyor...' : 'Kaydet'}
+                </button>
+              </>
+            )}
+            {!isEditing && (
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium"
+              >
+                Kapat
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </ModalOverlay>

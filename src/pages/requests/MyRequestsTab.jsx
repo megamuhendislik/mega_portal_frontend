@@ -328,7 +328,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             }
             if (typeFilter !== 'ALL' && r._type !== typeFilter) return false;
             if (statusFilter !== 'ALL') {
-                const statusGroup = { 'ORDERED': 'APPROVED' };
+                const statusGroup = { 'ORDERED': 'APPROVED', 'CANCELED': 'CANCELLED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
                 if (effectiveStatus !== statusFilter) return false;
             }
@@ -362,6 +362,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             pending: actual.filter(r => r.status === 'PENDING').length,
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => r.status === 'REJECTED').length,
+            cancelled: actual.filter(r => ['CANCELLED', 'CANCELED'].includes(r.status)).length,
         };
     }, [allMyRequests, dateFrom, dateTo]);
 
@@ -461,6 +462,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                     <FilterChip active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} label="Bekleyen" count={counts.pending} color="amber" />
                     <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
                     <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
+                    <FilterChip active={statusFilter === 'CANCELLED'} onClick={() => setStatusFilter('CANCELLED')} label="İptal" count={counts.cancelled} color="slate" />
                     <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block" />
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
                         <input type="checkbox" checked={showPotential} onChange={(e) => setShowPotential(e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded" />
