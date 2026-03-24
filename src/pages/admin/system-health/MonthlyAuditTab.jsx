@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     MagnifyingGlassIcon,
     DocumentArrowDownIcon,
@@ -7,10 +7,13 @@ import {
     ChevronDownIcon,
     ChevronUpIcon,
     ClockIcon,
+    WrenchScrewdriverIcon,
+    ShieldExclamationIcon,
+    ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// --- Helpers ---
 
 function fmtSec(s) {
     if (s === null || s === undefined) return '-';
@@ -32,17 +35,7 @@ function fmtSecReadable(s) {
     return `${sign}${m} dk`;
 }
 
-const WEEKDAY_TR = {
-    Monday: 'Pazartesi',
-    Tuesday: 'Sali',
-    Wednesday: 'Carsamba',
-    Thursday: 'Persembe',
-    Friday: 'Cuma',
-    Saturday: 'Cumartesi',
-    Sunday: 'Pazar',
-};
-
-// ─── Main Component ──────────────────────────────────────────────────────────
+// --- Main Component ---
 
 export default function MonthlyAuditTab() {
     const [employees, setEmployees] = useState([]);
@@ -56,8 +49,9 @@ export default function MonthlyAuditTab() {
     const [error, setError] = useState(null);
     const [expandedDays, setExpandedDays] = useState(new Set());
     const [filterMismatch, setFilterMismatch] = useState(false);
+    const [filterAnomaly, setFilterAnomaly] = useState(false);
+    const [autoFix, setAutoFix] = useState(false);
 
-    // Fetch employees
     useEffect(() => {
         api.get('/employees/', { params: { page_size: 500 } }).then(r => {
             const list = Array.isArray(r.data) ? r.data : r.data?.results || [];
@@ -82,8 +76,8 @@ export default function MonthlyAuditTab() {
         setExpandedDays(new Set());
         try {
             const resp = await api.post('/system/health-check/monthly-audit/', {
-                employee_id: selectedEmployee.id, year, month
-            }, { timeout: 120000 });
+                employee_id: selectedEmployee.id, year, month, auto_fix: autoFix
+            }, { timeout: 180000 });
             setResult(resp.data);
         } catch (err) {
             setError(err.response?.data?.error || 'Denetim basarisiz.');
@@ -119,16 +113,22 @@ export default function MonthlyAuditTab() {
     const collapseAll = () => setExpandedDays(new Set());
 
     const displayDays = result?.daily_logs
-        ? (filterMismatch ? result.daily_logs.filter(d => d.has_mismatch) : result.daily_logs)
+        ? result.daily_logs.filter(d => {
+            if (filterMismatch && !d.has_mismatch) return false;
+            if (filterAnomaly && (!d.anomalies || d.anomalies.length === 0)) return false;
+            return true;
+        })
         : [];
 
-    // ─── Summary Card ────────────────────────────────────────────────────────
+    // --- Summary Card ---
 
     const SummaryCard = ({ title, data, compareData, color }) => {
         const fields = [
             { key: 'target_seconds', label: 'Hedef' },
+            { key: 'expected_target', label: 'Hedef (Vardiyalardan)' },
             { key: 'completed_seconds', label: 'Tamamlanan' },
-            { key: 'overtime_seconds', label: 'Fazla Mesai' },
+            { key: 'overtime_seconds', label: 'Fazla Mesai (Onayli)' },
+            { key: 'calculated_ot_seconds', label: 'Fazla Mesai (Hesaplanan)' },
             { key: 'missing_seconds', label: 'Eksik' },
             { key: 'total_work_seconds', label: 'Toplam Calisma' },
             { key: 'net_balance_seconds', label: 'Net Bakiye' },
@@ -140,20 +140,30 @@ export default function MonthlyAuditTab() {
             { key: 'special_leave_days', label: 'Ozel Izin Gunu' },
             { key: 'total_break_seconds', label: 'Toplam Mola' },
             { key: 'worked_days', label: 'Calisan Gun' },
+            { key: 'absent_days', label: 'Devamsiz Gun' },
+            { key: 'off_days', label: 'Tatil Gun' },
+            { key: 'ghost_days', label: 'Kayitsiz Gun' },
         ];
+
+        const colorMap = {
+            blue: { border: 'border-blue-200', bg: 'bg-blue-50/50', title: 'text-blue-800' },
+            emerald: { border: 'border-emerald-200', bg: 'bg-emerald-50/50', title: 'text-emerald-800' },
+            amber: { border: 'border-amber-200', bg: 'bg-amber-50/50', title: 'text-amber-800' },
+        };
+        const c = colorMap[color] || colorMap.blue;
 
         if (data?.error) {
             return (
-                <div className={`rounded-xl border p-5 ${color === 'blue' ? 'border-blue-200 bg-blue-50/50' : 'border-emerald-200 bg-emerald-50/50'}`}>
-                    <h4 className={`font-bold text-sm mb-3 ${color === 'blue' ? 'text-blue-800' : 'text-emerald-800'}`}>{title}</h4>
+                <div className={`rounded-xl border p-5 ${c.border} ${c.bg}`}>
+                    <h4 className={`font-bold text-sm mb-3 ${c.title}`}>{title}</h4>
                     <p className="text-sm text-red-600">{data.error}</p>
                 </div>
             );
         }
 
         return (
-            <div className={`rounded-xl border p-5 ${color === 'blue' ? 'border-blue-200 bg-blue-50/50' : 'border-emerald-200 bg-emerald-50/50'}`}>
-                <h4 className={`font-bold text-sm mb-3 ${color === 'blue' ? 'text-blue-800' : 'text-emerald-800'}`}>{title}</h4>
+            <div className={`rounded-xl border p-5 ${c.border} ${c.bg}`}>
+                <h4 className={`font-bold text-sm mb-3 ${c.title}`}>{title}</h4>
                 <div className="space-y-1.5">
                     {fields.map(f => {
                         if (data?.[f.key] === undefined) return null;
@@ -179,7 +189,7 @@ export default function MonthlyAuditTab() {
         );
     };
 
-    // ─── Render ──────────────────────────────────────────────────────────────
+    // --- Render ---
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
@@ -189,7 +199,7 @@ export default function MonthlyAuditTab() {
                 <div>
                     <h3 className="text-lg font-bold text-gray-800">Aylik Hesap Denetimi</h3>
                     <p className="text-xs text-gray-500">
-                        MonthlyWorkSummary ile gunluk hesaplama karsilastirmasi
+                        Kapsamli butunluk kontrolu: ghost day tespiti, anomali tarama, hedef dengesi
                     </p>
                 </div>
             </div>
@@ -277,6 +287,20 @@ export default function MonthlyAuditTab() {
                     </select>
                 </div>
 
+                {/* Auto-fix toggle */}
+                <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={autoFix}
+                            onChange={e => setAutoFix(e.target.checked)}
+                            className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                        />
+                        <WrenchScrewdriverIcon className="w-4 h-4 text-amber-600" />
+                        <span className="font-medium">Otomatik Duzelt</span>
+                    </label>
+                </div>
+
                 {/* Run Button */}
                 <button
                     onClick={runAudit}
@@ -315,10 +339,21 @@ export default function MonthlyAuditTab() {
                     <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="text-sm text-gray-700">
                             <span className="font-semibold">{result.employee}</span>
+                            {result.department && (
+                                <>
+                                    <span className="mx-2 text-gray-300">|</span>
+                                    <span className="text-gray-500">{result.department}</span>
+                                </>
+                            )}
                             <span className="mx-2 text-gray-300">|</span>
                             <span>{result.period}</span>
                             <span className="mx-2 text-gray-300">|</span>
                             <span>{result.total_days} gun</span>
+                            {result.auto_fix && (
+                                <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                                    Otomatik Duzeltme AKTIF
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -331,32 +366,139 @@ export default function MonthlyAuditTab() {
                         </div>
                     </div>
 
-                    {/* Mismatch Banner */}
-                    {result.mismatches && result.mismatches.length > 0 ? (
+                    {/* Anomaly Summary Badges */}
+                    {result.anomaly_counts && result.anomaly_counts.total > 0 && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2">
-                                <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                            <div className="flex items-center gap-2 mb-3">
+                                <ShieldExclamationIcon className="w-5 h-5 text-red-600" />
                                 <span className="font-bold text-red-800 text-sm">
-                                    Ozet Uyusmazliklari ({result.mismatches.length})
+                                    Anomali Ozeti ({result.anomaly_counts.total} toplam)
                                 </span>
                             </div>
-                            <div className="space-y-1">
-                                {result.mismatches.map((m, i) => (
-                                    <div key={i} className="text-xs text-red-700 font-mono pl-7">{m}</div>
-                                ))}
+                            <div className="flex flex-wrap gap-3">
+                                {result.anomaly_counts.critical > 0 && (
+                                    <div className="px-3 py-2 bg-red-100 border border-red-300 rounded-lg">
+                                        <span className="text-xs font-bold text-red-800">
+                                            {result.anomaly_counts.critical} KRITIK
+                                        </span>
+                                    </div>
+                                )}
+                                {result.anomaly_counts.high > 0 && (
+                                    <div className="px-3 py-2 bg-orange-100 border border-orange-300 rounded-lg">
+                                        <span className="text-xs font-bold text-orange-800">
+                                            {result.anomaly_counts.high} YUKSEK
+                                        </span>
+                                    </div>
+                                )}
+                                {result.anomaly_counts.medium > 0 && (
+                                    <div className="px-3 py-2 bg-yellow-100 border border-yellow-300 rounded-lg">
+                                        <span className="text-xs font-bold text-yellow-800">
+                                            {result.anomaly_counts.medium} ORTA
+                                        </span>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
-                            <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                            <span className="text-green-800 text-sm font-medium">
-                                Ozet karsilastirmasi uyumlu - uyusmazlik bulunamadi.
-                            </span>
                         </div>
                     )}
 
+                    {/* Ghost Days Banner */}
+                    {result.ghost_days && result.ghost_days.length > 0 && (
+                        <div className="p-4 bg-red-50 border border-red-300 rounded-xl">
+                            <div className="flex items-center gap-2 mb-2">
+                                <ExclamationCircleIcon className="w-5 h-5 text-red-700" />
+                                <span className="font-bold text-red-800 text-sm">
+                                    Kayitsiz Gunler ({result.ghost_days.length})
+                                </span>
+                            </div>
+                            <p className="text-xs text-red-700 mb-2">
+                                Asagidaki is gunlerinde hicbir Attendance kaydi yok. Bu gunler hedef hesabinda eksik olusturuyor.
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {result.ghost_days.map(d => (
+                                    <span key={d} className="px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-mono font-medium">
+                                        {d}
+                                    </span>
+                                ))}
+                            </div>
+                            {result.fixed_days && result.fixed_days.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-red-200">
+                                    <span className="text-xs text-green-700 font-medium">
+                                        Duzeltilen: {result.fixed_days.join(', ')}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Integrity Checks */}
+                    {result.integrity_checks && result.integrity_checks.length > 0 && (
+                        <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                            <h4 className="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                                <ShieldExclamationIcon className="w-4 h-4 text-indigo-600" />
+                                Butunluk Kontrolleri
+                            </h4>
+                            <div className="space-y-2">
+                                {result.integrity_checks.map((ic, i) => (
+                                    <div
+                                        key={i}
+                                        className={`flex items-start gap-2 p-2 rounded-lg text-xs ${
+                                            ic.status === 'PASS'
+                                                ? 'bg-green-50 border border-green-200'
+                                                : 'bg-red-50 border border-red-200'
+                                        }`}
+                                    >
+                                        {ic.status === 'PASS' ? (
+                                            <CheckCircleIcon className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                        ) : (
+                                            <ExclamationTriangleIcon className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                        )}
+                                        <div>
+                                            <span className={`font-semibold ${ic.status === 'PASS' ? 'text-green-800' : 'text-red-800'}`}>
+                                                [{ic.check}]
+                                            </span>
+                                            <span className={`ml-2 ${ic.status === 'PASS' ? 'text-green-700' : 'text-red-700'}`}>
+                                                {ic.message}
+                                            </span>
+                                            {ic.diff !== undefined && ic.diff !== 0 && (
+                                                <span className="ml-2 font-mono text-red-600">
+                                                    (fark: {fmtSecReadable(ic.diff)})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Legacy Mismatch Banner (backward compat) */}
+                    {(!result.integrity_checks || result.integrity_checks.length === 0) && (
+                        result.mismatches && result.mismatches.length > 0 ? (
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                                    <span className="font-bold text-red-800 text-sm">
+                                        Ozet Uyusmazliklari ({result.mismatches.length})
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    {result.mismatches.map((m, i) => (
+                                        <div key={i} className="text-xs text-red-700 font-mono pl-7">{m}</div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                                <span className="text-green-800 text-sm font-medium">
+                                    Ozet karsilastirmasi uyumlu - uyusmazlik bulunamadi.
+                                </span>
+                            </div>
+                        )
+                    )}
+
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`grid grid-cols-1 ${result.summary_after_fix ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
                         <SummaryCard
                             title="DB Durumu (MonthlyWorkSummary)"
                             data={result.summary_db}
@@ -369,17 +511,15 @@ export default function MonthlyAuditTab() {
                             compareData={result.summary_db}
                             color="emerald"
                         />
+                        {result.summary_after_fix && (
+                            <SummaryCard
+                                title="Duzeltme Sonrasi"
+                                data={result.summary_after_fix}
+                                compareData={result.summary_db}
+                                color="amber"
+                            />
+                        )}
                     </div>
-
-                    {/* Daily Mismatch Count Badge */}
-                    {result.mismatch_count > 0 && (
-                        <div className="flex items-center gap-2 text-sm">
-                            <ExclamationTriangleIcon className="w-4 h-4 text-amber-600" />
-                            <span className="text-amber-800 font-medium">
-                                {result.mismatch_count} / {result.total_days} gunde gunluk uyusmazlik
-                            </span>
-                        </div>
-                    )}
 
                     {/* Daily Detail Controls */}
                     <div className="flex items-center justify-between gap-3">
@@ -388,8 +528,17 @@ export default function MonthlyAuditTab() {
                             <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                                 <input
                                     type="checkbox"
+                                    checked={filterAnomaly}
+                                    onChange={e => { setFilterAnomaly(e.target.checked); if (e.target.checked) setFilterMismatch(false); }}
+                                    className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                />
+                                Sadece anomaliler
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                <input
+                                    type="checkbox"
                                     checked={filterMismatch}
-                                    onChange={e => setFilterMismatch(e.target.checked)}
+                                    onChange={e => { setFilterMismatch(e.target.checked); if (e.target.checked) setFilterAnomaly(false); }}
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 Sadece uyusmazliklar
@@ -425,16 +574,22 @@ export default function MonthlyAuditTab() {
                                     const db = day.db || {};
                                     const rc = day.recalculated || {};
                                     const hasErr = rc.error;
+                                    const dayAnomalies = day.anomalies || [];
+                                    const hasCritical = dayAnomalies.some(a => a.severity === 'CRITICAL');
+                                    const hasHigh = dayAnomalies.some(a => a.severity === 'HIGH');
+                                    const hasMedium = dayAnomalies.some(a => a.severity === 'MEDIUM');
+
+                                    let rowBg = 'hover:bg-gray-50';
+                                    if (hasCritical) rowBg = 'bg-red-50 hover:bg-red-100';
+                                    else if (hasHigh) rowBg = 'bg-orange-50 hover:bg-orange-100';
+                                    else if (hasMedium) rowBg = 'bg-yellow-50 hover:bg-yellow-100';
+                                    else if (day.is_off_day) rowBg = 'bg-gray-50 hover:bg-gray-100';
+                                    else if (day.was_fixed) rowBg = 'bg-green-50 hover:bg-green-100';
+
                                     return (
                                         <React.Fragment key={day.date}>
                                             <tr
-                                                className={`border-b border-gray-100 cursor-pointer transition-colors ${
-                                                    day.has_mismatch
-                                                        ? 'bg-red-50 hover:bg-red-100'
-                                                        : day.is_off_day
-                                                            ? 'bg-gray-50 hover:bg-gray-100'
-                                                            : 'hover:bg-gray-50'
-                                                }`}
+                                                className={`border-b border-gray-100 cursor-pointer transition-colors ${rowBg}`}
                                                 onClick={() => toggleDay(day.date)}
                                             >
                                                 <td className="px-3 py-2">
@@ -445,7 +600,7 @@ export default function MonthlyAuditTab() {
                                                 </td>
                                                 <td className="px-3 py-2 font-mono font-medium text-gray-800">{day.date}</td>
                                                 <td className="px-3 py-2 text-gray-600">
-                                                    {WEEKDAY_TR[day.weekday] || day.weekday}
+                                                    {day.weekday}
                                                     {day.is_off_day && (
                                                         <span className="ml-1 px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[10px] font-medium">
                                                             TATIL
@@ -469,9 +624,16 @@ export default function MonthlyAuditTab() {
                                                     <StatusBadge status={db.status} />
                                                 </td>
                                                 <td className="text-center px-3 py-2">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {day.has_mismatch && (
-                                                            <span className="w-2 h-2 rounded-full bg-red-500" title="Uyusmazlik" />
+                                                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                                                        {/* Anomaly badges */}
+                                                        {dayAnomalies.map((a, i) => (
+                                                            <AnomalyBadge key={i} type={a.type} severity={a.severity} />
+                                                        ))}
+                                                        {day.was_fixed && (
+                                                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium"
+                                                                title="Duzeltildi">
+                                                                FIX
+                                                            </span>
                                                         )}
                                                         {day.approved_ot && (
                                                             <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-medium"
@@ -506,7 +668,7 @@ export default function MonthlyAuditTab() {
                                 {displayDays.length === 0 && (
                                     <tr>
                                         <td colSpan={12} className="text-center py-8 text-gray-400 text-sm">
-                                            {filterMismatch ? 'Uyusmazlik bulunamadi.' : 'Veri yok.'}
+                                            {(filterMismatch || filterAnomaly) ? 'Filtre kriterine uyan gun bulunamadi.' : 'Veri yok.'}
                                         </td>
                                     </tr>
                                 )}
@@ -527,7 +689,30 @@ export default function MonthlyAuditTab() {
     );
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// --- Sub-components ---
+
+function AnomalyBadge({ type, severity }) {
+    const severityColors = {
+        CRITICAL: 'bg-red-200 text-red-800 border-red-300',
+        HIGH: 'bg-orange-200 text-orange-800 border-orange-300',
+        MEDIUM: 'bg-yellow-200 text-yellow-800 border-yellow-300',
+    };
+    const typeLabels = {
+        GHOST_DAY: 'KAYIT YOK',
+        CALC_MISMATCH: 'FARK',
+        STALE_OPEN: 'ACIK',
+        OVERFLOW: 'TASMA',
+        UNCLAIMED_OT: 'OT?',
+    };
+    return (
+        <span
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${severityColors[severity] || 'bg-gray-200 text-gray-700'}`}
+            title={`${severity}: ${type}`}
+        >
+            {typeLabels[type] || type}
+        </span>
+    );
+}
 
 function StatusBadge({ status }) {
     if (!status) return <span className="text-gray-300">-</span>;
@@ -568,8 +753,27 @@ function DayDetail({ day }) {
 
     return (
         <div className="space-y-3 text-xs">
-            {/* Mismatch Alert */}
-            {day.has_mismatch && (
+            {/* Anomaly Alerts */}
+            {day.anomalies && day.anomalies.length > 0 && (
+                <div className="space-y-1">
+                    {day.anomalies.map((a, i) => {
+                        const bgMap = {
+                            CRITICAL: 'bg-red-100 border-red-200 text-red-800',
+                            HIGH: 'bg-orange-100 border-orange-200 text-orange-800',
+                            MEDIUM: 'bg-yellow-100 border-yellow-200 text-yellow-800',
+                        };
+                        return (
+                            <div key={i} className={`p-2 border rounded-lg ${bgMap[a.severity] || 'bg-gray-100 border-gray-200'}`}>
+                                <span className="font-bold">[{a.severity}] {a.type}:</span>{' '}
+                                <span>{a.message}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Mismatch Alert (legacy compat) */}
+            {day.has_mismatch && day.mismatch_fields && day.mismatch_fields.length > 0 && !day.anomalies?.some(a => a.type === 'CALC_MISMATCH') && (
                 <div className="p-2 bg-red-100 border border-red-200 rounded-lg">
                     <span className="font-semibold text-red-800">Uyusmazliklar: </span>
                     {day.mismatch_fields.map((f, i) => (
@@ -577,6 +781,21 @@ function DayDetail({ day }) {
                             {i > 0 && ', '}{f}
                         </span>
                     ))}
+                </div>
+            )}
+
+            {/* Fixed indicator */}
+            {day.was_fixed && (
+                <div className="p-2 bg-green-100 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                    <span className="font-semibold text-green-800">Bu gun icin ABSENT kaydi olusturuldu (duzeltme)</span>
+                </div>
+            )}
+
+            {/* Shift info */}
+            {day.shift_seconds > 0 && (
+                <div className="text-gray-500">
+                    Vardiya suresi: {fmtSec(day.shift_seconds)} ({day.shift_seconds}s)
                 </div>
             )}
 
