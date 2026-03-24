@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../../services/api';
-import { MagnifyingGlassIcon, ArrowDownTrayIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ArrowDownTrayIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
 
 const SEVERITY_COLORS = {
     HIGH: 'bg-red-100 text-red-800 border-red-200',
@@ -63,6 +63,35 @@ export default function OTGroupingAuditTab() {
         }
     };
 
+    const [fixing, setFixing] = useState(false);
+    const [fixResult, setFixResult] = useState(null);
+
+    const runFix = async () => {
+        if (!window.confirm(
+            `${totalIssues} sorun tespit edildi. Sorunlu günler için recalculate çalıştırılacak.\n\nDevam etmek istiyor musunuz?`
+        )) return;
+
+        setFixing(true);
+        setError(null);
+        try {
+            const body = { format: 'json', mode: 'fix' };
+            if (dateFrom) body.date_from = dateFrom;
+            if (dateTo) body.date_to = dateTo;
+            if (employeeId) body.employee_id = parseInt(employeeId);
+
+            const res = await api.post('/system/health-check/ot-grouping-audit/', body);
+            setFixResult(res.data);
+            // Post-scan sonuçlarını göster
+            if (res.data.post_scan) {
+                setResults(res.data.post_scan);
+            }
+        } catch (err) {
+            setError('Düzeltme hatası: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setFixing(false);
+        }
+    };
+
     const categories = results ? Object.entries(results.categories) : [];
     const totalIssues = results?.total_issues || 0;
 
@@ -114,18 +143,43 @@ export default function OTGroupingAuditTab() {
                         {loading ? 'Taranıyor...' : 'Tara'}
                     </button>
                     {results && (
-                        <button
-                            onClick={downloadTxt}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
-                        >
-                            <ArrowDownTrayIcon className="w-4 h-4" />
-                            TXT İndir
-                        </button>
+                        <>
+                            <button
+                                onClick={downloadTxt}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
+                            >
+                                <ArrowDownTrayIcon className="w-4 h-4" />
+                                TXT İndir
+                            </button>
+                            {totalIssues > 0 && (
+                                <button
+                                    onClick={runFix}
+                                    disabled={fixing}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                >
+                                    <WrenchScrewdriverIcon className="w-4 h-4" />
+                                    {fixing ? 'Düzeltiliyor...' : `Düzelt (${totalIssues})`}
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
 
                 {error && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+                )}
+
+                {fixResult && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-bold text-green-800 mb-2">
+                            Düzeltme tamamlandı — {fixResult.fixed_count} gün recalculate edildi
+                        </p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {fixResult.fix_log?.map((line, i) => (
+                                <p key={i} className="text-xs text-green-700 font-mono">{line}</p>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
 
