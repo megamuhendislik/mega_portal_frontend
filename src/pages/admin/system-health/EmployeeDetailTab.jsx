@@ -233,9 +233,22 @@ export default function EmployeeDetailTab() {
                         <CountBadge label="Kart" count={data.gate_event_count} color="cyan" />
                         <CountBadge label="Ek Mesai" count={data.overtime_request_count} color="amber" />
                         <CountBadge label="Izin" count={data.leave_request_count} color="green" />
+                        <CountBadge label="Rapor" count={data.health_report_count} color="red" />
                         <CountBadge label="Yemek" count={data.meal_request_count} color="orange" />
                         <CountBadge label="Kartsiz" count={data.cardless_request_count} color="purple" />
                     </div>
+
+                    {/* Leave Breakdown */}
+                    {data.leave_breakdown && Object.keys(data.leave_breakdown).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            <span className="text-xs font-bold text-gray-500">Izin Dagilimi:</span>
+                            {Object.entries(data.leave_breakdown).map(([type, info]) => (
+                                <span key={type} className="px-2 py-1 bg-green-50 border border-green-200 rounded text-[11px] text-green-800 font-medium">
+                                    {type}: {info.count} talep ({info.days} gun)
+                                </span>
+                            ))}
+                        </div>
+                    )}
 
                     {/* ═══ Attendance Records (grouped by date) ═══ */}
                     <SectionToggle title="Devam Kayitlari (Gunluk)" icon={<ClockIcon className="w-5 h-5" />}
@@ -407,6 +420,48 @@ export default function EmployeeDetailTab() {
                         </table>
                     </SectionToggle>
 
+                    {/* ═══ Health Reports ═══ */}
+                    {data.health_report_count > 0 && (
+                        <SectionToggle title="Saglik Raporlari & Hastane Ziyaretleri" icon={<DocumentTextIcon className="w-5 h-5" />}
+                            count={data.health_report_count} sectionKey="health_reports"
+                            expanded={expandedSections} toggle={toggleSection}>
+                            <table className="w-full text-[11px]">
+                                <thead>
+                                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                                        <th className="py-1 px-2">ID</th>
+                                        <th className="py-1 px-2">Tur</th>
+                                        <th className="py-1 px-2">Baslangic</th>
+                                        <th className="py-1 px-2">Bitis</th>
+                                        <th className="py-1 px-2">Saat</th>
+                                        <th className="py-1 px-2">Durum</th>
+                                        <th className="py-1 px-2">Olusturma</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.health_reports?.map(r => (
+                                        <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                            <td className="py-1 px-2 font-mono text-gray-400">#{r.id}</td>
+                                            <td className="py-1 px-2">
+                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                    r.report_type === 'HOSPITAL_VISIT' ? 'bg-red-100 text-red-700' : 'bg-rose-100 text-rose-700'
+                                                }`}>{r.report_type === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti' : 'Saglik Raporu'}</span>
+                                            </td>
+                                            <td className="py-1 px-2">{r.start_date}</td>
+                                            <td className="py-1 px-2">{r.end_date}</td>
+                                            <td className="py-1 px-2 font-mono">
+                                                {r.is_full_day ? 'Tam gun' : `${r.start_time || '-'}-${r.end_time || '-'}`}
+                                            </td>
+                                            <td className="py-1 px-2">
+                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${STATUS_COLORS[r.status] || ''}`}>{r.status}</span>
+                                            </td>
+                                            <td className="py-1 px-2 text-gray-400">{r.created_at}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </SectionToggle>
+                    )}
+
                     {/* ═══ Cardless + Meal (compact) ═══ */}
                     {(data.cardless_request_count > 0 || data.meal_request_count > 0) && (
                         <SectionToggle title="Kartsiz Giris & Yemek" icon={<CreditCardIcon className="w-5 h-5" />}
@@ -553,6 +608,7 @@ function CountBadge({ label, count, color }) {
         green: 'bg-green-50 border-green-200 text-green-700',
         orange: 'bg-orange-50 border-orange-200 text-orange-700',
         purple: 'bg-purple-50 border-purple-200 text-purple-700',
+        red: 'bg-red-50 border-red-200 text-red-700',
     };
     return (
         <div className={`px-3 py-2 rounded-lg border text-center ${colors[color] || colors.blue}`}>
