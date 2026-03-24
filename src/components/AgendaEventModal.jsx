@@ -135,7 +135,7 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
     // --- Search Filter ---
     const filteredEmployees = employees.filter(e =>
-        (e.first_name + ' ' + e.last_name).toLowerCase().includes(searchTerm.toLowerCase())
+        e.is_active !== false && (e.first_name + ' ' + e.last_name).toLowerCase().includes(searchTerm.toLowerCase())
     );
     const filteredDepartments = departments.filter(d =>
         d.name.toLowerCase().includes(searchTerm.toLowerCase())

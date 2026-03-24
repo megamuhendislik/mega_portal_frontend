@@ -211,7 +211,7 @@ const Reports = () => {
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             >
                                 <option value="">Tüm Çalışanlar</option>
-                                {employees.map(emp => (
+                                {employees.filter(e => e.is_active !== false).map(emp => (
                                     <option key={emp.id} value={emp.id}>
                                         {emp.first_name} {emp.last_name}
                                     </option>

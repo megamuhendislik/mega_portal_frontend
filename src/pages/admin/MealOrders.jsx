@@ -60,7 +60,7 @@ const MealOrders = () => {
         const timer = setTimeout(async () => {
             try {
                 const res = await api.get(`/employees/?search=${encodeURIComponent(employeeSearch)}&page_size=10`);
-                setEmployeeResults(res.data.results || res.data);
+                setEmployeeResults((res.data.results || res.data).filter(e => e.is_active !== false));
             } catch { setEmployeeResults([]); }
         }, 300);
         return () => clearTimeout(timer);

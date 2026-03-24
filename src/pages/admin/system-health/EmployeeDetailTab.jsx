@@ -77,6 +77,7 @@ export default function EmployeeDetailTab() {
         api.get('/employees/', { params: { page_size: 500 } })
             .then(res => {
                 const list = (res.data.results || res.data || [])
+                    .filter(e => e.is_active !== false)
                     .map(e => ({ id: e.id, name: e.full_name || `${e.first_name} ${e.last_name}`, dept: e.department_name || '-' }))
                     .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
                 setEmployees(list);

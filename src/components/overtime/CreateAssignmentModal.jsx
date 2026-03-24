@@ -134,7 +134,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                             required
                         >
                             <option value="">Çalışan seçiniz...</option>
-                            {teamMembers.map(m => (
+                            {teamMembers.filter(m => m.is_active !== false).map(m => (
                                 <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>
                             ))}
                         </select>

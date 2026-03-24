@@ -77,7 +77,7 @@ const ManagerEditModal = ({ employeeId, employeeName, onClose, onSaved }) => {
             try {
                 const res = await api.get(`/employees/?search=${encodeURIComponent(searchQuery)}`);
                 const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-                setSearchResults(data);
+                setSearchResults(data.filter(e => e.is_active !== false));
                 setShowDropdown(true);
             } catch {
                 setSearchResults([]);

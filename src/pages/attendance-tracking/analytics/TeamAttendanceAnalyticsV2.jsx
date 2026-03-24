@@ -105,7 +105,7 @@ function EmployeeMultiSelect() {
     }, []);
 
     const options = useMemo(() => {
-        return employees.map(e => ({
+        return employees.filter(e => e.is_active !== false).map(e => ({
             value: e.id,
             label: `${e.first_name || ''} ${e.last_name || ''}`.trim() || e.user?.email || `#${e.id}`,
         }));
