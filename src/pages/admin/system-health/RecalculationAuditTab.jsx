@@ -1061,6 +1061,14 @@ export default function RecalculationAuditTab() {
                                 color="amber"
                             />
                         )}
+                        {(frcResult.summary?.day_balance_fails || 0) > 0 && (
+                            <SummaryCard
+                                icon={<ExclamationTriangleIcon className="w-6 h-6 text-pink-600" />}
+                                label="Gun Denge Hatasi"
+                                value={frcResult.summary.day_balance_fails}
+                                color="red"
+                            />
+                        )}
                         {(frcResult.summary?.total_employees_with_issues || 0) > 0 && (
                             <SummaryCard
                                 icon={<ExclamationTriangleIcon className="w-6 h-6 text-rose-600" />}
