@@ -122,7 +122,8 @@ const helpContent = [
         permission: null,
         link: '/requests',
         images: [
-            { src: '/help-images/help-talepler-01.png', caption: 'Kendi Taleplerim sekmesi — izin talep listesi, durum süzgeçleri ve yeni talep oluşturma düğmesi' }
+            { src: '/help-images/help-talepler-01.png', caption: 'Kendi Taleplerim sekmesi — izin talep listesi, durum süzgeçleri ve yeni talep oluşturma düğmesi' },
+            { src: '/help-images/help-talepler-05.png', caption: 'Yeni talep oluşturma penceresi — izin türü seçimi ve tarih aralığı' }
         ],
         steps: [
             {
@@ -145,6 +146,10 @@ const helpContent = [
             {
                 title: 'İptal ve Bakiye Iadesi',
                 description: 'Bekleyen talebi kendiniz iptal edebilirsiniz. Onaylanmış talepler için sistem yöneticisine başvurun. İptal durumunda bakiye otomatik iade edilir.'
+            },
+            {
+                title: 'Avans İzin Kullanımı',
+                description: 'Yıllık izin bakiyeniz yetersizse "Avans İzin" seçeneğini kullanabilirsiniz. Avans izin, henüz hak etmediğiniz izin günlerini önceden kullanmanızı sağlar. Bakiyeniz negatife düşebilir. Avans limiti çalışan bazında tanımlanır (varsayılan: yıllık hakkın yarısı).'
             }
         ],
         tips: [
@@ -158,6 +163,47 @@ const helpContent = [
             { q: 'Onaylanmış iznimi iptal edebilir miyim?', a: 'Kendiniz iptal edemezsiniz. Sistem yöneticisine başvurmaniz gerekir. İptal sonrası bakiye otomatik iade edilir.' },
             { q: 'Mazeret iznimin saat bakiyesini nerede görebilirim?', a: 'Ana sayfadaki turuncu izin kartında ve talepler sayfasında detayli olarak görürsünüz.' },
             { q: 'İzin talebim kime gidiyor?', a: 'Birincil yöneticinize otomatik yönlendirilir. İkincil yönetici izin taleplerine yetkili değildir, sadece ek mesai işlemleri için yetkilidir.' }
+        ]
+    },
+    {
+        id: 'kartsiz-giris',
+        title: 'Kartsız Giriş Talebi',
+        icon: Contact,
+        description: 'Kart okutmayı unuttuğunuzda veya kart okuyucu arızalandığında geriye dönük puantaj düzeltme talebi. (Tüm çalışanlar görebilir)',
+        permission: null,
+        link: '/requests',
+        images: [
+            { src: '/help-images/help-talepler-05.png', caption: 'Yeni talep oluşturma penceresi — talep türü seçimi' },
+            { src: '/help-images/help-talepler-01.png', caption: 'Kendi taleplerim listesi — tüm taleplerin durumu' }
+        ],
+        steps: [
+            {
+                title: 'Yeni Talep Oluşturma',
+                description: 'Sol menüden "Talepler" sayfasına gidin. "Yeni Talep" düğmesine tıklayın. Açılan pencereden "Kartsız Giriş" türünü seçin.'
+            },
+            {
+                title: 'Tarih ve Saat Bilgisi Girme',
+                description: 'Kartsız giriş yapmak istediğiniz tarihi seçin. Giriş saati ve çıkış saatini belirtin. Tarih, geçmiş 2 mali ay (yaklaşık 60 gün) içinde olmalıdır. Tatil ve hafta sonu günleri için kartsız giriş talebi kabul edilmez.'
+            },
+            {
+                title: 'Açıklama ve Gönderim',
+                description: 'Neden kart okutamadığınızı açıklama alanına yazın (örn: "Kartımı evde unuttum", "Kart okuyucu arızalıydı"). "Gönder" düğmesine basın. Talep birincil yöneticinize iletilir.'
+            },
+            {
+                title: 'Onay Sonrası',
+                description: 'Yöneticiniz talebi onayladığında, belirttiğiniz saatlerle otomatik olarak puantaj kaydı oluşturulur ve günlük hesaplama yeniden tetiklenir. Reddedilirse, bildirim alırsınız ve puantajınızda değişiklik olmaz.'
+            }
+        ],
+        tips: [
+            { type: 'warning', text: 'Kartsız giriş talebi sadece çalışma programınızda iş günü olan tarihler için verilebilir. Tatil ve hafta sonu günleri otomatik reddedilir.' },
+            { type: 'info', text: 'Geçmiş 2 mali ay dışındaki tarihler için talep oluşturamazsınız. Mali dönem kuralı: her ayın 26sından bir sonraki ayın 25ine kadardır.' },
+            { type: 'success', text: 'Onaylanan kartsız giriş talebi, gerçek kart okutmayla aynı etkiyi yapar. Puantajınız otomatik güncellenir, fazla mesai varsa algılanır.' }
+        ],
+        faq: [
+            { q: 'Kartsız giriş talebi ne kadar geçmişe verilebilir?', a: 'Geçmiş 2 mali ay içindeki tarihler için verilebilir. Örneğin bugün 15 Mart ise, Ocak ayının 26sından itibaren tüm tarihler için talep oluşturabilirsiniz.' },
+            { q: 'Aynı tarih için birden fazla kartsız giriş talebi verebilir miyim?', a: 'Hayır. Aynı tarih için zaten bekleyen veya onaylanmış bir kartsız giriş talebiniz varsa, yeni talep oluşturamazsınız.' },
+            { q: 'Yöneticim talebi reddederse ne olur?', a: 'Puantajınızda herhangi bir değişiklik olmaz. Red bildiriminde yöneticinizin gerekçesini görebilirsiniz. Gerekirse düzeltip yeni talep oluşturabilirsiniz.' },
+            { q: 'Kartsız giriş onaylandıktan sonra fazla mesai algılanır mı?', a: 'Evet. Onay sonrası puantaj yeniden hesaplanır. Belirttiğiniz çıkış saati vardiya bitiş saatini aşıyorsa ve tolerans penceresi dışındaysa, potansiyel fazla mesai kaydı otomatik oluşturulur.' }
         ]
     },
     {
@@ -548,7 +594,9 @@ const helpContent = [
         tips: [
             { type: 'info', text: 'Tolerans değerleri (servis toleransı, normal tolerans, minimum mesai eşiği) mali takvim ve vardiya şablonundan okunur. Çalışan bazlı geçersiz kilma sadece servis toleransı için mumkundur.' },
             { type: 'warning', text: 'Takvim değişiklikleri tümilgili çalışanların puantajını etkiler. Buyuk değişiklikleri yoğun saatlerde yapmaktan kaçının.' },
-            { type: 'success', text: 'Yıllık tatil planini dönem başında tanımlayin. Resmi tatiller tüm çalışanların takviminde otomatik gösterilir.' }
+            { type: 'success', text: 'Yıllık tatil planini dönem başında tanımlayin. Resmi tatiller tüm çalışanların takviminde otomatik gösterilir.' },
+            { type: 'warning', text: 'Kilitli mali dönemlerdeki takvim değişiklikleri puantaja yansımaz. Değişiklik yapmadan önce ilgili dönemin kilit durumunu kontrol edin.' },
+            { type: 'info', text: 'Takvim değişikliği yapıldığında, etkilenen tüm çalışanların puantajları otomatik yeniden hesaplanır. Bu işlem büyük takvimlerde birkaç dakika sürebilir — ilerleme çubuğundan takip edebilirsiniz.' }
         ],
         faq: [
             { q: 'Bu sayfayı göremiyorum?', a: 'PAGE_WORK_SCHEDULES yetkisi gereklidir. Sistem yöneticinize başvurun.' },
@@ -611,7 +659,8 @@ const helpContent = [
         permission: 'PAGE_EMPLOYEES',
         link: '/employees',
         images: [
-            { src: '/help-images/help-calisanlar-01.png', caption: 'Çalışanlar sayfası — çalışan listesi, arama, süzgeçler ve işlem düğmeleri' }
+            { src: '/help-images/help-calisanlar-01.png', caption: 'Çalışanlar sayfası — çalışan listesi, arama, süzgeçler ve işlem düğmeleri' },
+            { src: '/help-images/help-calisanlar-02.png', caption: 'Çalışan listesi — aşağı kaydırılmış görünüm ve tablo detayları' }
         ],
         steps: [
             {
@@ -657,7 +706,8 @@ const helpContent = [
         permission: null,
         link: '/org-chart',
         images: [
-            { src: '/help-images/help-orgchart-01.png', caption: 'Organizasyon şeması — hiyerarşi ağacı, departman kutuları ve raporlama çizgileri' }
+            { src: '/help-images/help-orgchart-01.png', caption: 'Organizasyon şeması — hiyerarşi ağacı, departman kutuları ve raporlama çizgileri' },
+            { src: '/help-images/help-orgchart-02.png', caption: 'Organizasyon şeması — düğüm tıklanmış detay görünümü' }
         ],
         steps: [
             {
@@ -870,7 +920,8 @@ const helpContent = [
         permission: 'PAGE_DEBUG',
         link: '/debug',
         images: [
-            { src: '/help-images/help-debug-01.png', caption: 'Hata ayiklama — hata logları, performans metrikleri ve sorun giderme araclari' }
+            { src: '/help-images/help-debug-01.png', caption: 'Hata ayiklama — hata logları, performans metrikleri ve sorun giderme araclari' },
+            { src: '/help-images/help-debug-02.png', caption: 'Puantaj hata ayıklayıcı — detay ve hesaplama sonuçları' }
         ],
         steps: [
             {
