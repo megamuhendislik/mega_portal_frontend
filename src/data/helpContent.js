@@ -2,7 +2,8 @@ import {
     Clock, CalendarDays, Timer, Utensils, Calendar,
     Contact, CheckSquare, BarChart3, CalendarRange, Shield,
     Users, Network, Server, Database, Package,
-    MessageSquare, UserCheck, HeartPulse, Gift, Bug
+    MessageSquare, UserCheck, HeartPulse, Gift, Bug,
+    PieChart, Bell
 } from 'lucide-react';
 
 const helpContent = [
@@ -45,6 +46,11 @@ const helpContent = [
             {
                 title: 'Aylık Performans Özeti',
                 description: 'Ana sayfanın alt bölümünde aylık performans döngüsü bulunur. Her mali dönem için hedef çalışma süresi, gerçekleşen süre, bakiye (fark), onaylı mesai, izin ve sağlık raporu günleri gösterilir. Sol/sağ oklarla aylar arasında gezinebilirsiniz.'
+            },
+            {
+                title: 'Yönetici Ana Sayfa Ek Özellikleri',
+                description: 'Yönetici yetkisine sahip kullanıcılar ana sayfada ek özellikler görür: (1) Bekleyen Onaylar sayacı — üst menüde kırmızı rozet ile gösterilir, tıklayınca gelen talepler sayfasına gider. (2) Ekip Özeti — ekipteki toplam çalışan sayısı, ofiste olan, izinli ve devamsız kişi sayıları. (3) Hızlı Aksiyon Düğmeleri — "Mesai Ata" ve "Talepler" kısayolları ile doğrudan ilgili sayfalara gidebilirsiniz.',
+                permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY']
             }
         ],
         tips: [
@@ -111,7 +117,49 @@ const helpContent = [
             { q: 'Departman veya pozisyon bilgimi nasıl değiştiririm?', a: 'Bu bilgiler yönetici tarafından Çalışan Yönetimi sayfasından güncellenir. İK birimine veya yöneticinize başvurun.' },
             { q: 'Şifremi unuttum, ne yapmalıyım?', a: 'Sistem yöneticinize başvurun. Şifreniz sıfırlanir ve ilk girişte yeni şifre belirlemeniz istenir. Şifre sıfırlama süreci XLSX dosyası olarak yöneticiye iletilir.' },
             { q: 'TC kimlik numaram neden kilitli görünüyor?', a: 'KVKK kapsamında hassas veridir. Düzenlemek için SENSITIVE_DATA_CHANGE yetkisine sahip bir yönetici işlem yapmalıdır.' },
-            { q: 'Fotoraf yükleyebilir miyim?', a: 'Su an profil fotoğrafı yükleme desteklenmemektedir. Avatar, adinizin ve soyadinizin bas harflerinden otomatik oluşturulur.' }
+            { q: 'Fotoraf yükleyebilir miyim?', a: 'Su an profil fotoğrafı yükleme desteklenmemektedir. Avatar, adinizin ve soyadinizin bas harflerinden otomatik oluşturulur.' },
+            { q: 'Şifremi unuttum, ne yapmalıyım?', a: 'Giriş sayfasında "Şifremi Unuttum?" bağlantısına tıklayın. Eğer bu seçenek yoksa, sistem yöneticinize başvurun — yöneticiler Sistem Sağlığı sayfasından şifre sıfırlama işlemi yapabilir ve size yeni geçici şifre içeren dosyayı iletir.' }
+        ]
+    },
+    {
+        id: 'bildirim-sistemi',
+        title: 'Bildirim Sistemi',
+        icon: Bell,
+        description: 'Talep onayları, redler, vekalet atamaları ve sistem duyuruları hakkında anlık bildirimler. (Tüm çalışanlar görebilir)',
+        permission: null,
+        link: '/profile',
+        images: [
+            { src: '/help-images/help-profil-03.png', caption: 'Bildirim tercihleri — hangi bildirim türlerini almak istediğinizi seçebilirsiniz' }
+        ],
+        steps: [
+            {
+                title: 'Bildirim Çanı',
+                description: 'Üst menü çubuğundaki çan simgesine tıklayarak bildirimlerinizi görebilirsiniz. Okunmamış bildirim varsa çanın yanında kırmızı sayaç görünür. Tıkladığınızda bildirim listesi açılır.'
+            },
+            {
+                title: 'Bildirim Türleri',
+                description: 'Sistem 7 farklı bildirim türü gönderir: (1) İzin onaylandı, (2) İzin reddedildi, (3) Mesai onaylandı, (4) Mesai reddedildi, (5) Vekalet talepleri, (6) Yükseltme uyarıları (eskalasyon), (7) Sistem duyuruları. Her tür farklı renk ve simge ile ayırt edilir.'
+            },
+            {
+                title: 'Bildirim Tercihlerini Ayarlama',
+                description: 'Profilim sayfasında "Bildirimler" sekmesine gidin. Her bildirim türü için aç/kapat düğmesi bulunur. Kapattığınız türlerden artık bildirim almazsınız. Değişiklikler anında kaydedilir.',
+                image: { src: '/help-images/help-profil-03.png', caption: 'Bildirim tercihleri sekmesi' }
+            },
+            {
+                title: 'Bildirimi Okundu Olarak İşaretleme',
+                description: 'Bildirim listesinde bir bildirime tıkladığınızda otomatik olarak okundu işaretlenir ve ilgili sayfaya yönlendirilirsiniz. "Tümünü Okundu İşaretle" düğmesiyle tüm bildirimleri toplu temizleyebilirsiniz.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Bildirimler gerçek zamanlı değildir — sayfa her yenilendiğinde veya akıllı güncelleme döngüsünde (60 saniye) kontrol edilir. Acil durumlarda sayfayı yenileyerek güncel bildirimleri görebilirsiniz.' },
+            { type: 'warning', text: 'Tüm bildirim türlerini kapatırsanız, önemli onay ve red bilgilerini kaçırabilirsiniz. En azından izin ve mesai onay/red bildirimlerini açık tutmanızı öneririz.' },
+            { type: 'success', text: 'Yönetici değişikliğinde bekleyen talepleriniz otomatik olarak yeni yöneticinize devredilir ve bu durumda hem siz hem eski hem yeni yöneticiniz bildirim alır.' }
+        ],
+        faq: [
+            { q: 'Bildirimler e-posta olarak da gönderiliyor mu?', a: 'Şu anda bildirimler sadece uygulama içinde gösterilir. E-posta bildirimi henüz aktif değildir. Uygulamaya düzenli giriş yaparak bildirimlerinizi kontrol edin.' },
+            { q: 'Eski bildirimleri görebilir miyim?', a: 'Evet. Bildirim listesinde aşağı kaydırarak geçmiş bildirimleri görebilirsiniz. Bildirimler kalıcıdır ve silinmez, sadece okundu/okunmadı durumu değişir.' },
+            { q: 'Neden bildirim almıyorum?', a: 'Profilinizdeki bildirim tercihlerini kontrol edin — ilgili tür kapalı olabilir. Ayrıca tarayıcı sekmesi arka plandayken bildirim kontrolü duraklar, sekmeye döndüğünüzde güncellenecektir.' },
+            { q: 'Vekalet bildirimlerini kapatabilir miyim?', a: 'Evet. Profilim → Bildirimler sekmesinde "Vekalet Talepleri" satırındaki düğmeyi kapatarak bu türden bildirim almayı durdurabilirsiniz. Ancak bu durumda vekalet atamalarından haberdar olmayabilirsiniz.' }
         ]
     },
     {
@@ -255,7 +303,8 @@ const helpContent = [
             { q: 'Haftalık limit nasıl hesaplanıyor?', a: 'Son 7 gündeki onaylanmış ve bekleyen mesai toplamı hesaplanır. Varsayılan limit 30 saattir, çalışan bazında değişebilir.' },
             { q: 'Planli mesaimi görmüyorum, neden?', a: 'Yönetiçiniz size mesai görevi atamış olmalidir. Atanan mesaileri "Ek Mesai" sekmesinden kontrol edin.' },
             { q: 'Manuel giriş ile potansiyel mesai farkı nedir?', a: 'Potansiyel mesai sistemin kart okutma verilerinizden otomatik tespit ettigi mesaidir. Manuel giriş ise siz kendiniz tarih ve saat girerek oluştürürsunuz.' },
-            { q: 'Mesai talebim kime gidiyor?', a: 'Birincil veya ikincil yöneticinize gider. İkincil yönetici sadece ek mesai işlemleri için yetkilidir. Talep oluşturma sırasında yönetici seçimi yapabilirsiniz.' }
+            { q: 'Mesai talebim kime gidiyor?', a: 'Birincil veya ikincil yöneticinize gider. İkincil yönetici sadece ek mesai işlemleri için yetkilidir. Talep oluşturma sırasında yönetici seçimi yapabilirsiniz.' },
+            { q: 'Planlı, algılanan ve manuel mesai arasındaki fark nedir?', a: 'Planlı mesai: Yöneticiniz size ek mesai ataması yaptığında oluşur, siz talep edersiniz. Algılanan mesai: Vardiya dışı çalışma algılandığında sistem otomatik potansiyel kayıt oluşturur, siz talep edersiniz. Manuel mesai: Geçmiş tarihler için kendiniz saat girerek talep oluşturursunuz. Her üç yol da aynı onay sürecinden geçer.' }
         ]
     },
     {
@@ -333,7 +382,8 @@ const helpContent = [
         tips: [
             { type: 'info', text: 'Etkinlik renk kodları: kırmızı = resmi tatil, yeşil = onaylı izin, mor = mesai görevi, amber = bekleyen talep, pembe = sağlık raporu, mavi = kişisel etkinlik.' },
             { type: 'success', text: 'Yöneticiler gündetay panelinden doğrudan ek mesai ataması yapabilir.' },
-            { type: 'info', text: 'Ardışık tatiller otomatik birlestirilir (ornegin "Ramazan Bayrami, 3 gun").' }
+            { type: 'info', text: 'Ardışık tatiller otomatik birlestirilir (ornegin "Ramazan Bayrami, 3 gun").' },
+            { type: 'info', text: 'Takvimde renk kodları: Yeşil = çalışma günü, Turuncu = izin/mazeret, Kırmızı = devamsızlık, Mor = ek mesai görevi, Pembe = sağlık raporu, Mavi = kişisel etkinlik, Gri çizgili = yarım gün tatil.' }
         ],
         faq: [
             { q: 'Ekip takvimini nasıl görürum?', a: 'Yönetici yetkiniz varsa takvim sayfasında ekip görünümune gecebilirsiniz. Çalışanlarinizin izin ve mesai durumlarıni Gantt çubuğu olarak görürsünüz.' },
@@ -1016,6 +1066,51 @@ const helpContent = [
             { q: 'Kisi detay cekmecesinde ne görüyorum?', a: 'Seçilen çalışanın 3 bölümu: katilim detayları (günlük giriş/çıkış), ek mesai geçmişi (onaylanan/bekleyen/reddedilen) ve yemek siparişleri.' },
             { q: 'İkincil yönetici olarak neleri görebilirim?', a: 'İkincil yönetici olarak sadece ek mesai ile ilgili verileri görürsünüz. Katilim, izin ve diger analizler birincil yöneticiye özeldir.' },
             { q: 'Puantaj kayıtlarıni düzenleyebilir miyim?', a: 'Kilitli olmayan dönemlerdeki kayıtlar üzerinde işlem yapabilirsiniz. Kilitli dönemlerin kayıtları değiştirilemez.' }
+        ]
+    },
+    {
+        id: 'talep-analizleri',
+        title: 'Talep Analizleri',
+        icon: PieChart,
+        description: 'Tüm talep türlerinin istatistikleri, aylık eğilimler, departman karşılaştırmaları ve ek mesai-yemek ilişkisi analizi. (Rapor yetkisi olan yöneticiler ve sistem yöneticileri görebilir)',
+        permission: 'PAGE_REPORTS',
+        link: '/request-analytics',
+        images: [
+            { src: '/help-images/help-talep-analiz-01.png', caption: 'Talep analizleri sayfası — özet kartları ve aylık eğilim grafiği' },
+            { src: '/help-images/help-talep-analiz-02.png', caption: 'Talep analizleri — departman karşılaştırması ve detaylı dağılım grafikleri' }
+        ],
+        steps: [
+            {
+                title: 'Özet Kartlarını İnceleme',
+                description: 'Sayfanın üst kısmındaki özet kartları toplam talep sayısını, onay oranını, ortalama onay süresini ve en çok talep oluşturan departmanı gösterir. Her kart geçmiş aya göre değişim yüzdesini de içerir.'
+            },
+            {
+                title: 'Aylık Eğilim Grafiği',
+                description: 'İzin, ek mesai, kartsız giriş ve sağlık raporu taleplerinin aylık dağılımını çizgi grafikte görebilirsiniz. Talep türlerine göre filtreleme yapabilirsiniz. Grafiğin üzerinde fare ile gezinerek ay bazlı detayları görüntüleyebilirsiniz.'
+            },
+            {
+                title: 'Talep Türü Dağılımı',
+                description: 'Pasta grafiği tüm talep türlerinin yüzdesel dağılımını gösterir. Hangi talep türü en sık kullanılıyor, hangisi az, bir bakışta görebilirsiniz. Grafiğe tıklayarak detaya inebilirsiniz.'
+            },
+            {
+                title: 'Departman ve Kişi Bazlı Analiz',
+                description: 'Departman karşılaştırma tablosunda her departmanın talep sayısı, onay oranı ve ortalama süresi yan yana görülür. Kişi bazlı analizde en çok talep oluşturan, en yüksek ek mesai yapan çalışanları görebilirsiniz.'
+            },
+            {
+                title: 'Ek Mesai ve Yemek İlişkisi',
+                description: 'Ek mesai yapılan günlerde yemek siparişi oranını gösteren korelasyon analizi. Bu veri, mesai günlerinde yemek ihtiyacı planlaması için kullanılabilir. Hafta sonu ve hafta içi ayrı ayrı gösterilir.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Talep analizleri sayfası tüm verileri tek seferde yükler. İlk açılışta birkaç saniye beklemeniz gerekebilir. Sonraki gezinmelerde veriler önbellekten gelir.' },
+            { type: 'info', text: 'Grafiklerin üzerinde fare ile gezinerek detaylı bilgi balonu (araç ipucu) görebilirsiniz. Grafik açıklamalarına (lejant) tıklayarak belirli veri serilerini gizleyip gösterebilirsiniz.' },
+            { type: 'warning', text: 'Bu sayfa yoğun veri çeker. Yavaş bağlantılarda yüklenmesi uzun sürebilir. Tarih aralığını daraltarak performansı artırabilirsiniz.' }
+        ],
+        faq: [
+            { q: 'Talep analizleri hangi tarih aralığını kapsar?', a: 'Varsayılan olarak son 12 aylık veriyi gösterir. Sayfa üstündeki tarih seçici ile özel aralık belirleyebilirsiniz. Mali dönem bazlı filtreleme de yapılabilir.' },
+            { q: 'Departman karşılaştırmasında hangi metrikler var?', a: 'Toplam talep sayısı, onay oranı (yüzde), ortalama onay süresi (gün), en sık talep türü ve ek mesai toplamı (saat) gösterilir. Sütun başlıklarına tıklayarak sıralama yapabilirsiniz.' },
+            { q: 'Ek mesai-yemek korelasyonu ne işe yarar?', a: 'Ek mesai yapılan günlerde yemek siparişi verme oranını gösterir. İnsan kaynakları ve mutfak planlaması için değerli bir veridir. Yüksek korelasyon, mesai günlerinde yemek ihtiyacının arttığını gösterir.' },
+            { q: 'Bu sayfayı göremiyorum, ne yapmalıyım?', a: 'Talep analizleri sayfasını görmek için rapor yetkisine (PAGE_REPORTS) ihtiyacınız var. Bu yetki genellikle yönetici ve muhasebe rollerine tanımlıdır. Sistem yöneticinize başvurun.' }
         ]
     },
     {
