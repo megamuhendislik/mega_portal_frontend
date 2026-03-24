@@ -410,16 +410,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     <div>
                         <div className="flex flex-wrap justify-between items-center gap-y-1 mb-3">
                             <span className="text-xs font-bold uppercase text-slate-400 tracking-wider shrink-0 mr-4">Normal Mesai Dağılımı</span>
-                            <div className="flex gap-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
-                                <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Tamamlanan</span>
+                            <div className="flex gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                                <span className="flex items-center gap-1 whitespace-nowrap text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 shrink-0"></span>Tamamlanan</span>
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>İzin</span>
+                                    <span className="flex items-center gap-1 whitespace-nowrap text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50 shrink-0"></span>İzin</span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>Rapor</span>
+                                    <span className="flex items-center gap-1 whitespace-nowrap text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 shrink-0"></span>Rapor</span>
                                 )}
-                                <span className="flex items-center gap-1.5 text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>Eksik</span>
-                                <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300"></span>Kalan</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50 shrink-0"></span>Eksik</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300 shrink-0"></span>Kalan</span>
                             </div>
                         </div>
                         {/* ENHANCED BAR VISUALS — with leave + report segments */}
@@ -491,20 +491,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex gap-2 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
-                            <span className="flex items-center gap-1.5 text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>Normal</span>
-                            <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Ek Mesai</span>
+                        <div className="flex gap-x-3 gap-y-1 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                            <span className="flex items-center gap-1 whitespace-nowrap text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 shrink-0"></span>Normal</span>
+                            <span className="flex items-center gap-1 whitespace-nowrap text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0"></span>Ek Mesai</span>
                             {parseFloat(stats.leaveHours) > 0 && (
-                                <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>İzin</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50 shrink-0"></span>İzin</span>
                             )}
                             {parseFloat(stats.healthReportHours) > 0 && (
-                                <span className="flex items-center gap-1.5 text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>Rapor</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 shrink-0"></span>Rapor</span>
                             )}
                             {parseFloat(stats.otPendingHours) > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50 shrink-0"></span>Bekleyen</span>
                             )}
                             {parseFloat(stats.otPotentialHours) > 0 && (
-                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
+                                <span className="flex items-center gap-1 whitespace-nowrap text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>Potansiyel</span>
                             )}
                         </div>
 
@@ -591,10 +591,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 <div className="relative z-10 pt-6 border-t border-slate-100">
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Fazla Mesai Dağılımı</span>
-                        <div className="flex gap-4 text-[10px] font-black uppercase tracking-wide">
-                            <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>Onaylı</span>
-                            <span className="flex items-center gap-1.5 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>Bekleyen</span>
-                            <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span>Potansiyel</span>
+                        <div className="flex gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide flex-wrap">
+                            <span className="flex items-center gap-1 whitespace-nowrap text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0"></span>Onaylı</span>
+                            <span className="flex items-center gap-1 whitespace-nowrap text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50 shrink-0"></span>Bekleyen</span>
+                            <span className="flex items-center gap-1 whitespace-nowrap text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>Potansiyel</span>
                         </div>
                     </div>
                     {stats.hasOtBreakdown ? (
