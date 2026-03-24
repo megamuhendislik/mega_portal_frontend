@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday, getIstanbulYear } from '../utils/dateUtils';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
+import { Modal } from 'antd';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
 
@@ -192,7 +193,7 @@ const StepPersonal = ({ formData, handleChange, canEditSensitive = true, canChan
 );
 
 const StepCorporate = ({ formData, handleChange, departments, jobPositions, employees, availableTags, showManagerValidation }) => {
-    const potentialManagers = employees || [];
+    const potentialManagers = (employees || []).filter(e => e.is_active !== false);
 
     // Board muafiyet kontrolü - first primary manager's dept+pos'dan türetilir
     const firstPm = (formData.primary_managers || []).find(m => m.department_id && m.job_position_id);
@@ -1167,16 +1168,22 @@ const Employees = () => {
     const [positionFilter, setPositionFilter] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [showSettings, setShowSettings] = useState(false); // Toggle management mode
+    const [showInactive, setShowInactive] = useState(false);
 
     useEffect(() => {
         fetchInitialData();
     }, []);
 
+    // Re-fetch when showInactive changes
+    useEffect(() => {
+        fetchInitialData();
+    }, [showInactive]);
+
     const fetchInitialData = async () => {
         setLoading(true);
         try {
             const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes, hierRes] = await Promise.all([
-                api.get('/employees/'),
+                api.get('/employees/', { params: showInactive ? { include_inactive: 'true' } : {} }),
                 api.get('/departments/'),
                 api.get('/job-positions/'),
                 api.get('/permissions/'),
@@ -1334,15 +1341,55 @@ const Employees = () => {
     };
 
     const handleDelete = async (employeeId) => {
-        if (!window.confirm("Bu personeli silmek istediğinize emin misiniz? Bu işlem geri alınamaz (soft delete).")) return;
-
         try {
-            await api.delete(`/employees/${employeeId}/`);
-            alert("Personel silindi.");
-            fetchInitialData();
-        } catch (error) {
-            console.error("Delete error:", error);
-            alert("Silme işlemi başarısız: " + (error.response?.data?.error || "Yetkiniz yok."));
+            // Dry run first
+            const preview = await api.delete(`/employees/${employeeId}/?dry_run=true`);
+            const data = preview.data;
+
+            if (!data.can_delete) {
+                Modal.error({
+                    title: 'Silme İşlemi Engellenmiştir',
+                    content: (
+                        <div className="space-y-1">
+                            {data.blockers.map((b, i) => <p key={i} className="text-red-600">{b}</p>)}
+                        </div>
+                    ),
+                });
+                return;
+            }
+
+            const counts = data.would_delete;
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+            Modal.confirm({
+                title: 'Çalışanı Kalıcı Olarak Sil',
+                content: (
+                    <div className="space-y-2 text-sm">
+                        <p className="text-red-600 font-bold">Bu işlem GERİ ALINAMAZ!</p>
+                        <p>Silinecek kayıtlar ({total} toplam):</p>
+                        <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
+                            {counts.attendance > 0 && <li>{counts.attendance} devam kaydı</li>}
+                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} ek mesai talebi</li>}
+                            {counts.leave_requests > 0 && <li>{counts.leave_requests} izin talebi</li>}
+                            {counts.meal_requests > 0 && <li>{counts.meal_requests} yemek talebi</li>}
+                            {counts.health_reports > 0 && <li>{counts.health_reports} sağlık raporu</li>}
+                            {counts.cardless_requests > 0 && <li>{counts.cardless_requests} kartsız giriş</li>}
+                            {counts.calendar_events > 0 && <li>{counts.calendar_events} takvim etkinliği</li>}
+                            {counts.special_leaves > 0 && <li>{counts.special_leaves} özel izin</li>}
+                        </ul>
+                    </div>
+                ),
+                okText: 'Kalıcı Olarak Sil',
+                cancelText: 'Vazgeç',
+                okButtonProps: { danger: true },
+                onOk: async () => {
+                    await api.delete(`/employees/${employeeId}/`);
+                    toast.success('Çalışan silindi.');
+                    fetchInitialData();
+                },
+            });
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Silme işlemi başarısız.');
         }
     };
 
@@ -1686,10 +1733,16 @@ const Employees = () => {
                     </div>
 
                     {/* Name & Title */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                            <span className={`font-semibold text-sm truncate ${hasChildren ? 'text-slate-900' : 'text-slate-700'}`}>{emp.name}</span>
+                    <div className={`flex-1 min-w-0 ${empData && empData.is_active === false ? 'opacity-50' : ''}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-semibold text-sm truncate ${empData && empData.is_active === false ? 'line-through' : ''} ${hasChildren ? 'text-slate-900' : 'text-slate-700'}`}>{emp.name}</span>
                             {emp.is_secondary && <span className="text-[9px] font-bold bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded">Matrix</span>}
+                            {empData && empData.is_active === false && (
+                                <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">PASİF</span>
+                            )}
+                            {empData?.is_frozen && (
+                                <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">DONDURULMUŞ</span>
+                            )}
                         </div>
                         <span className="text-xs text-slate-500 truncate block">{emp.title}</span>
                     </div>
@@ -1707,7 +1760,7 @@ const Employees = () => {
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
-                        {showSettings && hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && (
+                        {showSettings && hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && !empData.is_active && (
                             <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                         )}
                     </div>
@@ -1804,6 +1857,18 @@ const Employees = () => {
                             <p className="text-slate-500 mt-1 flex items-center gap-2"><Network size={16} /> Hiyerarşik Görünüm</p>
                         </div>
                         <div className="flex items-center gap-3">
+                            {hasPermission('EMPLOYEE_UPDATE') && (
+                                <button
+                                    onClick={() => setShowInactive(!showInactive)}
+                                    className={`h-12 px-4 rounded-xl font-medium flex items-center gap-2 border transition-all duration-300 text-sm ${
+                                        showInactive
+                                            ? 'bg-red-100 text-red-700 border-red-300'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md'
+                                    }`}
+                                >
+                                    {showInactive ? 'Pasif Gizle' : 'Pasif Göster'}
+                                </button>
+                            )}
                             {hasPermission('EMPLOYEE_UPDATE') && (
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
