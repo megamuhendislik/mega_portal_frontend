@@ -408,19 +408,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     {/* Bar 1: Normal Mesai */}
                     <div>
-                        <div className="flex flex-wrap justify-between items-center gap-y-1 mb-3">
-                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider shrink-0 mr-4">Normal Mesai Dağılımı</span>
-                            <div className="flex gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide flex-wrap">
-                                <span className="flex items-center gap-1 whitespace-nowrap text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 shrink-0"></span>Tamamlanan</span>
-                                {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="flex items-center gap-1 whitespace-nowrap text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50 shrink-0"></span>İzin</span>
-                                )}
-                                {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="flex items-center gap-1 whitespace-nowrap text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 shrink-0"></span>Rapor</span>
-                                )}
-                                <span className="flex items-center gap-1 whitespace-nowrap text-rose-500"><span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50 shrink-0"></span>Eksik</span>
-                                <span className="flex items-center gap-1 whitespace-nowrap text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-300 shrink-0"></span>Kalan</span>
-                            </div>
+                        <div className="mb-3">
+                            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Normal Mesai Dağılımı</span>
                         </div>
                         {/* ENHANCED BAR VISUALS — with leave + report segments */}
                         <div className="h-6 w-full bg-slate-100 rounded-full flex overflow-hidden shadow-inner border border-slate-100 ring-1 ring-slate-200/50">
@@ -488,24 +477,6 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 {stats.isSurplus && <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-black shadow-sm border border-emerald-100">HEDEF AŞILDI</span>}
                             </span>
                             <span className="text-xs font-black text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">{stats.hasCredited ? stats.displayTotalHours : stats.netWorkHours} / {stats.targetHours} sa</span>
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex gap-x-3 gap-y-1 mb-2 text-[10px] font-black uppercase tracking-wide flex-wrap">
-                            <span className="flex items-center gap-1 whitespace-nowrap text-blue-600"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 shrink-0"></span>Normal</span>
-                            <span className="flex items-center gap-1 whitespace-nowrap text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0"></span>Ek Mesai</span>
-                            {parseFloat(stats.leaveHours) > 0 && (
-                                <span className="flex items-center gap-1 whitespace-nowrap text-cyan-600"><span className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50 shrink-0"></span>İzin</span>
-                            )}
-                            {parseFloat(stats.healthReportHours) > 0 && (
-                                <span className="flex items-center gap-1 whitespace-nowrap text-orange-600"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 shrink-0"></span>Rapor</span>
-                            )}
-                            {parseFloat(stats.otPendingHours) > 0 && (
-                                <span className="flex items-center gap-1 whitespace-nowrap text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50 shrink-0"></span>Bekleyen</span>
-                            )}
-                            {parseFloat(stats.otPotentialHours) > 0 && (
-                                <span className="flex items-center gap-1 whitespace-nowrap text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>Potansiyel</span>
-                            )}
                         </div>
 
                         {/* Stacked Progress Bar */}
@@ -589,13 +560,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                 {/* 3. OT Breakdown Bar — always visible */}
                 <div className="relative z-10 pt-6 border-t border-slate-100">
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="mb-3">
                         <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Fazla Mesai Dağılımı</span>
-                        <div className="flex gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide flex-wrap">
-                            <span className="flex items-center gap-1 whitespace-nowrap text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0"></span>Onaylı</span>
-                            <span className="flex items-center gap-1 whitespace-nowrap text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50 shrink-0"></span>Bekleyen</span>
-                            <span className="flex items-center gap-1 whitespace-nowrap text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>Potansiyel</span>
-                        </div>
                     </div>
                     {stats.hasOtBreakdown ? (
                         <>
