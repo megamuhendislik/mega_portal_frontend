@@ -14,6 +14,25 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        // Strip "undefined" / "null" string values from query params to prevent backend 500 errors
+        if (config.params) {
+            Object.keys(config.params).forEach(key => {
+                if (config.params[key] === undefined || config.params[key] === null || config.params[key] === 'undefined' || config.params[key] === 'null') {
+                    delete config.params[key];
+                }
+            });
+        }
+        // Also sanitize URL-embedded query strings (e.g. api.get(`/endpoint/?employee_id=${val}`))
+        if (config.url && config.url.includes('=undefined')) {
+            config.url = config.url.replace(/([?&])[^=]+=undefined(&|$)/g, (match, prefix, suffix) => {
+                return suffix === '&' ? prefix : '';
+            });
+        }
+        if (config.url && config.url.includes('=null')) {
+            config.url = config.url.replace(/([?&])[^=]+=null(&|$)/g, (match, prefix, suffix) => {
+                return suffix === '&' ? prefix : '';
+            });
+        }
         return config;
     },
     (error) => Promise.reject(error)

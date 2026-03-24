@@ -60,7 +60,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
             end_date: request.end_date,
             start_time: request.start_time || null,
             end_time: request.end_time || null,
-            employee_id: request.employee,
+            employee_id: request.employee || request.employee_detail?.id,
             date_segments: request.date_segments || null,
           });
           setDutyPreview(resp.data);
@@ -79,8 +79,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   }, [request?.id]);
 
   useEffect(() => {
-    if (isOpen && request && requestType === 'LEAVE' && request.request_type_detail?.category !== 'EXTERNAL_DUTY') {
-      api.get(`/leave/requests/?employee_id=${request.employee}&status=APPROVED&ordering=-start_date&page_size=5`)
+    const empId = request?.employee || request?.employee_detail?.id;
+    if (isOpen && request && empId && requestType === 'LEAVE' && request.request_type_detail?.category !== 'EXTERNAL_DUTY') {
+      api.get(`/leave/requests/?employee_id=${empId}&status=APPROVED&ordering=-start_date&page_size=5`)
         .then(res => {
           const data = res.data?.results || res.data || [];
           setEmployeeHistory(data.slice(0, 5));
