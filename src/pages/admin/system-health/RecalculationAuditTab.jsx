@@ -66,6 +66,7 @@ export default function RecalculationAuditTab() {
     const [frcError, setFrcError] = useState(null);
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
+    const [showAllDays, setShowAllDays] = useState(false);
 
     const fetchUnifiedLogText = async () => {
         if (uniLogText) { setShowUniLog(!showUniLog); return; }
@@ -120,7 +121,7 @@ export default function RecalculationAuditTab() {
         setFrcExpandedEmps(new Set());
         setFrcExpandedDays(new Set());
         try {
-            const body = { date_from: startDate, date_to: endDate, mode };
+            const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
             const res = await api.post('/system/health-check/full-recalculation/', body, { timeout: 600000 });
             setFrcResult(res.data);
@@ -133,7 +134,7 @@ export default function RecalculationAuditTab() {
 
     const downloadFrcLog = async () => {
         try {
-            const body = { date_from: startDate, date_to: endDate, mode: 'dry_run', download: true };
+            const body = { date_from: startDate, date_to: endDate, mode: 'dry_run', download: true, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
             const res = await api.post('/system/health-check/full-recalculation/', body, {
                 responseType: 'blob',
@@ -331,6 +332,11 @@ export default function RecalculationAuditTab() {
                         <MagnifyingGlassIcon className="w-4 h-4" />
                         {uniLoading ? 'Tarama...' : uniFixing ? 'Duzeltiliyor...' : 'Hesaplama Denetimi'}
                     </button>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+                        <input type="checkbox" checked={showAllDays} onChange={e => setShowAllDays(e.target.checked)}
+                            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
+                        Tum Gunler
+                    </label>
                     <button
                         onClick={() => runFullRecalculation('dry_run')}
                         disabled={isProcessing || uniLoading || uniFixing || frcLoading}
@@ -1043,6 +1049,30 @@ export default function RecalculationAuditTab() {
                             value={frcResult.summary?.split_fixes || 0}
                             color={frcResult.summary?.split_fixes > 0 ? 'red' : 'green'}
                         />
+                        {(frcResult.summary?.ghost_days || 0) > 0 && (
+                            <SummaryCard
+                                icon={<ExclamationTriangleIcon className="w-6 h-6 text-red-600" />}
+                                label="Kayitsiz Gun"
+                                value={frcResult.summary.ghost_days}
+                                color="red"
+                            />
+                        )}
+                        {(frcResult.summary?.balance_mismatches || 0) > 0 && (
+                            <SummaryCard
+                                icon={<ExclamationTriangleIcon className="w-6 h-6 text-orange-600" />}
+                                label="Hedef Denge Hatasi"
+                                value={frcResult.summary.balance_mismatches}
+                                color="amber"
+                            />
+                        )}
+                        {(frcResult.summary?.total_employees_with_issues || 0) > 0 && (
+                            <SummaryCard
+                                icon={<ExclamationTriangleIcon className="w-6 h-6 text-rose-600" />}
+                                label="Sorunlu Calisan"
+                                value={frcResult.summary.total_employees_with_issues}
+                                color="red"
+                            />
+                        )}
                     </div>
 
                     {/* Global Diff Summary */}
