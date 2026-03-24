@@ -14,16 +14,19 @@ import {
 import api from '../../../services/api';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
 
-function fmtH(h) {
-    if (!h && h !== 0) return '-';
-    const neg = h < 0;
-    const abs = Math.abs(h);
-    const hours = Math.floor(abs);
-    const mins = Math.round((abs - hours) * 60);
+// Saniye → "Xsa Ydk" (yuvarlama yok, truncate)
+function fmtS(s) {
+    if (s === null || s === undefined) return '-';
+    s = Math.round(s); // sadece saniye hassasiyetinde
+    const neg = s < 0;
+    const abs = Math.abs(s);
+    const hours = Math.floor(abs / 3600);
+    const mins = Math.floor((abs % 3600) / 60);
     const sign = neg ? '-' : '';
     if (hours > 0 && mins > 0) return `${sign}${hours}sa ${mins}dk`;
     if (hours > 0) return `${sign}${hours}sa`;
-    return `${sign}${mins}dk`;
+    if (mins > 0) return `${sign}${mins}dk`;
+    return '0dk';
 }
 
 function fmtTime(dt) {
@@ -291,10 +294,10 @@ export default function EmployeeDetailTab() {
                                                             {att.status}
                                                         </span>
                                                     </td>
-                                                    <td className="py-1 px-2 text-right font-mono">{fmtH(att.normal_h)}</td>
-                                                    <td className="py-1 px-2 text-right font-mono">{fmtH(att.ot_approved_h)}</td>
-                                                    <td className="py-1 px-2 text-right font-mono text-red-600">{att.missing_h > 0 ? fmtH(att.missing_h) : '-'}</td>
-                                                    <td className="py-1 px-2 text-right font-mono">{att.break_min > 0 ? `${att.break_min}dk` : '-'}</td>
+                                                    <td className="py-1 px-2 text-right font-mono">{fmtS(att.normal_s)}</td>
+                                                    <td className="py-1 px-2 text-right font-mono">{fmtS(att.ot_s)}</td>
+                                                    <td className="py-1 px-2 text-right font-mono text-red-600">{att.missing_s > 0 ? fmtS(att.missing_s) : '-'}</td>
+                                                    <td className="py-1 px-2 text-right font-mono">{att.break_s > 0 ? fmtS(att.break_s) : '-'}</td>
                                                     <td className="py-1 px-2 text-gray-400 max-w-[120px] truncate">{att.note || '-'}</td>
                                                 </tr>
                                             ))}
@@ -362,7 +365,7 @@ export default function EmployeeDetailTab() {
                                         <td className="py-1 px-2 font-medium">{r.date}</td>
                                         <td className="py-1 px-2 font-mono">{r.start_time?.slice(0, 5) || '-'}</td>
                                         <td className="py-1 px-2 font-mono">{r.end_time?.slice(0, 5) || '-'}</td>
-                                        <td className="py-1 px-2 text-right font-mono">{fmtH(r.hours)}</td>
+                                        <td className="py-1 px-2 text-right font-mono">{fmtS(r.duration_s)}</td>
                                         <td className="py-1 px-2">
                                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-700'}`}>{r.status}</span>
                                         </td>
@@ -521,30 +524,30 @@ export default function EmployeeDetailTab() {
                             </thead>
                             <tbody>
                                 {data.monthly_summaries?.map((ms, i) => {
-                                    const check = (ms.completed_h || 0) + (ms.missing_h || 0) + (ms.leave_h || 0) + (ms.health_report_h || 0) + (ms.remaining_h || 0);
-                                    const balanced = ms.target_h > 0 ? Math.abs(check - ms.target_h) < 0.2 : true;
+                                    const check = (ms.completed_s || 0) + (ms.missing_s || 0) + (ms.leave_s || 0) + (ms.health_report_s || 0) + (ms.remaining_s || 0);
+                                    const balanced = ms.target_s > 0 ? Math.abs(check - ms.target_s) < 60 : true;
                                     return (
                                         <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${!balanced ? 'bg-red-50' : ''}`}>
                                             <td className="py-1 px-2 font-bold">{ms.year}-{String(ms.month).padStart(2, '0')}</td>
-                                            <td className="py-1 px-2 text-right font-mono font-bold">{fmtH(ms.target_h)}</td>
-                                            <td className="py-1 px-2 text-right font-mono">{fmtH(ms.completed_h)}</td>
+                                            <td className="py-1 px-2 text-right font-mono font-bold">{fmtS(ms.target_s)}</td>
+                                            <td className="py-1 px-2 text-right font-mono">{fmtS(ms.completed_s)}</td>
                                             <td className="py-1 px-2 text-right font-mono text-teal-700">
-                                                {ms.leave_h > 0 ? fmtH(ms.leave_h) : '-'}
+                                                {ms.leave_s > 0 ? fmtS(ms.leave_s) : '-'}
                                                 {ms.leave_days > 0 && <span className="text-[9px] text-gray-400 ml-1">({ms.leave_days}g)</span>}
                                             </td>
                                             <td className="py-1 px-2 text-right font-mono text-rose-600">
-                                                {ms.health_report_h > 0 ? fmtH(ms.health_report_h) : '-'}
+                                                {ms.health_report_s > 0 ? fmtS(ms.health_report_s) : '-'}
                                                 {ms.health_report_days > 0 && <span className="text-[9px] text-gray-400 ml-1">({ms.health_report_days}g)</span>}
                                             </td>
-                                            <td className="py-1 px-2 text-right font-mono text-red-600">{ms.missing_h > 0 ? fmtH(ms.missing_h) : '-'}</td>
-                                            <td className="py-1 px-2 text-right font-mono text-gray-400">{ms.remaining_h > 0 ? fmtH(ms.remaining_h) : '-'}</td>
-                                            <td className="py-1 px-2 text-right font-mono text-amber-700">{ms.overtime_h > 0 ? fmtH(ms.overtime_h) : '-'}</td>
-                                            <td className="py-1 px-2 text-right font-mono">{fmtH(ms.total_work_h)}</td>
-                                            <td className={`py-1 px-2 text-right font-mono font-bold ${ms.net_balance_h >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                                {ms.net_balance_h > 0 ? '+' : ''}{fmtH(ms.net_balance_h)}
+                                            <td className="py-1 px-2 text-right font-mono text-red-600">{ms.missing_s > 0 ? fmtS(ms.missing_s) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono text-gray-400">{ms.remaining_s > 0 ? fmtS(ms.remaining_s) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono text-amber-700">{ms.overtime_s > 0 ? fmtS(ms.overtime_s) : '-'}</td>
+                                            <td className="py-1 px-2 text-right font-mono">{fmtS(ms.total_work_s)}</td>
+                                            <td className={`py-1 px-2 text-right font-mono font-bold ${ms.net_balance_s >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                {ms.net_balance_s > 0 ? '+' : ''}{fmtS(ms.net_balance_s)}
                                             </td>
-                                            <td className={`py-1 px-2 text-right font-mono ${ms.cumulative_h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {ms.cumulative_h > 0 ? '+' : ''}{fmtH(ms.cumulative_h)}
+                                            <td className={`py-1 px-2 text-right font-mono ${ms.cumulative_s >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {ms.cumulative_s > 0 ? '+' : ''}{fmtS(ms.cumulative_s)}
                                             </td>
                                         </tr>
                                     );
