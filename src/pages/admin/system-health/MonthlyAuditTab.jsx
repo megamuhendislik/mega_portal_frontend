@@ -51,6 +51,9 @@ export default function MonthlyAuditTab() {
     const [filterMismatch, setFilterMismatch] = useState(false);
     const [filterAnomaly, setFilterAnomaly] = useState(false);
     const [autoFix, setAutoFix] = useState(false);
+    const [bulkMode, setBulkMode] = useState(false);
+    const [bulkResult, setBulkResult] = useState(null);
+    const [bulkLoading, setBulkLoading] = useState(false);
 
     useEffect(() => {
         api.get('/employees/', { params: { page_size: 500 } }).then(r => {
@@ -86,13 +89,33 @@ export default function MonthlyAuditTab() {
         }
     };
 
+    const runBulkAudit = async () => {
+        setBulkLoading(true);
+        setBulkResult(null);
+        setError(null);
+        try {
+            const resp = await api.post('/system/health-check/monthly-audit-bulk/', {
+                year, month, auto_fix: autoFix
+            }, { timeout: 600000 });
+            setBulkResult(resp.data);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Toplu denetim başarısız.');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
     const downloadTxt = () => {
-        if (!result?.text_log) return;
-        const blob = new Blob([result.text_log], { type: 'text/plain;charset=utf-8' });
+        const log = bulkMode ? bulkResult?.text_log : result?.text_log;
+        if (!log) return;
+        const blob = new Blob([log], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audit_${result.employee_id}_${result.year}_${String(result.month).padStart(2, '0')}.txt`;
+        const fname = bulkMode
+            ? `bulk_audit_${year}_${String(month).padStart(2, '0')}.txt`
+            : `audit_${result.employee_id}_${year}_${String(month).padStart(2, '0')}.txt`;
+        a.download = fname;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -204,10 +227,26 @@ export default function MonthlyAuditTab() {
                 </div>
             </div>
 
+            {/* Mode Toggle */}
+            <div className="flex gap-2 mb-4">
+                <button
+                    onClick={() => { setBulkMode(false); setBulkResult(null); }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${!bulkMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                    Tekli Denetim
+                </button>
+                <button
+                    onClick={() => { setBulkMode(true); setResult(null); }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${bulkMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                    Tüm Çalışanlar
+                </button>
+            </div>
+
             {/* Controls */}
             <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                {/* Employee Search */}
-                <div className="relative flex-1 min-w-[240px]">
+                {/* Employee Search — only in single mode */}
+                {!bulkMode && <div className="relative flex-1 min-w-[240px]">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Calisan</label>
                     <div className="relative">
                         <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
@@ -256,7 +295,7 @@ export default function MonthlyAuditTab() {
                             )}
                         </div>
                     )}
-                </div>
+                </div>}
 
                 {/* Year */}
                 <div className="w-24">
@@ -303,22 +342,22 @@ export default function MonthlyAuditTab() {
 
                 {/* Run Button */}
                 <button
-                    onClick={runAudit}
-                    disabled={!selectedEmployee || loading}
+                    onClick={bulkMode ? runBulkAudit : runAudit}
+                    disabled={bulkMode ? (bulkLoading) : (!selectedEmployee || loading)}
                     className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
-                    {loading ? (
+                    {(bulkMode ? bulkLoading : loading) ? (
                         <>
                             <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
-                            Denetleniyor...
+                            {bulkMode ? 'Tüm çalışanlar denetleniyor...' : 'Denetleniyor...'}
                         </>
                     ) : (
                         <>
                             <MagnifyingGlassIcon className="w-4 h-4" />
-                            Denetle
+                            {bulkMode ? 'Tümünü Denetle' : 'Denetle'}
                         </>
                     )}
                 </button>
@@ -332,8 +371,159 @@ export default function MonthlyAuditTab() {
                 </div>
             )}
 
-            {/* Results */}
-            {result && !result.error && (
+            {/* Bulk Results */}
+            {bulkMode && bulkResult && (
+                <div className="space-y-4">
+                    {/* Bulk Summary */}
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <span className="font-semibold text-gray-800">
+                                {bulkResult.period}
+                            </span>
+                            <span className="text-gray-400">|</span>
+                            <span>{bulkResult.total_employees} çalışan</span>
+                            <span className="text-gray-400">|</span>
+                            {bulkResult.issues_count > 0 ? (
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium">
+                                    {bulkResult.issues_count} sorunlu
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+                                    Tümü temiz
+                                </span>
+                            )}
+                            <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                {bulkResult.clean_count} temiz
+                            </span>
+                            {bulkResult.total_ghost_days > 0 && (
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                                    {bulkResult.total_ghost_days} kayıtsız gün
+                                </span>
+                            )}
+                            {bulkResult.total_fixed_days > 0 && (
+                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                                    {bulkResult.total_fixed_days} düzeltildi
+                                </span>
+                            )}
+                            <button onClick={downloadTxt} className="ml-auto px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-200 flex items-center gap-1">
+                                <DocumentArrowDownIcon className="w-3 h-3" /> TXT İndir
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Bulk Table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                            <thead>
+                                <tr className="bg-gray-100 text-gray-600">
+                                    <th className="px-3 py-2 text-left font-medium">Çalışan</th>
+                                    <th className="px-3 py-2 text-left font-medium">Departman</th>
+                                    <th className="px-3 py-2 text-center font-medium">Anomali</th>
+                                    <th className="px-3 py-2 text-center font-medium">Ghost</th>
+                                    <th className="px-3 py-2 text-center font-medium">Denge</th>
+                                    <th className="px-3 py-2 text-right font-medium">DB Hedef</th>
+                                    <th className="px-3 py-2 text-right font-medium">DB Tamamlanan</th>
+                                    <th className="px-3 py-2 text-right font-medium">DB Eksik</th>
+                                    <th className="px-3 py-2 text-right font-medium">Hesap Tamamlanan</th>
+                                    <th className="px-3 py-2 text-right font-medium">Hesap Eksik</th>
+                                    <th className="px-3 py-2 text-center font-medium">İzin</th>
+                                    <th className="px-3 py-2 text-center font-medium">Rapor</th>
+                                    <th className="px-3 py-2 text-center font-medium">Detay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {bulkResult.results
+                                    .sort((a, b) => b.anomaly_count - a.anomaly_count)
+                                    .map(emp => {
+                                    const bgClass = emp.anomaly_count > 0
+                                        ? (emp.anomalies?.some(a => a.severity === 'CRITICAL') ? 'bg-red-50' : 'bg-orange-50')
+                                        : '';
+                                    return (
+                                        <tr key={emp.employee_id} className={`border-b border-gray-100 hover:bg-gray-50 ${bgClass}`}>
+                                            <td className="px-3 py-2 font-medium text-gray-800">{emp.employee_name}</td>
+                                            <td className="px-3 py-2 text-gray-500">{emp.department}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                {emp.anomaly_count > 0 ? (
+                                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-bold">{emp.anomaly_count}</span>
+                                                ) : (
+                                                    <CheckCircleIcon className="w-4 h-4 text-green-500 mx-auto" />
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                {emp.ghost_days > 0 ? (
+                                                    <span className="px-2 py-0.5 bg-red-200 text-red-800 rounded-full font-bold">{emp.ghost_days}</span>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                {emp.balance_ok ? (
+                                                    <CheckCircleIcon className="w-4 h-4 text-green-500 mx-auto" />
+                                                ) : (
+                                                    <ExclamationTriangleIcon className="w-4 h-4 text-red-500 mx-auto" />
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-mono">{fmtSec(emp.db_target)}</td>
+                                            <td className="px-3 py-2 text-right font-mono">{fmtSec(emp.db_completed)}</td>
+                                            <td className="px-3 py-2 text-right font-mono">{fmtSec(emp.db_missing)}</td>
+                                            <td className={`px-3 py-2 text-right font-mono ${Math.abs(emp.db_completed - emp.calc_completed) > 300 ? 'text-red-600 font-bold' : ''}`}>
+                                                {fmtSec(emp.calc_completed)}
+                                            </td>
+                                            <td className={`px-3 py-2 text-right font-mono ${Math.abs(emp.db_missing - emp.calc_missing) > 300 ? 'text-red-600 font-bold' : ''}`}>
+                                                {fmtSec(emp.calc_missing)}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">{emp.leave_days || '-'}</td>
+                                            <td className="px-3 py-2 text-center">{emp.health_report_days || '-'}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                <button
+                                                    onClick={() => {
+                                                        setBulkMode(false);
+                                                        setSelectedEmployee({ id: emp.employee_id, name: emp.employee_name, department: emp.department });
+                                                    }}
+                                                    className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[10px] font-medium hover:bg-indigo-200"
+                                                >
+                                                    Detay
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Anomaly details for problematic employees */}
+                    {bulkResult.results.filter(r => r.has_issues).length > 0 && (
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                            <h4 className="text-sm font-bold text-red-800 mb-3">Anomali Detayları</h4>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {bulkResult.results.filter(r => r.has_issues).map(emp => (
+                                    <div key={emp.employee_id} className="p-3 bg-white rounded-lg border border-red-100">
+                                        <div className="font-medium text-sm text-gray-800 mb-1">{emp.employee_name} <span className="text-gray-400 text-xs">({emp.department})</span></div>
+                                        {emp.anomalies.map((a, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-xs mt-1">
+                                                <span className={`px-1.5 py-0.5 rounded font-bold ${
+                                                    a.severity === 'CRITICAL' ? 'bg-red-200 text-red-800' :
+                                                    a.severity === 'HIGH' ? 'bg-orange-200 text-orange-800' :
+                                                    'bg-yellow-200 text-yellow-800'
+                                                }`}>{a.type}</span>
+                                                {a.date && <span className="text-gray-500">{a.date}</span>}
+                                                <span className="text-gray-700">{a.message}</span>
+                                            </div>
+                                        ))}
+                                        {emp.ghost_day_dates?.length > 0 && (
+                                            <div className="mt-1 text-[11px] text-red-600">
+                                                Kayıtsız günler: {emp.ghost_day_dates.join(', ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Single Employee Results */}
+            {!bulkMode && result && !result.error && (
                 <div className="space-y-6">
                     {/* Top Info Bar */}
                     <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
