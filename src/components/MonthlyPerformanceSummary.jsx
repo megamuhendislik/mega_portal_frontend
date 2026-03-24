@@ -360,48 +360,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <div
                                 className="absolute z-30 cursor-pointer group"
                                 style={{
-                                    left: `${stats.indicatorLeft}%`,
-                                    top: '14px',
+                                    left: `calc(${stats.indicatorLeft}% - 8px)`,
+                                    top: '22px',
                                     bottom: '0px',
-                                    width: '0px'
+                                    width: '16px'
                                 }}
                             >
-                                {/* Past target value label above triangle */}
-                                <div className="absolute -top-[22px] left-1/2 whitespace-nowrap pointer-events-none" style={{ transform: `translateX(${stats.indicatorLeft > 90 ? '-80%' : stats.indicatorLeft < 10 ? '-20%' : '-50%'})` }}>
-                                    <span className="text-[10px] font-black text-slate-500 group-hover:text-indigo-600 transition-colors tabular-nums">
-                                        {stats.pastTargetHours} sa
-                                    </span>
-                                </div>
                                 {/* Triangle marker at top */}
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                                    <svg width="12" height="8" viewBox="0 0 12 8" className="text-slate-500 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
-                                        <polygon points="6,8 0,0 12,0" fill="currentColor" />
+                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
+                                    <svg width="10" height="6" viewBox="0 0 10 6" className="text-slate-400 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
+                                        <polygon points="5,6 0,0 10,0" fill="currentColor" />
                                     </svg>
                                 </div>
                                 {/* Dashed vertical line — full height */}
-                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l-2 border-dashed border-slate-400/60 group-hover:border-indigo-400/80 transition-colors" />
-                                {/* Net deficit/surplus badge at bottom */}
-                                <div className={`absolute -bottom-7 left-1/2 px-2 py-0.5 rounded-md text-[10px] font-black whitespace-nowrap border shadow-sm transition-all group-hover:shadow-md ${
-                                    stats.isNetNeutral
-                                        ? 'bg-slate-50 text-slate-600 border-slate-200'
-                                        : stats.isNetSurplus
-                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                            : 'bg-rose-50 text-rose-600 border-rose-200'
-                                }`} style={{ transform: `translateX(${stats.indicatorLeft > 90 ? '-80%' : stats.indicatorLeft < 10 ? '-20%' : '-50%'})` }}>
-                                    {stats.isNetNeutral ? (
-                                        <span className="flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" /> Hedefte
-                                        </span>
-                                    ) : stats.isNetSurplus ? (
-                                        <span className="flex items-center gap-1">
-                                            <TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1">
-                                            <AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa
-                                        </span>
-                                    )}
-                                </div>
+                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l-[1.5px] border-dashed border-slate-300/60 group-hover:border-indigo-400/80 transition-colors" />
                             </div>
                         </Popover>
                     )}
@@ -446,21 +418,21 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             {/* Kalan — Gri */}
                             <div className="bg-slate-200 h-full transition-all duration-1000" style={{ width: `${stats.pRemaining}%` }} />
                         </div>
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 mt-2 px-1">
-                            <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap">
-                                <span className="text-blue-700">{stats.completedHours} sa</span>
+                        <div className="flex items-center justify-between mt-2.5 px-1">
+                            <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
+                                <span className="flex items-center gap-1.5 text-blue-700"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.completedHours} sa <span className="font-medium text-slate-400">tamamlanan</span></span>
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="text-cyan-600">+ {stats.leaveHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveHours} sa <span className="font-medium text-slate-400">izin</span></span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="text-orange-600">+ {stats.healthReportHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportHours} sa <span className="font-medium text-slate-400">rapor</span></span>
                                 )}
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
                                 {parseFloat(stats.missingHours) > 0 && (
-                                    <span className="text-rose-600">-{stats.missingHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>-{stats.missingHours} sa <span className="font-medium text-slate-400">eksik</span></span>
                                 )}
-                                <span className="text-slate-400">{stats.adjustedRemainingHours} sa kalan</span>
+                                <span className="flex items-center gap-1.5 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>{stats.adjustedRemainingHours} sa <span className="font-medium">kalan</span></span>
                             </div>
                         </div>
                     </div>
@@ -530,31 +502,46 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
 
                         {/* Summary row below bar */}
-                        <div className="flex items-center justify-between mt-2 px-1">
-                            <div className="flex items-center gap-3 text-[10px] font-bold flex-wrap">
-                                <span className="text-blue-600">{stats.normalHours} sa</span>
+                        <div className="flex items-center justify-between mt-2.5 px-1">
+                            <div className="flex items-center gap-x-4 gap-y-1 text-[10px] font-bold flex-wrap">
+                                <span className="flex items-center gap-1.5 text-blue-600"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>{stats.normalHours} sa <span className="font-medium text-slate-400">normal</span></span>
                                 {parseFloat(stats.overtimeHours) > 0 && (
-                                    <span className="text-emerald-600">+ {stats.overtimeHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>+ {stats.overtimeHours} sa <span className="font-medium text-slate-400">ek mesai</span></span>
                                 )}
                                 {parseFloat(stats.leaveHours) > 0 && (
-                                    <span className="text-cyan-600">+ {stats.leaveHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-cyan-600"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>+ {stats.leaveHours} sa <span className="font-medium text-slate-400">izin</span></span>
                                 )}
                                 {parseFloat(stats.healthReportHours) > 0 && (
-                                    <span className="text-orange-600">+ {stats.healthReportHours} sa</span>
+                                    <span className="flex items-center gap-1.5 text-orange-600"><span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>+ {stats.healthReportHours} sa <span className="font-medium text-slate-400">rapor</span></span>
                                 )}
                                 {parseFloat(stats.otPendingHours) > 0 && (
-                                    <span className="text-amber-600">+ {stats.otPendingHours} sa <span className="text-[9px] font-normal">(bekleyen)</span></span>
+                                    <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>+ {stats.otPendingHours} sa <span className="font-medium text-slate-400">bekleyen</span></span>
                                 )}
                                 {parseFloat(stats.otPotentialHours) > 0 && (
-                                    <span className="text-slate-500">+ {stats.otPotentialHours} sa <span className="text-[9px] font-normal">(potansiyel)</span></span>
+                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>+ {stats.otPotentialHours} sa <span className="font-medium text-slate-400">potansiyel</span></span>
                                 )}
                             </div>
                             {(parseFloat(stats.otPendingHours) > 0 || parseFloat(stats.otPotentialHours) > 0) && (
-                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100">
+                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100 whitespace-nowrap shrink-0">
                                     Potansiyel Dahil: {stats.projectedWorkHours} sa
                                 </span>
                             )}
                         </div>
+                        {/* Net deficit/surplus badge */}
+                        {!stats.isNetNeutral && (
+                            <div className="flex justify-end mt-1.5">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md border whitespace-nowrap ${
+                                    stats.isNetSurplus
+                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                        : 'bg-rose-50 text-rose-600 border-rose-200'
+                                }`}>
+                                    {stats.isNetSurplus
+                                        ? <><TrendingUp className="w-3 h-3" /> +{stats.netBalanceForLabelHours} sa</>
+                                        : <><AlertTriangle className="w-3 h-3" /> -{stats.netBalanceForLabelHours} sa</>
+                                    }
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -581,10 +568,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         style={{ width: `${stats.otPotentialPct}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 3px, #64748b 3px, #64748b 6px)' }} />
                                 )}
                             </div>
-                            <div className="flex justify-between text-xs font-bold mt-2 px-1">
-                                <span className="text-emerald-600">{stats.otApprovedHours} sa</span>
-                                <span className="text-amber-600">{stats.otPendingHours} sa</span>
-                                <span className="text-slate-500">{stats.otPotentialHours} sa</span>
+                            <div className="flex justify-between text-[10px] font-bold mt-2.5 px-1">
+                                <span className="flex items-center gap-1.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>{stats.otApprovedHours} sa <span className="font-medium text-slate-400">onaylı</span></span>
+                                <span className="flex items-center gap-1.5 text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>{stats.otPendingHours} sa <span className="font-medium text-slate-400">bekleyen</span></span>
+                                <span className="flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>{stats.otPotentialHours} sa <span className="font-medium text-slate-400">potansiyel</span></span>
                             </div>
                             <div className="text-right mt-1">
                                 <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">Toplam: {stats.otTotalHours} sa</span>
