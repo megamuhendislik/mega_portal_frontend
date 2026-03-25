@@ -3,7 +3,7 @@ import {
     Contact, CheckSquare, BarChart3, CalendarRange, Shield,
     Users, Network, Server, Database, Package,
     MessageSquare, UserCheck, HeartPulse, Gift, Bug,
-    PieChart, Bell
+    PieChart, Bell, ShoppingCart, PartyPopper
 } from 'lucide-react';
 
 const helpContent = [
@@ -398,7 +398,7 @@ const helpContent = [
         icon: Contact,
         description: 'Çalışanlari arama, iletişim bilgilerine erişim ve departman bazli filtreleme. (Tüm çalışanlar görebilir)',
         permission: null,
-        link: '/directory',
+        link: '/company-directory',
         images: [
             { src: '/help-images/help-rehber-01.png', caption: 'Şirket rehberi — çalışan kartları, arama çubuğu ve departman süzgeçi' },
             { src: '/help-images/help-rehber-02.png', caption: 'Şirket rehberi kartlar — çalışan detay bilgileri ve iletişim' }
@@ -482,7 +482,7 @@ const helpContent = [
         icon: UserCheck,
         description: 'İzin veya uzun süreli yokluk durumlarında vekalet atama ve yönetme. (Tüm çalışanlar görebilir)',
         permission: null,
-        link: '/substitutes',
+        link: '/substitute-management',
         images: [
             { src: '/help-images/help-vekalet-01.png', caption: 'Vekalet yönetimi — aktif vekaletler, geçmiş ve yeni vekalet atama' },
             { src: '/help-images/help-vekalet-02.png', caption: 'Vekalet yönetimi detay — vekalet süresi, vekil bilgileri ve işlem geçmişi' }
@@ -656,12 +656,50 @@ const helpContent = [
         ]
     },
     {
+        id: 'resmi-tatiller',
+        title: 'Resmi Tatiller',
+        icon: PartyPopper,
+        description: 'Yıllık resmi tatil takvimi, yarım gün tatiller ve tatil günlerinin puantaja etkisi. (Çalışma takvimi yetkisi olan yöneticiler görebilir)',
+        permission: 'PAGE_WORK_SCHEDULES',
+        link: '/public-holidays',
+        images: [],
+        steps: [
+            {
+                title: 'Resmi Tatil Takvimini Görüntüleme',
+                description: 'Sol menüden "Çalışma Takvimleri" sayfasına, ardından "Resmi Tatiller" sekmesine gidin. Yıllık resmi tatil listesi tarih sırasıyla gösterilir. Her tatilde ad, başlangıç/bitiş tarihi ve süre (gün) bilgisi bulunur.'
+            },
+            {
+                title: 'Yeni Resmi Tatil Ekleme',
+                description: '"Yeni Tatil Ekle" düğmesine tıklayın. Tatil adını, başlangıç ve bitiş tarihini girin. Yarım gün tatil ise "Yarım Gün" seçeneğini işaretleyin. Kaydettikten sonra tüm çalışanların takvimine otomatik yansır.'
+            },
+            {
+                title: 'Tatil Düzenleme ve Silme',
+                description: 'Mevcut bir tatile tıklayarak düzenleme yapabilirsiniz. Tarih veya ad değişikliği kaydedildiğinde etkilenen puantajlar yeniden hesaplanır. Silme işlemi geri alınamaz — silinen tatil günü normal iş günü olarak sayılır.'
+            },
+            {
+                title: 'Tatillerin Puantaja Etkisi',
+                description: 'Resmi tatil günlerinde çalışma hedefi sıfırlanır. Çalışanlar o gün çalışmasa bile devamsız sayılmaz. Tatil günü çalışan personelin mesaisi otomatik olarak "Tatil Günü Mesaisi" olarak algılanır ve potansiyel ek mesai kaydı oluşturulur.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Yarım gün tatillerde çalışma hedefi yarıya düşer. Takvimde yarım gün tatiller çapraz çizgili arka planla gösterilir.' },
+            { type: 'warning', text: 'Resmi tatil silme veya tarih değiştirme geri alınamaz. Değişiklik tüm çalışanların puantajını etkiler. Dikkatli olun.' },
+            { type: 'success', text: 'Ardışık resmi tatiller takvimde otomatik birleştirilir. Örneğin 3 günlük bayram tatili tek satırda "Ramazan Bayramı (3 gün)" olarak gösterilir.' }
+        ],
+        faq: [
+            { q: 'Resmi tatil eklediğimde mevcut puantajlar değişir mi?', a: 'Evet. Yeni tatil eklendiğinde, o tarihteki tüm çalışanların puantajları otomatik yeniden hesaplanır. Çalışma hedefi sıfırlanır, varsa devamsızlık kaydı kaldırılır.' },
+            { q: 'Yarım gün tatil nasıl çalışır?', a: 'Yarım gün tatillerde günlük çalışma hedefi yarıya düşer (örn: 9 saat yerine 4.5 saat). Vardiya bitiş saati değişmez ama hedef süre yarılanır. Yarım gün sonrası çalışma normal mesai sayılır.' },
+            { q: 'Tatil günü çalışırsam ne olur?', a: 'Tatil günü kart okutup çalışırsanız, tüm çalışma süreniz "Tatil Günü Mesaisi" olarak algılanır ve potansiyel ek mesai kaydı oluşturulur. Bu kaydı talep ederek onaya gönderebilirsiniz.' },
+            { q: 'Dini bayramlar otomatik ekleniyor mu?', a: 'Hayır. Tüm resmi tatiller manuel olarak eklenir. Her yılın başında sistem yöneticisi o yılın resmi tatillerini girmelidir. Geçmiş yıldan kopyalama özelliği mevcuttur.' }
+        ]
+    },
+    {
         id: 'sistem-yönetimi',
         title: 'Sistem Sagligi',
         icon: Shield,
         description: 'Sistem durumu, yetki denetimi, devamsızlık denetimi, özellik testleri, veri bütünlüğü ve şifre sıfırlama. (Sadece sistem yöneticileri görebilir)',
         permission: 'PAGE_SYSTEM_HEALTH',
-        link: '/system-health',
+        link: '/admin/system-health',
         images: [
             { src: '/help-images/help-sistem-01.png', caption: 'Sistem sagligi — denetim sekmeleri, durum kartları ve işlem düğmeleri' },
             { src: '/help-images/help-sistem-02.png', caption: 'Sistem sagligi detay — denetim sonuçları, düzeltme önerileri ve test çıktıları' }
@@ -754,7 +792,7 @@ const helpContent = [
         icon: Network,
         description: 'Şirket hiyerarşisini görsel olarak görüntüleme, departman ve raporlama yapısını inceleme. (Tüm çalışanlar görebilir)',
         permission: null,
-        link: '/org-chart',
+        link: '/organization-chart',
         images: [
             { src: '/help-images/help-orgchart-01.png', caption: 'Organizasyon şeması — hiyerarşi ağacı, departman kutuları ve raporlama çizgileri' },
             { src: '/help-images/help-orgchart-02.png', caption: 'Organizasyon şeması — düğüm tıklanmış detay görünümü' }
@@ -795,8 +833,8 @@ const helpContent = [
         title: 'Servis Yönetimi',
         icon: Package,
         description: 'Servis guzerahi, servis noktasi tanımlama, calisan-servis eslestime ve servis toleransı yönetimi. (Yöneticiler ve sistem yöneticileri görebilir)',
-        permission: 'PAGE_SERVICE_MANAGEMENT',
-        link: '/service-management',
+        permission: 'PAGE_SYSTEM_HEALTH',
+        link: '/admin/service-control',
         images: [
             { src: '/help-images/help-servis-01.png', caption: 'Servis yönetimi — güzergah listesi, duraklar ve çalışan eşleşmeleri' },
             { src: '/help-images/help-servis-02.png', caption: 'Servis yönetimi detay — güzergah düzenleme, durak yönetimi ve tolerans ayarları' }
@@ -838,7 +876,7 @@ const helpContent = [
         icon: Database,
         description: 'Verileri dışa aktarma, ice aktarma, yedekleme ve toplu işlemler. (Sadece sistem yöneticileri görebilir)',
         permission: 'PAGE_DATA_MANAGEMENT',
-        link: '/data-management',
+        link: '/system-data-management',
         images: [
             { src: '/help-images/help-veri-01.png', caption: 'Veri yönetimi — dışa aktarma, içe aktarma ve toplu işlem seçenekleri' },
             { src: '/help-images/help-veri-02.png', caption: 'Veri yönetimi detay — PDKS yükleme, kuru çalıştırma ve doğrulama sonuçları' }
@@ -968,7 +1006,7 @@ const helpContent = [
         icon: Bug,
         description: 'Sistem hata logları, performans izleme ve sorun giderme araclari. (Sadece sistem yöneticileri görebilir)',
         permission: 'PAGE_DEBUG',
-        link: '/debug',
+        link: '/debug/attendance',
         images: [
             { src: '/help-images/help-debug-01.png', caption: 'Hata ayiklama — hata logları, performans metrikleri ve sorun giderme araclari' },
             { src: '/help-images/help-debug-02.png', caption: 'Puantaj hata ayıklayıcı — detay ve hesaplama sonuçları' }
@@ -1009,7 +1047,7 @@ const helpContent = [
         title: 'Mesai Takibi',
         icon: Timer,
         description: 'Ekip puantaj tablosu, detayli analiz sekmeleri, katilim oranları, ek mesai dagilimi, yemek-mesai iliskişi, izin oranları, departman karşılaştırması ve kişi detay cekmecesi. (Yöneticiler ve sistem yöneticileri görebilir)',
-        permission: 'PAGE_ATTENDANCE',
+        permission: null,
         link: '/attendance',
         images: [
             { src: '/help-images/help-mesai-01.png', caption: 'Mesai takibi ekip tablosu — çalışan puantaj listesi, durum sütunları ve işlem düğmeleri' },
@@ -1119,7 +1157,7 @@ const helpContent = [
         icon: Server,
         description: 'Dis program entegrasyonlari, uygulama arayuzu (API) anahtar yönetimi, cihaz takibi ve erişim logları. (Sadece sistem yöneticileri görebilir)',
         permission: 'PAGE_PROGRAM_MANAGEMENT',
-        link: '/programs',
+        link: '/program-management',
         images: [
             { src: '/help-images/help-program-01.png', caption: 'Program yönetimi — program listesi, detay paneli, cihazlar ve erişim logları' },
             { src: '/help-images/help-program-02.png', caption: 'Program yönetimi detay — API anahtarı, cihaz listesi ve erişim log detayları' }
@@ -1159,6 +1197,44 @@ const helpContent = [
             { q: 'API anahtari güvenli mi?', a: 'API anahtari sunucu tarafinda şifrelenmis olarak saklanır. Ekranda varsayılan olarak gizli gösterilir. Anahtari güvenli ortamda saklayin, duz metin olarak paylasmahyin.' },
             { q: 'HWID_BLOCKED ne anlama gelir?', a: 'Bir cihazin donanım kimliği manuel olarak engellenmiştir. O cihazdan gelen tümbağlantı denemeleri reddedilir ve loglanir.' },
             { q: 'Pasif programa baglanan cihaz ne olur?', a: 'PROGRAM_INACTIVE hatasi alır. Programi tekrar aktif yaptığınızda bağlantılar otomatik çalışır, cihaz tarafinda değişiklik gerekmez.' }
+        ]
+    },
+    {
+        id: 'tedarik-talepleri',
+        title: 'Tedarik Talepleri',
+        icon: ShoppingCart,
+        description: 'Malzeme ve hizmet satın alma talepleri oluşturma, onay süreci ve takip. (Tedarik yetkisi olan kullanıcılar görebilir)',
+        permission: 'PAGE_PROCUREMENT',
+        link: '/procurement',
+        images: [],
+        steps: [
+            {
+                title: 'Yeni Tedarik Talebi Oluşturma',
+                description: 'Sol menüden "Tedarik Talepleri" sayfasına gidin. "Yeni Talep" düğmesine tıklayın. Talep formunda gerekli malzeme veya hizmetin adını, miktarını, tahmini bütçesini ve aciliyet durumunu belirtin.'
+            },
+            {
+                title: 'Talep Detaylarını Doldurma',
+                description: 'Talep formundaki alanları eksiksiz doldurun: ürün/hizmet açıklaması, miktar, birim, tahmini maliyet, gerekçe ve istenen teslim tarihi. Varsa teklif veya referans dosyası yükleyebilirsiniz.'
+            },
+            {
+                title: 'Onay Sürecini Takip Etme',
+                description: 'Gönderdiğiniz talep yöneticinize iletilir. Talep durumunu "Tedarik Talepleri" listesinden takip edebilirsiniz. Durum bilgisi: Bekliyor (sarı), Onaylandı (yeşil), Reddedildi (kırmızı), Tamamlandı (mavi).'
+            },
+            {
+                title: 'Talep Geçmişi ve Filtreleme',
+                description: 'Geçmiş taleplerinizi tarih aralığı, durum ve kategori ile filtreleyebilirsiniz. Her talebin detayına tıklayarak onay geçmişini, yorumları ve ekli dosyaları görebilirsiniz.'
+            }
+        ],
+        tips: [
+            { type: 'info', text: 'Tedarik talepleri departman bütçesiyle ilişkilidir. Tahmini maliyet alanını doğru doldurmak onay sürecini hızlandırır.' },
+            { type: 'warning', text: 'Acil talepler için "Acil" işaretini kullanın. Bu talepler öncelikli olarak yöneticiye bildirilir.' },
+            { type: 'success', text: 'Onaylanan talepler otomatik olarak satın alma birimine iletilir. Süreç boyunca bildirim alırsınız.' }
+        ],
+        faq: [
+            { q: 'Tedarik talebimi nasıl iptal edebilirim?', a: 'Bekleyen durumundaki talepleri iptal edebilirsiniz. Talep detayında "İptal Et" düğmesine tıklayın. Onaylanmış talepler iptal edilemez, bunun için yöneticinize başvurun.' },
+            { q: 'Talebim ne kadar sürede onaylanır?', a: 'Onay süresi yöneticinizin müsaitliğine bağlıdır. Ortalama 1-3 iş günü içinde sonuçlanır. Acil işaretli talepler genellikle aynı gün değerlendirilir.' },
+            { q: 'Bu sayfayı göremiyorum, ne yapmalıyım?', a: 'Tedarik talepleri sayfası PAGE_PROCUREMENT yetkisi gerektirir. Sistem yöneticinize başvurarak bu yetkinin rolünüze eklenmesini talep edin.' },
+            { q: 'Dosya yükleyebilir miyim?', a: 'Evet. Talep formunda dosya ekleme alanı bulunur. Teklif belgeleri, faturalar veya referans dosyaları yükleyebilirsiniz. Desteklenen formatlar: PDF, JPEG, PNG, XLSX.' }
         ]
     }
 ];
