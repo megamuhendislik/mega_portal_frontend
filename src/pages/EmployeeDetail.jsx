@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, Users, Settings, Shield, Save, Plus, X, CalendarRange, FileText, LayoutDashboard, User, Mail, Phone, Briefcase, Calendar, MapPin, AlertCircle, Clock,
-    UserX, UserCheck, Snowflake
+    UserX, UserCheck, Snowflake, Trash2
 } from 'lucide-react';
 import { Modal } from 'antd';
 import api from '../services/api';
@@ -323,6 +323,58 @@ const EmployeeDetail = () => {
                 }
             },
         });
+    };
+
+    const handleDelete = async () => {
+        try {
+            const preview = await api.delete(`/employees/${id}/?dry_run=true`);
+            const data = preview.data;
+
+            if (!data.can_delete) {
+                Modal.error({
+                    title: 'Silme İşlemi Engellenmiştir',
+                    content: (
+                        <div className="space-y-1">
+                            {data.blockers.map((b, i) => <p key={i} className="text-red-600">{b}</p>)}
+                        </div>
+                    ),
+                });
+                return;
+            }
+
+            const counts = data.would_delete;
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+            Modal.confirm({
+                title: 'Çalışanı Kalıcı Olarak Sil',
+                content: (
+                    <div className="space-y-2 text-sm">
+                        <p className="text-red-600 font-bold">Bu işlem GERİ ALINAMAZ!</p>
+                        <p>Silinecek kayıtlar ({total} toplam):</p>
+                        <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
+                            {counts.attendance > 0 && <li>{counts.attendance} devam kaydı</li>}
+                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} ek mesai talebi</li>}
+                            {counts.leave_requests > 0 && <li>{counts.leave_requests} izin talebi</li>}
+                            {counts.meal_requests > 0 && <li>{counts.meal_requests} yemek talebi</li>}
+                            {counts.health_reports > 0 && <li>{counts.health_reports} sağlık raporu</li>}
+                            {counts.cardless_requests > 0 && <li>{counts.cardless_requests} kartsız giriş</li>}
+                            {counts.calendar_events > 0 && <li>{counts.calendar_events} takvim etkinliği</li>}
+                            {counts.special_leaves > 0 && <li>{counts.special_leaves} özel izin</li>}
+                        </ul>
+                    </div>
+                ),
+                okText: 'Kalıcı Olarak Sil',
+                cancelText: 'Vazgeç',
+                okButtonProps: { danger: true },
+                onOk: async () => {
+                    await api.delete(`/employees/${id}/`);
+                    toast.success('Çalışan kalıcı olarak silindi.');
+                    navigate('/employees');
+                },
+            });
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Silme işlemi başarısız.');
+        }
     };
 
     // Board muafiyet kontrolü
@@ -902,12 +954,22 @@ const EmployeeDetail = () => {
                                         </>
                                     )}
                                     {!formData.is_active && (
-                                        <button
-                                            onClick={handleActivate}
-                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                                        >
-                                            <UserCheck size={14} /> Aktif Et
-                                        </button>
+                                        <>
+                                            <button
+                                                onClick={handleActivate}
+                                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                            >
+                                                <UserCheck size={14} /> Aktif Et
+                                            </button>
+                                            {isCurrentUserAdmin && !targetIsAdmin && (
+                                                <button
+                                                    onClick={handleDelete}
+                                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors"
+                                                >
+                                                    <Trash2 size={14} /> Kalıcı Olarak Sil
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                     {formData.is_frozen && (
                                         <button
