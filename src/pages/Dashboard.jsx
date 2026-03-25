@@ -548,22 +548,30 @@ const Dashboard = () => {
                             <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wide mb-1">MAZERET İZNİ</p>
                             <div className="flex items-baseline gap-1 mb-1">
                                 <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                                    {monthlySummary?.excuse_leave_hours_remaining != null
-                                        ? monthlySummary.excuse_leave_hours_remaining
-                                        : 18}
+                                    {(() => {
+                                        const val = monthlySummary?.excuse_leave_hours_remaining != null
+                                            ? monthlySummary.excuse_leave_hours_remaining : 18;
+                                        const h = Math.floor(val);
+                                        const m = Math.round((val - h) * 60);
+                                        return m > 0 ? `${h}sa ${m}dk` : `${h}sa`;
+                                    })()}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-400">SAAT</span>
                             </div>
                             <p className="text-[10px] text-slate-400 font-medium">
                                 Kullanılan: <span className="text-amber-600 font-bold">
-                                    {monthlySummary?.excuse_leave_hours_used || 0} Saat
+                                    {(() => {
+                                        const val = monthlySummary?.excuse_leave_hours_used || 0;
+                                        const h = Math.floor(val);
+                                        const m = Math.round((val - h) * 60);
+                                        return m > 0 ? `${h}sa ${m}dk` : `${h}sa`;
+                                    })()}
                                 </span>
                             </p>
 
                             {/* Daily Max */}
                             <div className="mt-2 pt-2 border-t border-slate-50">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">GÜNLÜK MAX</span>
-                                <span className="text-xs font-bold text-orange-600">4.5 Saat</span>
+                                <span className="text-xs font-bold text-orange-600">4sa 30dk</span>
                             </div>
 
                             {/* Quota Progress */}
@@ -571,7 +579,12 @@ const Dashboard = () => {
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-[9px] font-bold text-orange-500 uppercase">KOTA</span>
                                     <span className="text-[9px] font-bold text-orange-600">
-                                        {monthlySummary?.excuse_leave_hours_used || 0}/{monthlySummary?.excuse_leave_hours_entitled || 18}sa
+                                        {(() => {
+                                            const used = monthlySummary?.excuse_leave_hours_used || 0;
+                                            const entitled = monthlySummary?.excuse_leave_hours_entitled || 18;
+                                            const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
+                                            return `${fmtH(used)} / ${fmtH(entitled)}`;
+                                        })()}
                                     </span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">

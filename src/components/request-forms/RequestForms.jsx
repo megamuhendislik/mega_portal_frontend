@@ -197,16 +197,16 @@ export const LeaveRequestForm = ({
                     <div className="grid grid-cols-3 gap-2 text-center mb-3">
                         <div className="bg-white/60 p-2 rounded-lg">
                             <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
-                            <span className="block font-black text-slate-700 text-lg">{excuseBalance.hours_entitled} sa</span>
+                            <span className="block font-black text-slate-700 text-lg">{(() => { const h = Math.floor(excuseBalance.hours_entitled); const m = Math.round((excuseBalance.hours_entitled - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
                         </div>
                         <div className="bg-white/60 p-2 rounded-lg">
                             <span className="block text-xs text-slate-500 font-bold uppercase">KULLANILAN</span>
-                            <span className="block font-black text-amber-700 text-lg">{excuseBalance.hours_used} sa</span>
+                            <span className="block font-black text-amber-700 text-lg">{(() => { const h = Math.floor(excuseBalance.hours_used); const m = Math.round((excuseBalance.hours_used - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
                         </div>
                         <div className={`p-2 rounded-lg ${excuseBalance.hours_remaining <= 0 ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-100'}`}>
                             <span className="block text-xs font-bold uppercase text-slate-500">KALAN</span>
                             <span className={`block font-black text-lg ${excuseBalance.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {excuseBalance.hours_remaining} sa
+                                {(() => { const h = Math.floor(excuseBalance.hours_remaining); const m = Math.round((excuseBalance.hours_remaining - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}
                             </span>
                         </div>
                     </div>
@@ -219,8 +219,8 @@ export const LeaveRequestForm = ({
                         />
                     </div>
                     <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                        <span>0 sa</span>
-                        <span>{excuseBalance.hours_entitled} sa</span>
+                        <span>0sa</span>
+                        <span>{(() => { const h = Math.floor(excuseBalance.hours_entitled); const m = Math.round((excuseBalance.hours_entitled - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
                     </div>
 
                     {/* Son Kullanım */}
@@ -232,7 +232,7 @@ export const LeaveRequestForm = ({
                                 {new Date(excuseBalance.recent_requests[0].date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                             </span>
                             <span className="text-slate-400">
-                                ({excuseBalance.recent_requests[0].hours} sa)
+                                ({(() => { const v = excuseBalance.recent_requests[0].hours; const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()})
                             </span>
                             <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                 excuseBalance.recent_requests[0].status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
@@ -522,19 +522,20 @@ export const LeaveRequestForm = ({
                             const [eh, em] = leaveForm.end_time.split(':').map(Number);
                             const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
                             if (hours <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
-                            if (hours > 4.5) return <p className="text-xs text-red-600 font-bold mt-2">Günlük mazeret izni en fazla 4.5 saat olabilir. ({hours.toFixed(1)} saat)</p>;
+                            const fmtHM = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
+                            if (hours > 4.5) return <p className="text-xs text-red-600 font-bold mt-2">Günlük mazeret izni en fazla 4 saat 30 dakika olabilir. ({fmtHM(hours)})</p>;
                             const remaining = excuseBalance ? (excuseBalance.hours_remaining - hours) : null;
                             return (
                                 <div className="p-2.5 bg-orange-50 rounded-lg mt-2 border border-orange-100 space-y-1.5">
                                     <div className="flex items-center gap-2">
                                         <Clock size={14} className="text-orange-600" />
-                                        <span className="text-sm font-bold text-orange-700">{hours.toFixed(1)} saat mazeret izni</span>
+                                        <span className="text-sm font-bold text-orange-700">{fmtHM(hours)} mazeret izni</span>
                                     </div>
                                     {excuseBalance && (
                                         <div className="flex items-center justify-between text-xs bg-white/60 p-1.5 rounded">
                                             <span className="text-slate-500">Bu taleple kalacak:</span>
                                             <span className={`font-black ${remaining < 0 ? 'text-red-600' : remaining <= 4.5 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                                {remaining.toFixed(1)} sa
+                                                {fmtHM(remaining)}
                                             </span>
                                         </div>
                                     )}
