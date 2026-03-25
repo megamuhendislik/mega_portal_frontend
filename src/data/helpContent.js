@@ -116,7 +116,7 @@ const helpContent = [
         faq: [
             { q: 'Departman veya pozisyon bilgimi nasıl değiştiririm?', a: 'Bu bilgiler yönetici tarafından Çalışan Yönetimi sayfasından güncellenir. İK birimine veya yöneticinize başvurun.' },
             { q: 'Şifremi unuttum, ne yapmalıyım?', a: 'Sistem yöneticinize başvurun. Şifreniz sıfırlanir ve ilk girişte yeni şifre belirlemeniz istenir. Şifre sıfırlama süreci XLSX dosyası olarak yöneticiye iletilir.' },
-            { q: 'TC kimlik numaram neden kilitli görünüyor?', a: 'KVKK kapsamında hassas veridir. Düzenlemek için SENSITIVE_DATA_CHANGE yetkisine sahip bir yönetici işlem yapmalıdır.' },
+            { q: 'TC kimlik numaram neden kilitli görünüyor?', a: 'KVKK kapsamında hassas veridir. Düzenlemek için Çalışan Yönetimi (PAGE_EMPLOYEES) yetkisine sahip bir yönetici işlem yapmalıdır.' },
             { q: 'Fotoraf yükleyebilir miyim?', a: 'Su an profil fotoğrafı yükleme desteklenmemektedir. Avatar, adinizin ve soyadinizin bas harflerinden otomatik oluşturulur.' },
             { q: 'Şifremi unuttum, ne yapmalıyım?', a: 'Giriş sayfasında "Şifremi Unuttum?" bağlantısına tıklayın. Eğer bu seçenek yoksa, sistem yöneticinize başvurun — yöneticiler Sistem Sağlığı sayfasından şifre sıfırlama işlemi yapabilir ve size yeni geçici şifre içeren dosyayı iletir.' }
         ]

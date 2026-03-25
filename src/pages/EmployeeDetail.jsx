@@ -20,11 +20,11 @@ const EmployeeDetail = () => {
     const [targetIsAdmin, setTargetIsAdmin] = useState(false);
 
     const isCurrentUserAdmin = hasPermission('SYSTEM_FULL_ACCESS');
-    // 3 katmanlı yetki modeli: PAGE_EMPLOYEES (görüntüle) → EMPLOYEE_UPDATE (düzenle) → SENSITIVE_DATA_CHANGE (hassas)
-    const canEdit = hasPermission('EMPLOYEE_UPDATE') && (!targetIsAdmin || isCurrentUserAdmin);
-    const canEditSensitive = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
-    const canChangePassword = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
-    const canManageRoles = hasPermission('SENSITIVE_DATA_CHANGE') && (!targetIsAdmin || isCurrentUserAdmin);
+    // PAGE_EMPLOYEES = tam erişim, admin koruması ayrı
+    const canEdit = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canEditSensitive = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canChangePassword = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
+    const canManageRoles = hasPermission('PAGE_EMPLOYEES') && (!targetIsAdmin || isCurrentUserAdmin);
 
     // Data Sources
     const [departments, setDepartments] = useState([]);
@@ -354,7 +354,7 @@ const EmployeeDetail = () => {
                         </p>
                     </div>
                 </div>
-                {targetIsAdmin && !isCurrentUserAdmin && hasPermission('EMPLOYEE_UPDATE') && (
+                {targetIsAdmin && !isCurrentUserAdmin && hasPermission('PAGE_EMPLOYEES') && (
                     <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-medium border border-red-200">
                         <Shield size={16} />
                         Admin kullanıcı — sadece adminler düzenleyebilir
@@ -882,7 +882,7 @@ const EmployeeDetail = () => {
                                 {formData.is_frozen ? 'Dondurulmuş' : formData.is_active ? 'Aktif Çalışan' : 'Pasif'}
                             </div>
                             {/* Status Management Buttons */}
-                            {hasPermission('SENSITIVE_DATA_CHANGE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <div className="mt-3 flex flex-col gap-2">
                                     {formData.is_active && !formData.is_frozen && (
                                         <>

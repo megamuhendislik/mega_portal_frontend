@@ -1857,7 +1857,7 @@ const Employees = () => {
                             <p className="text-slate-500 mt-1 flex items-center gap-2"><Network size={16} /> Hiyerarşik Görünüm</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            {hasPermission('EMPLOYEE_UPDATE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <button
                                     onClick={() => setShowInactive(!showInactive)}
                                     className={`h-12 px-4 rounded-xl font-medium flex items-center gap-2 border transition-all duration-300 text-sm ${
@@ -1869,7 +1869,7 @@ const Employees = () => {
                                     {showInactive ? 'Pasif Gizle' : 'Pasif Göster'}
                                 </button>
                             )}
-                            {hasPermission('EMPLOYEE_UPDATE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
                                     className={`
@@ -1885,7 +1885,7 @@ const Employees = () => {
                                 </button>
                             )}
 
-                            {hasPermission('EMPLOYEE_UPDATE') && (
+                            {hasPermission('PAGE_EMPLOYEES') && (
                                 <button
                                     onClick={handleAddNew}
                                     className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
@@ -2095,8 +2095,8 @@ const Employees = () => {
                                     <StepPersonal
                                         formData={formData}
                                         handleChange={handleInputChange}
-                                        canEditSensitive={hasPermission('SENSITIVE_DATA_CHANGE')}
-                                        canChangePassword={hasPermission('SENSITIVE_DATA_CHANGE')}
+                                        canEditSensitive={hasPermission('PAGE_EMPLOYEES')}
+                                        canChangePassword={hasPermission('PAGE_EMPLOYEES')}
                                     />
                                 </section>
 
@@ -2121,7 +2121,7 @@ const Employees = () => {
                                 </section>
 
                                 {/* Section 5: Permissions */}
-                                {hasPermission('SENSITIVE_DATA_CHANGE') && (
+                                {hasPermission('PAGE_EMPLOYEES') && (
                                     <section id="sec-permissions" className="scroll-mt-24 pt-8 border-t border-slate-100">
                                         <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />
                                     </section>
@@ -2158,13 +2158,13 @@ const Employees = () => {
                                         </div>
                                     </div>
                                 )}
-                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={hasPermission('SENSITIVE_DATA_CHANGE')} canChangePassword={hasPermission('SENSITIVE_DATA_CHANGE')} />}
+                                {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={hasPermission('PAGE_EMPLOYEES')} canChangePassword={hasPermission('PAGE_EMPLOYEES')} />}
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
-                                {currentStep === 6 && hasPermission('SENSITIVE_DATA_CHANGE') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
-                                {currentStep === 6 && !hasPermission('SENSITIVE_DATA_CHANGE') && (
+                                {currentStep === 6 && hasPermission('PAGE_EMPLOYEES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
+                                {currentStep === 6 && !hasPermission('PAGE_EMPLOYEES') && (
                                     <div className="flex flex-col items-center justify-center h-full p-4 md:p-10 text-center animate-fade-in">
                                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400"><Key size={32} /></div>
                                         <h3 className="text-xl font-bold text-slate-700">Yetkilendirme Erişimi Kısıtlı</h3>
