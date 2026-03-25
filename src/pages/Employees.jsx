@@ -1760,7 +1760,7 @@ const Employees = () => {
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
-                        {showSettings && hasPermission('SENSITIVE_DATA_CHANGE') && empData && !empData.is_admin && !empData.is_active && (
+                        {showSettings && hasPermission('SYSTEM_FULL_ACCESS') && empData && !empData.is_admin && !empData.is_active && (
                             <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                         )}
                     </div>
