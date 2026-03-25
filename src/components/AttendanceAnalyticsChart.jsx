@@ -77,9 +77,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             if (startStr === '-' || endStr === '-') return;
             let needsFetch = false;
             if (logs && logs.length > 0) {
-                const logsMin = safeParse(logs[0].work_date);
-                const logsMax = safeParse(logs[logs.length - 1].work_date);
-                if (logsMin && logsMax && (addDays(weekStart, 6) < logsMin || weekStart > logsMax)) needsFetch = true;
+                // logs are ordered by -work_date (descending), so [0] is newest, [last] is oldest
+                const logsNewest = safeParse(logs[0].work_date);
+                const logsOldest = safeParse(logs[logs.length - 1].work_date);
+                if (logsNewest && logsOldest && (addDays(weekStart, 6) < logsOldest || weekStart > logsNewest)) needsFetch = true;
             } else {
                 needsFetch = true;
             }
