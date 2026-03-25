@@ -46,6 +46,7 @@ const ProgramManagement = lazyRetry(() => import('./pages/admin/ProgramManagemen
 const Feedback = lazyRetry(() => import('./pages/Feedback'));
 const HealthReports = lazyRetry(() => import('./pages/admin/HealthReports'));
 const SpecialLeaves = lazyRetry(() => import('./pages/admin/SpecialLeaves'));
+const Procurement = lazyRetry(() => import('./pages/Procurement'));
 const RequestAnalytics = lazyRetry(() => import('./pages/request-analytics/RequestAnalyticsPage'));
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
 
@@ -163,6 +164,9 @@ function App() {
                 </Suspense>
               </ProtectedRoute>
             } />
+
+            {/* Procurement - Tedarik Talepleri */}
+            <Route path="procurement" element={<ProtectedRoute requiredPermission="PAGE_PROCUREMENT"><Suspense fallback={<PageLoader />}><Procurement /></Suspense></ProtectedRoute>} />
 
             {/* 404 - Sayfa Bulunamadı */}
             <Route path="*" element={

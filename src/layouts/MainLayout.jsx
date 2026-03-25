@@ -29,7 +29,8 @@ import {
     AlertTriangle,
     BookOpen,
     HeartPulse,
-    HeartHandshake
+    HeartHandshake,
+    ShoppingCart
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -168,6 +169,7 @@ const MainLayout = () => {
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },
         { path: '/program-management', label: 'Program Yönetimi', icon: Package, permission: 'PAGE_PROGRAM_MANAGEMENT' },
+        { path: '/procurement', label: 'Tedarik Talepleri', icon: ShoppingCart, permission: 'PAGE_PROCUREMENT' },
         { path: '/help', label: 'Yardım', icon: BookOpen, permission: null },
     ];
 
