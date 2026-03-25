@@ -567,7 +567,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     <div className="flex flex-wrap gap-2">
                         {authorities.map(auth => (
                             <span key={auth.id} className="bg-white rounded-lg px-3 py-1.5 border border-blue-100 text-xs font-bold text-slate-700">
-                                {auth.principal_name} ({new Date(auth.valid_from).toLocaleDateString('tr-TR')} — {new Date(auth.valid_to).toLocaleDateString('tr-TR')})
+                                {auth.principal_name} ({new Date(auth.valid_from).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })} — {new Date(auth.valid_to).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })})
                             </span>
                         ))}
                     </div>

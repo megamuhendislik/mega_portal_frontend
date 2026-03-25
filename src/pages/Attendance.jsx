@@ -298,9 +298,9 @@ const Attendance = () => {
                                 </div>
                                 {startDate && endDate && (
                                     <div className="text-[10px] font-medium text-slate-400 px-2 leading-tight hidden xl:block">
-                                        {new Date(startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        {new Date(startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                                         {' - '}
-                                        {new Date(endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                        {new Date(endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
                                     </div>
                                 )}
                             </div>

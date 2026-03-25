@@ -12,6 +12,7 @@ import {
     Cell, Legend
 } from 'recharts';
 import api from '../../../services/api';
+import { getIstanbulToday, getIstanbulTodayParts, getIstanbulDateOffset } from '../../../utils/dateUtils';
 
 /* ═══════════════════════════════════════════════════
    HELPERS
@@ -27,32 +28,32 @@ const DOW_LABELS = { MON: 'Pzt', TUE: 'Sal', WED: 'Car', THU: 'Per', FRI: 'Cum',
 
 function buildQueryParams(quickFilter, customRange) {
     const params = {};
-    const today = new Date();
+    const todayStr = getIstanbulToday();
+    const { year, month, day } = getIstanbulTodayParts();
     if (quickFilter === 'custom' && customRange.start && customRange.end) {
         params.start_date = customRange.start;
         params.end_date = customRange.end;
     } else if (quickFilter === 'this_week') {
-        const mon = new Date(today);
-        mon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-        params.start_date = mon.toISOString().split('T')[0];
-        params.end_date = today.toISOString().split('T')[0];
+        const dow = new Date(`${todayStr}T12:00:00`).getDay();
+        const mondayOffset = -((dow + 6) % 7);
+        params.start_date = getIstanbulDateOffset(mondayOffset);
+        params.end_date = todayStr;
     } else if (quickFilter === 'last_7') {
-        const d = new Date(today); d.setDate(d.getDate() - 7);
-        params.start_date = d.toISOString().split('T')[0];
-        params.end_date = today.toISOString().split('T')[0];
+        params.start_date = getIstanbulDateOffset(-7);
+        params.end_date = todayStr;
     } else if (quickFilter === 'last_month') {
-        const d = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-        const e = new Date(today.getFullYear(), today.getMonth(), 25);
-        params.start_date = d.toISOString().split('T')[0];
-        params.end_date = e.toISOString().split('T')[0];
+        const d = new Date(year, month - 2, 26);
+        const e = new Date(year, month - 1, 25);
+        params.start_date = d.toLocaleDateString('en-CA');
+        params.end_date = e.toLocaleDateString('en-CA');
     } else {
         // this_month — fiscal
-        if (today.getDate() >= 26) {
-            params.start_date = new Date(today.getFullYear(), today.getMonth(), 26).toISOString().split('T')[0];
-            params.end_date = new Date(today.getFullYear(), today.getMonth() + 1, 25).toISOString().split('T')[0];
+        if (day >= 26) {
+            params.start_date = new Date(year, month - 1, 26).toLocaleDateString('en-CA');
+            params.end_date = new Date(year, month, 25).toLocaleDateString('en-CA');
         } else {
-            params.start_date = new Date(today.getFullYear(), today.getMonth() - 1, 26).toISOString().split('T')[0];
-            params.end_date = new Date(today.getFullYear(), today.getMonth(), 25).toISOString().split('T')[0];
+            params.start_date = new Date(year, month - 2, 26).toLocaleDateString('en-CA');
+            params.end_date = new Date(year, month - 1, 25).toLocaleDateString('en-CA');
         }
     }
     return params;

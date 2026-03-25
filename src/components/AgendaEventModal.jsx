@@ -4,6 +4,7 @@ import api from '../services/api';
 import moment from 'moment';
 import toast, { Toaster } from 'react-hot-toast';
 import ModalOverlay from './ui/ModalOverlay';
+import { toIstanbulParts, formatIstanbulTime } from '../utils/dateUtils';
 
 const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null }) => {
     const [loading, setLoading] = useState(false);
@@ -26,10 +27,10 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         description: initialData?.description || '',
-        start_date: initialData ? moment(initialData.start_time).format('YYYY-MM-DD') : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
-        start_time: initialData ? moment(initialData.start_time).format('HH:mm') : '09:00',
-        end_date: initialData ? moment(initialData.end_time).format('YYYY-MM-DD') : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
-        end_time: initialData ? moment(initialData.end_time).format('HH:mm') : '10:00',
+        start_date: initialData ? (() => { const p = toIstanbulParts(initialData.start_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
+        start_time: initialData ? formatIstanbulTime(initialData.start_time) || '09:00' : '09:00',
+        end_date: initialData ? (() => { const p = toIstanbulParts(initialData.end_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
+        end_time: initialData ? formatIstanbulTime(initialData.end_time) || '10:00' : '10:00',
         color: initialData?.color || '#3b82f6',
         is_all_day: initialData?.is_all_day || false,
 

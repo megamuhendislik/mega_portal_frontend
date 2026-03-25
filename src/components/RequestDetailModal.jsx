@@ -150,7 +150,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const EDIT_FIELDS_MAP = {
     LEAVE: ['start_date', 'end_date', 'reason'],
     OVERTIME: ['start_time', 'end_time', 'reason'],
-    CARDLESS_ENTRY: ['check_in', 'check_out', 'reason'],
+    CARDLESS_ENTRY: ['check_in_time', 'check_out_time', 'reason'],
     MEAL: ['date'],
     HEALTH_REPORT: ['start_date', 'end_date', 'report_type', 'description'],
     HOSPITAL_VISIT: ['start_date', 'end_date', 'report_type', 'description'],
@@ -223,6 +223,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
     start_date: 'Başlangıç Tarihi', end_date: 'Bitiş Tarihi',
     start_time: 'Başlangıç Saati', end_time: 'Bitiş Saati',
     check_in: 'Giriş Saati', check_out: 'Çıkış Saati',
+    check_in_time: 'Giriş Saati', check_out_time: 'Çıkış Saati',
     description: 'Açıklama', reason: 'Sebep/Açıklama',
     date: 'Tarih', report_type: 'Rapor Türü',
   };

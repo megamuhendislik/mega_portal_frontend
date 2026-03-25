@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
 import useInterval from '../hooks/useInterval';
 import toast from 'react-hot-toast';
-import { getIstanbulTodayDate, getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulTodayDate, getIstanbulToday, formatIstanbulTime } from '../utils/dateUtils';
 import {
     Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight,
     Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart,
@@ -227,7 +227,7 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
                                     const canModify = evt.type === 'PERSONAL' && evt.is_owner;
                                     const timeStr = evt.allDay
                                         ? 'Tüm Gün'
-                                        : `${moment(evt.start).format('HH:mm')} - ${moment(evt.end).format('HH:mm')}`;
+                                        : `${formatIstanbulTime(evt.start)} - ${formatIstanbulTime(evt.end)}`;
 
                                     return (
                                         <div key={evt.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${colors.border} ${colors.bg} group`}>

@@ -7,7 +7,7 @@ import {
 import moment from 'moment';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
-import { getIstanbulNow } from '../../utils/dateUtils';
+import { getIstanbulNow, formatIstanbulTime } from '../../utils/dateUtils';
 
 export const formatMinutes = (minutes) => {
     if (!minutes) return '0s 0dk';
@@ -516,7 +516,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                             className={`absolute top-3 bottom-3 rounded flex items-center justify-center px-3 text-[10px] font-bold text-white whitespace-nowrap ${employee.is_online ? 'bg-emerald-500' : 'bg-slate-400'}`}
                                             style={{ left: `${barStart}%`, width: `${barWidth}%` }}
                                         >
-                                            {moment(employee.today_check_in).format('HH:mm')} – {employee.today_check_out ? moment(employee.today_check_out).format('HH:mm') : 'Şimdi'}
+                                            {formatIstanbulTime(employee.today_check_in)} – {employee.today_check_out ? formatIstanbulTime(employee.today_check_out) : 'Şimdi'}
                                         </div>
                                     </>
                                 );
@@ -535,7 +535,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             <div>
                                 <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Giriş</div>
                                 <div className="text-sm font-bold text-slate-700 tabular-nums">
-                                    {employee.today_check_in ? moment(employee.today_check_in).format('HH:mm:ss') : '—'}
+                                    {employee.today_check_in ? new Date(employee.today_check_in).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Istanbul' }) : '—'}
                                 </div>
                             </div>
                         </div>
@@ -547,7 +547,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                 <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Çıkış</div>
                                 <div className="text-sm font-bold text-slate-700 tabular-nums">
                                     {employee.today_check_out
-                                        ? moment(employee.today_check_out).format('HH:mm:ss')
+                                        ? new Date(employee.today_check_out).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Istanbul' })
                                         : employee.is_online
                                             ? <span className="text-emerald-500">Devam ediyor</span>
                                             : '—'}

@@ -8,11 +8,11 @@ import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
-import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle, Cake } from 'lucide-react';
+import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle, Cake, ChevronLeft, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { getIstanbulToday, getIstanbulDateOffset } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset, formatIstanbulTime } from '../utils/dateUtils';
 
 // Yaklaşan Etkinlikler sabit tanımlar (component dışında — re-render'da yeniden oluşturulmaz)
 const eventTypeLabels = {
@@ -144,6 +144,35 @@ const groupEventsByDay = (events) => {
         });
 };
 
+const FISCAL_MONTH_NAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+// Bugünün fiscal ay/yılını hesapla (26-25 sistemi)
+const getCurrentFiscal = () => {
+    const todayStr = getIstanbulToday();
+    const [y, m, d] = todayStr.split('-').map(Number);
+    if (d >= 26) {
+        return m === 12 ? { year: y + 1, month: 1 } : { year: y, month: m + 1 };
+    }
+    return { year: y, month: m };
+};
+
+// Fiscal ay/yıldan dönem tarihlerini hesapla
+const getFiscalPeriodDates = (year, month) => {
+    let startMonth, startYear;
+    if (month === 1) {
+        startMonth = 11; startYear = year - 1; // Dec (0-based for JS Date)
+    } else {
+        startMonth = month - 2; startYear = year; // 0-based
+    }
+    const start = new Date(startYear, startMonth, 26);
+    const end = new Date(year, month - 1, 25);
+    return {
+        startStr: format(start, 'yyyy-MM-dd'),
+        endStr: format(end, 'yyyy-MM-dd')
+    };
+};
+
 const Dashboard = () => {
     const { user } = useAuth();
 
@@ -168,24 +197,26 @@ const Dashboard = () => {
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
-    // Helper: Period Calc (26-25 fiscal rule)
-    const getPeriodDates = () => {
-        const todayStr = getIstanbulToday();
-        const [y, m0, d] = todayStr.split('-').map(Number);
-        const m = m0 - 1; // 0-based month for Date constructor
-        let start, end;
-        if (d >= 26) {
-            start = new Date(y, m, 26);
-            end = m === 11 ? new Date(y + 1, 0, 25) : new Date(y, m + 1, 25);
-        } else {
-            start = m === 0 ? new Date(y - 1, 11, 26) : new Date(y, m - 1, 26);
-            end = new Date(y, m, 25);
-        }
-        return {
-            startStr: format(start, 'yyyy-MM-dd'),
-            endStr: format(end, 'yyyy-MM-dd')
-        };
+    // Fiscal month navigation
+    const [selectedFiscal, setSelectedFiscal] = useState(getCurrentFiscal);
+    const currentFiscal = useMemo(getCurrentFiscal, []);
+    const isCurrentMonth = selectedFiscal.year === currentFiscal.year && selectedFiscal.month === currentFiscal.month;
+
+    const goToPrevMonth = () => {
+        setSelectedFiscal(prev =>
+            prev.month === 1 ? { year: prev.year - 1, month: 12 } : { year: prev.year, month: prev.month - 1 }
+        );
     };
+    const goToNextMonth = () => {
+        const cur = getCurrentFiscal();
+        setSelectedFiscal(prev => {
+            const next = prev.month === 12 ? { year: prev.year + 1, month: 1 } : { year: prev.year, month: prev.month + 1 };
+            // Gelecek aylara gitmeyi engelle
+            if (next.year > cur.year || (next.year === cur.year && next.month > cur.month)) return prev;
+            return next;
+        });
+    };
+    const goToCurrentMonth = () => setSelectedFiscal(getCurrentFiscal());
 
     // Period dates state (updated from backend response)
     const [periodDates, setPeriodDates] = useState(null);
@@ -201,12 +232,11 @@ const Dashboard = () => {
             // Currently fetchDashboardData sets loading=false at end, but doesn't set it to true at start (except initial state).
             // So it's safe for background polling (won't flash skeleton).
 
-            const { startStr, endStr } = getPeriodDates();
+            const { startStr, endStr } = getFiscalPeriodDates(selectedFiscal.year, selectedFiscal.month);
 
             const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes, birthdayRes] = await Promise.allSettled([
                 api.get('/attendance/today_summary/'),
-                // Don't send dates — let backend auto-detect fiscal period
-                api.get(`/attendance/monthly_summary/?employee_id=${employeeId}`),
+                api.get(`/attendance/monthly_summary/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`),
                 api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
                 api.get('/leave-requests/'), // Simplified: just getting my leaves for now
                 api.get('/leave-requests/pending_approvals/'),
@@ -255,10 +285,10 @@ const Dashboard = () => {
         }
     };
 
-    // Initial Fetch
+    // Fetch on mount + when fiscal month changes
     useEffect(() => {
         fetchDashboardData();
-    }, [user]);
+    }, [user, selectedFiscal.year, selectedFiscal.month]);
 
     // Smart Polling (Every 60s)
     useSmartPolling(fetchDashboardData, 60000);
@@ -319,7 +349,34 @@ const Dashboard = () => {
                         {user?.first_name || 'Kullanıcı'}
                     </h1>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3">
+                    {/* Fiscal Month Navigator */}
+                    <div className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <button
+                            onClick={goToPrevMonth}
+                            className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                            title="Önceki Ay"
+                        >
+                            <ChevronLeft size={16} className="text-slate-500" />
+                        </button>
+                        <button
+                            onClick={isCurrentMonth ? undefined : goToCurrentMonth}
+                            className={`px-2 min-w-[110px] text-center text-sm font-bold transition-colors ${
+                                isCurrentMonth ? 'text-indigo-600' : 'text-slate-700 hover:text-indigo-600 cursor-pointer'
+                            }`}
+                            title={isCurrentMonth ? 'Mevcut Dönem' : 'Bugüne Dön'}
+                        >
+                            {FISCAL_MONTH_NAMES[selectedFiscal.month]} {selectedFiscal.year}
+                        </button>
+                        <button
+                            onClick={goToNextMonth}
+                            disabled={isCurrentMonth}
+                            className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Sonraki Ay"
+                        >
+                            <ChevronRight size={16} className="text-slate-500" />
+                        </button>
+                    </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] uppercase font-bold text-slate-400">Son Giriş</span>
@@ -640,7 +697,8 @@ const Dashboard = () => {
                     <AttendanceAnalyticsChart
                         logs={logs}
                         employeeId={user?.id}
-                        currentYear={Number(getIstanbulToday().split('-')[0])}
+                        currentYear={selectedFiscal.year}
+                        currentMonth={selectedFiscal.month}
                     />
                 </div>
 
@@ -683,7 +741,7 @@ const Dashboard = () => {
                                             <div className="space-y-1">
                                                 {group.items.map((ev, i) => {
                                                     const timeStr = !ev.allDay && ev.start?.includes('T') && ev.end?.includes('T')
-                                                        ? `${ev.start.split('T')[1]?.slice(0,5)}–${ev.end.split('T')[1]?.slice(0,5)}`
+                                                        ? `${formatIstanbulTime(ev.start)}–${formatIstanbulTime(ev.end)}`
                                                         : null;
                                                     const badge = ev.status && statusBadges[ev.status];
                                                     const showStatus = ev.type !== 'HOLIDAY' && ev.type !== 'PERSONAL';

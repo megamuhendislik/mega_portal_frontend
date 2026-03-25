@@ -3,7 +3,7 @@ import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
     CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info, FileText
 } from 'lucide-react';
-import { Tooltip } from 'antd';
+import { Tooltip, Modal, message } from 'antd';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
@@ -182,7 +182,39 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
     // --- Handlers ---
 
-    // handleDeleteRequest kaldırıldı — kullanıcı iptal/silme yapamaz
+    const REQUEST_CANCEL_MAP = {
+        LEAVE: '/leave/requests',
+        OVERTIME: '/overtime-requests',
+        CARDLESS_ENTRY: '/cardless-entry-requests',
+        MEAL: '/meal-requests',
+        HEALTH_REPORT: '/health-reports',
+        HOSPITAL_VISIT: '/health-reports',
+        SPECIAL_LEAVE: '/special-leaves',
+    };
+
+    const handleDeleteRequest = useCallback((req) => {
+        const reqType = req._type || req.type;
+        const endpoint = REQUEST_CANCEL_MAP[reqType];
+        if (!endpoint) return;
+
+        Modal.confirm({
+            title: 'Talebi İptal Et',
+            content: 'Bu talebi iptal etmek istediğinize emin misiniz?',
+            okText: 'Evet, İptal Et',
+            cancelText: 'Vazgeç',
+            okButtonProps: { danger: true },
+            onOk: async () => {
+                try {
+                    await api.post(`${endpoint}/${req.id}/cancel/`);
+                    message.success('Talep iptal edildi.');
+                    await fetchData();
+                    notifyParent();
+                } catch (err) {
+                    message.error(err.response?.data?.error || err.response?.data?.detail || 'İptal işlemi başarısız.');
+                }
+            },
+        });
+    }, [fetchData, notifyParent]);
 
     const handleEditOvertimeClick = useCallback((r) => {
         setEditOvertimeForm({
@@ -366,12 +398,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         };
     }, [allMyRequests, dateFrom, dateTo]);
 
-    // Custom onEdit that routes OVERTIME to edit modal, others to view
+    // Custom onEdit that routes OVERTIME to edit modal, others to detail modal
     const handleEdit = useCallback((req) => {
         if (req._type === 'OVERTIME' || req.type === 'OVERTIME') {
             handleEditOvertimeClick(req);
+        } else {
+            handleViewDetails(req, req._type || req.type);
         }
-    }, [handleEditOvertimeClick]);
+    }, [handleEditOvertimeClick, handleViewDetails]);
 
     // Wrap onViewDetails to also add claim action for POTENTIAL OT
     const wrappedRequests = useMemo(() => {
@@ -527,7 +561,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                             onToggle={() => handleViewDetails(req, req._type || req.type)}
                                             onViewDetails={handleViewDetails}
                                             onEdit={handleEdit}
-                                            onDelete={null}
+                                            onDelete={handleDeleteRequest}
                                             showEmployeeColumn={false}
                                             mode="personal"
                                             claimPotentialRenderer={(r) => {

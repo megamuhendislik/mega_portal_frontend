@@ -134,7 +134,7 @@ const Reports = () => {
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' });
     };
 
     const trMonths = {

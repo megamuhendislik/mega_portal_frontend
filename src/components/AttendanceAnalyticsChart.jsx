@@ -80,7 +80,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 // logs are ordered by -work_date (descending), so [0] is newest, [last] is oldest
                 const logsNewest = safeParse(logs[0].work_date);
                 const logsOldest = safeParse(logs[logs.length - 1].work_date);
-                if (logsNewest && logsOldest && (addDays(weekStart, 6) < logsOldest || weekStart > logsNewest)) needsFetch = true;
+                // Fetch if displayed week extends beyond log range in either direction
+                // (covers fiscal month boundary: week may straddle two fiscal periods)
+                if (logsNewest && logsOldest && (weekStart < logsOldest || addDays(weekStart, 6) > logsNewest)) needsFetch = true;
             } else {
                 needsFetch = true;
             }

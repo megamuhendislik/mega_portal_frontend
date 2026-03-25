@@ -817,7 +817,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             {approverSubstitutes.map((s, i) => (
                                 <span key={i}>
                                     {s.substitute_name || s.substitute?.full_name}
-                                    <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR')} - {new Date(s.valid_to).toLocaleDateString('tr-TR')})</span>
+                                    <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })} - {new Date(s.valid_to).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })})</span>
                                     {i < approverSubstitutes.length - 1 && ', '}
                                 </span>
                             ))}
@@ -868,7 +868,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         {approverSubstitutes.map((s, i) => (
                             <span key={i}>
                                 {s.substitute_name || s.substitute?.full_name}
-                                <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR')} - {new Date(s.valid_to).toLocaleDateString('tr-TR')})</span>
+                                <span className="text-slate-400"> ({new Date(s.valid_from).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })} - {new Date(s.valid_to).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })})</span>
                                 {i < approverSubstitutes.length - 1 && ', '}
                             </span>
                         ))}

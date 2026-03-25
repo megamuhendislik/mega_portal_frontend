@@ -1178,7 +1178,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                     </div>
                                     <div className="text-right shrink-0 ml-2">
                                         <div className="text-slate-500 font-semibold">{log.adjusted_by}</div>
-                                        <div className="text-slate-400">{new Date(log.created_at).toLocaleDateString('tr-TR')}</div>
+                                        <div className="text-slate-400">{new Date(log.created_at).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</div>
                                     </div>
                                 </div>
                             ))}
