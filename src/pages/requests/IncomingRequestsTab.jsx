@@ -31,8 +31,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [typeFilter, setTypeFilter] = useState(filterType === 'overtime' ? 'OVERTIME' : 'ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [searchText, setSearchText] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [dateFrom, setDateFrom] = useState(null);
+    const [dateTo, setDateTo] = useState(null);
     const [personFilter, setPersonFilter] = useState('ALL');
 
     // Pagination
@@ -672,6 +672,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         ))}
                     </select>
                     <FiscalMonthPicker
+                        defaultAll
                         onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
                     />
                 </div>

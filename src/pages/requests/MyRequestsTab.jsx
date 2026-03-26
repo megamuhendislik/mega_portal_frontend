@@ -97,9 +97,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [claimManagers, setClaimManagers] = useState([]);
     const [claimModal, setClaimModal] = useState({ open: false, target: null });
 
-    // Date range filter
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    // Date range filter (null = tüm dönemler, default)
+    const [dateFrom, setDateFrom] = useState(null);
+    const [dateTo, setDateTo] = useState(null);
 
     // Pagination
     const PAGE_SIZE = 50;
@@ -487,6 +487,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             {/* Mali Dönem Filtresi */}
             <div className="mb-4 flex items-center gap-2">
                 <FiscalMonthPicker
+                    defaultAll
                     onDateChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
                 />
                 <Tooltip title="Mali dönem her ayın 26'sından başlayıp, bir sonraki ayın 25'ine kadar sürer.">

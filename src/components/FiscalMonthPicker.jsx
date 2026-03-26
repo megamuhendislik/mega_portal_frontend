@@ -18,10 +18,19 @@ function formatDateRange(startDate, endDate) {
   return `${s.day} ${SHORT_MONTHS[s.month]} – ${e.day} ${SHORT_MONTHS[e.month]}`;
 }
 
-export default function FiscalMonthPicker({ onDateChange }) {
+export default function FiscalMonthPicker({ onDateChange, defaultAll = false }) {
   const [periods, setPeriods] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(defaultAll ? '__ALL__' : null);
   const [loading, setLoading] = useState(true);
+  const [initialFired, setInitialFired] = useState(false);
+
+  // Fire initial onDateChange for defaultAll mode (once, synchronously after mount)
+  useEffect(() => {
+    if (defaultAll && !initialFired) {
+      setInitialFired(true);
+      onDateChange(null, null);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;
@@ -30,11 +39,13 @@ export default function FiscalMonthPicker({ onDateChange }) {
         if (cancelled) return;
         const data = res.data?.periods || [];
         setPeriods(data);
-        const current = data.find(p => p.is_current);
-        if (current) {
-          const key = `${current.year}-${current.month}`;
-          setSelectedPeriod(key);
-          onDateChange(current.start_date, current.end_date);
+        if (!defaultAll) {
+          const current = data.find(p => p.is_current);
+          if (current) {
+            const key = `${current.year}-${current.month}`;
+            setSelectedPeriod(key);
+            onDateChange(current.start_date, current.end_date);
+          }
         }
       })
       .catch(() => {})
