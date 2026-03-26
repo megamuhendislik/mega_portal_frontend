@@ -31,15 +31,32 @@ const SubstituteManagement = () => {
     substitute: '',
     valid_from: '',
     valid_to: '',
-    is_active: true
+    is_active: true,
+    delegated_employees: [],
   });
 
   const [formErrors, setFormErrors] = useState({});
+  const [managedEmployees, setManagedEmployees] = useState([]);
 
   useEffect(() => {
     fetchDelegations();
     fetchEmployees();
   }, []);
+
+  useEffect(() => {
+    if (formData.principal) {
+      api.get('/substitute-authority/managed_employees/', {
+        params: { principal_id: formData.principal }
+      })
+        .then(res => {
+          setManagedEmployees(res.data || []);
+        })
+        .catch(() => setManagedEmployees([]));
+    } else {
+      setManagedEmployees([]);
+      setFormData(prev => ({ ...prev, delegated_employees: [] }));
+    }
+  }, [formData.principal]);
 
   const fetchDelegations = async () => {
     try {
@@ -150,6 +167,9 @@ const SubstituteManagement = () => {
     if (formData.valid_from && formData.valid_to && formData.valid_to < formData.valid_from) {
       errors.valid_to = 'Bitiş tarihi başlangıçtan önce olamaz';
     }
+    if (formData.principal && formData.delegated_employees.length === 0) {
+      errors.delegated_employees = 'En az bir çalışan seçmelisiniz';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -193,7 +213,8 @@ const SubstituteManagement = () => {
       substitute: delegation.substitute,
       valid_from: delegation.valid_from,
       valid_to: delegation.valid_to,
-      is_active: delegation.is_active
+      is_active: delegation.is_active,
+      delegated_employees: delegation.delegated_employees || [],
     });
     setEditingId(delegation.id);
     setShowForm(true);
@@ -228,7 +249,8 @@ const SubstituteManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ principal: '', substitute: '', valid_from: '', valid_to: '', is_active: true });
+    setFormData({ principal: '', substitute: '', valid_from: '', valid_to: '', is_active: true, delegated_employees: [] });
+    setManagedEmployees([]);
     setEditingId(null);
     setShowForm(false);
     setFormErrors({});
@@ -461,7 +483,7 @@ const SubstituteManagement = () => {
                   showSearch
                   placeholder="Personel seçiniz..."
                   value={formData.principal || undefined}
-                  onChange={(val) => setFormData({ ...formData, principal: val || '' })}
+                  onChange={(val) => setFormData({ ...formData, principal: val || '', delegated_employees: [] })}
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
@@ -496,6 +518,51 @@ const SubstituteManagement = () => {
                   notFoundContent="Sonuç bulunamadı"
                 />
                 {formErrors.substitute && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.substitute}</p>}
+              </div>
+
+              {/* Kapsam: Çalışan Seç */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Kapsam (Çalışanlar) {formData.principal && <span className="text-red-400">*</span>}
+                </label>
+                <Select
+                  mode="multiple"
+                  placeholder={!formData.principal ? 'Önce asıl yöneticiyi seçin...' : 'Vekalet kapsamındaki çalışanları seçin...'}
+                  value={formData.delegated_employees}
+                  onChange={(val) => setFormData(prev => ({ ...prev, delegated_employees: val }))}
+                  showSearch
+                  optionFilterProp="label"
+                  className="w-full"
+                  size="large"
+                  disabled={!formData.principal || managedEmployees.length === 0}
+                  notFoundContent={!formData.principal ? 'Önce asıl yöneticiyi seçin' : 'Ekipte çalışan bulunamadı'}
+                  maxTagCount={5}
+                  maxTagPlaceholder={(omitted) => `+${omitted.length} kişi daha`}
+                  status={formErrors.delegated_employees ? 'error' : undefined}
+                  options={managedEmployees.map(emp => ({
+                    value: emp.id,
+                    label: `${emp.first_name} ${emp.last_name}${emp.position ? ` — ${emp.position}` : ''}`,
+                  }))}
+                />
+                {formErrors.delegated_employees && <p className="mt-1.5 text-xs text-red-500 font-medium">{formErrors.delegated_employees}</p>}
+                {managedEmployees.length > 0 && (
+                  <div className="mt-1.5 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, delegated_employees: managedEmployees.map(e => e.id) }))}
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium"
+                    >
+                      Tümünü Seç
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, delegated_employees: [] }))}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 font-medium"
+                    >
+                      Temizle
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Start Date */}
@@ -651,6 +718,7 @@ const SubstituteManagement = () => {
                     <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Vekil</th>
                     <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Süre</th>
                     <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Kalan</th>
+                    <th className="px-3 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Kapsam</th>
                     {activeTab === 'given' && (
                       <th className="px-5 py-3.5 text-right text-[11px] font-bold text-slate-400 uppercase tracking-widest">İşlemler</th>
                     )}
@@ -692,6 +760,23 @@ const SubstituteManagement = () => {
                         </td>
                         <td className="px-3 py-4">
                           <RemainingBadge delegation={d} />
+                        </td>
+                        <td className="px-3 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {d.delegated_employee_names?.slice(0, 3).map(emp => (
+                              <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-blue-200/60">
+                                {emp.name}
+                              </span>
+                            ))}
+                            {d.delegated_employee_names?.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                +{d.delegated_employee_names.length - 3} kişi
+                              </span>
+                            )}
+                            {(!d.delegated_employee_names || d.delegated_employee_names.length === 0) && (
+                              <span className="text-slate-300 text-xs italic">Kapsam yok</span>
+                            )}
+                          </div>
                         </td>
                         {activeTab === 'given' && (
                           <td className="px-5 py-4">
@@ -798,6 +883,20 @@ const SubstituteManagement = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Kapsam */}
+                    {d.delegated_employee_names?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {d.delegated_employee_names.slice(0, 2).map(emp => (
+                          <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-blue-200/60">
+                            {emp.name}
+                          </span>
+                        ))}
+                        {d.delegated_employee_names.length > 2 && (
+                          <span className="text-xs text-slate-400 font-medium">+{d.delegated_employee_names.length - 2} kişi</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions */}
                     {activeTab === 'given' && (
