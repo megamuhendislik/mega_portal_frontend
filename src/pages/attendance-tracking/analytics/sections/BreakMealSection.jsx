@@ -533,31 +533,33 @@ export default function BreakMealSection({ onPersonClick }) {
                     </div>
                 )}
 
-                {/* ─── OT Meal Correlation Cards ─── */}
-                {otMealCorrelation && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                        <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-600 font-medium">Normal Gün Yemek Oranı</span>
-                                <span className="text-lg font-bold text-blue-700">
-                                    %{otMealCorrelation.normal_day_meal_rate_pct != null
-                                        ? Math.round(otMealCorrelation.normal_day_meal_rate_pct)
-                                        : '—'}
-                                </span>
+                {/* ─── Yemek Sipariş Deseni (Normal vs OT Gün) ─── */}
+                {otMealCorrelation && (() => {
+                    const normalRate = otMealCorrelation.normal_day_meal_rate_pct != null
+                        ? Math.round(otMealCorrelation.normal_day_meal_rate_pct) : 0;
+                    const otRate = otMealCorrelation.ot_day_meal_rate_pct != null
+                        ? Math.round(otMealCorrelation.ot_day_meal_rate_pct) : 0;
+                    const diff = otRate - normalRate;
+                    return (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-3 border-t border-slate-100">
+                            <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
+                                <p className="text-[10px] text-slate-500 font-medium">Normal Gün</p>
+                                <p className="text-lg font-bold text-blue-700">%{normalRate}</p>
+                                <p className="text-[9px] text-slate-400">sipariş oranı</p>
+                            </div>
+                            <div className="bg-violet-50 rounded-xl p-3 border border-violet-100 text-center">
+                                <p className="text-[10px] text-slate-500 font-medium">Ek Mesai Günü</p>
+                                <p className="text-lg font-bold text-violet-700">%{otRate}</p>
+                                <p className="text-[9px] text-slate-400">sipariş oranı</p>
+                            </div>
+                            <div className={`${diff > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} rounded-xl p-3 border text-center`}>
+                                <p className="text-[10px] text-slate-500 font-medium">Fark</p>
+                                <p className={`text-lg font-bold ${diff > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{diff > 0 ? '+' : ''}{diff}%</p>
+                                <p className="text-[9px] text-slate-400">{diff > 0 ? 'OT günleri daha çok sipariş' : diff < 0 ? 'OT günleri daha az sipariş' : 'Aynı oran'}</p>
                             </div>
                         </div>
-                        <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-600 font-medium">Ek Mesai Günü Yemek Oranı</span>
-                                <span className="text-lg font-bold text-violet-700">
-                                    %{otMealCorrelation.ot_day_meal_rate_pct != null
-                                        ? Math.round(otMealCorrelation.ot_day_meal_rate_pct)
-                                        : '—'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* ─── Yemek Davranış Özeti ─── */}
                 {otMealCorrelation?.employees?.length > 0 && (
@@ -587,6 +589,21 @@ export default function BreakMealSection({ onPersonClick }) {
                         </div>
                     </div>
                 )}
+
+                {/* ─── Mola Davranış Özeti ─── */}
+                <div className="mt-3 p-2 bg-slate-50 rounded-lg">
+                    <p className="text-[10px] text-slate-500">
+                        <span className="font-medium">Mola Özeti:</span>{' '}
+                        Ekip ortalaması <span className="font-bold">{Math.round(kpi?.avg_break_minutes || 0)} dk</span> mola yapıyor (izin: 30 dk).{' '}
+                        {(kpi?.break_over_30_pct || 0) > 50 ? (
+                            <span className="text-red-600 font-medium">Günlerin yarısından fazlasında mola aşımı var!</span>
+                        ) : (kpi?.break_over_30_pct || 0) > 25 ? (
+                            <span className="text-amber-600 font-medium">Bazı günlerde mola aşımı gözlemleniyor.</span>
+                        ) : (
+                            <span className="text-emerald-600 font-medium">Mola süreleri genel olarak izin dahilinde.</span>
+                        )}
+                    </p>
+                </div>
             </div>
         </div>
     );

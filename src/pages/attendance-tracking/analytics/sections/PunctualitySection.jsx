@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Clock, Target, BarChart3, AlertCircle, RefreshCw, AlarmClock, Award, AlertTriangle } from 'lucide-react';
+import { Clock, Target, BarChart3, AlertCircle, RefreshCw, AlarmClock, Award, AlertTriangle, CheckCircle } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ReferenceLine, ResponsiveContainer, Legend, Cell
@@ -216,6 +216,12 @@ export default function PunctualitySection({ onPersonClick }) {
         const ranking = data?.performance_ranking || [];
         if (!ranking.length) return null;
         return ranking.reduce((max, e) => ((e.consistency_std ?? 0) > (max?.consistency_std ?? 0)) ? e : max, null);
+    }, [data?.performance_ranking]);
+
+    const mostConsistentEmployee = useMemo(() => {
+        const ranking = data?.performance_ranking || [];
+        if (!ranking.length) return null;
+        return [...ranking].sort((a, b) => (a.consistency_std || 999) - (b.consistency_std || 999))[0];
     }, [data?.performance_ranking]);
 
     /* ─── Loading skeleton ─── */
@@ -492,7 +498,7 @@ export default function PunctualitySection({ onPersonClick }) {
                 </div>
 
                 {/* Dakiklik Özet — Additional insight cards */}
-                <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                     {/* En Dakik Çalışan */}
                     <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -502,6 +508,15 @@ export default function PunctualitySection({ onPersonClick }) {
                         <p className="text-sm font-bold text-emerald-700 truncate">{bestPunctualEmployee?.name ?? '—'}</p>
                         <p className="text-[10px] text-slate-400">%{bestPunctualEmployee?.on_time_pct?.toFixed(0) ?? '—'} zamanında</p>
                     </div>
+                    {/* En Tutarlı Çalışan */}
+                    <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <CheckCircle size={14} className="text-emerald-600" />
+                            <span className="text-[10px] text-slate-500 font-medium">En Tutarlı</span>
+                        </div>
+                        <p className="text-sm font-bold text-emerald-700 truncate">{mostConsistentEmployee?.name ?? '—'}</p>
+                        <p className="text-[10px] text-slate-400">Sapma: ±{mostConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} dk</p>
+                    </div>
                     {/* En Tutarsız Çalışan */}
                     <div className="bg-red-50 rounded-xl p-3 border border-red-100">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -509,13 +524,29 @@ export default function PunctualitySection({ onPersonClick }) {
                             <span className="text-[10px] text-slate-500 font-medium">En Tutarsız</span>
                         </div>
                         <p className="text-sm font-bold text-red-700 truncate">{worstConsistentEmployee?.name ?? '—'}</p>
-                        <p className="text-[10px] text-slate-400">{worstConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} sapma</p>
+                        <p className="text-[10px] text-slate-400">Sapma: ±{worstConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} dk</p>
                     </div>
+                </div>
+
+                {/* Dakiklik Trendi Özeti */}
+                <div className="mt-3 p-2 bg-slate-50 rounded-lg">
+                    <p className="text-[10px] text-slate-500">
+                        <span className="font-medium">Dakiklik Özeti:</span>{' '}
+                        Ekibin <span className="font-bold text-slate-700">%{avgOnTimePct}</span>
+                        {'\u2019'}i zamanında giriş yapıyor.{' '}
+                        {avgOnTimePct >= 90 ? (
+                            <span className="text-emerald-600 font-medium">Mükemmel performans!</span>
+                        ) : avgOnTimePct >= 75 ? (
+                            <span className="text-amber-600 font-medium">İyi, ancak iyileştirme alanı var.</span>
+                        ) : (
+                            <span className="text-red-600 font-medium">Dakiklik iyileştirmesi gerekli.</span>
+                        )}
+                    </p>
                 </div>
 
                 {/* Summary text */}
                 {totalRecords > 0 && (
-                    <div className="bg-slate-50 rounded-xl px-4 py-2.5">
+                    <div className="bg-slate-50 rounded-xl px-4 py-2.5 mt-2">
                         <p className="text-xs text-slate-600">
                             Toplam <span className="font-bold text-slate-800">{totalRecords.toLocaleString('tr-TR')}</span> kayıt analiz edildi.
                             Zamanında giriş oranı: <span className={`font-bold ${avgOnTimePct >= 80 ? 'text-emerald-600' : avgOnTimePct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>%{avgOnTimePct}</span>
