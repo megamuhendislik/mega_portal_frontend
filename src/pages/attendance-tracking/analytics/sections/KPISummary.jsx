@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     BarChart3, Clock, CheckCircle, AlertTriangle,
     TrendingUp, TrendingDown, Timer, AlarmClock, HeartPulse,
-    UtensilsCrossed, Coffee
+    UtensilsCrossed, Coffee, Target, Scale, UserCheck
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
@@ -22,6 +22,10 @@ const KPI_TOOLTIPS = {
     health_score: 'Bile\u015fik skor: %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma.',
     meal_rate: '\u0130\u015f g\u00fcnlerinde yemek sipari\u015fi veren \u00e7al\u0131\u015fanlar\u0131n oran\u0131.',
     avg_break: 'Ekip ortalamas\u0131 g\u00fcnl\u00fck mola s\u00fcresi (izin dahilindeki say\u0131lan mola).',
+    target_hit: 'G\u00fcnl\u00fck hedef saatini tutturan \u00e7al\u0131\u015fan say\u0131s\u0131 / toplam \u00e7al\u0131\u015fan.',
+    late_arrival: 'Vardiya ba\u015flang\u0131c\u0131ndan 15+ dakika sonra giri\u015f yapanlar\u0131n oran\u0131.',
+    net_status: 'Toplam \u00e7al\u0131\u015f\u0131lan - toplam hedef saat. Pozitif = fazla \u00e7al\u0131\u015fma, negatif = eksik.',
+    active_ratio: 'Se\u00e7ilen d\u00f6nemde en az 1 g\u00fcn devam kayd\u0131 olan \u00e7al\u0131\u015fan say\u0131s\u0131.',
 };
 
 /* ===================================================================
@@ -56,6 +60,8 @@ const SPARKLINE_COLORS = {
     'from-sky-500 to-blue-600': '#0ea5e9',
     'from-pink-500 to-rose-600': '#ec4899',
     'from-amber-500 to-orange-600': '#f59e0b',
+    'from-lime-500 to-green-600': '#84cc16',
+    'from-red-500 to-rose-600': '#ef4444',
 };
 
 /* ===================================================================
@@ -226,6 +232,102 @@ const CARD_CONFIGS = [
         },
         trendKey: 'avg_break',
     },
+    {
+        key: 'target_hit',
+        label: 'Hedef Tutturma',
+        icon: Target,
+        gradient: 'from-lime-500 to-green-600',
+        getValue: (kpi, empCount, extra) => extra?.targetHitData ?? null,
+        formatValue: (v) => v ? `${v.hit}/${v.total}` : '\u2014',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi, empCount, extra) => {
+            const d = extra?.targetHitData;
+            if (!d || !d.total) return 0;
+            return Math.round((d.hit / d.total) * 100);
+        },
+        getTooltip: (kpi, empCount, extra) => {
+            const d = extra?.targetHitData;
+            if (!d || !d.total) return 'Hedef tutturma verisi yok';
+            return `${d.hit}/${d.total} \u00e7al\u0131\u015fan hedefi tutturdu (%${Math.round((d.hit / d.total) * 100)})`;
+        },
+        trendKey: 'target_hit',
+    },
+    {
+        key: 'late_arrival',
+        label: 'Ge\u00e7 Kalma',
+        icon: AlarmClock,
+        gradient: 'from-red-500 to-rose-600',
+        getValue: (kpi, empCount, extra) => extra?.avgLatePct ?? null,
+        formatValue: (v) => v != null ? `%${v}` : '\u2014',
+        deltaKey: null,
+        inverted: true,
+        getProgress: (kpi, empCount, extra) => Math.max(0, 100 - (extra?.avgLatePct ?? 0)),
+        getTooltip: (kpi, empCount, extra) => {
+            const pct = extra?.avgLatePct ?? 0;
+            return `Ge\u00e7 kalma oran\u0131: %${pct} \u2014 d\u00fc\u015f\u00fck olmas\u0131 iyidir`;
+        },
+        progressColor: (kpi, empCount, extra) => {
+            const pct = extra?.avgLatePct ?? 0;
+            if (pct > 30) return '#ef4444';
+            if (pct >= 15) return '#f59e0b';
+            return '#10b981';
+        },
+        trendKey: 'late_arrival',
+    },
+    {
+        key: 'net_status',
+        label: 'Net Durum',
+        icon: Scale,
+        gradient: 'from-emerald-500 to-green-600',
+        getValue: (kpi, empCount, extra) => extra?.netHours ?? null,
+        formatValue: (v) => {
+            if (v == null) return '\u2014';
+            const sign = v >= 0 ? '+' : '';
+            return `${sign}${v.toFixed(1)}s`;
+        },
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi) => {
+            const ot = kpi?.total_overtime_hours ?? 0;
+            const missing = kpi?.total_missing_hours ?? 0;
+            const total = ot + missing || 1;
+            return Math.round((ot / total) * 100);
+        },
+        getTooltip: (kpi, empCount, extra) => {
+            const v = extra?.netHours;
+            if (v == null) return 'Net durum verisi yok';
+            return v >= 0
+                ? `Ekip ${v.toFixed(1)} saat fazla \u00e7al\u0131\u015ft\u0131`
+                : `Ekip ${Math.abs(v).toFixed(1)} saat eksik \u00e7al\u0131\u015ft\u0131`;
+        },
+        dynamicGradient: (kpi, empCount, extra) => {
+            const v = extra?.netHours ?? 0;
+            return v >= 0 ? 'from-emerald-500 to-green-600' : 'from-red-500 to-rose-600';
+        },
+        trendKey: 'net_status',
+    },
+    {
+        key: 'active_ratio',
+        label: 'Aktif/Toplam',
+        icon: UserCheck,
+        gradient: 'from-sky-500 to-blue-600',
+        getValue: (kpi, empCount, extra) => extra?.activeRatio ?? null,
+        formatValue: (v) => v ? `${v.active}/${v.total}` : '\u2014',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi, empCount, extra) => {
+            const d = extra?.activeRatio;
+            if (!d || !d.total) return 0;
+            return Math.round((d.active / d.total) * 100);
+        },
+        getTooltip: (kpi, empCount, extra) => {
+            const d = extra?.activeRatio;
+            if (!d || !d.total) return 'Aktif oran verisi yok';
+            return `${d.active}/${d.total} \u00e7al\u0131\u015fan d\u00f6nemde aktif (%${Math.round((d.active / d.total) * 100)})`;
+        },
+        trendKey: 'active_ratio',
+    },
 ];
 
 /* ===================================================================
@@ -240,6 +342,8 @@ const PROGRESS_GRADIENTS = {
     'from-sky-500 to-blue-600': 'linear-gradient(to right, #0ea5e9, #2563eb)',
     'from-pink-500 to-rose-600': 'linear-gradient(to right, #ec4899, #e11d48)',
     'from-amber-500 to-orange-600': 'linear-gradient(to right, #f59e0b, #ea580c)',
+    'from-lime-500 to-green-600': 'linear-gradient(to right, #84cc16, #16a34a)',
+    'from-red-500 to-rose-600': 'linear-gradient(to right, #ef4444, #e11d48)',
 };
 
 /* ===================================================================
@@ -273,15 +377,16 @@ function DeltaBadge({ delta, inverted }) {
    KPI CARD
    =================================================================== */
 function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
-    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor } = config;
+    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor, dynamicGradient } = config;
 
     const value = getValue(kpi, employeeCount, extra);
     const delta = deltaKey ? kpi?.vs_prev?.[deltaKey] : null;
     const progress = getProgress(kpi, employeeCount, extra);
     const tooltipText = getTooltip(kpi, employeeCount, extra);
-    const customColor = progressColor?.(kpi, employeeCount);
-    const progressGradient = customColor || PROGRESS_GRADIENTS[gradient];
-    const sparkColor = SPARKLINE_COLORS[gradient] || '#6366f1';
+    const resolvedGradient = dynamicGradient ? dynamicGradient(kpi, employeeCount, extra) : gradient;
+    const customColor = progressColor?.(kpi, employeeCount, extra);
+    const progressGradient = customColor || PROGRESS_GRADIENTS[resolvedGradient] || PROGRESS_GRADIENTS[gradient];
+    const sparkColor = SPARKLINE_COLORS[resolvedGradient] || SPARKLINE_COLORS[gradient] || '#6366f1';
 
     return (
         <Tooltip title={tooltipText} placement="top">
@@ -293,7 +398,7 @@ function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
                         {KPI_TOOLTIPS[config.key] && <InfoTooltip text={KPI_TOOLTIPS[config.key]} />}
                     </span>
                     <div
-                        className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0`}
+                        className={`w-8 h-8 rounded-xl bg-gradient-to-br ${resolvedGradient} flex items-center justify-center flex-shrink-0`}
                     >
                         <Icon size={16} className="text-white" strokeWidth={2.5} />
                     </div>
@@ -357,17 +462,20 @@ export default function KPISummary() {
     const { queryParams } = useAnalyticsFilter();
     const [data, setData] = useState(null);
     const [entryExitData, setEntryExitData] = useState(null);
+    const [workHoursData, setWorkHoursData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [teamRes, eeRes] = await Promise.allSettled([
+            const [teamRes, eeRes, whRes] = await Promise.allSettled([
                 api.get('/attendance-analytics/team-overview/', { params: queryParams }),
                 api.get('/attendance-analytics/entry-exit/', { params: queryParams }),
+                api.get('/attendance-analytics/work-hours/', { params: queryParams }),
             ]);
             if (teamRes.status === 'fulfilled') setData(teamRes.value.data);
             if (eeRes.status === 'fulfilled') setEntryExitData(eeRes.value.data);
+            if (whRes.status === 'fulfilled') setWorkHoursData(whRes.value.data);
         } catch (err) {
             console.error('KPISummary fetch error:', err);
         } finally {
@@ -389,7 +497,47 @@ export default function KPISummary() {
         return Math.round(total / ranking.length);
     }, [entryExitData?.performance_ranking]);
 
-    const extra = useMemo(() => ({ avgOnTimePct }), [avgOnTimePct]);
+    // Card 10: Target hit count from work-hours efficiency_ranking
+    const targetHitData = useMemo(() => {
+        const ranking = workHoursData?.efficiency_ranking || [];
+        if (!ranking.length) return { hit: 0, total: employeeCount || 0 };
+        const hit = ranking.filter(e => (e.efficiency_pct || 0) >= 100).length;
+        return { hit, total: ranking.length };
+    }, [workHoursData, employeeCount]);
+
+    // Card 11: Average late percentage
+    const avgLatePct = useMemo(() => {
+        const ranking = entryExitData?.performance_ranking;
+        if (!ranking?.length) return 0;
+        const sum = ranking.reduce((s, e) => s + (e.late_pct || 0), 0);
+        return Math.round(sum / ranking.length);
+    }, [entryExitData?.performance_ranking]);
+
+    // Card 12: Net status (OT - missing)
+    const netHours = useMemo(() => {
+        const kpiData = data?.kpi;
+        if (!kpiData) return null;
+        const ot = kpiData.total_overtime_hours ?? 0;
+        const missing = kpiData.total_missing_hours ?? 0;
+        return ot - missing;
+    }, [data?.kpi]);
+
+    // Card 13: Active/total ratio
+    const activeRatio = useMemo(() => {
+        const count = data?.employee_count ?? 0;
+        const kpiData = data?.kpi;
+        // active_employee_count from API if available, otherwise use employee_count
+        const active = kpiData?.active_employee_count ?? count;
+        return { active, total: count };
+    }, [data]);
+
+    const extra = useMemo(() => ({
+        avgOnTimePct,
+        targetHitData,
+        avgLatePct,
+        netHours,
+        activeRatio,
+    }), [avgOnTimePct, targetHitData, avgLatePct, netHours, activeRatio]);
 
     // Extract sparkline data per KPI key from monthly_trend
     const sparklineMap = useMemo(() => {
@@ -417,14 +565,26 @@ export default function KPISummary() {
         map.meal_rate = monthlyTrend.map(m => m.meal_rate_pct ?? 0);
         // avg_break: avg_break_minutes per month
         map.avg_break = monthlyTrend.map(m => m.avg_break_minutes ?? 0);
+        // target_hit: target hit count per month (approx from efficiency)
+        map.target_hit = monthlyTrend.map(m => m.target_hit_count ?? m.avg_efficiency_pct ?? 0);
+        // late_arrival: late percentage per month
+        map.late_arrival = monthlyTrend.map(m => m.late_pct ?? m.avg_late_pct ?? 0);
+        // net_status: net hours per month (OT - missing)
+        map.net_status = monthlyTrend.map(m => {
+            const ot = m.total_hours ?? m.total_overtime_hours ?? 0;
+            const missing = m.missing_hours ?? m.total_missing_hours ?? 0;
+            return ot - missing;
+        });
+        // active_ratio: active employee count per month
+        map.active_ratio = monthlyTrend.map(m => m.active_employee_count ?? m.employee_count ?? 0);
         return map;
     }, [monthlyTrend, employeeCount]);
 
     /* Loading skeleton */
     if (loading) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => <SkeletonCard key={i} />)}
             </div>
         );
     }
@@ -433,7 +593,7 @@ export default function KPISummary() {
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {CARD_CONFIGS.map(config => (
                 <KPICard
                     key={config.key}

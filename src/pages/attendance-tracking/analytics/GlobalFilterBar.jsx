@@ -39,6 +39,7 @@ export default function GlobalFilterBar() {
     const [roles, setRoles] = useState([]);
     const [rolesLoading, setRolesLoading] = useState(true);
     const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [showQuickScope, setShowQuickScope] = useState(true);
 
     /* ── Fetch departments ─────────────────────────── */
     useEffect(() => {
@@ -143,6 +144,32 @@ export default function GlobalFilterBar() {
         departments.forEach(d => { map[d.id] = d.name; });
         return map;
     }, [departments]);
+
+    /* ── Bubble chip click handler (3-state cycle) ───── */
+    const handleBubbleClick = (type, id) => {
+        if (type === 'dept') {
+            const isSelected = selectedDepartments.includes(id);
+            const isExcluded = excludedDepartments.includes(id);
+
+            if (isExcluded) {
+                // Excluded → Normal (remove from excluded)
+                setExcludedDepartments(prev => prev.filter(x => x !== id));
+            } else if (isSelected) {
+                // Selected → Excluded (remove from selected, add to excluded)
+                setSelectedDepartments(prev => prev.filter(x => x !== id));
+                setExcludedDepartments(prev => [...prev, id]);
+            } else {
+                // Normal → Selected
+                setSelectedDepartments(prev => [...prev, id]);
+            }
+        }
+    };
+
+    const handleRoleBubbleClick = (id) => {
+        setSelectedRoles(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
 
     /* ── Handle quick filter ─────────────────────────── */
     const handleQuickFilter = (key) => {
@@ -415,6 +442,82 @@ export default function GlobalFilterBar() {
             </div>
 
             {/* ══════════════════════════════════════════════════════
+                ROW 2.5: Hızlı Kapsam Baloncukları
+               ══════════════════════════════════════════════════════ */}
+            {showQuickScope && (departments.length > 1 || roles.length > 0) && (
+                <div className="px-4 py-2 border-t border-slate-100">
+                    {/* Departman Baloncukları */}
+                    {departments.length > 1 && (
+                        <div className="mb-2">
+                            <span className="text-[10px] text-slate-400 font-medium mr-2">Departmanlar:</span>
+                            <div className="inline-flex flex-wrap gap-1.5">
+                                {departments.map(dept => {
+                                    const isExcluded = excludedDepartments.includes(dept.id);
+                                    const isSelected = selectedDepartments.includes(dept.id);
+                                    return (
+                                        <button
+                                            key={dept.id}
+                                            onClick={() => handleBubbleClick('dept', dept.id)}
+                                            className={`
+                                                px-2.5 py-1 rounded-full text-[10px] font-medium transition-all border
+                                                ${isExcluded
+                                                    ? 'bg-red-50 text-red-400 border-red-200 line-through opacity-60'
+                                                    : isSelected
+                                                        ? 'bg-indigo-100 text-indigo-700 border-indigo-300 shadow-sm'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                                                }
+                                            `}
+                                            title={isExcluded ? 'Hariç tutuldu \u2014 tıklayarak dahil edin' : isSelected ? 'Seçili \u2014 tıklayarak hariç tutun' : 'Tıklayarak filtreleyin'}
+                                        >
+                                            {isExcluded && <span className="mr-1">{'\u2715'}</span>}
+                                            {isSelected && <span className="mr-1">{'\u2713'}</span>}
+                                            {dept.name}
+                                            {dept.employee_count != null && <span className="ml-1 text-[9px] opacity-60">({dept.employee_count})</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Rol Baloncukları */}
+                    {roles.length > 0 && (
+                        <div>
+                            <span className="text-[10px] text-slate-400 font-medium mr-2">Roller:</span>
+                            <div className="inline-flex flex-wrap gap-1.5">
+                                {roles.map(role => {
+                                    const isSelected = selectedRoles.includes(role.id);
+                                    return (
+                                        <button
+                                            key={role.id}
+                                            onClick={() => handleRoleBubbleClick(role.id)}
+                                            className={`
+                                                px-2.5 py-1 rounded-full text-[10px] font-medium transition-all border
+                                                ${isSelected
+                                                    ? 'bg-violet-100 text-violet-700 border-violet-300 shadow-sm'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:bg-violet-50'
+                                                }
+                                            `}
+                                        >
+                                            {isSelected && <span className="mr-1">{'\u2713'}</span>}
+                                            {role.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Lejant */}
+                    <div className="flex items-center gap-3 mt-1.5 text-[9px] text-slate-400">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-400" /> Seçili (filtrele)</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Hariç tutuldu</span>
+                        <span>Tıklayarak: Seç {'\u2192'} Hariç Tut {'\u2192'} Normal</span>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
                 Advanced Toggle Button (between Row 2 and Row 3)
                ══════════════════════════════════════════════════════ */}
             <div className="px-4 pb-1 flex items-center">
@@ -473,7 +576,7 @@ export default function GlobalFilterBar() {
                             </div>
                         </div>
 
-                        {/* 3d. Rol Bazlı Analiz Modu */}
+                        {/* 3d. Rol Bazlı Analiz Modu + Hızlı Kapsam */}
                         <div className="p-3 bg-white rounded-lg border border-slate-100">
                             <span className="text-xs font-medium text-slate-600 mb-2 block">Analiz Modu</span>
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -484,6 +587,15 @@ export default function GlobalFilterBar() {
                                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 <span className="text-xs text-slate-600">Rollere göre grupla ve analiz et</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={showQuickScope}
+                                    onChange={(e) => setShowQuickScope(e.target.checked)}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs text-slate-600">Hızlı kapsam baloncuklarını göster</span>
                             </label>
                         </div>
 
