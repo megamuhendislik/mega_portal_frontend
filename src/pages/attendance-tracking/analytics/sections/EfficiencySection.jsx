@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     TrendingUp, Users, PieChart as PieChartIcon,
-    Loader2, AlertCircle, RefreshCw
+    AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,

@@ -18,17 +18,6 @@ export function AnalyticsFilterProvider({ children }) {
         if (quickFilter === 'custom' && customRange.start && customRange.end) {
             params.start_date = customRange.start;
             params.end_date = customRange.end;
-        } else if (quickFilter === 'this_week') {
-            const dow = new Date(`${todayStr}T12:00:00`).getDay(); // 0=Sun
-            const mondayOffset = -((dow + 6) % 7);
-            params.start_date = getIstanbulDateOffset(mondayOffset);
-            params.end_date = todayStr;
-        } else if (quickFilter === 'last_7') {
-            params.start_date = getIstanbulDateOffset(-7);
-            params.end_date = todayStr;
-        } else if (quickFilter === 'last_30') {
-            params.start_date = getIstanbulDateOffset(-30);
-            params.end_date = todayStr;
         } else if (quickFilter === 'last_90') {
             params.start_date = getIstanbulDateOffset(-90);
             params.end_date = todayStr;
@@ -49,7 +38,7 @@ export function AnalyticsFilterProvider({ children }) {
         }
 
         if (selectedDepartment) params.department_id = selectedDepartment;
-        if (selectedEmployees.length) params.employee_ids = selectedEmployees;
+        if (selectedEmployees.length) params.employee_ids = selectedEmployees.join(',');
 
         return params;
     }, [quickFilter, customRange, selectedDepartment, selectedEmployees]);

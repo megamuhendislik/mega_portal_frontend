@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState, useCallback } from 'react';
-import { AnalyticsFilterProvider } from './AnalyticsFilterContext';
+import { AnalyticsFilterProvider, useAnalyticsFilter } from './AnalyticsFilterContext';
 import GlobalFilterBar from './GlobalFilterBar';
 import CollapsibleSection from './shared/CollapsibleSection';
 import { Target, Clock, CalendarCheck, Users } from 'lucide-react';
@@ -20,6 +20,7 @@ function SectionLoader() {
 }
 
 function TeamAnalyticsV3Inner() {
+    const { queryParams } = useAnalyticsFilter();
     const [drawerEmployee, setDrawerEmployee] = useState(null);
 
     const handlePersonClick = useCallback((employeeId) => {
@@ -88,6 +89,7 @@ function TeamAnalyticsV3Inner() {
                         open={true}
                         onClose={() => setDrawerEmployee(null)}
                         employeeId={drawerEmployee}
+                        queryParams={queryParams}
                     />
                 </Suspense>
             )}

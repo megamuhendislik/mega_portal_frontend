@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     CalendarDays, PieChart as PieChartIcon, TrendingUp,
-    Loader2, AlertCircle, RefreshCw
+    AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip,

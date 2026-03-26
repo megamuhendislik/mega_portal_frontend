@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     BarChart3, Grid3X3, Users,
-    Loader2, AlertCircle, RefreshCw
+    AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,

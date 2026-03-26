@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Users, Target, GitCompareArrows, Table2,
-    Loader2, AlertCircle, RefreshCw
+    AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -490,7 +490,7 @@ export default function ComparisonSection({ onPersonClick }) {
             const res = await api.get('/attendance-analytics/employee-compare/', {
                 params: {
                     ...queryParams,
-                    employee_ids: selectedEmployees.join(','),
+                    employee_ids: selectedEmployees.slice(0, 5).join(','),
                 },
             });
             setData(res.data);
