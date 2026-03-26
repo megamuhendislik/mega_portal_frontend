@@ -262,7 +262,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                         icon={Target}
                                     />
                                     <KPIMini
-                                        label="Calisan"
+                                        label="Çalışan"
                                         value={kpi.worked_hours}
                                         suffix="saat"
                                         gradient="bg-gradient-to-br from-blue-500 to-blue-600"
@@ -288,7 +288,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                             {/* ─── Section 3: Entry/Exit Scatter ─────── */}
                             {(scatterData.checkIn.length > 0 || scatterData.checkOut.length > 0) && (
                                 <div>
-                                    <SectionHeader icon={Activity} title="Giris/Cikis Dagılımı" iconColor="text-blue-500" />
+                                    <SectionHeader icon={Activity} title="Giriş/Çıkış Dağılımı" iconColor="text-blue-500" />
                                     <div className="bg-slate-50 rounded-xl p-3">
                                         <ResponsiveContainer width="100%" height={180}>
                                             <ScatterChart margin={{ top: 10, right: 10, bottom: 5, left: -10 }}>
@@ -325,7 +325,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                                 <ReferenceLine y={9} stroke="#6366f1" strokeDasharray="3 3" label={{ value: '09:00', fontSize: 9, fill: '#6366f1' }} />
                                                 <ReferenceLine y={18} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: '18:00', fontSize: 9, fill: '#f59e0b' }} />
                                                 <Scatter
-                                                    name="Giris"
+                                                    name="Giriş"
                                                     data={scatterData.checkIn}
                                                     fill="#3b82f6"
                                                 >
@@ -334,7 +334,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                                     ))}
                                                 </Scatter>
                                                 <Scatter
-                                                    name="Cikis"
+                                                    name="Çıkış"
                                                     data={scatterData.checkOut}
                                                     fill="#f59e0b"
                                                 >
@@ -355,7 +355,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                             {/* ─── Section 4: Daily Hours Bar ────────── */}
                             {dailyHours.length > 0 && (
                                 <div>
-                                    <SectionHeader icon={Clock} title="Gunluk Calisma Saati" iconColor="text-indigo-500" />
+                                    <SectionHeader icon={Clock} title="Günlük Çalışma Saati" iconColor="text-indigo-500" />
                                     <div className="bg-slate-50 rounded-xl p-3">
                                         <ResponsiveContainer width="100%" height={200}>
                                             <BarChart data={dailyHours} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
@@ -383,7 +383,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                                 />
                                                 <Bar
                                                     dataKey="worked"
-                                                    name="Calisma"
+                                                    name="Çalışma"
                                                     fill="#6366f1"
                                                     radius={[4, 4, 0, 0]}
                                                     maxBarSize={20}
@@ -404,7 +404,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                             {/* ─── Section 5: OT Breakdown ───────────── */}
                             {otb && (
                                 <div>
-                                    <SectionHeader icon={TrendingUp} title="Ek Mesai Dagilimi" iconColor="text-violet-500" />
+                                    <SectionHeader icon={TrendingUp} title="Ek Mesai Dağılımı" iconColor="text-violet-500" />
                                     <div className="space-y-3">
                                         {/* 3 horizontal progress bars */}
                                         <ProgressBar
@@ -468,12 +468,12 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                             </div>
                                         </div>
                                         <StatPair
-                                            label="Ort. Giris"
+                                            label="Ort. Giriş"
                                             empValue={bm.avg_check_in}
                                             teamValue={bm.team_avg_check_in}
                                         />
                                         <StatPair
-                                            label="Ort. Cikis"
+                                            label="Ort. Çıkış"
                                             empValue={bm.avg_check_out}
                                             teamValue={bm.team_avg_check_out}
                                         />
@@ -562,7 +562,7 @@ export default function PersonDetailDrawer({ open, onClose, employeeId, queryPar
                                                     axisLine={false}
                                                 />
                                                 <Radar
-                                                    name="Calisan"
+                                                    name="Çalışan"
                                                     dataKey="employee"
                                                     stroke="#6366f1"
                                                     fill="#6366f1"

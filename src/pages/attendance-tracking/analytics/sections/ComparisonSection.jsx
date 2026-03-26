@@ -168,7 +168,7 @@ function RawValueTooltip({ active, payload, label, employeesData, teamAvg }) {
 }
 
 /* ===================================================================
-   CHART 1: RADAR CHART — Performans Radari
+   CHART 1: RADAR CHART — Performans Radarı
    =================================================================== */
 function StrengthsWeaknesses({ employees }) {
     if (!employees?.length) return null;
@@ -214,7 +214,7 @@ function RadarChartCard({ employees, teamAvg, showTeamAvg }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
                     <Target size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Performans Radari</h3>
+                <h3 className="text-sm font-bold text-slate-800">Performans Radarı</h3>
             </div>
 
             {/* Radar */}

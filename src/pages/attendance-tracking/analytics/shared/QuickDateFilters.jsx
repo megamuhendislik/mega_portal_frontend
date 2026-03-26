@@ -4,10 +4,10 @@ import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 
 const FILTERS = [
     { key: 'this_week', label: 'Bu Hafta' },
-    { key: 'last_7', label: 'Son 7 Gun' },
-    { key: 'last_30', label: 'Son 30 Gun' },
+    { key: 'last_7', label: 'Son 7 Gün' },
+    { key: 'last_30', label: 'Son 30 Gün' },
     { key: 'this_month', label: 'Bu Ay' },
-    { key: 'last_month', label: 'Gecen Ay' },
+    { key: 'last_month', label: 'Geçen Ay' },
 ];
 
 export default function QuickDateFilters() {
@@ -42,7 +42,7 @@ export default function QuickDateFilters() {
                     }
                 }}
                 className="rounded-lg"
-                placeholder={['Baslangic', 'Bitis']}
+                placeholder={['Başlangıç', 'Bitiş']}
             />
         </div>
     );
