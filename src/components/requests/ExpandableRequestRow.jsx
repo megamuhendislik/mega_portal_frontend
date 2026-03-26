@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    ChevronDown, ChevronRight, Clock, FileText, Utensils,
+    ChevronDown, ChevronRight, Clock, FileText, Utensils, Briefcase,
     CreditCard, CheckCircle2, XCircle, AlertCircle, User, ArrowRight,
     Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield, CalendarHeart
 } from 'lucide-react';
@@ -57,6 +57,7 @@ const getSegmentTimes = (req) => {
 const getTypeIcon = (type) => {
     switch (type) {
         case 'LEAVE': return <FileText size={16} className="text-blue-600" />;
+        case 'EXTERNAL_DUTY': return <Briefcase size={16} className="text-indigo-600" />;
         case 'OVERTIME': return <Clock size={16} className="text-amber-600" />;
         case 'MEAL': return <Utensils size={16} className="text-emerald-600" />;
         case 'CARDLESS_ENTRY': return <CreditCard size={16} className="text-purple-600" />;
@@ -68,6 +69,9 @@ const getTypeIcon = (type) => {
 };
 
 const getTypeLabel = (req) => {
+    // Check _type first (set by MyRequestsTab), then type (set by all_team endpoint)
+    const effectiveType = req._type || req.type;
+    if (effectiveType === 'EXTERNAL_DUTY') return req.leave_type_name || 'Dış Görev';
     if (req.type === 'LEAVE') return req.leave_type_name || 'İzin';
     if (req.type === 'OVERTIME') return 'Fazla Mesai';
     if (req.type === 'MEAL') return 'Yemek';
@@ -80,6 +84,7 @@ const getTypeLabel = (req) => {
 
 const typeBgLookup = {
     LEAVE: 'bg-blue-50',
+    EXTERNAL_DUTY: 'bg-indigo-50',
     OVERTIME: 'bg-amber-50',
     MEAL: 'bg-emerald-50',
     CARDLESS_ENTRY: 'bg-purple-50',
@@ -354,9 +359,9 @@ const ExpandableRequestRow = ({
                 <td className="px-3 py-3">
                     <div className="flex items-center gap-2">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                            typeBgLookup[req.type] || 'bg-slate-50'
+                            typeBgLookup[req._type || req.type] || 'bg-slate-50'
                         }`}>
-                            {getTypeIcon(req.type)}
+                            {getTypeIcon(req._type || req.type)}
                         </div>
                         <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
                             {getTypeLabel(req)}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Calendar, Clock, Utensils, CreditCard, Plus,
+    Search, Calendar, Clock, Utensils, CreditCard, Plus, Briefcase,
     CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info, FileText,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -304,14 +304,20 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
         const items = [];
         const myInfo = { employee_name: currentUserInfo?.name || '', employee_department: currentUserInfo?.department || '' };
-        requests.filter(isMyRequest).forEach(r => items.push({
-            ...r, ...myInfo, _type: 'LEAVE', type: 'LEAVE',
-            _sortDate: r.start_date || r.created_at,
-            leave_type_name: r.leave_type_name || requestTypes.find(t => t.id === r.request_type)?.name || r.request_type_detail?.name || '',
-            leave_type_code: r.leave_type_code || requestTypes.find(t => t.id === r.request_type)?.code || r.request_type_detail?.code || '',
-            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
-            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
-        }));
+        requests.filter(isMyRequest).forEach(r => {
+            const category = r.request_type_detail?.category || requestTypes.find(t => t.id === r.request_type)?.category || '';
+            const isExternalDuty = category === 'EXTERNAL_DUTY';
+            items.push({
+                ...r, ...myInfo,
+                _type: isExternalDuty ? 'EXTERNAL_DUTY' : 'LEAVE',
+                type: isExternalDuty ? 'LEAVE' : 'LEAVE',  // Keep type as LEAVE for component compatibility
+                _sortDate: r.start_date || r.created_at,
+                leave_type_name: r.leave_type_name || requestTypes.find(t => t.id === r.request_type)?.name || r.request_type_detail?.name || '',
+                leave_type_code: r.leave_type_code || requestTypes.find(t => t.id === r.request_type)?.code || r.request_type_detail?.code || '',
+                target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+                approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
+            });
+        });
         overtimeRequests.filter(isMyRequest).forEach(r => items.push({
             ...r, ...myInfo, _type: 'OVERTIME', type: 'OVERTIME',
             _sortDate: r.date || r.created_at,
@@ -390,6 +396,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         return {
             all: actual.length,
             leave: actual.filter(r => r._type === 'LEAVE').length,
+            external_duty: actual.filter(r => r._type === 'EXTERNAL_DUTY').length,
             overtime: actual.filter(r => r._type === 'OVERTIME').length,
             meal: actual.filter(r => r._type === 'MEAL').length,
             cardless: actual.filter(r => r._type === 'CARDLESS_ENTRY').length,
@@ -500,6 +507,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 <div className="flex flex-wrap gap-2">
                     <FilterChip active={typeFilter === 'ALL'} onClick={() => setTypeFilter('ALL')} label="Tümü" count={counts.all} color="slate" />
                     <FilterChip active={typeFilter === 'LEAVE'} onClick={() => setTypeFilter('LEAVE')} label="İzin" icon={<Calendar size={14} />} count={counts.leave} color="blue" />
+                    <FilterChip active={typeFilter === 'EXTERNAL_DUTY'} onClick={() => setTypeFilter(typeFilter === 'EXTERNAL_DUTY' ? 'ALL' : 'EXTERNAL_DUTY')} label="Dış Görev" icon={<Briefcase size={14} />} count={counts.external_duty} color="indigo" />
                     <FilterChip active={typeFilter === 'OVERTIME'} onClick={() => setTypeFilter('OVERTIME')} label="Mesai" icon={<Clock size={14} />} count={counts.overtime} color="amber" />
                     <FilterChip active={typeFilter === 'MEAL'} onClick={() => setTypeFilter('MEAL')} label="Yemek" icon={<Utensils size={14} />} count={counts.meal} color="emerald" />
                     <FilterChip active={typeFilter === 'CARDLESS_ENTRY'} onClick={() => setTypeFilter('CARDLESS_ENTRY')} label="Kartsız" icon={<CreditCard size={14} />} count={counts.cardless} color="purple" />

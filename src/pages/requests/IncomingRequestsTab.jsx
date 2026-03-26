@@ -555,6 +555,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             : [
                 { key: 'ALL', label: 'Tümü' },
                 { key: 'LEAVE', label: 'İzin' },
+                { key: 'EXTERNAL_DUTY', label: 'Dış Görev' },
                 { key: 'OVERTIME', label: 'Mesai' },
                 { key: 'MEAL', label: 'Yemek' },
                 { key: 'CARDLESS_ENTRY', label: 'Kartsız' },
