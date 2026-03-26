@@ -234,7 +234,16 @@ const TimeRange = ({ req }) => {
 };
 
 // ─── Duration Renderer ────────────────────────────────────────────────────
+const formatMinutesLabel = (totalMin) => {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (m === 0) return `${h} Saat`;
+    return `${h}s ${m}dk`;
+};
+
 const DurationCell = ({ req }) => {
+    const effectiveType = req._type || req.type;
+
     if (req.type === 'OVERTIME') {
         if (req.total_hours != null) {
             return <span className="text-xs font-bold text-amber-700">{req.total_hours} Saat</span>;
@@ -244,20 +253,45 @@ const DurationCell = ({ req }) => {
         }
         return <span className="text-xs text-slate-400">-</span>;
     }
+
+    // External Duty: show net hours (with lunch deducted) from duty_work_info or segments
+    if (effectiveType === 'EXTERNAL_DUTY') {
+        // Use duty_work_info if available (actual net hours from attendance records)
+        const dwi = req.duty_work_info;
+        if (dwi && (dwi.total_work_minutes > 0 || dwi.total_ot_minutes > 0)) {
+            const totalNet = (dwi.total_work_minutes || 0) + (dwi.total_ot_minutes || 0);
+            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(totalNet)} <span className="text-indigo-400 font-normal">(net)</span></span>;
+        }
+        // Fallback: segment times (gross, subtract estimated lunch per day)
+        const segTimes = getSegmentTimes(req);
+        if (segTimes?.totalMinutes > 0) {
+            // Rough net estimate: subtract ~60min lunch per working day for multi-day
+            const days = segTimes.segmentCount || 1;
+            const lunchPerDay = 60; // approximate lunch deduction
+            const netMin = Math.max(0, segTimes.totalMinutes - (days * lunchPerDay));
+            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(netMin)} <span className="text-indigo-400 font-normal">(tahmini net)</span></span>;
+        }
+        if (segTimes?.start && segTimes?.end) {
+            return <span className="text-xs font-bold text-indigo-700">{calculateDuration(segTimes.start, segTimes.end)}</span>;
+        }
+        // Last fallback
+        if (req.start_time && req.end_time) {
+            return <span className="text-xs font-bold text-indigo-700">{calculateDuration(req.start_time, req.end_time)}</span>;
+        }
+        return <span className="text-xs text-slate-400">-</span>;
+    }
+
     if (req.type === 'LEAVE') {
         if (req.start_time && req.end_time) {
             return <span className="text-xs font-bold text-blue-700">{calculateDuration(req.start_time, req.end_time)}</span>;
         }
-        // Fallback: check date_segments for External Duty partial-day entries
+        // Fallback: check date_segments for partial-day entries
         const segTimes = getSegmentTimes(req);
         if (segTimes?.start && segTimes?.end) {
             return <span className="text-xs font-bold text-blue-700">{calculateDuration(segTimes.start, segTimes.end)}</span>;
         }
         if (segTimes?.totalMinutes > 0) {
-            const th = Math.floor(segTimes.totalMinutes / 60);
-            const tm = segTimes.totalMinutes % 60;
-            const lbl = tm > 0 ? `${th}s ${tm}dk` : `${th} Saat`;
-            return <span className="text-xs font-bold text-blue-700">{lbl}</span>;
+            return <span className="text-xs font-bold text-blue-700">{formatMinutesLabel(segTimes.totalMinutes)}</span>;
         }
         const days = req.total_days || 1;
         const hours = days * 9;
@@ -265,7 +299,7 @@ const DurationCell = ({ req }) => {
         const m = Math.round((hours - h) * 60);
         const label = m > 0 ? `${h}s ${m}dk` : `${h} Saat`;
         const isFullDay = days >= 1;
-        return <span className="text-xs font-bold text-blue-700">{label} {isFullDay && <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` × ${days}` : ''})</span>}</span>;
+        return <span className="text-xs font-bold text-blue-700">{label} {isFullDay && <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` x ${days}` : ''})</span>}</span>;
     }
     if (req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time) {
         return <span className="text-xs font-bold text-purple-700">{calculateDuration(req.check_in_time, req.check_out_time)}</span>;
