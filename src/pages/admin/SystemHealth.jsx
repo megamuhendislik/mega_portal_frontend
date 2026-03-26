@@ -64,6 +64,7 @@ import EmployeeDetailTab from './system-health/EmployeeDetailTab';
 import OTGroupingAuditTab from './system-health/OTGroupingAuditTab';
 import MonthlyAuditTab from './system-health/MonthlyAuditTab';
 import ScheduleAuditTab from './system-health/ScheduleAuditTab';
+import EmployeeDebugTab from './system-health/EmployeeDebugTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -151,6 +152,7 @@ export default function SystemHealth() {
                         { id: 'ot_grouping_audit', name: 'OT Gruplama', icon: FunnelIcon },
                         { id: 'monthly_audit', name: 'Aylik Denetim', icon: CalculatorIcon },
                         { id: 'schedule_audit', name: 'Takvim Denetim', icon: ClockIcon },
+                        { id: 'employee_debug', name: 'Çalışan Debug', icon: UsersIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -210,6 +212,7 @@ export default function SystemHealth() {
                 {activeTab === 'ot_grouping_audit' && <OTGroupingAuditTab />}
                 {activeTab === 'monthly_audit' && <MonthlyAuditTab />}
                 {activeTab === 'schedule_audit' && <ScheduleAuditTab />}
+                {activeTab === 'employee_debug' && <EmployeeDebugTab />}
             </div>
 
         </div>
