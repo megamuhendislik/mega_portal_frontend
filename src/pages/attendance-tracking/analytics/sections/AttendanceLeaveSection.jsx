@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     CalendarDays, PieChart as PieChartIcon, TrendingUp,
-    AlertCircle, RefreshCw
+    AlertCircle, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip,
     ResponsiveContainer, AreaChart, Area,
+    BarChart, Bar,
     XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
@@ -457,6 +458,46 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
         return map;
     }, [absenceData?.employee_leave_table]);
 
+    // ─── Derived: İzin Kullanım Özeti hesaplamaları ───
+    const avgLeavePerPerson = useMemo(() => {
+        const empCount = absenceData?.employee_count || absenceData?.employee_leave_table?.length || 1;
+        return empCount > 0 ? (totalLeaveDays / empCount).toFixed(1) : '0';
+    }, [totalLeaveDays, absenceData]);
+
+    const absenceDays = useMemo(() => {
+        if (!absenceData?.monthly_absence_trend?.length) return 0;
+        return absenceData.monthly_absence_trend.reduce((sum, m) => sum + (m.absent_days ?? 0), 0);
+    }, [absenceData?.monthly_absence_trend]);
+
+    // ─── Derived: Haftalık Devamsızlık Dağılımı ───
+    const weekdayAbsenceData = useMemo(() => {
+        const heatmap = absenceData?.absence_heatmap || [];
+        const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'];
+        return heatmap.slice(0, 5).map((d, i) => ({
+            day: dayLabels[i] || d.day,
+            count: d.total_absent ?? Object.values(d.weeks || d.buckets || {}).reduce((s, v) => s + v, 0),
+        }));
+    }, [absenceData]);
+
+    const avgAbsencePerDay = useMemo(() => {
+        if (!weekdayAbsenceData.length) return 0;
+        const total = weekdayAbsenceData.reduce((s, d) => s + d.count, 0);
+        return total / weekdayAbsenceData.length;
+    }, [weekdayAbsenceData]);
+
+    // ─── Derived: En çok izin/devamsızlık çalışanları ───
+    const topLeaveEmployee = useMemo(() => {
+        const table = absenceData?.employee_leave_table || [];
+        if (!table.length) return null;
+        return table.reduce((max, e) => ((e.total_days ?? 0) > (max?.total_days ?? 0)) ? e : max, table[0]);
+    }, [absenceData]);
+
+    const topAbsentEmployee = useMemo(() => {
+        const table = absenceData?.employee_leave_table || [];
+        if (!table.length) return null;
+        return table.reduce((max, e) => ((e.absent_days ?? 0) > (max?.absent_days ?? 0)) ? e : max, table[0]);
+    }, [absenceData]);
+
     // ─── Loading ───
     if (loading) {
         return (
@@ -530,6 +571,21 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                     </div>
                     {hasPie ? (
                         <>
+                            {/* İzin Kullanım Özeti */}
+                            <div className="grid grid-cols-3 gap-2 mb-3">
+                                <div className="bg-blue-50 rounded-lg p-2 text-center border border-blue-100">
+                                    <p className="text-lg font-bold text-blue-700">{totalLeaveDays}</p>
+                                    <p className="text-[10px] text-slate-500">Toplam İzin Günü</p>
+                                </div>
+                                <div className="bg-emerald-50 rounded-lg p-2 text-center border border-emerald-100">
+                                    <p className="text-lg font-bold text-emerald-700">{avgLeavePerPerson}</p>
+                                    <p className="text-[10px] text-slate-500">Kişi Başı Ort.</p>
+                                </div>
+                                <div className="bg-amber-50 rounded-lg p-2 text-center border border-amber-100">
+                                    <p className="text-lg font-bold text-amber-700">{absenceDays}</p>
+                                    <p className="text-[10px] text-slate-500">Devamsızlık Günü</p>
+                                </div>
+                            </div>
                             <ResponsiveContainer width="100%" height={280}>
                                 <PieChart>
                                     <Pie
@@ -591,6 +647,27 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                                         </span>
                                     </div>
                                 ))}
+                            </div>
+                            {/* En çok izin/devamsızlık çalışanları */}
+                            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <CalendarDays size={10} className="text-blue-600" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-slate-500">En Çok İzin</p>
+                                        <p className="text-xs font-bold text-slate-700 truncate">{topLeaveEmployee?.name ?? '\u2014'} ({topLeaveEmployee?.total_days ?? 0} gün)</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                                        <AlertTriangle size={10} className="text-red-600" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-slate-500">En Çok Devamsız</p>
+                                        <p className="text-xs font-bold text-slate-700 truncate">{topAbsentEmployee?.name ?? '\u2014'} ({topAbsentEmployee?.absent_days ?? 0} gün)</p>
+                                    </div>
+                                </div>
                             </div>
                         </>
                     ) : (
@@ -662,6 +739,41 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            )}
+
+            {/* ─── Chart 4: Haftalık Devamsızlık Dağılımı ─── */}
+            {weekdayAbsenceData.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                            <CalendarDays size={14} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-700">Haftalık Devamsızlık Dağılımı</h3>
+                    </div>
+                    <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={weekdayAbsenceData} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                            <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#64748b' }} />
+                            <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'rgba(255,255,255,0.95)',
+                                    backdropFilter: 'blur(8px)',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                    fontSize: '12px',
+                                }}
+                                formatter={(value) => [`${value} gün`, 'Devamsızlık']}
+                            />
+                            <Bar dataKey="count" name="Devamsızlık" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                                {weekdayAbsenceData.map((entry, i) => (
+                                    <Cell key={i} fill={entry.count > avgAbsencePerDay ? '#ef4444' : '#f59e0b'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             )}
         </div>
