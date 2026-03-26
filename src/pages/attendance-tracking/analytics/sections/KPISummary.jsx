@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     BarChart3, Clock, CheckCircle, AlertTriangle,
-    TrendingUp, TrendingDown
+    TrendingUp, TrendingDown, Timer, AlarmClock
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
@@ -84,6 +84,46 @@ const CARD_CONFIGS = [
             return `Kişi başı ort: ${avg}s`;
         },
     },
+    {
+        key: 'weekly_ot_limit',
+        label: 'Haftalık OT Limit',
+        icon: Timer,
+        gradient: 'from-cyan-500 to-teal-600',
+        getValue: (kpi, empCount) => {
+            const totalOT = kpi?.total_overtime_hours ?? 0;
+            if (!empCount) return 0;
+            return Math.round(totalOT / empCount / 30 * 100);
+        },
+        formatValue: (v) => `%${v ?? '-'}`,
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi, empCount) => {
+            const totalOT = kpi?.total_overtime_hours ?? 0;
+            if (!empCount) return 0;
+            return Math.min(100, Math.round(totalOT / empCount / 30 * 100));
+        },
+        getTooltip: () => 'Ekip ort. haftalık limit kullanımı',
+        progressColor: (kpi, empCount) => {
+            const totalOT = kpi?.total_overtime_hours ?? 0;
+            if (!empCount) return null;
+            const pct = totalOT / empCount / 30 * 100;
+            if (pct > 80) return '#ef4444';
+            if (pct >= 50) return '#f59e0b';
+            return '#10b981';
+        },
+    },
+    {
+        key: 'punctuality',
+        label: 'Dakiklik',
+        icon: AlarmClock,
+        gradient: 'from-sky-500 to-blue-600',
+        getValue: (kpi, empCount, extra) => extra?.avgOnTimePct ?? null,
+        formatValue: (v) => v != null ? `%${v}` : '—',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi, empCount, extra) => extra?.avgOnTimePct ?? 0,
+        getTooltip: () => 'Zamanında giriş oranı',
+    },
 ];
 
 /* ===================================================================
@@ -94,6 +134,8 @@ const PROGRESS_GRADIENTS = {
     'from-violet-500 to-purple-600': 'linear-gradient(to right, #8b5cf6, #9333ea)',
     'from-emerald-500 to-green-600': 'linear-gradient(to right, #10b981, #16a34a)',
     'from-rose-500 to-red-600': 'linear-gradient(to right, #f43f5e, #dc2626)',
+    'from-cyan-500 to-teal-600': 'linear-gradient(to right, #06b6d4, #0d9488)',
+    'from-sky-500 to-blue-600': 'linear-gradient(to right, #0ea5e9, #2563eb)',
 };
 
 /* ===================================================================
@@ -126,14 +168,15 @@ function DeltaBadge({ delta, inverted }) {
 /* ===================================================================
    KPI CARD
    =================================================================== */
-function KPICard({ config, kpi, employeeCount }) {
-    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip } = config;
+function KPICard({ config, kpi, employeeCount, extra }) {
+    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor } = config;
 
-    const value = getValue(kpi);
+    const value = getValue(kpi, employeeCount, extra);
     const delta = deltaKey ? kpi?.vs_prev?.[deltaKey] : null;
-    const progress = getProgress(kpi, employeeCount);
-    const tooltipText = getTooltip(kpi, employeeCount);
-    const progressGradient = PROGRESS_GRADIENTS[gradient];
+    const progress = getProgress(kpi, employeeCount, extra);
+    const tooltipText = getTooltip(kpi, employeeCount, extra);
+    const customColor = progressColor?.(kpi, employeeCount);
+    const progressGradient = customColor || PROGRESS_GRADIENTS[gradient];
 
     return (
         <Tooltip title={tooltipText} placement="top">
@@ -198,13 +241,18 @@ function SkeletonCard() {
 export default function KPISummary() {
     const { queryParams } = useAnalyticsFilter();
     const [data, setData] = useState(null);
+    const [entryExitData, setEntryExitData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get('/attendance-analytics/team-overview/', { params: queryParams });
-            setData(res.data);
+            const [teamRes, eeRes] = await Promise.allSettled([
+                api.get('/attendance-analytics/team-overview/', { params: queryParams }),
+                api.get('/attendance-analytics/entry-exit/', { params: queryParams }),
+            ]);
+            if (teamRes.status === 'fulfilled') setData(teamRes.value.data);
+            if (eeRes.status === 'fulfilled') setEntryExitData(eeRes.value.data);
         } catch (err) {
             console.error('KPISummary fetch error:', err);
         } finally {
@@ -217,11 +265,21 @@ export default function KPISummary() {
     const kpi = data?.kpi;
     const employeeCount = data?.employee_count || 0;
 
+    // Compute average on_time_pct from entry-exit performance_ranking
+    const avgOnTimePct = useMemo(() => {
+        const ranking = entryExitData?.performance_ranking;
+        if (!ranking?.length) return null;
+        const total = ranking.reduce((sum, e) => sum + (e.on_time_pct ?? 0), 0);
+        return Math.round(total / ranking.length);
+    }, [entryExitData?.performance_ranking]);
+
+    const extra = useMemo(() => ({ avgOnTimePct }), [avgOnTimePct]);
+
     /* Loading skeleton */
     if (loading) {
         return (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[0, 1, 2, 3].map(i => <SkeletonCard key={i} />)}
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
             </div>
         );
     }
@@ -230,13 +288,14 @@ export default function KPISummary() {
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {CARD_CONFIGS.map(config => (
                 <KPICard
                     key={config.key}
                     config={config}
                     kpi={kpi}
                     employeeCount={employeeCount}
+                    extra={extra}
                 />
             ))}
         </div>

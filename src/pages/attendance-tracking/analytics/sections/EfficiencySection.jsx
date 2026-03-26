@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-    TrendingUp, Users, PieChart as PieChartIcon,
+    TrendingUp, TrendingDown, Users, PieChart as PieChartIcon,
     AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
@@ -317,6 +317,28 @@ export default function EfficiencySection({ onPersonClick }) {
         return { donutData: segments, avgEfficiency: avg, employeesByGroup: groups };
     }, [teamOverview?.efficiency_distribution, workHours?.efficiency_ranking]);
 
+    // ─── Best / Worst day from daily_team_avg ───
+    const { bestDay, worstDay } = useMemo(() => {
+        const daily = workHours?.daily_team_avg;
+        if (!daily?.length) return { bestDay: '—', worstDay: '—' };
+        let best = daily[0], worst = daily[0];
+        daily.forEach(d => {
+            if ((d.avg_hours ?? 0) > (best.avg_hours ?? 0)) best = d;
+            if ((d.avg_hours ?? 0) < (worst.avg_hours ?? 0)) worst = d;
+        });
+        const formatDate = (d) => {
+            const dateStr = d.date || '';
+            if (dateStr.length >= 10) {
+                return `${dateStr.substring(8, 10)}/${dateStr.substring(5, 7)}`;
+            }
+            return d.label || dateStr;
+        };
+        return {
+            bestDay: `${formatDate(best)} (${best.avg_hours ?? 0}s)`,
+            worstDay: `${formatDate(worst)} (${worst.avg_hours ?? 0}s)`,
+        };
+    }, [workHours?.daily_team_avg]);
+
     // ─── Loading ───
     if (loading) {
         return (
@@ -477,6 +499,24 @@ export default function EfficiencySection({ onPersonClick }) {
                                     />
                                     <Tooltip content={<PersonBarTooltip />} />
                                     <ReferenceLine
+                                        x={95}
+                                        stroke="#10b981"
+                                        strokeDasharray="4 2"
+                                        label={{ value: 'Mükemmel', fontSize: 8, fill: '#10b981', position: 'top' }}
+                                    />
+                                    <ReferenceLine
+                                        x={80}
+                                        stroke="#3b82f6"
+                                        strokeDasharray="4 2"
+                                        label={{ value: 'İyi', fontSize: 8, fill: '#3b82f6', position: 'top' }}
+                                    />
+                                    <ReferenceLine
+                                        x={60}
+                                        stroke="#f59e0b"
+                                        strokeDasharray="4 2"
+                                        label={{ value: 'Ortalama', fontSize: 8, fill: '#f59e0b', position: 'top' }}
+                                    />
+                                    <ReferenceLine
                                         x={100}
                                         stroke="#9ca3af"
                                         strokeDasharray="4 2"
@@ -556,6 +596,20 @@ export default function EfficiencySection({ onPersonClick }) {
                                     <span className="text-xs text-slate-400 font-bold">({entry.value})</span>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Best / Worst day summary */}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 text-xs">
+                            <div className="flex items-center gap-1.5">
+                                <TrendingUp size={12} className="text-emerald-500" />
+                                <span className="text-slate-500">En verimli gün:</span>
+                                <span className="font-bold text-slate-700">{bestDay}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <TrendingDown size={12} className="text-red-500" />
+                                <span className="text-slate-500">En düşük gün:</span>
+                                <span className="font-bold text-slate-700">{worstDay}</span>
+                            </div>
                         </div>
                     </div>
                 ) : (

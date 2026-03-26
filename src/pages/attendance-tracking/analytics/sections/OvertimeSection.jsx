@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     BarChart3, Grid3X3, Users,
-    AlertCircle, RefreshCw
+    AlertCircle, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -276,6 +276,12 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
         }));
     }, [data, selectedEmployees]);
 
+    // Employees exceeding weekly OT limit
+    const exceedingEmployees = useMemo(() => {
+        if (!data?.length) return [];
+        return data.filter(e => (e.weekly_limit_pct ?? 0) >= 100);
+    }, [data]);
+
     if (!chartData.length) return null;
 
     const handleBarClick = (barData) => {
@@ -383,6 +389,29 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                     <span>Kırmızı isimler haftalık limiti aşan çalışanlardır</span>
                 </div>
             )}
+
+            {/* Exceeding employees warning box */}
+            {exceedingEmployees.length > 0 && (
+                <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle size={14} className="text-red-500" />
+                        <span className="text-xs font-bold text-red-700">
+                            Haftalık Limit Aşımı: {exceedingEmployees.length} çalışan
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        {exceedingEmployees.map(e => (
+                            <span
+                                key={e.employee_id}
+                                className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-red-200 transition-colors"
+                                onClick={() => onPersonClick?.(e.employee_id)}
+                            >
+                                {e.name} (%{e.weekly_limit_pct})
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -465,6 +494,24 @@ export default function OvertimeSection({ onPersonClick }) {
                 {/* Chart 2: Weekly Heatmap */}
                 <WeeklyHeatmap data={data.weekly_heatmap} />
             </div>
+
+            {/* ─── Source distribution mini cards ─── */}
+            {data.source_distribution && (
+                <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-indigo-50 rounded-lg p-2 text-center">
+                        <p className="text-lg font-bold text-indigo-700">{data.source_distribution?.intended?.pct ?? 0}%</p>
+                        <p className="text-[10px] text-slate-500">Planlı</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-2 text-center">
+                        <p className="text-lg font-bold text-amber-700">{data.source_distribution?.potential?.pct ?? 0}%</p>
+                        <p className="text-[10px] text-slate-500">Algılanan</p>
+                    </div>
+                    <div className="bg-violet-50 rounded-lg p-2 text-center">
+                        <p className="text-lg font-bold text-violet-700">{data.source_distribution?.manual?.pct ?? 0}%</p>
+                        <p className="text-[10px] text-slate-500">Manuel</p>
+                    </div>
+                </div>
+            )}
 
             {/* ─── Bottom: Employee Ranking ─── */}
             <EmployeeRankingChart
