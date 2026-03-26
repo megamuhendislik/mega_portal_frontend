@@ -597,6 +597,7 @@ export const LeaveRequestForm = ({
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih Aralığı <span className="text-red-500">*</span></label>
                     <ConfigProvider locale={trTR}>
                         <DatePicker.RangePicker
+                            getPopupContainer={(trigger) => trigger.closest('.ant-modal-body') || trigger.closest('.custom-scrollbar') || document.body}
                             value={
                                 leaveForm.start_date && leaveForm.end_date
                                     ? [dayjs(leaveForm.start_date), dayjs(leaveForm.end_date)]
