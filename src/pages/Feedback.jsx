@@ -321,6 +321,7 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     const [responding, setResponding] = useState(false);
     const [newStatus, setNewStatus] = useState('');
     const [statusLoading, setStatusLoading] = useState(false);
+    const [downloadingAttId, setDownloadingAttId] = useState(null);
 
     useEffect(() => {
         if (feedback) {
@@ -361,8 +362,6 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     };
 
     // Dosya proxy ile görüntüleme — Cloudinary SSL sorunlarını bypass eder
-    const [downloadingAttId, setDownloadingAttId] = useState(null);
-
     const viewAttachmentProxy = async (feedbackId, attId) => {
         setDownloadingAttId(attId);
         try {
