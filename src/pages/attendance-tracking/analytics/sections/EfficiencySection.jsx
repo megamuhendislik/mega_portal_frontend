@@ -95,7 +95,7 @@ function PersonBarTooltip({ active, payload }) {
                     }`}>%{d.efficiency_pct}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Calisma:</span>
+                    <span className="text-slate-500">Çalışma:</span>
                     <span className="font-bold text-slate-700">{d.worked_hours}s</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -137,7 +137,7 @@ function DonutTooltip({ active, payload, employeesByGroup }) {
         <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-xl px-4 py-3 text-xs max-w-[220px]">
             <div className="flex items-center gap-2 mb-1.5">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                <span className="font-bold text-slate-700">{d.name}: {d.value} kisi</span>
+                <span className="font-bold text-slate-700">{d.name}: {d.value} kişi</span>
             </div>
             {employees.length > 0 && (
                 <div className="border-t border-slate-100 pt-1.5 mt-1 space-y-0.5">
@@ -200,11 +200,11 @@ export default function EfficiencySection({ onPersonClick }) {
             if (to.status === 'fulfilled') setTeamOverview(to.value.data);
             else console.error('team-overview fetch error:', to.reason);
             if (wh.status === 'rejected' && to.status === 'rejected') {
-                setError('Verimlilik verileri yuklenemedi.');
+                setError('Verimlilik verileri yüklenemedi.');
             }
         } catch (err) {
             console.error('EfficiencySection fetch error:', err);
-            setError('Verimlilik verileri yuklenemedi.');
+            setError('Verimlilik verileri yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -300,17 +300,17 @@ export default function EfficiencySection({ onPersonClick }) {
         let segments;
         if (dist) {
             segments = [
-                { key: 'excellent', name: 'Mukemmel (>=95%)', value: dist.excellent ?? 0, color: EFFICIENCY_COLORS.excellent },
-                { key: 'good', name: 'Iyi (80-95%)', value: dist.good ?? 0, color: EFFICIENCY_COLORS.good },
+                { key: 'excellent', name: 'Mükemmel (>=95%)', value: dist.excellent ?? 0, color: EFFICIENCY_COLORS.excellent },
+                { key: 'good', name: 'İyi (80-95%)', value: dist.good ?? 0, color: EFFICIENCY_COLORS.good },
                 { key: 'average', name: 'Ortalama (60-80%)', value: dist.average ?? 0, color: EFFICIENCY_COLORS.average },
-                { key: 'low', name: 'Dusuk (<60%)', value: dist.low ?? 0, color: EFFICIENCY_COLORS.low },
+                { key: 'low', name: 'Düşük (<60%)', value: dist.low ?? 0, color: EFFICIENCY_COLORS.low },
             ].filter(s => s.value > 0);
         } else {
             segments = [
-                { key: 'excellent', name: 'Mukemmel (>=95%)', value: groups.excellent.length, color: EFFICIENCY_COLORS.excellent },
-                { key: 'good', name: 'Iyi (80-95%)', value: groups.good.length, color: EFFICIENCY_COLORS.good },
+                { key: 'excellent', name: 'Mükemmel (>=95%)', value: groups.excellent.length, color: EFFICIENCY_COLORS.excellent },
+                { key: 'good', name: 'İyi (80-95%)', value: groups.good.length, color: EFFICIENCY_COLORS.good },
                 { key: 'average', name: 'Ortalama (60-80%)', value: groups.average.length, color: EFFICIENCY_COLORS.average },
-                { key: 'low', name: 'Dusuk (<60%)', value: groups.low.length, color: EFFICIENCY_COLORS.low },
+                { key: 'low', name: 'Düşük (<60%)', value: groups.low.length, color: EFFICIENCY_COLORS.low },
             ].filter(s => s.value > 0);
         }
 
@@ -352,7 +352,7 @@ export default function EfficiencySection({ onPersonClick }) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                 <TrendingUp size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">Bu donem icin verimlilik verisi bulunamadi.</p>
+                <p className="text-sm">Bu dönem için verimlilik verisi bulunamadı.</p>
             </div>
         );
     }
@@ -362,13 +362,13 @@ export default function EfficiencySection({ onPersonClick }) {
             {/* ═══ TOP ROW: 2 charts side-by-side ═══ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                {/* ─── Chart 1: Gunluk Verimlilik Trendi (Area/Line) ─── */}
+                {/* ─── Chart 1: Günlük Verimlilik Trendi (Area/Line) ─── */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shrink-0">
                             <TrendingUp size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Gunluk Verimlilik Trendi</h4>
+                        <h4 className="text-sm font-bold text-slate-800">Günlük Verimlilik Trendi</h4>
                     </div>
                     {dailyTrendData.length > 0 ? (
                         <div className="overflow-x-auto -mx-2">
@@ -429,7 +429,7 @@ export default function EfficiencySection({ onPersonClick }) {
                                             key={empId}
                                             type="monotone"
                                             dataKey={`emp_${empId}`}
-                                            name={employeeNameMap[empId] || `Calisan #${empId}`}
+                                            name={employeeNameMap[empId] || `Çalışan #${empId}`}
                                             stroke={EMPLOYEE_LINE_COLORS[idx % EMPLOYEE_LINE_COLORS.length]}
                                             strokeWidth={2}
                                             dot={{ r: 3 }}
@@ -442,18 +442,18 @@ export default function EfficiencySection({ onPersonClick }) {
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-[280px] text-slate-300">
-                            <p className="text-xs">Gunluk veri bulunamadi</p>
+                            <p className="text-xs">Günlük veri bulunamadı</p>
                         </div>
                     )}
                 </div>
 
-                {/* ─── Chart 2: Kisi Bazli Verimlilik (Horizontal Bar) ─── */}
+                {/* ─── Chart 2: Kişi Bazlı Verimlilik (Horizontal Bar) ─── */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                             <Users size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Kisi Bazli Verimlilik</h4>
+                        <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Verimlilik</h4>
                     </div>
                     {efficiencyBarData.length > 0 ? (
                         <div className="overflow-x-auto -mx-2">
@@ -503,7 +503,7 @@ export default function EfficiencySection({ onPersonClick }) {
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-[400px] text-slate-300">
-                            <p className="text-xs">Calisan verisi bulunamadi</p>
+                            <p className="text-xs">Çalışan verisi bulunamadı</p>
                         </div>
                     )}
                 </div>
@@ -515,7 +515,7 @@ export default function EfficiencySection({ onPersonClick }) {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shrink-0">
                         <PieChartIcon size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Verimlilik Dagilimi</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Verimlilik Dağılımı</h4>
                 </div>
                 {donutData.length > 0 ? (
                     <div className="flex flex-col items-center">
@@ -560,7 +560,7 @@ export default function EfficiencySection({ onPersonClick }) {
                     </div>
                 ) : (
                     <div className="flex items-center justify-center h-[250px] text-slate-300">
-                        <p className="text-xs">Dagilim verisi bulunamadi</p>
+                        <p className="text-xs">Dağılım verisi bulunamadı</p>
                     </div>
                 )}
             </div>

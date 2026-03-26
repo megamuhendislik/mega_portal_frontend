@@ -24,14 +24,14 @@ const RADAR_AXES = [
     { key: 'overtime', label: 'Ek Mesai' },
     { key: 'attendance', label: 'Devam' },
     { key: 'punctuality', label: 'Dakiklik' },
-    { key: 'leave_usage', label: 'Izin' },
+    { key: 'leave_usage', label: 'İzin' },
 ];
 
 const PARALLEL_AXES = [
     { key: 'efficiency', label: 'Verimlilik%' },
     { key: 'overtime', label: 'OT Saat' },
     { key: 'attendance', label: 'Devam%' },
-    { key: 'leave_usage', label: 'Izin Gun' },
+    { key: 'leave_usage', label: 'İzin Gün' },
     { key: 'punctuality', label: 'Dakiklik%' },
 ];
 
@@ -92,8 +92,8 @@ function RawValueTooltip({ active, payload, label, employeesData, teamAvg }) {
         'Devam%': { key: 'attendance_pct', suffix: '%' },
         'Dakiklik': { key: 'punctuality_pct', suffix: '%' },
         'Dakiklik%': { key: 'punctuality_pct', suffix: '%' },
-        'Izin': { key: 'leave_days', suffix: ' gun' },
-        'Izin Gun': { key: 'leave_days', suffix: ' gun' },
+        'İzin': { key: 'leave_days', suffix: ' gün' },
+        'İzin Gün': { key: 'leave_days', suffix: ' gün' },
     };
 
     const meta = RAW_MAP[label];
@@ -252,7 +252,7 @@ function ParallelCoordinatesCard({ employees, teamAvg, showTeamAvg }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0">
                     <GitCompareArrows size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Cok Boyutlu Karsilastirma</h3>
+                <h3 className="text-sm font-bold text-slate-800">Çok Boyutlu Karşılaştırma</h3>
             </div>
 
             {/* LineChart (parallel coordinates simulation) */}
@@ -336,14 +336,14 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
             hasDot: false,
         },
         {
-            label: 'Devam Orani',
+            label: 'Devam Oranı',
             metricKey: 'attendance_pct',
             bestKey: 'attendance',
             format: v => `%${typeof v === 'number' ? v.toFixed(1) : v}`,
             hasDot: true,
         },
         {
-            label: 'Ort. Giris',
+            label: 'Ort. Giriş',
             metricKey: 'avg_check_in',
             bestKey: null,
             format: v => v || '-',
@@ -351,10 +351,10 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
             isTime: true,
         },
         {
-            label: 'Izin Gunu',
+            label: 'İzin Günü',
             metricKey: 'leave_days',
             bestKey: 'leave_usage',
-            format: v => `${typeof v === 'number' ? v : 0} gun`,
+            format: v => `${typeof v === 'number' ? v : 0} gün`,
             hasDot: false,
         },
         {
@@ -373,7 +373,7 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                     <Table2 size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Detayli Karsilastirma</h3>
+                <h3 className="text-sm font-bold text-slate-800">Detaylı Karşılaştırma</h3>
             </div>
 
             {/* Table */}
@@ -398,7 +398,7 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                                 Ekip Ort.
                             </th>
                             <th className="px-3 py-2 text-left font-bold text-emerald-600 whitespace-nowrap">
-                                En Iyi
+                                En İyi
                             </th>
                         </tr>
                     </thead>
@@ -496,7 +496,7 @@ export default function ComparisonSection({ onPersonClick }) {
             setData(res.data);
         } catch (err) {
             console.error('ComparisonSection fetch error:', err);
-            setError('Karsilastirma verileri yuklenemedi.');
+            setError('Karşılaştırma verileri yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -513,8 +513,8 @@ export default function ComparisonSection({ onPersonClick }) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <Users className="w-12 h-12 mb-3 text-slate-300" />
-                <p className="text-sm font-medium">Yukaridaki filtreden en az 2 kisi secin</p>
-                <p className="text-xs mt-1">veya grafiklerde kisiye tiklayin</p>
+                <p className="text-sm font-medium">Yukarıdaki filtreden en az 2 kişi seçin</p>
+                <p className="text-xs mt-1">veya grafiklerde kişiye tıklayın</p>
             </div>
         );
     }
@@ -553,7 +553,7 @@ export default function ComparisonSection({ onPersonClick }) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <Users className="w-12 h-12 mb-3 text-slate-300" />
-                <p className="text-sm font-medium">Secili calisanlar icin veri bulunamadi</p>
+                <p className="text-sm font-medium">Seçili çalışanlar için veri bulunamadı</p>
             </div>
         );
     }

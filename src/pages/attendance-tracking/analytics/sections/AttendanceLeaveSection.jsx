@@ -14,13 +14,13 @@ import api from '../../../../services/api';
 /* ═══════════════════════════════════════════════════
    CONSTANTS
    ═══════════════════════════════════════════════════ */
-const WEEKDAY_LABELS = ['Pzt', 'Sal', 'Car', 'Per', 'Cum'];
+const WEEKDAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'];
 
 const STATUS_CONFIG = {
-    present: { label: 'Tam gun', bg: 'bg-emerald-400', color: '#10b981' },
-    late:    { label: 'Gec giris', bg: 'bg-amber-400', color: '#f59e0b' },
-    absent:  { label: 'Devamsiz', bg: 'bg-red-400', color: '#ef4444' },
-    leave:   { label: 'Izinli', bg: 'bg-blue-400', color: '#3b82f6' },
+    present: { label: 'Tam gün', bg: 'bg-emerald-400', color: '#10b981' },
+    late:    { label: 'Geç giriş', bg: 'bg-amber-400', color: '#f59e0b' },
+    absent:  { label: 'Devamsız', bg: 'bg-red-400', color: '#ef4444' },
+    leave:   { label: 'İzinli', bg: 'bg-blue-400', color: '#3b82f6' },
     off:     { label: 'Tatil', bg: 'bg-slate-200', color: '#e2e8f0' },
 };
 
@@ -136,7 +136,7 @@ function AttendanceCalendarHeatmap({ dailyData, period }) {
     if (calendarGrid.length === 0) {
         return (
             <div className="flex items-center justify-center py-8 text-slate-400 text-sm">
-                Takvim verisi bulunamadi.
+                Takvim verisi bulunamadı.
             </div>
         );
     }
@@ -178,7 +178,7 @@ function AttendanceCalendarHeatmap({ dailyData, period }) {
                                 <div
                                     className={`w-9 h-9 rounded-lg ${getCellClass(cell)} transition-all cursor-default
                                         hover:ring-2 hover:ring-slate-300 hover:ring-offset-1 flex items-center justify-center`}
-                                    title={`${cell.dayLabel}: ${cell.avgHours > 0 ? cell.avgHours.toFixed(1) + 's ort.' : 'Veri yok'}${cell.presentCount ? ' | ' + cell.presentCount + ' tam' : ''}${cell.lateCount ? ', ' + cell.lateCount + ' gec' : ''}${cell.absentCount ? ', ' + cell.absentCount + ' devamsiz' : ''}${cell.leaveCount ? ', ' + cell.leaveCount + ' izinli' : ''}`}
+                                    title={`${cell.dayLabel}: ${cell.avgHours > 0 ? cell.avgHours.toFixed(1) + 's ort.' : 'Veri yok'}${cell.presentCount ? ' | ' + cell.presentCount + ' tam' : ''}${cell.lateCount ? ', ' + cell.lateCount + ' geç' : ''}${cell.absentCount ? ', ' + cell.absentCount + ' devamsız' : ''}${cell.leaveCount ? ', ' + cell.leaveCount + ' izinli' : ''}`}
                                 >
                                     <span className="text-[8px] font-bold text-white/80">
                                         {cell.date.getDate()}
@@ -222,7 +222,7 @@ function LeaveDonutTooltip({ active, payload, totalDays, employeesByType, onPers
             </div>
             <div className="space-y-0.5">
                 <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Gun:</span>
+                    <span className="text-slate-500">Gün:</span>
                     <span className="font-bold text-slate-800">{d.value}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -319,11 +319,11 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
             else console.error('work-hours fetch error:', whRes.reason);
 
             if (absRes.status === 'rejected' && whRes.status === 'rejected') {
-                setError('Devamsizlik/izin verileri yuklenemedi.');
+                setError('Devamsızlık/izin verileri yüklenemedi.');
             }
         } catch (err) {
             console.error('AttendanceLeaveSection fetch error:', err);
-            setError('Devamsizlik/izin verileri yuklenemedi.');
+            setError('Devamsızlık/izin verileri yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -364,7 +364,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
             // Build a lookup: weekday-index (0=Mon) -> week-number -> absent_count
             const heatLookup = {};
             const trDayToIdx = {
-                'Pazartesi': 0, 'Sal\u0131': 1, 'Carsamba': 2, '\u00c7ar\u015famba': 2,
+                'Pazartesi': 0, 'Sal\u0131': 1, 'Çarşamba': 2, '\u00c7ar\u015famba': 2,
                 'Per\u015fembe': 3, 'Cuma': 4, 'Cumartesi': 5, 'Pazar': 6,
             };
             absenceData.absence_heatmap.forEach((dayEntry, idx) => {
@@ -427,8 +427,8 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
 
             return {
                 name: m.label,
-                'Devamsiz': absentDays,
-                'Izinli': leaveDays,
+                'Devamsız': absentDays,
+                'İzinli': leaveDays,
             };
         });
     }, [absenceData?.monthly_absence_trend]);
@@ -494,7 +494,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                 <CalendarDays size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">Bu donem icin devam/izin verisi bulunamadi.</p>
+                <p className="text-sm">Bu dönem için devam/izin verisi bulunamadı.</p>
             </div>
         );
     }
@@ -515,18 +515,18 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         <AttendanceCalendarHeatmap dailyData={dailyCalendarData} period={period} />
                     ) : (
                         <div className="flex items-center justify-center py-12 text-slate-400 text-sm">
-                            Takvim verisi bulunamadi.
+                            Takvim verisi bulunamadı.
                         </div>
                     )}
                 </div>
 
-                {/* Chart 2: Izin Turu Dagilimi (Donut) */}
+                {/* Chart 2: İzin Türü Dağılımı (Donut) */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <div className="flex items-center gap-2 mb-3">
                         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                             <PieChartIcon size={14} className="text-white" />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-700">Izin Turu Dagilimi</h3>
+                        <h3 className="text-sm font-bold text-slate-700">İzin Türü Dağılımı</h3>
                     </div>
                     {hasPie ? (
                         <>
@@ -578,7 +578,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                                         className="fill-slate-400"
                                         style={{ fontSize: '11px' }}
                                     >
-                                        gun
+                                        gün
                                     </text>
                                 </PieChart>
                             </ResponsiveContainer>
@@ -595,7 +595,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         </>
                     ) : (
                         <div className="flex items-center justify-center py-12 text-slate-400 text-sm">
-                            Izin verisi bulunamadi.
+                            İzin verisi bulunamadı.
                         </div>
                     )}
                 </div>
@@ -641,7 +641,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                                 />
                                 <Area
                                     type="monotone"
-                                    dataKey="Devamsiz"
+                                    dataKey="Devamsız"
                                     stackId="status"
                                     stroke={AREA_COLORS.absent}
                                     fill="url(#atl-absent-fill)"
@@ -651,7 +651,7 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                                 />
                                 <Area
                                     type="monotone"
-                                    dataKey="Izinli"
+                                    dataKey="İzinli"
                                     stackId="status"
                                     stroke={AREA_COLORS.leave}
                                     fill="url(#atl-leave-fill)"

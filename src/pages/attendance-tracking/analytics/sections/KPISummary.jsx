@@ -24,7 +24,7 @@ const CARD_CONFIGS = [
         getTooltip: (kpi) => {
             const eff = kpi?.avg_efficiency_pct ?? 0;
             const worked = kpi?.total_worked_hours ?? 0;
-            return `${eff}% = ${worked}s calisan / hedef`;
+            return `${eff}% = ${worked}s çalışan / hedef`;
         },
     },
     {
@@ -44,12 +44,12 @@ const CARD_CONFIGS = [
         getTooltip: (kpi, empCount) => {
             const total = kpi?.total_overtime_hours ?? 0;
             const avg = empCount ? (total / empCount).toFixed(1) : 0;
-            return `Kisi basi ort: ${avg}s`;
+            return `Kişi başı ort: ${avg}s`;
         },
     },
     {
         key: 'attendance',
-        label: 'Devam Orani',
+        label: 'Devam Oranı',
         icon: CheckCircle,
         gradient: 'from-emerald-500 to-green-600',
         getValue: (kpi) => kpi?.attendance_rate_pct,
@@ -59,7 +59,7 @@ const CARD_CONFIGS = [
         getProgress: (kpi) => kpi?.attendance_rate_pct ?? 0,
         getTooltip: (kpi) => {
             const rate = kpi?.attendance_rate_pct ?? 0;
-            return `Devam orani: %${rate}`;
+            return `Devam oranı: %${rate}`;
         },
     },
     {
@@ -81,7 +81,7 @@ const CARD_CONFIGS = [
         getTooltip: (kpi, empCount) => {
             const total = kpi?.total_missing_hours ?? 0;
             const avg = empCount ? (total / empCount).toFixed(1) : 0;
-            return `Kisi basi ort: ${avg}s`;
+            return `Kişi başı ort: ${avg}s`;
         },
     },
 ];

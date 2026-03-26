@@ -19,7 +19,7 @@ const SOURCE_COLORS = {
     manual: '#8b5cf6',     // violet-500
 };
 const HEATMAP_BUCKETS = ['06-08', '08-10', '10-12', '12-14', '14-16', '16-18', '18-20', '20+'];
-const HEATMAP_DAYS = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
+const HEATMAP_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
 /* ═══════════════════════════════════════════════════
    SKELETON LOADER
@@ -44,8 +44,8 @@ function MonthlyTrendChart({ data }) {
         if (!data?.length) return [];
         return data.map(m => ({
             name: m.label,
-            Planli: m.intended_hours ?? 0,
-            Algilanan: m.potential_hours ?? 0,
+            Planlı: m.intended_hours ?? 0,
+            Algılanan: m.potential_hours ?? 0,
             Manuel: m.manual_hours ?? 0,
             Toplam: m.total_hours ?? 0,
         }));
@@ -60,7 +60,7 @@ function MonthlyTrendChart({ data }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
                     <BarChart3 size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Aylik Ek Mesai Trendi</h4>
+                <h4 className="text-sm font-bold text-slate-800">Aylık Ek Mesai Trendi</h4>
             </div>
 
             <ResponsiveContainer width="100%" height={280}>
@@ -100,8 +100,8 @@ function MonthlyTrendChart({ data }) {
                         iconSize={10}
                         formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
                     />
-                    <Bar dataKey="Planli" stackId="ot" fill={SOURCE_COLORS.intended} radius={[0, 0, 0, 0]} maxBarSize={30} />
-                    <Bar dataKey="Algilanan" stackId="ot" fill={SOURCE_COLORS.potential} radius={[0, 0, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="Planlı" stackId="ot" fill={SOURCE_COLORS.intended} radius={[0, 0, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="Algılanan" stackId="ot" fill={SOURCE_COLORS.potential} radius={[0, 0, 0, 0]} maxBarSize={30} />
                     <Bar dataKey="Manuel" stackId="ot" fill={SOURCE_COLORS.manual} radius={[4, 4, 0, 0]} maxBarSize={30} />
                 </BarChart>
             </ResponsiveContainer>
@@ -154,7 +154,7 @@ function WeeklyHeatmap({ data }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0">
                     <Grid3X3 size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Haftalik Yogunluk</h4>
+                <h4 className="text-sm font-bold text-slate-800">Haftalık Yoğunluk</h4>
             </div>
 
             <div className="overflow-x-auto">
@@ -212,7 +212,7 @@ function WeeklyHeatmap({ data }) {
                         <div className="w-4 h-3 rounded-sm bg-amber-300" />
                         <div className="w-4 h-3 rounded-sm bg-amber-500" />
                         <div className="w-4 h-3 rounded-sm bg-amber-700" />
-                        <span className="text-[9px] text-slate-400">Cok</span>
+                        <span className="text-[9px] text-slate-400">Çok</span>
                     </div>
                 </div>
             </div>
@@ -244,7 +244,7 @@ function EmployeeRankingTooltip({ active, payload }) {
                     <span className="font-black text-slate-800">{raw.total_hours?.toLocaleString('tr-TR')}s</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Limit Kullanimi:</span>
+                    <span className="text-slate-500">Limit Kullanımı:</span>
                     <span className={`font-bold ${raw.weekly_limit_pct >= 90 ? 'text-red-600' : raw.weekly_limit_pct >= 70 ? 'text-amber-600' : 'text-emerald-600'}`}>
                         %{raw.weekly_limit_pct ?? 0}
                     </span>
@@ -269,8 +269,8 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
         return filtered.slice(0, 15).map(e => ({
             ...e,
             shortName: e.name?.length > 12 ? e.name.substring(0, 12) + '...' : e.name,
-            Planli: e.intended_hours ?? 0,
-            Algilanan: e.potential_hours ?? 0,
+            Planlı: e.intended_hours ?? 0,
+            Algılanan: e.potential_hours ?? 0,
             Manuel: e.manual_hours ?? 0,
             exceedsLimit: (e.weekly_limit_pct ?? 0) >= 100,
         }));
@@ -291,7 +291,7 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                     <Users size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Kisi Bazli Ek Mesai</h4>
+                <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Ek Mesai</h4>
             </div>
 
             <ResponsiveContainer width="100%" height={400}>
@@ -350,20 +350,20 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                         }}
                     />
                     <Bar
-                        dataKey="Planli"
+                        dataKey="Planlı"
                         fill="#10b981"
                         radius={[0, 0, 0, 0]}
                         maxBarSize={14}
                         cursor="pointer"
-                        name="Onayli/Planli"
+                        name="Onaylı/Planlı"
                     />
                     <Bar
-                        dataKey="Algilanan"
+                        dataKey="Algılanan"
                         fill="#f59e0b"
                         radius={[0, 0, 0, 0]}
                         maxBarSize={14}
                         cursor="pointer"
-                        name="Bekleyen/Algilanan"
+                        name="Bekleyen/Algılanan"
                     />
                     <Bar
                         dataKey="Manuel"
@@ -380,7 +380,7 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
             {chartData.some(e => e.exceedsLimit) && (
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-red-500 font-semibold">
                     <div className="w-3 h-3 rounded border-2 border-red-400 bg-red-50" />
-                    <span>Kirmizi isimler haftalik limiti asan calisanlardir</span>
+                    <span>Kırmızı isimler haftalık limiti aşan çalışanlardır</span>
                 </div>
             )}
         </div>
@@ -404,7 +404,7 @@ export default function OvertimeSection({ onPersonClick }) {
             setData(res.data);
         } catch (err) {
             console.error('OvertimeSection fetch error:', err);
-            setError('Ek mesai verileri yuklenemedi.');
+            setError('Ek mesai verileri yüklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -449,7 +449,7 @@ export default function OvertimeSection({ onPersonClick }) {
             <div className="bg-white rounded-2xl border border-slate-200/80 p-12">
                 <div className="flex flex-col items-center justify-center text-slate-400">
                     <BarChart3 size={32} className="mb-2 opacity-50" />
-                    <p className="text-sm">Bu donem icin ek mesai verisi bulunamadi.</p>
+                    <p className="text-sm">Bu dönem için ek mesai verisi bulunamadı.</p>
                 </div>
             </div>
         );
