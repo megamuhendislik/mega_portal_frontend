@@ -255,12 +255,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + dutySec + missingSec + leaveSec + healthReportSec) / targetSec) * 100) : 0,
 
                 // Net balance vs past_target (total effort including credits vs expected)
-                // Net Eksik = hedef - (normal + duty + izin + rapor)
-                // OT ile Net = Net Eksik + onaylı OT
-                // Potansiyel ile = OT ile Net + potansiyel OT
-                _netDeficitSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec),
-                _netWithOtSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec) - overtimeSec,
-                _netWithPotentialSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec) - overtimeSec - potentialOtFromBackend,
+                // Net hesaplar: BUGÜNE KADAR hedefe göre (past_target bazlı, gelecek günler HARİÇ)
+                // past_target_balance = total_work - past_target (backend'den)
+                // past_target_balance > 0 → ilerde, < 0 → geride
+                // Net Eksik = OT hariç past bakiye = past_target_balance - overtime
+                // OT ile Net = past_target_balance (OT dahil)
+                // Potansiyel ile = past_target_balance + potansiyel
+                _pastBalanceSec: netBalanceReal, // raw past_target_balance from backend
+                _netDeficitSec: netBalanceReal - overtimeSec, // OT hariç: ne kadar geride/ilerde
+                _netWithOtSec: netBalanceReal, // OT dahil
+                _netWithPotentialSec: netBalanceReal + potentialOtFromBackend, // potansiyel dahil
                 netBalanceForLabelDisplay: fmtSec(Math.abs(overtimeSec - missingSec)),
                 netBalanceForLabelHours: (Math.abs(overtimeSec - missingSec) / 3600).toFixed(1),
                 isNetSurplus: overtimeSec - missingSec > 0,
@@ -284,8 +288,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     prevYearBalance: (periodSummary.cumulative.previous_year_balance_seconds / 3600).toFixed(1),
                     prevYearBalanceDisplay: fmtSec(periodSummary.cumulative.previous_year_balance_seconds),
 
-                    prevMonthCarryOver: ((periodSummary.cumulative.previous_year_balance_seconds + periodSummary.cumulative.carry_over_seconds) / 3600).toFixed(1),
-                    prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative.previous_year_balance_seconds + periodSummary.cumulative.carry_over_seconds),
+                    // DB-persisted carry-over: respects settlements (mutabakat → 0)
+                    prevMonthCarryOver: ((periodSummary.cumulative_balance_seconds || 0) / 3600).toFixed(1),
+                    prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative_balance_seconds || 0),
 
                     totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
                     totalNetBalanceDisplay: fmtSec(periodSummary.cumulative.total_net_balance_seconds),
@@ -463,6 +468,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
 
                         {/* Bar 2: Toplam Efor — AYNI SCALE (target = 100%), shrink-0 */}
+                        {/* Taşma: bar target'ta kesilir, sağ uçta yeşil ++ gösterilir */}
                         {(() => {
                             const sc = stats._targetSec || 1;
                             const pct = (v) => (v / sc) * 100;
@@ -471,7 +477,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             const gapSec = Math.max(0, sc - totalSec - potSec);
                             const overflowSec = Math.max(0, totalSec - sc);
                             return (
-                                <>
+                                <div className="relative">
                                     <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50">
                                         {stats._realizedSec > 0 && <Tooltip title={`Normal: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shrink-0" style={{ width: `${pct(stats._realizedSec)}%` }} /></Tooltip>}
                                         {(stats._dutySec||0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${pct(stats._dutySec)}%` }} /></Tooltip>}
@@ -481,12 +487,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                         {potSec > 0 && <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}><div className="h-full shrink-0 opacity-50" style={{ width: `${pct(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} /></Tooltip>}
                                         {gapSec > 0 && <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}><div className="h-full flex-1" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #e5e7eb 4px, #e5e7eb 5px)' }} /></Tooltip>}
                                     </div>
+                                    {/* Taşma: sağ uçta yeşil ++ badge */}
                                     {overflowSec > 0 && (
-                                        <div className="flex justify-end mt-1">
-                                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hedef +{fmtSec(overflowSec)} aşıldı</span>
-                                        </div>
+                                        <Tooltip title={`Hedef ${fmtSec(overflowSec)} aşıldı`}>
+                                            <div className="absolute right-0 top-0 h-6 flex items-center -mr-1">
+                                                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-300 rounded-r-md pl-1 pr-1.5 py-0.5 leading-none shadow-sm">++</span>
+                                            </div>
+                                        </Tooltip>
                                     )}
-                                </>
+                                </div>
                             );
                         })()}
                         {/* Bar 2 labels */}
@@ -502,15 +511,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                         </div>
                     </div>{/* end relative bar area */}
 
-                    {/* Bugüne kadar net durum — indicator çizgisinin altı */}
+                    {/* Bugüne kadar net durum — past_target bazlı (gelecek günler HARİÇ) */}
                     {(() => {
-                        const bal = stats._netWithOtSec ?? 0;
-                        const isOk = bal <= 0;
+                        // past_target_balance: pozitif = ilerde, negatif = geride
+                        const bal = stats._pastBalanceSec ?? 0;
+                        const isOk = bal >= 0;
                         return (
                             <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold ${isOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-700' : 'bg-rose-50/50 border-rose-100 text-rose-700'}`}>
                                 {isOk ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-                                <span>Bugüne kadar: {isOk ? '+' : ''}{fmtSec(bal === 0 ? 0 : -bal)} {isOk ? 'ilerde' : 'geride'}</span>
-                                <span className="text-slate-400 font-medium ml-auto text-[10px]">OT dahil</span>
+                                <span>Bugüne kadar: {isOk ? '+' : '-'}{fmtSec(Math.abs(bal))} {isOk ? 'ilerde' : 'geride'}</span>
+                                <span className="text-slate-400 font-medium ml-auto text-[10px]">OT dahil, bugüne kadar hedefe göre</span>
                             </div>
                         );
                     })()}
@@ -519,18 +529,18 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 {/* ── NET DURUM ── */}
                 <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
                     {[
-                        { label: 'Net Eksik', sec: stats._netDeficitSec, tip: 'Toplam eksik mesai' },
-                        { label: 'OT ile Net', sec: stats._netWithOtSec, tip: 'OT düşüldükten sonra' },
-                        { label: 'Potansiyel ile', sec: stats._netWithPotentialSec, tip: 'Potansiyel OT dahil' },
+                        { label: 'OT Hariç', sec: stats._netDeficitSec, tip: 'Bugüne kadar hedef vs normal çalışma (OT hariç)' },
+                        { label: 'OT Dahil', sec: stats._netWithOtSec, tip: 'Bugüne kadar hedef vs toplam efor (OT dahil)' },
+                        { label: 'Potansiyel ile', sec: stats._netWithPotentialSec, tip: 'Potansiyel OT de eklenince' },
                     ].map((c) => {
                         const v = c.sec ?? 0;
-                        const ok = v <= 0;
+                        const ok = v >= 0; // pozitif = ilerde (past_target_balance bazlı)
                         return (
                             <Tooltip key={c.label} title={c.tip}>
                                 <div className="px-4 py-3 text-center cursor-help hover:bg-white/60 transition-colors">
                                     <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">{c.label}</div>
                                     <div className={`text-base font-black tabular-nums ${ok ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {v === 0 ? '0' : `${ok ? '+' : '-'}${fmtSec(Math.abs(v))}`}
+                                        {Math.abs(v) < 60 ? '0' : `${ok ? '+' : '-'}${fmtSec(Math.abs(v))}`}
                                     </div>
                                 </div>
                             </Tooltip>
