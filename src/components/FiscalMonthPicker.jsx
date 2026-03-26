@@ -44,25 +44,34 @@ export default function FiscalMonthPicker({ onDateChange }) {
 
   const handleSelect = (value) => {
     setSelectedPeriod(value);
+    if (value === '__ALL__') {
+      onDateChange(null, null);
+      return;
+    }
     const period = periods.find(p => `${p.year}-${p.month}` === value);
     if (period) {
       onDateChange(period.start_date, period.end_date);
     }
   };
 
-  const options = periods.map(p => ({
-    value: `${p.year}-${p.month}`,
-    label: p.is_current ? `${p.label} (Mevcut)` : p.label,
-  }));
+  const options = [
+    { value: '__ALL__', label: 'Tüm Mali Dönemler' },
+    ...periods.map(p => ({
+      value: `${p.year}-${p.month}`,
+      label: p.is_current ? `${p.label} (Mevcut)` : p.label,
+    })),
+  ];
 
   const selectedData = useMemo(() => {
-    if (!selectedPeriod) return null;
+    if (!selectedPeriod || selectedPeriod === '__ALL__') return null;
     return periods.find(p => `${p.year}-${p.month}` === selectedPeriod);
   }, [selectedPeriod, periods]);
 
-  const dateRangeText = selectedData
-    ? formatDateRange(selectedData.start_date, selectedData.end_date)
-    : '';
+  const dateRangeText = selectedPeriod === '__ALL__'
+    ? 'Tüm dönemler'
+    : selectedData
+      ? formatDateRange(selectedData.start_date, selectedData.end_date)
+      : '';
 
   return (
     <div className="flex items-center gap-2">

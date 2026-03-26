@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     Search, Calendar, Clock, Utensils, CreditCard, Plus,
-    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info, FileText
+    CheckCircle2, XCircle, AlertCircle, Zap, HeartPulse, Stethoscope, Cake, Info, FileText,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Tooltip, Modal, message } from 'antd';
 import api from '../../services/api';
@@ -99,6 +100,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     // Date range filter
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+
+    // Pagination
+    const PAGE_SIZE = 50;
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Fetch all data
     const fetchData = useCallback(async () => {
@@ -407,15 +412,25 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
         }
     }, [handleEditOvertimeClick, handleViewDetails]);
 
+    // Reset page when filters change
+    useEffect(() => { setCurrentPage(1); }, [typeFilter, statusFilter, showPotential, dateFrom, dateTo]);
+
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const paginatedFiltered = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return filtered.slice(start, start + PAGE_SIZE);
+    }, [filtered, currentPage]);
+
     // Wrap onViewDetails to also add claim action for POTENTIAL OT
     const wrappedRequests = useMemo(() => {
-        return filtered.map(r => {
+        return paginatedFiltered.map(r => {
             if (r._type === 'OVERTIME' && r.status === 'POTENTIAL') {
                 return { ...r, _claimAction: () => handleClaimPotential(r), _claiming: claimingId === r.id };
             }
             return r;
         });
-    }, [filtered, handleClaimPotential, claimingId]);
+    }, [paginatedFiltered, handleClaimPotential, claimingId]);
 
     if (loading) {
         return (
@@ -583,6 +598,54 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 </tbody>
                             </table>
                         </div>
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50/30">
+                                <span className="text-xs font-bold text-slate-500">
+                                    {filtered.length} talep, sayfa {currentPage}/{totalPages}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setCurrentPage(1)}
+                                        disabled={currentPage === 1}
+                                        className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"
+                                    >İlk</button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"
+                                    ><ChevronLeft size={16} /></button>
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let page;
+                                        if (totalPages <= 5) page = i + 1;
+                                        else if (currentPage <= 3) page = i + 1;
+                                        else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                                        else page = currentPage - 2 + i;
+                                        return (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                                                    currentPage === page
+                                                        ? 'bg-slate-800 text-white shadow-sm'
+                                                        : 'text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                            >{page}</button>
+                                        );
+                                    })}
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"
+                                    ><ChevronRight size={16} /></button>
+                                    <button
+                                        onClick={() => setCurrentPage(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"
+                                    >Son</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

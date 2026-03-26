@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-    Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info
+    Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import api from '../../services/api';
@@ -33,6 +34,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [personFilter, setPersonFilter] = useState('ALL');
+
+    // Pagination
+    const PAGE_SIZE = 50;
+    const [pendingPage, setPendingPage] = useState(1);
+    const [teamPage, setTeamPage] = useState(1);
 
     // Detail modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -521,6 +527,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         return filtered;
     }, [activeSubTab, filtered]);
 
+    // Reset pagination when filters change
+    useEffect(() => { setPendingPage(1); setTeamPage(1); }, [typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter, activeSubTab]);
+
+    // Paginated pending
+    const pendingTotalPages = Math.max(1, Math.ceil(filteredPendingActionable.length / PAGE_SIZE));
+    const paginatedPending = useMemo(() => {
+        const start = (pendingPage - 1) * PAGE_SIZE;
+        return filteredPendingActionable.slice(start, start + PAGE_SIZE);
+    }, [filteredPendingActionable, pendingPage]);
+
+    // Paginated team
+    const teamTotalPages = Math.max(1, Math.ceil(allTeamFiltered.length / PAGE_SIZE));
+    const paginatedTeam = useMemo(() => {
+        const start = (teamPage - 1) * PAGE_SIZE;
+        return allTeamFiltered.slice(start, start + PAGE_SIZE);
+    }, [allTeamFiltered, teamPage]);
+
     // Type filter options
     const typeFilterOptions = filterType
         ? []
@@ -724,7 +747,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {filteredPendingActionable.map(req => (
+                                        {paginatedPending.map(req => (
                                             <ExpandableRequestRow
                                                 key={`${req.type}-${req.id}`}
                                                 req={req}
@@ -744,6 +767,36 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                     </tbody>
                                 </table>
                             </div>
+                            {/* Pending Pagination */}
+                            {pendingTotalPages > 1 && (
+                                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50/30">
+                                    <span className="text-xs font-bold text-slate-500">
+                                        {filteredPendingActionable.length} talep, sayfa {pendingPage}/{pendingTotalPages}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => setPendingPage(1)} disabled={pendingPage === 1}
+                                            className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600">İlk</button>
+                                        <button onClick={() => setPendingPage(p => Math.max(1, p - 1))} disabled={pendingPage === 1}
+                                            className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"><ChevronLeft size={16} /></button>
+                                        {Array.from({ length: Math.min(5, pendingTotalPages) }, (_, i) => {
+                                            let page;
+                                            if (pendingTotalPages <= 5) page = i + 1;
+                                            else if (pendingPage <= 3) page = i + 1;
+                                            else if (pendingPage >= pendingTotalPages - 2) page = pendingTotalPages - 4 + i;
+                                            else page = pendingPage - 2 + i;
+                                            return (
+                                                <button key={page} onClick={() => setPendingPage(page)}
+                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${pendingPage === page ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}`}
+                                                >{page}</button>
+                                            );
+                                        })}
+                                        <button onClick={() => setPendingPage(p => Math.min(pendingTotalPages, p + 1))} disabled={pendingPage === pendingTotalPages}
+                                            className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"><ChevronRight size={16} /></button>
+                                        <button onClick={() => setPendingPage(pendingTotalPages)} disabled={pendingPage === pendingTotalPages}
+                                            className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600">Son</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -775,7 +828,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {allTeamFiltered.map(req => (
+                                        {paginatedTeam.map(req => (
                                             <ExpandableRequestRow
                                                 key={`team-${req.type}-${req.id}`}
                                                 req={req}
@@ -795,6 +848,36 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                     </tbody>
                                 </table>
                             </div>
+                            {/* Team Pagination */}
+                            {teamTotalPages > 1 && (
+                                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50/30">
+                                    <span className="text-xs font-bold text-slate-500">
+                                        {allTeamFiltered.length} talep, sayfa {teamPage}/{teamTotalPages}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => setTeamPage(1)} disabled={teamPage === 1}
+                                            className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600">İlk</button>
+                                        <button onClick={() => setTeamPage(p => Math.max(1, p - 1))} disabled={teamPage === 1}
+                                            className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"><ChevronLeft size={16} /></button>
+                                        {Array.from({ length: Math.min(5, teamTotalPages) }, (_, i) => {
+                                            let page;
+                                            if (teamTotalPages <= 5) page = i + 1;
+                                            else if (teamPage <= 3) page = i + 1;
+                                            else if (teamPage >= teamTotalPages - 2) page = teamTotalPages - 4 + i;
+                                            else page = teamPage - 2 + i;
+                                            return (
+                                                <button key={page} onClick={() => setTeamPage(page)}
+                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${teamPage === page ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}`}
+                                                >{page}</button>
+                                            );
+                                        })}
+                                        <button onClick={() => setTeamPage(p => Math.min(teamTotalPages, p + 1))} disabled={teamPage === teamTotalPages}
+                                            className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600"><ChevronRight size={16} /></button>
+                                        <button onClick={() => setTeamPage(teamTotalPages)} disabled={teamPage === teamTotalPages}
+                                            className="px-2 py-1 text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 text-slate-600">Son</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
