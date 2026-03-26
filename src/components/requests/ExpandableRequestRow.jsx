@@ -254,27 +254,34 @@ const DurationCell = ({ req }) => {
         return <span className="text-xs text-slate-400">-</span>;
     }
 
-    // External Duty: show net hours (with lunch deducted) from duty_work_info or segments
+    // External Duty: show normal + OT breakdown from duty_work_info
     if (effectiveType === 'EXTERNAL_DUTY') {
-        // Use duty_work_info if available (actual net hours from attendance records)
         const dwi = req.duty_work_info;
         if (dwi && (dwi.total_work_minutes > 0 || dwi.total_ot_minutes > 0)) {
-            const totalNet = (dwi.total_work_minutes || 0) + (dwi.total_ot_minutes || 0);
-            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(totalNet)} <span className="text-indigo-400 font-normal">(net)</span></span>;
+            const normalMin = dwi.total_work_minutes || 0;
+            const otMin = dwi.total_ot_minutes || 0;
+            return (
+                <span className="text-xs text-indigo-700">
+                    <span className="font-bold">{formatMinutesLabel(normalMin)}</span>
+                    <span className="text-indigo-400 font-normal"> normal</span>
+                    {otMin > 0 && (
+                        <>
+                            <span className="text-slate-300 mx-1">+</span>
+                            <span className="font-bold text-amber-600">{formatMinutesLabel(otMin)}</span>
+                            <span className="text-amber-400 font-normal"> OT</span>
+                        </>
+                    )}
+                </span>
+            );
         }
-        // Fallback: segment times (gross, subtract estimated lunch per day)
+        // Fallback for pending requests: show gross from segments
         const segTimes = getSegmentTimes(req);
         if (segTimes?.totalMinutes > 0) {
-            // Rough net estimate: subtract ~60min lunch per working day for multi-day
-            const days = segTimes.segmentCount || 1;
-            const lunchPerDay = 60; // approximate lunch deduction
-            const netMin = Math.max(0, segTimes.totalMinutes - (days * lunchPerDay));
-            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(netMin)} <span className="text-indigo-400 font-normal">(tahmini net)</span></span>;
+            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(segTimes.totalMinutes)}</span>;
         }
         if (segTimes?.start && segTimes?.end) {
             return <span className="text-xs font-bold text-indigo-700">{calculateDuration(segTimes.start, segTimes.end)}</span>;
         }
-        // Last fallback
         if (req.start_time && req.end_time) {
             return <span className="text-xs font-bold text-indigo-700">{calculateDuration(req.start_time, req.end_time)}</span>;
         }
