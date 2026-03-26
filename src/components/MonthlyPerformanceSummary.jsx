@@ -21,6 +21,9 @@ const EffortDetailPopover = ({ stats }) => {
         { label: 'Normal Çalışma', value: stats.completedDisplay },
         { label: 'Onaylı OT', value: stats.overtimeDisplay },
     ];
+    if (stats._dutySec > 0) {
+        rows.push({ label: 'Dış Görev', value: stats.dutyDisplay, color: 'text-indigo-600' });
+    }
     if (stats._leaveSec > 0) {
         rows.push({ label: 'İzin', value: stats.leaveDisplay, color: 'text-cyan-600' });
     }
@@ -94,10 +97,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             // Fix: Backend sends 'total_work_seconds', not 'net_work_seconds'
             const netWorkSec = periodSummary.total_work_seconds || periodSummary.net_work_seconds || 0; // Normal + OT
 
-            // Leave & Health Report credited seconds
+            // Leave, Health Report & Duty credited seconds
             const leaveSec = periodSummary.leave_seconds || 0;
             const healthReportSec = periodSummary.health_report_seconds || 0;
-            const creditedSec = leaveSec + healthReportSec; // Total credited (İzin + Rapor)
+            const dutySec = periodSummary.duty_seconds || 0;
+            const potentialOtFromBackend = periodSummary.potential_ot_seconds || 0;
+            const creditedSec = leaveSec + healthReportSec + dutySec; // Total credited (İzin + Rapor + Görev)
 
             // True Balance: cari ay için past_target_balance kullan (gelecek günler dahil değil)
             const netBalanceReal = periodSummary.past_target_balance_seconds ?? periodSummary.net_balance_seconds ?? (netWorkSec - targetSec);
@@ -108,16 +113,17 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             // === SHARED BASE PERCENTAGES (used by BOTH bars for pixel-perfect alignment) ===
             const scale = targetSec > 0 ? targetSec : 1;
             const pBase = (realizedSec / scale) * 100;
+            const pBaseDuty = (dutySec / scale) * 100;
             const pBaseLeave = (leaveSec / scale) * 100;
             const pBaseReport = (healthReportSec / scale) * 100;
 
             // Bar 1 tail: eksik + kalan (fills remaining space to 100%)
             const pMissing = (missingSec / scale) * 100;
-            const kalanSec = Math.max(0, targetSec - realizedSec - leaveSec - healthReportSec - missingSec);
+            const kalanSec = Math.max(0, targetSec - realizedSec - dutySec - leaveSec - healthReportSec - missingSec);
             const pKalan = (kalanSec / scale) * 100;
 
-            // Bar 2: Total Progress (Normal + OT + Leave + Report)
-            // FIX: netWorkSec (total_work_seconds) already includes leave + HR — NO double counting
+            // Bar 2: Total Progress (Normal + Duty + OT + Leave + Report)
+            // FIX: netWorkSec (total_work_seconds) already includes duty + leave + HR — NO double counting
             const totalEforSec = netWorkSec;
             const surplusSec = Math.max(0, totalEforSec - targetSec);
             const isSurplus = surplusSec > 0;
@@ -125,15 +131,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
             // Bar 2 tail: OT (after shared base segments)
             const pOT = (overtimeSec / scale) * 100;
-            const bar2Sum = pBase + pBaseLeave + pBaseReport + pOT;
-            const bar2OverflowSec = Math.max(0, totalEforSec - targetSec);
+            const pPotentialOT = (potentialOtFromBackend / scale) * 100;
 
             // Legacy compat aliases
             const pCompleted = pBase;
+            const pDutyBar1 = pBaseDuty;
             const pLeaveBar1 = pBaseLeave;
             const pReportBar1 = pBaseReport;
             const pRemaining = pKalan;
             const pNormal = pBase;
+            const pDuty = pBaseDuty;
             const pLeave = pBaseLeave;
             const pHealthReport = pBaseReport;
             const pOtApproved = pOT;
@@ -161,9 +168,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 // Raw seconds for calculations
                 _targetSec: targetSec,
                 _realizedSec: realizedSec,
+                _dutySec: dutySec,
                 _missingSec: missingSec,
                 _remainingSec: remainingSec,
                 _overtimeSec: overtimeSec,
+                _potentialOtSec: potentialOtFromBackend,
                 _leaveSec: leaveSec,
                 _hrSec: healthReportSec,
                 _otPendingSec: otPendingSec,
@@ -172,9 +181,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 // Display formatted (saniye → Xsa Ydk)
                 targetDisplay: fmtSec(targetSec),
                 completedDisplay: fmtSec(realizedSec),
+                dutyDisplay: fmtSec(dutySec),
                 missingDisplay: fmtSec(missingSec),
                 remainingDisplay: fmtSec(remainingSec),
                 overtimeDisplay: fmtSec(overtimeSec),
+                potentialOtDisplay: fmtSec(potentialOtFromBackend),
                 netWorkDisplay: fmtSec(netWorkSec),
                 netBalanceDisplay: fmtSec(netBalanceReal),
                 leaveDisplay: fmtSec(leaveSec),
@@ -184,6 +195,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 // Legacy compat (bar chart still needs numeric)
                 targetHours: (targetSec / 3600).toFixed(1),
                 completedHours: (realizedSec / 3600).toFixed(1),
+                dutyHours: (dutySec / 3600).toFixed(1),
                 missingHours: (missingSec / 3600).toFixed(1),
                 remainingHours: (remainingSec / 3600).toFixed(1),
                 overtimeHours: (overtimeSec / 3600).toFixed(1),
@@ -197,11 +209,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 lateMinutes: Math.floor(lateSec / 60),
 
                 pCompleted,
+                pDutyBar1,
                 pLeaveBar1,
                 pReportBar1,
                 pMissing,
                 pRemaining,
-                pTotal, pNormal, pOtApproved, pLeave, pHealthReport, // For Bar 2 stacked segments
+                pTotal, pNormal, pDuty, pOtApproved, pLeave, pHealthReport, pPotentialOT, // For Bar 2 stacked segments
                 normalHours: (realizedSec / 3600).toFixed(1),
                 lateCount,
 
@@ -232,19 +245,22 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 pPending: targetSec > 0 ? Math.min(100 - pTotal, (otPendingSec / targetSec) * 100) : 0,
                 pPotential: targetSec > 0 ? Math.min(100 - Math.min(100, ((totalEforSec + otPendingSec) / targetSec) * 100), (otPotentialSec / targetSec) * 100) : 0,
 
-                // Past target
-                pastTargetSec: realizedSec + missingSec + leaveSec + healthReportSec,
-                pastTargetDisplay: fmtSec(realizedSec + missingSec + leaveSec + healthReportSec),
-                pastTargetHours: ((realizedSec + missingSec + leaveSec + healthReportSec) / 3600).toFixed(1),
-                adjustedRemainingHours: (Math.max(0, targetSec - realizedSec - leaveSec - healthReportSec - missingSec) / 3600).toFixed(1),
+                // Past target (includes duty)
+                pastTargetSec: realizedSec + dutySec + missingSec + leaveSec + healthReportSec,
+                pastTargetDisplay: fmtSec(realizedSec + dutySec + missingSec + leaveSec + healthReportSec),
+                pastTargetHours: ((realizedSec + dutySec + missingSec + leaveSec + healthReportSec) / 3600).toFixed(1),
+                adjustedRemainingHours: (Math.max(0, targetSec - realizedSec - dutySec - leaveSec - healthReportSec - missingSec) / 3600).toFixed(1),
 
-                // Indicator position: past_target (including leave+report credits) as % of full month target
-                indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + missingSec + leaveSec + healthReportSec) / targetSec) * 100) : 0,
+                // Indicator position: past_target (including duty+leave+report credits) as % of full month target
+                indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + dutySec + missingSec + leaveSec + healthReportSec) / targetSec) * 100) : 0,
 
                 // Net balance vs past_target (total effort including credits vs expected)
-                // totalEffort = normal + OT + leave + report
-                // pastTarget = normal + missing + leave + report
-                // netBalance = OT - missing (leave+report cancel out)
+                // Net Eksik = hedef - (normal + duty + izin + rapor)
+                // OT ile Net = Net Eksik + onaylı OT
+                // Potansiyel ile = OT ile Net + potansiyel OT
+                _netDeficitSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec),
+                _netWithOtSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec) - overtimeSec,
+                _netWithPotentialSec: targetSec - (realizedSec + dutySec + leaveSec + healthReportSec) - overtimeSec - potentialOtFromBackend,
                 netBalanceForLabelDisplay: fmtSec(Math.abs(overtimeSec - missingSec)),
                 netBalanceForLabelHours: (Math.abs(overtimeSec - missingSec) / 3600).toFixed(1),
                 isNetSurplus: overtimeSec - missingSec > 0,
@@ -258,7 +274,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 fiscalMonth: periodSummary.fiscal_month || getIstanbulMonth(),
 
                 // Projected work display
-                projectedWorkDisplay: fmtSec(netWorkSec + otPendingSec + otPotentialSec),
+                projectedWorkDisplay: fmtSec(netWorkSec + otPendingSec + potentialOtFromBackend),
 
                 cumulative: periodSummary.cumulative ? {
                     carryOver: periodSummary.cumulative.carry_over_seconds,
@@ -388,207 +404,163 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
             </div>
 
             {/* DUAL BAR LAYOUT */}
-            <div className="bg-white p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 relative">
+            <div className="bg-white p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200">
 
-                {/* Shared Legend */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-6 text-[10px] font-bold">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-blue-500 to-indigo-600 shrink-0"></span><span className="text-slate-500">Tamamlanan</span></span>
-                    {parseFloat(stats.leaveHours) > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-cyan-400 to-cyan-600 shrink-0"></span><span className="text-slate-500">İzin</span></span>}
-                    {parseFloat(stats.healthReportHours) > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-orange-400 to-orange-600 shrink-0"></span><span className="text-slate-500">Rapor</span></span>}
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: 'repeating-linear-gradient(45deg, #fda4af, #fda4af 1.5px, #f43f5e 1.5px, #f43f5e 3px)' }}></span><span className="text-slate-500">Eksik</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 shrink-0"></span><span className="text-slate-500">Kalan</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-emerald-400 to-emerald-600 shrink-0"></span><span className="text-slate-500">Onaylı Ek Mesai</span></span>
-                    {parseFloat(stats.otPotentialHours) > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 1.5px, #94a3b8 1.5px, #94a3b8 3px)' }}></span><span className="text-slate-500">Potansiyel</span></span>}
-                </div>
-
-                {/* Dual Bar Container — pixel-perfect aligned */}
+                {/* Dual Bar Container */}
                 <div className="relative">
                     {/* Target indicator spanning both bars */}
                     {parseFloat(stats.targetHours) > 0 && (
-                        <Popover
-                            content={<EffortDetailPopover stats={stats} />}
-                            trigger="click"
-                            placement="bottom"
-                            zIndex={1050}
-                        >
-                            <div
-                                className="absolute z-30 cursor-pointer group"
-                                style={{
-                                    left: `calc(${stats.indicatorLeft}% - 8px)`,
-                                    top: '0px',
-                                    bottom: '0px',
-                                    width: '16px'
-                                }}
-                            >
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                                    <svg width="10" height="6" viewBox="0 0 10 6" className="text-slate-400 group-hover:text-indigo-500 transition-colors drop-shadow-sm">
-                                        <polygon points="5,6 0,0 10,0" fill="currentColor" />
-                                    </svg>
+                        <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottom" zIndex={1050}>
+                            <div className="absolute z-30 cursor-pointer group" style={{ left: `calc(${stats.indicatorLeft}% - 8px)`, top: 0, bottom: 0, width: '16px' }}>
+                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
+                                    <svg width="10" height="6" viewBox="0 0 10 6" className="text-slate-400 group-hover:text-indigo-500 transition-colors"><polygon points="5,6 0,0 10,0" fill="currentColor" /></svg>
                                 </div>
-                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l-[1.5px] border-dashed border-slate-300/60 group-hover:border-indigo-400/80 transition-colors" />
+                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l-[1.5px] border-dashed border-slate-300/50 group-hover:border-indigo-400/80 transition-colors" />
                             </div>
                         </Popover>
                     )}
 
-                    {/* Bar 1: Normal Mesai Dağılımı */}
-                    <div className="mb-1.5">
-                        <div className="flex justify-between items-center mb-2">
+                    {/* ─── BAR 1: NORMAL MESAİ ─── */}
+                    {/* Her iki bar aynı scale: target = 100%. Segmentler birebir hizalı. */}
+                    <div>
+                        <div className="flex justify-between items-baseline mb-1.5">
                             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Normal Mesai</span>
-                            <span className="text-[10px] font-bold text-slate-500 tabular-nums">{stats.targetDisplay}</span>
+                            <span className="text-[10px] font-medium text-slate-400 tabular-nums">Hedef: {stats.targetDisplay}</span>
                         </div>
-                        <div className="h-7 w-full bg-slate-100 rounded-lg flex overflow-hidden shadow-inner border border-slate-200/60">
-                            {/* Tamamlanan — Mavi */}
-                            <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}>
-                                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pCompleted}%` }}>
-                                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                </div>
-                            </Tooltip>
-                            {/* İzin — Cyan */}
+                        <div className="h-8 w-full bg-slate-100 rounded-lg flex overflow-hidden ring-1 ring-slate-200/60">
+                            {stats.pCompleted > 0 && (
+                                <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}>
+                                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-700" style={{ width: `${stats.pCompleted}%` }} />
+                                </Tooltip>
+                            )}
+                            {(stats.pDutyBar1 || 0) > 0 && (
+                                <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}>
+                                    <div className="bg-gradient-to-r from-violet-400 to-violet-600 h-full transition-all duration-700" style={{ width: `${stats.pDutyBar1}%` }} />
+                                </Tooltip>
+                            )}
                             {stats.pLeaveBar1 > 0 && (
                                 <Tooltip title={`İzin: ${stats.leaveDisplay}`}>
-                                    <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pLeaveBar1}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
+                                    <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-700" style={{ width: `${stats.pLeaveBar1}%` }} />
                                 </Tooltip>
                             )}
-                            {/* Rapor — Turuncu */}
                             {stats.pReportBar1 > 0 && (
-                                <Tooltip title={`Sağlık Raporu: ${stats.healthReportDisplay}`}>
-                                    <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pReportBar1}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
+                                <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}>
+                                    <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-700" style={{ width: `${stats.pReportBar1}%` }} />
                                 </Tooltip>
                             )}
-                            {/* Eksik — Kırmızı çizgili */}
                             {stats.pMissing > 0 && (
                                 <Tooltip title={`Eksik: ${stats.missingDisplay}`}>
-                                    <div className="h-full transition-all duration-700 relative" style={{ width: `${stats.pMissing}%`, background: 'repeating-linear-gradient(45deg, #fda4af, #fda4af 2px, #f43f5e 2px, #f43f5e 4px)' }} />
+                                    <div className="h-full transition-all duration-700" style={{ width: `${stats.pMissing}%`, background: 'repeating-linear-gradient(45deg, #fda4af, #fda4af 2px, #f43f5e 2px, #f43f5e 4px)' }} />
                                 </Tooltip>
                             )}
-                            {/* Kalan — Gri */}
                             {stats.pRemaining > 0.1 && (
-                                <Tooltip title={`Kalan: ${stats.remainingDisplay}`}>
-                                    <div className="bg-slate-200/80 h-full transition-all duration-700" style={{ width: `${stats.pRemaining}%` }} />
+                                <Tooltip title={`Kalan: ${stats.remainingDisplay || fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec))}`}>
+                                    <div className="bg-slate-200/70 h-full transition-all duration-700" style={{ width: `${stats.pRemaining}%` }} />
                                 </Tooltip>
                             )}
                         </div>
-                        {/* Labels */}
-                        <div className="flex items-center justify-between mt-1.5 px-0.5">
-                            <div className="flex items-center gap-x-3 text-[10px] font-bold flex-wrap">
-                                <span className="text-blue-700 tabular-nums">{stats.completedDisplay}</span>
-                                {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-600 tabular-nums">+{stats.leaveDisplay}</span>}
-                                {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-600 tabular-nums">+{stats.healthReportDisplay}</span>}
+                        <div className="flex justify-between mt-1 text-[10px] font-bold tabular-nums px-0.5">
+                            <div className="flex gap-x-2.5 flex-wrap">
+                                <span className="text-blue-700">{stats.completedDisplay}</span>
+                                {parseFloat(stats.dutyHours || 0) > 0 && <span className="text-violet-600">+{stats.dutyDisplay}</span>}
+                                {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-600">+{stats.leaveDisplay}</span>}
+                                {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-600">+{stats.healthReportDisplay}</span>}
                             </div>
-                            <div className="flex items-center gap-x-3 text-[10px] font-bold">
-                                {parseFloat(stats.missingHours) > 0 && <span className="text-rose-600 tabular-nums">-{stats.missingDisplay}</span>}
-                                {parseFloat(stats.adjustedRemainingHours) > 0 && <span className="text-slate-400 tabular-nums">{fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - stats._leaveSec - stats._hrSec - stats._missingSec))} kalan</span>}
+                            <div className="flex gap-x-2.5">
+                                {parseFloat(stats.missingHours) > 0 && <span className="text-rose-500">-{stats.missingDisplay} eksik</span>}
+                                {parseFloat(stats.adjustedRemainingHours || 0) > 0 && <span className="text-slate-400">{fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec))} kalan</span>}
                             </div>
                         </div>
                     </div>
 
-                    {/* Bar 2: Toplam Efor (includes OT) */}
-                    <div className="mt-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                                Toplam Efor
-                                <Tooltip title="Normal Mesai + Ek Mesai + İzin + Rapor. Eksik dahil değildir — net eksik sonraki aya aktarılır." placement="top">
-                                    <Info className="w-3 h-3 text-slate-300 cursor-help" />
-                                </Tooltip>
-                            </span>
+                    {/* ─── BAR 2: TOPLAM EFOR ─── */}
+                    {/* Aynı scale (target=100%). Base segmentler Bar 1 ile birebir aynı genişlik. */}
+                    {/* Boş kalan kısım "hedefe kalan" olarak gösterilir. Taşarsa overflow badge. */}
+                    <div className="mt-3">
+                        <div className="flex justify-between items-baseline mb-1.5">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Toplam Efor</span>
                             <span className="text-[10px] font-black text-slate-600 tabular-nums">{stats.displayTotalDisplay} / {stats.targetDisplay}</span>
                         </div>
-                        <div className="h-7 w-full bg-slate-100 rounded-lg flex overflow-hidden shadow-inner border border-slate-200/60">
-                            {/* Normal — Mavi (birebir Bar 1 ile aynı genişlik) */}
-                            {stats.pNormal > 0 && (
-                                <Tooltip title={`Normal: ${stats.completedDisplay}`}>
-                                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pNormal}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
-                                </Tooltip>
-                            )}
-                            {/* İzin — Cyan (birebir Bar 1) */}
-                            {stats.pLeave > 0 && (
-                                <Tooltip title={`İzin: ${stats.leaveDisplay}`}>
-                                    <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pLeave}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
-                                </Tooltip>
-                            )}
-                            {/* Rapor — Turuncu (birebir Bar 1) */}
-                            {stats.pHealthReport > 0 && (
-                                <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}>
-                                    <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-700 relative group" style={{ width: `${stats.pHealthReport}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
-                                </Tooltip>
-                            )}
-                            {/* Onaylı Ek Mesai — Yeşil */}
-                            {stats.pOtApproved > 0 && (
-                                <Tooltip title={`Onaylı Ek Mesai: ${stats.overtimeDisplay}`}>
-                                    <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-700 relative group" style={{ width: `${Math.min(stats.pOtApproved, 100 - stats.pNormal - stats.pLeave - stats.pHealthReport)}%` }}>
-                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    </div>
-                                </Tooltip>
-                            )}
-                            {/* Potansiyel OT — Çizgili gri */}
-                            {stats.pPotential > 0 && (
-                                <div className="h-full transition-all duration-700 opacity-50"
-                                    style={{ width: `${stats.pPotential}%`, background: 'repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 2px, #94a3b8 2px, #94a3b8 4px)' }} />
-                            )}
-                        </div>
-                        {/* Labels + badges */}
-                        <div className="flex items-center justify-between mt-1.5 px-0.5">
-                            <div className="flex items-center gap-x-3 text-[10px] font-bold flex-wrap">
-                                <span className="text-blue-700 tabular-nums">{stats.completedDisplay}</span>
-                                {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-600 tabular-nums">+{stats.leaveDisplay}</span>}
-                                {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-600 tabular-nums">+{stats.healthReportDisplay}</span>}
-                                {parseFloat(stats.overtimeHours) > 0 && <span className="text-emerald-600 tabular-nums">+{stats.overtimeDisplay}</span>}
-                                {parseFloat(stats.otPotentialHours) > 0 && <span className="text-slate-400 tabular-nums">+{stats.otPotentialDisplay} pot.</span>}
+                        {(() => {
+                            // Tüm segmentler target scale ile hesaplanır
+                            const sc = stats._targetSec || 1;
+                            const segs = [
+                                { sec: stats._realizedSec, color: 'from-blue-500 to-indigo-600', label: `Normal: ${stats.completedDisplay}` },
+                                { sec: stats._dutySec || 0, color: 'from-violet-400 to-violet-600', label: `Dış Görev: ${stats.dutyDisplay || '0 saat'}` },
+                                { sec: stats._leaveSec, color: 'from-cyan-400 to-cyan-600', label: `İzin: ${stats.leaveDisplay}` },
+                                { sec: stats._hrSec, color: 'from-orange-400 to-orange-600', label: `Rapor: ${stats.healthReportDisplay}` },
+                                { sec: stats._overtimeSec, color: 'from-emerald-400 to-emerald-600', label: `Onaylı OT: ${stats.overtimeDisplay}` },
+                            ].filter(s => s.sec > 0);
+                            const filledSec = segs.reduce((a, s) => a + s.sec, 0);
+                            const potSec = stats._potentialOtSec || 0;
+                            const totalWithPot = filledSec + potSec;
+                            const overflowSec = Math.max(0, filledSec - sc);
+                            const gapSec = Math.max(0, sc - filledSec - potSec);
+                            // Tüm segmentler target bazlı: seg/target * 100
+                            // Taşma durumunda: barı max(target,total) ile ölçekle
+                            const barScale = Math.max(sc, totalWithPot) || 1;
+                            const p = (v) => Math.max(0, (v / barScale) * 100);
+                            return (
+                                <div className="h-8 w-full bg-slate-100 rounded-lg flex overflow-hidden ring-1 ring-slate-200/60 relative">
+                                    {segs.map((s, i) => (
+                                        <Tooltip key={i} title={s.label}>
+                                            <div className={`bg-gradient-to-r ${s.color} h-full transition-all duration-700`} style={{ width: `${p(s.sec)}%` }} />
+                                        </Tooltip>
+                                    ))}
+                                    {potSec > 0 && (
+                                        <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}>
+                                            <div className="h-full transition-all duration-700 opacity-60" style={{ width: `${p(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} />
+                                        </Tooltip>
+                                    )}
+                                    {/* Hedefe kalan boşluk — noktalı */}
+                                    {gapSec > 0 && (
+                                        <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}>
+                                            <div className="h-full transition-all duration-700" style={{ width: `${p(gapSec)}%`, background: 'repeating-linear-gradient(90deg, transparent, transparent 3px, #e2e8f0 3px, #e2e8f0 6px)' }} />
+                                        </Tooltip>
+                                    )}
+                                    {/* Hedef çizgisi (taştığında) */}
+                                    {overflowSec > 0 && (
+                                        <div className="absolute top-0 bottom-0 z-10 flex items-center" style={{ left: `${p(sc)}%` }}>
+                                            <div className="h-full border-l-2 border-dashed border-emerald-600/50" />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                        <div className="flex justify-between mt-1 text-[10px] font-bold tabular-nums px-0.5">
+                            <div className="flex gap-x-2.5 flex-wrap">
+                                <span className="text-blue-700">{stats.completedDisplay}</span>
+                                {parseFloat(stats.dutyHours || 0) > 0 && <span className="text-violet-600">+{stats.dutyDisplay}</span>}
+                                {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-600">+{stats.leaveDisplay}</span>}
+                                {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-600">+{stats.healthReportDisplay}</span>}
+                                {parseFloat(stats.overtimeHours) > 0 && <span className="text-emerald-600">+{stats.overtimeDisplay} OT</span>}
+                                {(stats._potentialOtSec || 0) > 0 && <span className="text-slate-400">+{stats.potentialOtDisplay || fmtSec(stats._potentialOtSec)} pot.</span>}
                             </div>
+                            {stats.isSurplus && <span className="text-emerald-600 font-black">+{stats.surplusDisplay} fazla</span>}
                         </div>
                     </div>
                 </div>
 
-                {/* Carry-over badge — between bars and OT breakdown */}
-                <div className="flex flex-wrap items-center justify-between gap-2 mt-5 pt-5 border-t border-slate-100">
-                    {/* Overflow badge (HEDEF AŞILDI) */}
-                    {stats.isSurplus ? (
-                        <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-                                <TrendingUp className="w-3.5 h-3.5" />
-                                Hedef Aşıldı: +{stats.surplusDisplay}
-                            </span>
-                            <Tooltip title="Ek mesai hedefin üzerine çıktı — fazlası sonraki aya aktarılabilir">
-                                <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
+                {/* ─── NET DURUM KARTLARI ─── */}
+                <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-100">
+                    {[
+                        { label: 'Net Eksik', sec: stats._netDeficitSec, info: 'Eksik mesai toplamı' },
+                        { label: 'OT ile Net', sec: stats._netWithOtSec, info: 'OT eklendikten sonra' },
+                        { label: 'Potansiyel ile', sec: stats._netWithPotentialSec, info: 'Potansiyel dahil net' },
+                    ].map((card) => {
+                        const v = card.sec ?? 0;
+                        const pos = v <= 0;
+                        return (
+                            <Tooltip key={card.label} title={card.info}>
+                                <div className={`rounded-xl px-3 py-2.5 border cursor-help transition-shadow hover:shadow-md ${pos ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
+                                    <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">{card.label}</div>
+                                    <div className={`text-sm font-black tabular-nums ${pos ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {pos ? '+' : '-'}{fmtSec(Math.abs(v))}
+                                    </div>
+                                </div>
                             </Tooltip>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            {!stats.isNetNeutral && (
-                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1.5 rounded-lg border ${
-                                    stats.isNetSurplus
-                                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                        : 'text-rose-700 bg-rose-50 border-rose-200'
-                                }`}>
-                                    {stats.isNetSurplus
-                                        ? <><TrendingUp className="w-3.5 h-3.5" /> Net Fazla: +{stats.netBalanceForLabelDisplay}</>
-                                        : <><AlertTriangle className="w-3.5 h-3.5" /> Net Eksik: -{stats.netBalanceForLabelDisplay}</>
-                                    }
-                                </span>
-                            )}
-                            {!stats.isNetSurplus && !stats.isNetNeutral && (
-                                <Tooltip title="Ek mesainin karşılayamadığı eksik — sonraki aya aktarılır">
-                                    <span className="text-[9px] text-slate-400 font-medium">sonraki aya aktarılır</span>
-                                </Tooltip>
-                            )}
-                        </div>
-                    )}
-                    {/* Potansiyel dahil projection */}
-                    {(stats._otPendingSec > 0 || stats._otPotentialSec > 0) && (
-                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50/80 px-2.5 py-1 rounded-lg border border-indigo-100 whitespace-nowrap">
-                            Potansiyel Dahil: {stats.projectedWorkDisplay}
-                        </span>
-                    )}
+                        );
+                    })}
                 </div>
 
                 {/* 3. OT Breakdown Bar — always visible */}
@@ -984,7 +956,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             <tbody className="divide-y divide-slate-100">
                                                 {filteredBreakdown
                                                     .slice(monthScrollIndex, monthScrollIndex + 3)
-                                                    .map((m, idx) => {
+                                                    .map((m) => {
                                                         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
                                                         const currentFiscalMonth = stats.cumulative.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth();
                                                         const isPast = m.month < currentFiscalMonth;
