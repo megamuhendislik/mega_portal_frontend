@@ -416,6 +416,39 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
     );
 }
 
+/* ═══════════════════════════════════════════════════
+   HAFTALIK OT LIMIT UYARISI
+   ═══════════════════════════════════════════════════ */
+function LimitWarningSection({ employeeRanking, onPersonClick }) {
+    const limitWarnings = useMemo(() => {
+        if (!employeeRanking?.length) return [];
+        return employeeRanking.filter(e => (e.weekly_limit_pct ?? 0) > 80 && (e.weekly_limit_pct ?? 0) < 100);
+    }, [employeeRanking]);
+
+    if (!limitWarnings.length) return null;
+
+    return (
+        <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+            <div className="flex items-center gap-1.5 mb-2">
+                <AlertTriangle size={14} className="text-red-500" />
+                <span className="text-xs font-bold text-red-700">Haftalık OT Limit Uyarısı</span>
+                <span className="text-[10px] text-red-400 ml-1">({limitWarnings.length} çalışan %80+ kullanım)</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+                {limitWarnings.map(emp => (
+                    <span
+                        key={emp.employee_id}
+                        className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-bold cursor-pointer hover:bg-red-200 transition-colors"
+                        onClick={() => onPersonClick?.(emp.employee_id)}
+                    >
+                        {emp.name} (%{Math.round(emp.weekly_limit_pct)})
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
@@ -495,20 +528,20 @@ export default function OvertimeSection({ onPersonClick }) {
                 <WeeklyHeatmap data={data.weekly_heatmap} />
             </div>
 
-            {/* ─── Source distribution mini cards ─── */}
+            {/* ─── Kaynak Dağılımı mini cards ─── */}
             {data.source_distribution && (
-                <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-indigo-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-indigo-700">{data.source_distribution?.intended?.pct ?? 0}%</p>
+                <div className="flex gap-2">
+                    <div className="flex-1 bg-indigo-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-slate-500">Planlı</p>
+                        <p className="text-sm font-bold text-indigo-700">%{Math.round(data.source_distribution?.intended?.pct || 0)}</p>
                     </div>
-                    <div className="bg-amber-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-amber-700">{data.source_distribution?.potential?.pct ?? 0}%</p>
+                    <div className="flex-1 bg-amber-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-slate-500">Algılanan</p>
+                        <p className="text-sm font-bold text-amber-700">%{Math.round(data.source_distribution?.potential?.pct || 0)}</p>
                     </div>
-                    <div className="bg-violet-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-violet-700">{data.source_distribution?.manual?.pct ?? 0}%</p>
+                    <div className="flex-1 bg-violet-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-slate-500">Manuel</p>
+                        <p className="text-sm font-bold text-violet-700">%{Math.round(data.source_distribution?.manual?.pct || 0)}</p>
                     </div>
                 </div>
             )}
@@ -518,6 +551,12 @@ export default function OvertimeSection({ onPersonClick }) {
                 data={data.employee_ranking}
                 onPersonClick={onPersonClick}
                 selectedEmployees={selectedEmployees}
+            />
+
+            {/* ─── Haftalık OT Limit Uyarısı ─── */}
+            <LimitWarningSection
+                employeeRanking={data.employee_ranking}
+                onPersonClick={onPersonClick}
             />
         </div>
     );

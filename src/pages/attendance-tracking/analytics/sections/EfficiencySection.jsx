@@ -186,6 +186,7 @@ export default function EfficiencySection({ onPersonClick }) {
     const [teamOverview, setTeamOverview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedTier, setSelectedTier] = useState(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -339,6 +340,50 @@ export default function EfficiencySection({ onPersonClick }) {
         };
     }, [workHours?.daily_team_avg]);
 
+    // ─── Weekly pattern from daily_team_avg ───
+    const weeklyPattern = useMemo(() => {
+        if (!workHours?.daily_team_avg?.length) return [0, 0, 0, 0, 0];
+        const days = [0, 0, 0, 0, 0]; // Mon-Fri totals
+        const counts = [0, 0, 0, 0, 0];
+        workHours.daily_team_avg.forEach(d => {
+            const dow = new Date(d.date + 'T12:00:00').getDay(); // 0=Sun
+            const idx = dow === 0 ? -1 : dow - 1; // Mon=0, Fri=4
+            if (idx >= 0 && idx <= 4) { days[idx] += (d.avg_hours || 0); counts[idx]++; }
+        });
+        return days.map((total, i) => counts[i] ? total / counts[i] : 0);
+    }, [workHours]);
+
+    // ─── Donut click → filter bar chart to selected tier ───
+    const filteredBarData = useMemo(() => {
+        if (!selectedTier || !efficiencyBarData.length) return efficiencyBarData;
+        const tierRanges = {
+            excellent: [95, Infinity],
+            good: [80, 95],
+            average: [60, 80],
+            low: [0, 60],
+        };
+        const range = tierRanges[selectedTier];
+        if (!range) return efficiencyBarData;
+        // Re-derive from ranking instead of filtered bar data to get all employees in tier
+        const ranking = workHours?.efficiency_ranking || [];
+        let filtered = ranking.filter(e => {
+            const pct = e.efficiency_pct ?? 0;
+            return pct >= range[0] && (range[1] === Infinity ? true : pct < range[1]);
+        });
+        if (hasSelectedEmployees) {
+            filtered = filtered.filter(e => selectedEmployees.includes(e.employee_id));
+        }
+        filtered.sort((a, b) => (b.efficiency_pct ?? 0) - (a.efficiency_pct ?? 0));
+        return filtered.slice(0, 15).map(e => ({
+            name: (e.name || '').length > 12 ? (e.name || '').substring(0, 12) + '...' : (e.name || ''),
+            fullName: e.name,
+            efficiency_pct: e.efficiency_pct ?? 0,
+            worked_hours: e.worked_hours ?? 0,
+            target_hours: e.target_hours ?? 0,
+            employee_id: e.employee_id,
+        }));
+    }, [selectedTier, efficiencyBarData, workHours?.efficiency_ranking, hasSelectedEmployees, selectedEmployees]);
+
     // ─── Loading ───
     if (loading) {
         return (
@@ -476,12 +521,20 @@ export default function EfficiencySection({ onPersonClick }) {
                             <Users size={14} />
                         </div>
                         <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Verimlilik</h4>
+                        {selectedTier && (
+                            <button
+                                onClick={() => setSelectedTier(null)}
+                                className="ml-auto text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-full transition-colors"
+                            >
+                                Tümünü Göster
+                            </button>
+                        )}
                     </div>
-                    {efficiencyBarData.length > 0 ? (
+                    {filteredBarData.length > 0 ? (
                         <div className="overflow-x-auto -mx-2">
                             <ResponsiveContainer width="100%" height={400}>
                                 <BarChart
-                                    data={efficiencyBarData}
+                                    data={filteredBarData}
                                     layout="vertical"
                                     margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
                                 >
@@ -534,7 +587,7 @@ export default function EfficiencySection({ onPersonClick }) {
                                             }
                                         }}
                                     >
-                                        {efficiencyBarData.map((entry, i) => (
+                                        {filteredBarData.map((entry, i) => (
                                             <Cell key={`cell-${i}`} fill={getBarColor(entry.efficiency_pct)} />
                                         ))}
                                     </Bar>
@@ -542,8 +595,18 @@ export default function EfficiencySection({ onPersonClick }) {
                             </ResponsiveContainer>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center h-[400px] text-slate-300">
-                            <p className="text-xs">Çalışan verisi bulunamadı</p>
+                        <div className="flex flex-col items-center justify-center h-[400px] text-slate-300 gap-2">
+                            <p className="text-xs">
+                                {selectedTier ? 'Bu kategoride çalışan bulunamadı' : 'Çalışan verisi bulunamadı'}
+                            </p>
+                            {selectedTier && (
+                                <button
+                                    onClick={() => setSelectedTier(null)}
+                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full"
+                                >
+                                    Tümünü Göster
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -571,9 +634,22 @@ export default function EfficiencySection({ onPersonClick }) {
                                     outerRadius={100}
                                     paddingAngle={3}
                                     label={false}
+                                    cursor="pointer"
+                                    onClick={(_, index) => {
+                                        const segment = donutData[index];
+                                        if (segment) {
+                                            setSelectedTier(prev => prev === segment.key ? null : segment.key);
+                                        }
+                                    }}
                                 >
                                     {donutData.map((entry, i) => (
-                                        <Cell key={`donut-${i}`} fill={entry.color} />
+                                        <Cell
+                                            key={`donut-${i}`}
+                                            fill={entry.color}
+                                            stroke={selectedTier === entry.key ? '#1e293b' : 'transparent'}
+                                            strokeWidth={selectedTier === entry.key ? 3 : 0}
+                                            opacity={selectedTier && selectedTier !== entry.key ? 0.4 : 1}
+                                        />
                                     ))}
                                 </Pie>
                                 <Tooltip content={<DonutTooltip employeesByGroup={employeesByGroup} />} />
@@ -611,6 +687,42 @@ export default function EfficiencySection({ onPersonClick }) {
                                 <span className="font-bold text-slate-700">{worstDay}</span>
                             </div>
                         </div>
+
+                        {/* Haftalık Verimlilik Deseni */}
+                        <div className="mt-4 pt-3 border-t border-slate-100">
+                            <p className="text-[10px] text-slate-400 font-medium mb-2">Haftalık Verimlilik Deseni</p>
+                            <div className="flex gap-1">
+                                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum'].map((day, i) => {
+                                    const avgHours = weeklyPattern[i] || 0;
+                                    const pct = Math.min(100, (avgHours / 9) * 100);
+                                    const color = avgHours >= 8 ? '#10b981' : avgHours >= 6 ? '#f59e0b' : '#ef4444';
+                                    return (
+                                        <div key={day} className="flex-1 text-center">
+                                            <div className="h-8 rounded bg-slate-100 relative overflow-hidden">
+                                                <div className="absolute bottom-0 w-full rounded transition-all" style={{ height: `${pct}%`, backgroundColor: color }} />
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 mt-0.5 block">{day}</span>
+                                            <span className="text-[9px] font-bold text-slate-600">{avgHours.toFixed(1)}s</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Selected tier indicator */}
+                        {selectedTier && (
+                            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-[10px] text-slate-500">
+                                    Seçili: <span className="font-bold text-slate-700">{donutData.find(d => d.key === selectedTier)?.name || selectedTier}</span>
+                                </span>
+                                <button
+                                    onClick={() => setSelectedTier(null)}
+                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
+                                >
+                                    Temizle
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center justify-center h-[250px] text-slate-300">

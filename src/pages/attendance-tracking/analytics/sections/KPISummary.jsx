@@ -1,11 +1,44 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     BarChart3, Clock, CheckCircle, AlertTriangle,
-    TrendingUp, TrendingDown, Timer, AlarmClock
+    TrendingUp, TrendingDown, Timer, AlarmClock, HeartPulse
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+
+/* ===================================================================
+   MINI SPARKLINE (lightweight SVG — no Recharts dependency)
+   =================================================================== */
+function MiniSparkline({ data, color = '#6366f1', height = 20, width = 60 }) {
+    if (!data || data.length < 2) return null;
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    const points = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
+        return `${x},${y}`;
+    });
+    return (
+        <svg width={width} height={height} className="mt-1">
+            <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+/* ===================================================================
+   SPARKLINE COLOR MAP (gradient → sparkline stroke)
+   =================================================================== */
+const SPARKLINE_COLORS = {
+    'from-blue-500 to-indigo-600': '#6366f1',
+    'from-violet-500 to-purple-600': '#8b5cf6',
+    'from-emerald-500 to-green-600': '#10b981',
+    'from-rose-500 to-red-600': '#ef4444',
+    'from-cyan-500 to-teal-600': '#0d9488',
+    'from-sky-500 to-blue-600': '#0ea5e9',
+    'from-pink-500 to-rose-600': '#ec4899',
+};
 
 /* ===================================================================
    CARD CONFIGS
@@ -26,6 +59,7 @@ const CARD_CONFIGS = [
             const worked = kpi?.total_worked_hours ?? 0;
             return `${eff}% = ${worked}s çalışan / hedef`;
         },
+        trendKey: 'efficiency',
     },
     {
         key: 'overtime',
@@ -46,6 +80,7 @@ const CARD_CONFIGS = [
             const avg = empCount ? (total / empCount).toFixed(1) : 0;
             return `Kişi başı ort: ${avg}s`;
         },
+        trendKey: 'overtime',
     },
     {
         key: 'attendance',
@@ -61,6 +96,7 @@ const CARD_CONFIGS = [
             const rate = kpi?.attendance_rate_pct ?? 0;
             return `Devam oranı: %${rate}`;
         },
+        trendKey: 'attendance',
     },
     {
         key: 'missing',
@@ -83,6 +119,7 @@ const CARD_CONFIGS = [
             const avg = empCount ? (total / empCount).toFixed(1) : 0;
             return `Kişi başı ort: ${avg}s`;
         },
+        trendKey: 'missing',
     },
     {
         key: 'weekly_ot_limit',
@@ -111,6 +148,7 @@ const CARD_CONFIGS = [
             if (pct >= 50) return '#f59e0b';
             return '#10b981';
         },
+        trendKey: 'ot_limit',
     },
     {
         key: 'punctuality',
@@ -123,6 +161,20 @@ const CARD_CONFIGS = [
         inverted: false,
         getProgress: (kpi, empCount, extra) => extra?.avgOnTimePct ?? 0,
         getTooltip: () => 'Zamanında giriş oranı',
+        trendKey: 'punctuality',
+    },
+    {
+        key: 'health_score',
+        label: 'Ekip Sağlığı',
+        icon: HeartPulse,
+        gradient: 'from-pink-500 to-rose-600',
+        getValue: (kpi) => kpi?.health_score ?? null,
+        formatValue: (v) => v != null ? `%${v}` : '—',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi) => kpi?.health_score ?? 0,
+        getTooltip: () => 'Ekip Sağlığı = %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma',
+        trendKey: 'health',
     },
 ];
 
@@ -136,6 +188,7 @@ const PROGRESS_GRADIENTS = {
     'from-rose-500 to-red-600': 'linear-gradient(to right, #f43f5e, #dc2626)',
     'from-cyan-500 to-teal-600': 'linear-gradient(to right, #06b6d4, #0d9488)',
     'from-sky-500 to-blue-600': 'linear-gradient(to right, #0ea5e9, #2563eb)',
+    'from-pink-500 to-rose-600': 'linear-gradient(to right, #ec4899, #e11d48)',
 };
 
 /* ===================================================================
@@ -168,7 +221,7 @@ function DeltaBadge({ delta, inverted }) {
 /* ===================================================================
    KPI CARD
    =================================================================== */
-function KPICard({ config, kpi, employeeCount, extra }) {
+function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
     const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor } = config;
 
     const value = getValue(kpi, employeeCount, extra);
@@ -177,6 +230,7 @@ function KPICard({ config, kpi, employeeCount, extra }) {
     const tooltipText = getTooltip(kpi, employeeCount, extra);
     const customColor = progressColor?.(kpi, employeeCount);
     const progressGradient = customColor || PROGRESS_GRADIENTS[gradient];
+    const sparkColor = SPARKLINE_COLORS[gradient] || '#6366f1';
 
     return (
         <Tooltip title={tooltipText} placement="top">
@@ -211,6 +265,13 @@ function KPICard({ config, kpi, employeeCount, extra }) {
                         </div>
                     </div>
                 </div>
+
+                {/* Mini Sparkline */}
+                {sparklineData && sparklineData.length >= 2 && (
+                    <div className="flex justify-end">
+                        <MiniSparkline data={sparklineData} color={sparkColor} />
+                    </div>
+                )}
             </div>
         </Tooltip>
     );
@@ -264,6 +325,7 @@ export default function KPISummary() {
 
     const kpi = data?.kpi;
     const employeeCount = data?.employee_count || 0;
+    const monthlyTrend = data?.monthly_trend;
 
     // Compute average on_time_pct from entry-exit performance_ranking
     const avgOnTimePct = useMemo(() => {
@@ -275,11 +337,36 @@ export default function KPISummary() {
 
     const extra = useMemo(() => ({ avgOnTimePct }), [avgOnTimePct]);
 
+    // Extract sparkline data per KPI key from monthly_trend
+    const sparklineMap = useMemo(() => {
+        if (!monthlyTrend?.length) return {};
+        const map = {};
+        // efficiency: avg_efficiency_pct per month
+        map.efficiency = monthlyTrend.map(m => m.avg_efficiency_pct ?? m.efficiency ?? 0);
+        // overtime: total_hours per month
+        map.overtime = monthlyTrend.map(m => m.total_hours ?? m.total_overtime_hours ?? 0);
+        // attendance: attendance_rate per month
+        map.attendance = monthlyTrend.map(m => m.attendance_rate ?? m.attendance_rate_pct ?? 0);
+        // missing: missing_hours per month
+        map.missing = monthlyTrend.map(m => m.missing_hours ?? m.total_missing_hours ?? 0);
+        // ot_limit: weekly OT usage % per month (approx from total hours)
+        map.ot_limit = monthlyTrend.map(m => {
+            const total = m.total_hours ?? m.total_overtime_hours ?? 0;
+            const ec = employeeCount || 1;
+            return Math.round(total / ec / 30 * 100);
+        });
+        // punctuality: on_time_pct per month
+        map.punctuality = monthlyTrend.map(m => m.on_time_pct ?? m.punctuality ?? 0);
+        // health: health_score per month
+        map.health = monthlyTrend.map(m => m.health_score ?? 0);
+        return map;
+    }, [monthlyTrend, employeeCount]);
+
     /* Loading skeleton */
     if (loading) {
         return (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                {[0, 1, 2, 3, 4, 5, 6].map(i => <SkeletonCard key={i} />)}
             </div>
         );
     }
@@ -288,7 +375,7 @@ export default function KPISummary() {
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
             {CARD_CONFIGS.map(config => (
                 <KPICard
                     key={config.key}
@@ -296,6 +383,7 @@ export default function KPISummary() {
                     kpi={kpi}
                     employeeCount={employeeCount}
                     extra={extra}
+                    sparklineData={sparklineMap[config.trendKey]}
                 />
             ))}
         </div>
