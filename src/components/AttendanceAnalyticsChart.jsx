@@ -152,7 +152,9 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
                 ot_pending: parseFloat((otPending / 3600).toFixed(2)),
                 ot_potential: parseFloat((otPotential / 3600).toFixed(2)),
-                missing: isLeaveDay ? 0 : parseFloat((totalMissing / 3600).toFixed(1)),
+                // İzin günlerinde de missing gösterilmeli — kısmi izinlerde (mazeret izni vb.)
+                // missing olabilir. DB'deki gerçek değer kullanılır.
+                missing: parseFloat((totalMissing / 3600).toFixed(1)),
                 break_time: parseFloat((totalBreak / 3600).toFixed(2)),
                 target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(1)) : null,
                 isFuture: dateStr > getIstanbulToday()
