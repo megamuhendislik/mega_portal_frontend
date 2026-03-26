@@ -40,12 +40,6 @@ function getOverflowColor(pct) {
     return 'text-emerald-600';
 }
 
-function getEmployeeBreakBarColor(minutes) {
-    if (minutes > 45) return BREAK_COLORS.overflow;
-    if (minutes > 30) return BREAK_COLORS.exceeding;
-    return BREAK_COLORS.withinAllowance;
-}
-
 /* ═══════════════════════════════════════════════════
    SKELETON LOADER
    ═══════════════════════════════════════════════════ */
@@ -84,26 +78,37 @@ function EmployeeBreakTooltip({ active, payload }) {
     if (!active || !payload?.length) return null;
     const raw = payload[0]?.payload;
     if (!raw) return null;
+    const counted = raw.avg_counted_minutes ?? 0;
+    const uncounted = raw.avg_uncounted_minutes ?? 0;
+    const total = counted + uncounted;
     return (
         <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-xl px-4 py-3 text-xs max-w-[250px]">
             <p className="font-bold text-slate-700 mb-0.5">{raw.fullName}</p>
             <p className="text-[10px] text-slate-400 mb-2">{raw.department}</p>
-            <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Ort. Mola:</span>
-                <span className={`font-bold ${getAvgBreakColor(raw.avg_minutes)}`}>
-                    {raw.avg_minutes?.toLocaleString('tr-TR')} dk
-                </span>
-            </div>
-            <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+            <div className="space-y-1">
                 <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">İzin:</span>
-                    <span className="font-bold text-slate-700">30 dk</span>
+                    <span className="text-emerald-600">Sayılan Mola:</span>
+                    <span className="font-bold text-emerald-700">{counted.toFixed(1)} dk</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Fark:</span>
-                    <span className={`font-bold ${raw.avg_minutes > 30 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {raw.avg_minutes > 30 ? '+' : ''}{(raw.avg_minutes - 30).toFixed(1)} dk
-                    </span>
+                    <span className="text-red-500">Sayılmayan Mola:</span>
+                    <span className="font-bold text-red-600">{uncounted.toFixed(1)} dk</span>
+                </div>
+                <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-slate-500">Toplam:</span>
+                        <span className={`font-bold ${getAvgBreakColor(total)}`}>{total.toFixed(1)} dk</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-slate-500">İzin:</span>
+                        <span className="font-bold text-slate-700">30 dk</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-slate-500">Fark:</span>
+                        <span className={`font-bold ${total > 30 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {total > 30 ? '+' : ''}{(total - 30).toFixed(1)} dk
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -157,21 +162,57 @@ export default function BreakMealSection({ onPersonClick }) {
     /* ─── KPI values ─── */
     const kpi = data?.kpi;
 
+    /* ─── Derived KPI: Sayılan / Sayılmayan ─── */
+    const avgCountedMinutes = useMemo(() => {
+        if (kpi?.avg_counted_break_minutes != null) return kpi.avg_counted_break_minutes;
+        // Fallback: break_minutes is the counted (within-allowance) portion
+        if (kpi?.avg_break_minutes != null) return kpi.avg_break_minutes;
+        return null;
+    }, [kpi]);
+
+    const avgPotentialMinutes = useMemo(() => {
+        if (kpi?.avg_potential_break_minutes != null) return kpi.avg_potential_break_minutes;
+        return null;
+    }, [kpi]);
+
+    const avgUncountedMinutes = useMemo(() => {
+        if (kpi?.avg_uncounted_break_minutes != null) return kpi.avg_uncounted_break_minutes;
+        // Compute if potential available
+        if (avgPotentialMinutes != null && avgCountedMinutes != null) {
+            return Math.max(0, avgPotentialMinutes - avgCountedMinutes);
+        }
+        return null;
+    }, [kpi, avgPotentialMinutes, avgCountedMinutes]);
+
     /* ─── Histogram data ─── */
     const histogramData = useMemo(() => {
         if (!data?.break_histogram?.length) return [];
         return data.break_histogram;
     }, [data?.break_histogram]);
 
+    /* ─── Uncounted histogram data ─── */
+    const uncountedHistogramData = useMemo(() => {
+        if (data?.uncounted_histogram?.length) return data.uncounted_histogram;
+        return null; // not available from backend
+    }, [data?.uncounted_histogram]);
+
     /* ─── Employee break avg (sorted desc, top 15) ─── */
     const employeeBreakData = useMemo(() => {
         if (!data?.employee_break_avg?.length) return [];
         const sorted = [...data.employee_break_avg].sort((a, b) => (b.avg_minutes ?? 0) - (a.avg_minutes ?? 0));
-        return sorted.slice(0, 15).map(e => ({
-            ...e,
-            shortName: (e.name || '').length > 12 ? (e.name || '').substring(0, 12) + '...' : (e.name || ''),
-            fullName: e.name || '',
-        }));
+        return sorted.slice(0, 15).map(e => {
+            // Compute counted / uncounted if not provided
+            const avgMin = e.avg_minutes ?? 0;
+            const counted = e.avg_counted_minutes != null ? e.avg_counted_minutes : Math.min(30, avgMin);
+            const uncounted = e.avg_uncounted_minutes != null ? e.avg_uncounted_minutes : Math.max(0, avgMin - 30);
+            return {
+                ...e,
+                shortName: (e.name || '').length > 12 ? (e.name || '').substring(0, 12) + '...' : (e.name || ''),
+                fullName: e.name || '',
+                avg_counted_minutes: counted,
+                avg_uncounted_minutes: uncounted,
+            };
+        });
     }, [data?.employee_break_avg]);
 
     /* ─── Meal trend data ─── */
@@ -224,8 +265,8 @@ export default function BreakMealSection({ onPersonClick }) {
         return (
             <div className="space-y-4">
                 {/* KPI skeleton */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {[1, 2, 3, 4, 5].map(i => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
                         <div key={i} className="bg-white rounded-xl border border-slate-200/80 p-3 animate-pulse">
                             <div className="h-3 w-16 bg-slate-200 rounded mb-2" />
                             <div className="h-6 w-12 bg-slate-200 rounded mb-1" />
@@ -235,8 +276,9 @@ export default function BreakMealSection({ onPersonClick }) {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <SkeletonCard height={260} />
-                    <SkeletonCard height={400} />
+                    <SkeletonCard height={260} />
                 </div>
+                <SkeletonCard height={400} />
                 <SkeletonCard height={250} />
             </div>
         );
@@ -275,34 +317,54 @@ export default function BreakMealSection({ onPersonClick }) {
     return (
         <div className="space-y-4">
 
-            {/* ═══ SECTION 1: 5 Mini KPI Kartları ═══ */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {/* ═══ SECTION 1: KPI Kartları — 2 Grup ═══ */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
-                {/* 1 — Ort. Mola */}
-                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                {/* ── Grup A: Mola Analizi ── */}
+
+                {/* 1 — Sayılan Mola */}
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                     <div className="flex items-center gap-1.5 mb-1">
-                        <Coffee size={14} className="text-amber-600" />
-                        <span className="text-xs text-slate-500 font-medium">Ort. Mola</span>
+                        <Coffee size={14} className="text-emerald-600" />
+                        <span className="text-xs text-slate-500 font-medium">Sayılan Mola</span>
                     </div>
-                    <p className={`text-xl font-bold ${getAvgBreakColor(kpi?.avg_break_minutes ?? 0)}`}>
-                        {kpi?.avg_break_minutes != null ? Math.round(kpi.avg_break_minutes) : '—'} <span className="text-sm font-semibold">dk</span>
+                    <p className="text-xl font-bold text-emerald-700">
+                        {avgCountedMinutes != null ? Math.round(avgCountedMinutes) : '—'} <span className="text-sm font-semibold">dk</span>
                     </p>
                     <p className="text-[10px] text-slate-400">/ 30 dk izin</p>
                 </div>
 
-                {/* 2 — Mola Taşma */}
+                {/* 2 — Sayılmayan Mola */}
                 <div className="bg-red-50 rounded-xl p-3 border border-red-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <AlertTriangle size={14} className="text-red-500" />
-                        <span className="text-xs text-slate-500 font-medium">Mola Taşma</span>
+                        <span className="text-xs text-slate-500 font-medium">Sayılmayan Mola</span>
                     </div>
-                    <p className={`text-xl font-bold ${getOverflowColor(kpi?.break_over_30_pct ?? 0)}`}>
-                        %{kpi?.break_over_30_pct != null ? Math.round(kpi.break_over_30_pct) : '—'}
+                    <p className="text-xl font-bold text-red-600">
+                        {avgUncountedMinutes != null ? Math.round(avgUncountedMinutes) : '—'} <span className="text-sm font-semibold">dk</span>
                     </p>
-                    <p className="text-[10px] text-slate-400">günlerin %'si 30 dk+ mola</p>
+                    <p className="text-[10px] text-slate-400">izin dışı fazla mola</p>
                 </div>
 
-                {/* 3 — Yemek Oranı */}
+                {/* 3 — Toplam Dışarıda */}
+                <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <Timer size={14} className="text-orange-600" />
+                        <span className="text-xs text-slate-500 font-medium">Toplam Dışarıda</span>
+                    </div>
+                    <p className={`text-xl font-bold ${getAvgBreakColor(avgPotentialMinutes ?? avgCountedMinutes ?? 0)}`}>
+                        {avgPotentialMinutes != null
+                            ? Math.round(avgPotentialMinutes)
+                            : avgCountedMinutes != null
+                                ? Math.round(avgCountedMinutes)
+                                : '—'} <span className="text-sm font-semibold">dk</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400">toplam dışarıda geçen süre</p>
+                </div>
+
+                {/* ── Grup B: Yemek & Taşma ── */}
+
+                {/* 4 — Yemek Oranı */}
                 <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <UtensilsCrossed size={14} className="text-blue-600" />
@@ -314,7 +376,7 @@ export default function BreakMealSection({ onPersonClick }) {
                     <p className="text-[10px] text-slate-400">iş günlerinde sipariş</p>
                 </div>
 
-                {/* 4 — OT Yemek */}
+                {/* 5 — OT Yemek */}
                 <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <Utensils size={14} className="text-violet-600" />
@@ -326,10 +388,10 @@ export default function BreakMealSection({ onPersonClick }) {
                     <p className="text-[10px] text-slate-400">ek mesai günlerinde yemek</p>
                 </div>
 
-                {/* 5 — Taşma Günü */}
+                {/* 6 — Taşma Günü */}
                 <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
                     <div className="flex items-center gap-1.5 mb-1">
-                        <Timer size={14} className="text-orange-600" />
+                        <Clock size={14} className="text-orange-600" />
                         <span className="text-xs text-slate-500 font-medium">Taşma Günü</span>
                     </div>
                     <p className="text-xl font-bold text-orange-700">
@@ -338,6 +400,12 @@ export default function BreakMealSection({ onPersonClick }) {
                     <p className="text-[10px] text-slate-400">45 dk+ mola yapılan gün</p>
                 </div>
             </div>
+
+            {/* ═══ Açıklama Notu ═══ */}
+            <p className="text-[10px] text-slate-400 mt-2 px-1">
+                <span className="font-medium text-emerald-600">Sayılan mola:</span> İzin dahilinde (≤30 dk) çalışma süresinden düşülen mola.
+                <span className="font-medium text-red-500 ml-2">Sayılmayan mola:</span> İzin dışı fazla mola — çalışma süresinden düşülmez ama verimliliği etkiler.
+            </p>
 
             {/* ═══ Break Quality Insights ═══ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -372,16 +440,16 @@ export default function BreakMealSection({ onPersonClick }) {
                 </div>
             </div>
 
-            {/* ═══ MIDDLE ROW: 2 charts side-by-side ═══ */}
+            {/* ═══ MIDDLE ROW: 2 Histogram yan yana ═══ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                {/* ─── Chart 2: Mola Süresi Dağılımı (Histogram) ─── */}
+                {/* ─── Chart 1: Sayılan Mola Dağılımı (Histogram) ─── */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                             <BarChart3 size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Mola Süresi Dağılımı</h4>
+                        <h4 className="text-sm font-bold text-slate-800">Sayılan Mola Dağılımı</h4>
                     </div>
                     {histogramData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={260}>
@@ -417,61 +485,113 @@ export default function BreakMealSection({ onPersonClick }) {
                     )}
                 </div>
 
-                {/* ─── Chart 3: Kişi Bazlı Mola Ortalaması (Horizontal Bar) ─── */}
+                {/* ─── Chart 2: Sayılmayan Mola Dağılımı (Histogram) ─── */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
-                            <Users size={14} />
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shrink-0">
+                            <AlertTriangle size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Mola Ortalaması</h4>
+                        <h4 className="text-sm font-bold text-slate-800">Sayılmayan Mola (Taşma)</h4>
                     </div>
-                    {employeeBreakData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart
-                                data={employeeBreakData}
-                                layout="vertical"
-                                margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                                <YAxis
-                                    type="category"
-                                    dataKey="shortName"
-                                    width={100}
-                                    tick={{ fontSize: 10, fill: '#64748b' }}
+                    {uncountedHistogramData && uncountedHistogramData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={260}>
+                            <BarChart data={uncountedHistogramData} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                <XAxis
+                                    dataKey="range"
+                                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                    interval={0}
                                 />
-                                <Tooltip content={<EmployeeBreakTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                                <ReferenceLine
-                                    x={30}
-                                    stroke="#ef4444"
-                                    strokeDasharray="4 2"
-                                    strokeWidth={1.5}
-                                    label={{ value: '30 dk', fontSize: 9, fill: '#ef4444', position: 'top' }}
-                                />
-                                <Bar
-                                    dataKey="avg_minutes"
-                                    name="Ort. Mola (dk)"
-                                    radius={[0, 6, 6, 0]}
-                                    maxBarSize={20}
-                                    cursor="pointer"
-                                    onClick={(barData) => {
-                                        if (barData?.employee_id) {
-                                            onPersonClick?.(barData.employee_id);
-                                        }
-                                    }}
-                                >
-                                    {employeeBreakData.map((entry, i) => (
-                                        <Cell key={`emp-brk-${i}`} fill={getEmployeeBreakBarColor(entry.avg_minutes)} />
+                                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                <Tooltip content={<HistogramTooltip />} />
+                                <Bar dataKey="count" name="Gün Sayısı" radius={[4, 4, 0, 0]} maxBarSize={32} fill="#ef4444">
+                                    {uncountedHistogramData.map((entry, i) => (
+                                        <Cell key={`uncounted-hist-${i}`} fill="#ef4444" />
                                     ))}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="flex items-center justify-center h-[400px] text-slate-300">
-                            <p className="text-xs">Çalışan mola verisi bulunamadı</p>
+                        <div className="flex flex-col items-center justify-center h-[260px] text-slate-300 gap-2">
+                            <AlertTriangle size={24} className="text-slate-200" />
+                            <p className="text-xs text-slate-400">Sayılmayan mola dağılımı hesaplanıyor...</p>
+                            <p className="text-[10px] text-slate-300">Backend desteği eklendiğinde otomatik görünecektir.</p>
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* ═══ Kişi Bazlı Mola Analizi (Stacked Horizontal Bar) ═══ */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
+                        <Users size={14} />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Mola Analizi (Sayılan + Sayılmayan)</h4>
+                </div>
+                {employeeBreakData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart
+                            data={employeeBreakData}
+                            layout="vertical"
+                            margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                            <YAxis
+                                type="category"
+                                dataKey="shortName"
+                                width={100}
+                                tick={{ fontSize: 10, fill: '#64748b' }}
+                            />
+                            <Tooltip content={<EmployeeBreakTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                            <Legend
+                                wrapperStyle={{ fontSize: '11px' }}
+                                iconSize={10}
+                                formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
+                            />
+                            <ReferenceLine
+                                x={30}
+                                stroke="#ef4444"
+                                strokeDasharray="4 2"
+                                strokeWidth={1.5}
+                                label={{ value: '30 dk', fontSize: 9, fill: '#ef4444', position: 'top' }}
+                            />
+                            <Bar
+                                dataKey="avg_counted_minutes"
+                                name="Sayılan"
+                                stackId="break"
+                                fill="#10b981"
+                                radius={[0, 0, 0, 0]}
+                                maxBarSize={20}
+                                cursor="pointer"
+                                onClick={(barData) => {
+                                    if (barData?.employee_id) {
+                                        onPersonClick?.(barData.employee_id);
+                                    }
+                                }}
+                            />
+                            <Bar
+                                dataKey="avg_uncounted_minutes"
+                                name="Sayılmayan"
+                                stackId="break"
+                                fill="#ef4444"
+                                radius={[0, 6, 6, 0]}
+                                maxBarSize={20}
+                                cursor="pointer"
+                                onClick={(barData) => {
+                                    if (barData?.employee_id) {
+                                        onPersonClick?.(barData.employee_id);
+                                    }
+                                }}
+                            />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="flex items-center justify-center h-[400px] text-slate-300">
+                        <p className="text-xs">Çalışan mola verisi bulunamadı</p>
+                    </div>
+                )}
             </div>
 
             {/* ═══ BOTTOM ROW: Yemek Sipariş Trendi ═══ */}
