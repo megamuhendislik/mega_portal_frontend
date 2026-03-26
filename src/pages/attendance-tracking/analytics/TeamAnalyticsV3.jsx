@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useState, useCallback } from 'react';
 import { AnalyticsFilterProvider, useAnalyticsFilter } from './AnalyticsFilterContext';
 import GlobalFilterBar from './GlobalFilterBar';
 import CollapsibleSection from './shared/CollapsibleSection';
-import { Target, Clock, CalendarCheck, Users, AlarmClock, Coffee } from 'lucide-react';
+import { Target, Clock, CalendarCheck, Users, AlarmClock, Coffee, Building2 } from 'lucide-react';
 
 const KPISummary = lazy(() => import('./sections/KPISummary'));
 const EfficiencySection = lazy(() => import('./sections/EfficiencySection'));
@@ -10,6 +10,7 @@ const OvertimeSection = lazy(() => import('./sections/OvertimeSection'));
 const AttendanceLeaveSection = lazy(() => import('./sections/AttendanceLeaveSection'));
 const PunctualitySection = lazy(() => import('./sections/PunctualitySection'));
 const BreakMealSection = lazy(() => import('./sections/BreakMealSection'));
+const DepartmentRoleSection = lazy(() => import('./sections/DepartmentRoleSection'));
 const ComparisonSection = lazy(() => import('./sections/ComparisonSection'));
 const PersonDetailDrawer = lazy(() => import('./sections/PersonDetailDrawer'));
 
@@ -94,6 +95,18 @@ function TeamAnalyticsV3Inner() {
             >
                 <Suspense fallback={<SectionLoader />}>
                     <AttendanceLeaveSection onPersonClick={handlePersonClick} />
+                </Suspense>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+                title="Departman & Rol"
+                icon={Building2}
+                iconGradient="from-slate-500 to-zinc-600"
+                subtitle="Departman karşılaştırması ve rol bazlı performans analizi"
+                defaultOpen={true}
+            >
+                <Suspense fallback={<SectionLoader />}>
+                    <DepartmentRoleSection onPersonClick={handlePersonClick} />
                 </Suspense>
             </CollapsibleSection>
 
