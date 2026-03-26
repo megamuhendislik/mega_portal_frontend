@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -224,6 +225,16 @@ export default function PunctualitySection({ onPersonClick }) {
         return [...ranking].sort((a, b) => (a.consistency_std || 999) - (b.consistency_std || 999))[0];
     }, [data?.performance_ranking]);
 
+    // ─── Performans Seviyesi Dağılımı ───
+    const levelCounts = useMemo(() => {
+        const counts = { excellent: 0, good: 0, average: 0, low: 0 };
+        const ranking = data?.performance_ranking || [];
+        ranking.forEach(e => {
+            if (e.level && counts[e.level] !== undefined) counts[e.level]++;
+        });
+        return counts;
+    }, [data?.performance_ranking]);
+
     /* ─── Loading skeleton ─── */
     if (loading) {
         return (
@@ -291,7 +302,10 @@ export default function PunctualitySection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shrink-0">
                             <Clock size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Giriş/Çıkış Dağılımı</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Giriş/Çıkış Dağılımı
+                            <InfoTooltip text="15 dakikalık dilimlerde giriş ve çıkış saatlerinin dağılımı. Yeşil çizgi vardiya başlangıcı (09:00), kırmızı çizgi vardiya sonu (18:00)." />
+                        </h4>
                     </div>
                     {histogramData.length > 0 ? (
                         <div className="overflow-x-auto -mx-2">
@@ -361,7 +375,10 @@ export default function PunctualitySection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                             <Target size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Dakiklik Performansı</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Dakiklik Performansı
+                            <InfoTooltip text="Çalışanların zamanında, erken ve geç giriş yüzdeleri. Yeşil = zamanında, mavi = erken, kırmızı = geç." />
+                        </h4>
                     </div>
                     {punctualityBarData.length > 0 ? (
                         <>
@@ -443,7 +460,10 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shrink-0">
                         <BarChart3 size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Giriş/Çıkış İstatistikleri</h4>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                        Giriş/Çıkış İstatistikleri
+                        <InfoTooltip text="Giriş ve çıkış saatlerinin medyan değerleri ve standart sapmaları." />
+                    </h4>
                 </div>
 
                 {/* 4 mini KPI cards */}
@@ -452,7 +472,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-1.5 mb-1">
                             <AlarmClock size={12} className="text-indigo-500" />
-                            <span className="text-[10px] text-slate-500 font-medium">Ort. Giriş Sapması</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">Ort. Giriş Sapması <InfoTooltip text="Giriş saatlerinin vardiya başlangıcından ortalama sapması (dakika)." /></span>
                         </div>
                         <p className="text-lg font-black text-slate-800">
                             {entryStats.std_dev_minutes != null
@@ -465,7 +485,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-1.5 mb-1">
                             <Clock size={12} className="text-indigo-500" />
-                            <span className="text-[10px] text-slate-500 font-medium">Medyan Giriş</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">Medyan Giriş <InfoTooltip text="Tüm giriş saatlerinin ortanca değeri." /></span>
                         </div>
                         <p className="text-lg font-black text-slate-800">
                             {entryStats.median || '—'}
@@ -476,7 +496,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-1.5 mb-1">
                             <Clock size={12} className="text-amber-500" />
-                            <span className="text-[10px] text-slate-500 font-medium">Medyan Çıkış</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">Medyan Çıkış <InfoTooltip text="Tüm çıkış saatlerinin ortanca değeri." /></span>
                         </div>
                         <p className="text-lg font-black text-slate-800">
                             {exitStats.median || '—'}
@@ -487,7 +507,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-1.5 mb-1">
                             <AlarmClock size={12} className="text-amber-500" />
-                            <span className="text-[10px] text-slate-500 font-medium">Ort. Çıkış Sapması</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">Ort. Çıkış Sapması <InfoTooltip text="Çıkış saatlerinin vardiya sonundan ortalama sapması (dakika)." /></span>
                         </div>
                         <p className="text-lg font-black text-slate-800">
                             {exitStats.std_dev_minutes != null
@@ -503,7 +523,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                         <div className="flex items-center gap-1.5 mb-1">
                             <Award size={14} className="text-emerald-600" />
-                            <span className="text-[10px] text-slate-500 font-medium">En Dakik</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">En Dakik <InfoTooltip text="En yüksek zamanında giriş oranına sahip çalışan." /></span>
                         </div>
                         <p className="text-sm font-bold text-emerald-700 truncate">{bestPunctualEmployee?.name ?? '—'}</p>
                         <p className="text-[10px] text-slate-400">%{bestPunctualEmployee?.on_time_pct?.toFixed(0) ?? '—'} zamanında</p>
@@ -512,7 +532,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                         <div className="flex items-center gap-1.5 mb-1">
                             <CheckCircle size={14} className="text-emerald-600" />
-                            <span className="text-[10px] text-slate-500 font-medium">En Tutarlı</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">En Tutarlı <InfoTooltip text="Giriş saati en az değişkenlik gösteren çalışan (düşük standart sapma)." /></span>
                         </div>
                         <p className="text-sm font-bold text-emerald-700 truncate">{mostConsistentEmployee?.name ?? '—'}</p>
                         <p className="text-[10px] text-slate-400">Sapma: ±{mostConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} dk</p>
@@ -521,7 +541,7 @@ export default function PunctualitySection({ onPersonClick }) {
                     <div className="bg-red-50 rounded-xl p-3 border border-red-100">
                         <div className="flex items-center gap-1.5 mb-1">
                             <AlertTriangle size={14} className="text-red-500" />
-                            <span className="text-[10px] text-slate-500 font-medium">En Tutarsız</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">En Tutarsız <InfoTooltip text="Giriş saati en çok değişkenlik gösteren çalışan (yüksek standart sapma)." /></span>
                         </div>
                         <p className="text-sm font-bold text-red-700 truncate">{worstConsistentEmployee?.name ?? '—'}</p>
                         <p className="text-[10px] text-slate-400">Sapma: ±{worstConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} dk</p>
@@ -543,6 +563,24 @@ export default function PunctualitySection({ onPersonClick }) {
                         )}
                     </p>
                 </div>
+
+                {/* Performans Seviyesi Da\u011f\u0131l\u0131m\u0131 */}
+                {(levelCounts.excellent + levelCounts.good + levelCounts.average + levelCounts.low) > 0 && (
+                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-medium">Seviye Da\u011f\u0131l\u0131m\u0131:</span>
+                        {[
+                            { key: 'excellent', label: 'M\u00fckemmel', color: 'bg-emerald-500', count: levelCounts.excellent },
+                            { key: 'good', label: '\u0130yi', color: 'bg-blue-500', count: levelCounts.good },
+                            { key: 'average', label: 'Ortalama', color: 'bg-amber-500', count: levelCounts.average },
+                            { key: 'low', label: 'D\u00fc\u015f\u00fck', color: 'bg-red-500', count: levelCounts.low },
+                        ].map(l => (
+                            <div key={l.key} className="flex items-center gap-1">
+                                <span className={`w-2 h-2 rounded-full ${l.color}`} />
+                                <span className="text-[10px] text-slate-500">{l.label}: <span className="font-bold">{l.count}</span></span>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Summary text */}
                 {totalRecords > 0 && (

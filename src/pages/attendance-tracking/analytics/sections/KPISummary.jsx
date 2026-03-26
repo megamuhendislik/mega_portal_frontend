@@ -1,11 +1,28 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     BarChart3, Clock, CheckCircle, AlertTriangle,
-    TrendingUp, TrendingDown, Timer, AlarmClock, HeartPulse
+    TrendingUp, TrendingDown, Timer, AlarmClock, HeartPulse,
+    UtensilsCrossed, Coffee
 } from 'lucide-react';
 import { Tooltip } from 'antd';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
+
+/* ===================================================================
+   INFO TOOLTIP TEXTS FOR KPI CARDS
+   =================================================================== */
+const KPI_TOOLTIPS = {
+    efficiency: 'Çalışılan saat / hedef saat \u00d7 100. Ekip genelinin ortalama verimliliğini gösterir.',
+    overtime: 'Seçilen dönemdeki toplam onaylı ve bekleyen ek mesai saatleri.',
+    attendance: 'Çalışılan gün / toplam iş günü \u00d7 100. Devamsızlık ve izinler düşürür.',
+    missing: 'Hedef saate ulaşılamayan toplam eksik çalışma saatleri.',
+    weekly_ot_limit: 'Ekip ortalaması haftalık 30 saatlik ek mesai limitinin ne kadarını kullanıyor.',
+    punctuality: 'Vardiya başlangıcına \u00b115 dakika içinde giriş yapanların oranı.',
+    health_score: 'Bile\u015fik skor: %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma.',
+    meal_rate: '\u0130\u015f g\u00fcnlerinde yemek sipari\u015fi veren \u00e7al\u0131\u015fanlar\u0131n oran\u0131.',
+    avg_break: 'Ekip ortalamas\u0131 g\u00fcnl\u00fck mola s\u00fcresi (izin dahilindeki say\u0131lan mola).',
+};
 
 /* ===================================================================
    MINI SPARKLINE (lightweight SVG — no Recharts dependency)
@@ -38,6 +55,7 @@ const SPARKLINE_COLORS = {
     'from-cyan-500 to-teal-600': '#0d9488',
     'from-sky-500 to-blue-600': '#0ea5e9',
     'from-pink-500 to-rose-600': '#ec4899',
+    'from-amber-500 to-orange-600': '#f59e0b',
 };
 
 /* ===================================================================
@@ -176,6 +194,38 @@ const CARD_CONFIGS = [
         getTooltip: () => 'Ekip Sağlığı = %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma',
         trendKey: 'health',
     },
+    {
+        key: 'meal_rate',
+        label: 'Yemek Oranı',
+        icon: UtensilsCrossed,
+        gradient: 'from-cyan-500 to-teal-600',
+        getValue: (kpi) => kpi?.meal_rate_pct ?? null,
+        formatValue: (v) => v != null ? `%${v}` : '\u2014',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi) => kpi?.meal_rate_pct ?? 0,
+        getTooltip: () => '\u0130\u015f g\u00fcnlerinde yemek sipari\u015fi veren \u00e7al\u0131\u015fanlar\u0131n oran\u0131.',
+        trendKey: 'meal_rate',
+    },
+    {
+        key: 'avg_break',
+        label: 'Ort. Mola',
+        icon: Coffee,
+        gradient: 'from-amber-500 to-orange-600',
+        getValue: (kpi) => kpi?.avg_break_minutes ?? null,
+        formatValue: (v) => v != null ? `${v} dk` : '\u2014',
+        deltaKey: null,
+        inverted: false,
+        getProgress: (kpi) => Math.min(100, ((kpi?.avg_break_minutes ?? 0) / 45) * 100),
+        getTooltip: () => 'Ekip ortalamas\u0131 g\u00fcnl\u00fck mola s\u00fcresi (izin dahilindeki say\u0131lan mola).',
+        progressColor: (kpi) => {
+            const mins = kpi?.avg_break_minutes ?? 0;
+            if (mins > 45) return '#ef4444';
+            if (mins >= 30) return '#f59e0b';
+            return '#10b981';
+        },
+        trendKey: 'avg_break',
+    },
 ];
 
 /* ===================================================================
@@ -189,6 +239,7 @@ const PROGRESS_GRADIENTS = {
     'from-cyan-500 to-teal-600': 'linear-gradient(to right, #06b6d4, #0d9488)',
     'from-sky-500 to-blue-600': 'linear-gradient(to right, #0ea5e9, #2563eb)',
     'from-pink-500 to-rose-600': 'linear-gradient(to right, #ec4899, #e11d48)',
+    'from-amber-500 to-orange-600': 'linear-gradient(to right, #f59e0b, #ea580c)',
 };
 
 /* ===================================================================
@@ -237,7 +288,10 @@ function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
             <div className="bg-white rounded-2xl border border-slate-200/80 p-5 hover:shadow-md transition-all cursor-default">
                 {/* Header: Label + Icon */}
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-slate-500">{label}</span>
+                    <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                        {label}
+                        {KPI_TOOLTIPS[config.key] && <InfoTooltip text={KPI_TOOLTIPS[config.key]} />}
+                    </span>
                     <div
                         className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0`}
                     >
@@ -359,14 +413,18 @@ export default function KPISummary() {
         map.punctuality = monthlyTrend.map(m => m.on_time_pct ?? m.punctuality ?? 0);
         // health: health_score per month
         map.health = monthlyTrend.map(m => m.health_score ?? 0);
+        // meal_rate: meal_rate_pct per month
+        map.meal_rate = monthlyTrend.map(m => m.meal_rate_pct ?? 0);
+        // avg_break: avg_break_minutes per month
+        map.avg_break = monthlyTrend.map(m => m.avg_break_minutes ?? 0);
         return map;
     }, [monthlyTrend, employeeCount]);
 
     /* Loading skeleton */
     if (loading) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-                {[0, 1, 2, 3, 4, 5, 6].map(i => <SkeletonCard key={i} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
             </div>
         );
     }
@@ -375,7 +433,7 @@ export default function KPISummary() {
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {CARD_CONFIGS.map(config => (
                 <KPICard
                     key={config.key}

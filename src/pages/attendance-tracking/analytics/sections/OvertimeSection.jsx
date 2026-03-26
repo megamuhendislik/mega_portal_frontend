@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     BarChart3, Grid3X3, Users,
-    AlertCircle, AlertTriangle, RefreshCw
+    AlertCircle, AlertTriangle, RefreshCw, TrendingUp
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -19,7 +20,7 @@ const SOURCE_COLORS = {
     manual: '#8b5cf6',     // violet-500
 };
 const HEATMAP_BUCKETS = ['06-08', '08-10', '10-12', '12-14', '14-16', '16-18', '18-20', '20+'];
-const HEATMAP_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+const HEATMAP_DAYS = ['Pzt', 'Sal', '\u00c7ar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
 /* ═══════════════════════════════════════════════════
    SKELETON LOADER
@@ -44,8 +45,8 @@ function MonthlyTrendChart({ data }) {
         if (!data?.length) return [];
         return data.map(m => ({
             name: m.label,
-            Planlı: m.intended_hours ?? 0,
-            Algılanan: m.potential_hours ?? 0,
+            Planl\u0131: m.intended_hours ?? 0,
+            Alg\u0131lanan: m.potential_hours ?? 0,
             Manuel: m.manual_hours ?? 0,
             Toplam: m.total_hours ?? 0,
         }));
@@ -60,7 +61,10 @@ function MonthlyTrendChart({ data }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
                     <BarChart3 size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Aylık Ek Mesai Trendi</h4>
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Ayl\u0131k Ek Mesai Trendi
+                    <InfoTooltip text="Ayl\u0131k ek mesai saatlerinin kayna\u011fa g\u00f6re da\u011f\u0131l\u0131m\u0131: Planl\u0131 (atanm\u0131\u015f), Alg\u0131lanan (otomatik tespit), Manuel (elle girilen)." />
+                </h4>
             </div>
 
             <ResponsiveContainer width="100%" height={280}>
@@ -100,8 +104,8 @@ function MonthlyTrendChart({ data }) {
                         iconSize={10}
                         formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
                     />
-                    <Bar dataKey="Planlı" stackId="ot" fill={SOURCE_COLORS.intended} radius={[0, 0, 0, 0]} maxBarSize={30} />
-                    <Bar dataKey="Algılanan" stackId="ot" fill={SOURCE_COLORS.potential} radius={[0, 0, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="Planl\u0131" stackId="ot" fill={SOURCE_COLORS.intended} radius={[0, 0, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="Alg\u0131lanan" stackId="ot" fill={SOURCE_COLORS.potential} radius={[0, 0, 0, 0]} maxBarSize={30} />
                     <Bar dataKey="Manuel" stackId="ot" fill={SOURCE_COLORS.manual} radius={[4, 4, 0, 0]} maxBarSize={30} />
                 </BarChart>
             </ResponsiveContainer>
@@ -154,7 +158,10 @@ function WeeklyHeatmap({ data }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0">
                     <Grid3X3 size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Haftalık Yoğunluk</h4>
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Haftal\u0131k Yo\u011funluk
+                    <InfoTooltip text="Haftan\u0131n g\u00fcnleri ve zaman dilimlerine g\u00f6re ek mesai yo\u011funlu\u011fu. Koyu renkler daha yo\u011fun ek mesai saatlerini g\u00f6sterir." />
+                </h4>
             </div>
 
             <div className="overflow-x-auto">
@@ -212,7 +219,7 @@ function WeeklyHeatmap({ data }) {
                         <div className="w-4 h-3 rounded-sm bg-amber-300" />
                         <div className="w-4 h-3 rounded-sm bg-amber-500" />
                         <div className="w-4 h-3 rounded-sm bg-amber-700" />
-                        <span className="text-[9px] text-slate-400">Çok</span>
+                        <span className="text-[9px] text-slate-400">\u00c7ok</span>
                     </div>
                 </div>
             </div>
@@ -244,7 +251,7 @@ function EmployeeRankingTooltip({ active, payload }) {
                     <span className="font-black text-slate-800">{raw.total_hours?.toLocaleString('tr-TR')}s</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Limit Kullanımı:</span>
+                    <span className="text-slate-500">Limit Kullan\u0131m\u0131:</span>
                     <span className={`font-bold ${raw.weekly_limit_pct >= 90 ? 'text-red-600' : raw.weekly_limit_pct >= 70 ? 'text-amber-600' : 'text-emerald-600'}`}>
                         %{raw.weekly_limit_pct ?? 0}
                     </span>
@@ -269,8 +276,8 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
         return filtered.slice(0, 15).map(e => ({
             ...e,
             shortName: e.name?.length > 12 ? e.name.substring(0, 12) + '...' : e.name,
-            Planlı: e.intended_hours ?? 0,
-            Algılanan: e.potential_hours ?? 0,
+            Planl\u0131: e.intended_hours ?? 0,
+            Alg\u0131lanan: e.potential_hours ?? 0,
             Manuel: e.manual_hours ?? 0,
             exceedsLimit: (e.weekly_limit_pct ?? 0) >= 100,
         }));
@@ -297,7 +304,10 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                     <Users size={14} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Ek Mesai</h4>
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Ki\u015fi Bazl\u0131 Ek Mesai
+                    <InfoTooltip text="\u00c7al\u0131\u015fan ba\u015f\u0131na ek mesai saatleri. K\u0131rm\u0131z\u0131 \u00e7izgi haftal\u0131k 30 saat limiti. K\u0131rm\u0131z\u0131 isimler limiti a\u015fan \u00e7al\u0131\u015fanlar." />
+                </h4>
             </div>
 
             <ResponsiveContainer width="100%" height={400}>
@@ -356,20 +366,20 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                         }}
                     />
                     <Bar
-                        dataKey="Planlı"
+                        dataKey="Planl\u0131"
                         fill="#10b981"
                         radius={[0, 0, 0, 0]}
                         maxBarSize={14}
                         cursor="pointer"
-                        name="Onaylı/Planlı"
+                        name="Onayl\u0131/Planl\u0131"
                     />
                     <Bar
-                        dataKey="Algılanan"
+                        dataKey="Alg\u0131lanan"
                         fill="#f59e0b"
                         radius={[0, 0, 0, 0]}
                         maxBarSize={14}
                         cursor="pointer"
-                        name="Bekleyen/Algılanan"
+                        name="Bekleyen/Alg\u0131lanan"
                     />
                     <Bar
                         dataKey="Manuel"
@@ -386,7 +396,7 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
             {chartData.some(e => e.exceedsLimit) && (
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-red-500 font-semibold">
                     <div className="w-3 h-3 rounded border-2 border-red-400 bg-red-50" />
-                    <span>Kırmızı isimler haftalık limiti aşan çalışanlardır</span>
+                    <span>K\u0131rm\u0131z\u0131 isimler haftal\u0131k limiti a\u015fan \u00e7al\u0131\u015fanlard\u0131r</span>
                 </div>
             )}
 
@@ -396,7 +406,7 @@ function EmployeeRankingChart({ data, onPersonClick, selectedEmployees }) {
                     <div className="flex items-center gap-2 mb-2">
                         <AlertTriangle size={14} className="text-red-500" />
                         <span className="text-xs font-bold text-red-700">
-                            Haftalık Limit Aşımı: {exceedingEmployees.length} çalışan
+                            Haftal\u0131k Limit A\u015f\u0131m\u0131: {exceedingEmployees.length} \u00e7al\u0131\u015fan
                         </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -431,8 +441,8 @@ function LimitWarningSection({ employeeRanking, onPersonClick }) {
         <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl">
             <div className="flex items-center gap-1.5 mb-2">
                 <AlertTriangle size={14} className="text-red-500" />
-                <span className="text-xs font-bold text-red-700">Haftalık OT Limit Uyarısı</span>
-                <span className="text-[10px] text-red-400 ml-1">({limitWarnings.length} çalışan %80+ kullanım)</span>
+                <span className="text-xs font-bold text-red-700">Haftal\u0131k OT Limit Uyar\u0131s\u0131</span>
+                <span className="text-[10px] text-red-400 ml-1">({limitWarnings.length} \u00e7al\u0131\u015fan %80+ kullan\u0131m)</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
                 {limitWarnings.map(emp => (
@@ -445,6 +455,44 @@ function LimitWarningSection({ employeeRanking, onPersonClick }) {
                     </span>
                 ))}
             </div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════
+   OT-VER\u0130ML\u0130L\u0130K ETK\u0130S\u0130 INSIGHT
+   ═══════════════════════════════════════════════════ */
+function OTEfficiencyInsight({ employeeRanking, onPersonClick }) {
+    const atRiskEmployees = useMemo(() => {
+        if (!employeeRanking?.length) return [];
+        return employeeRanking.filter(e => (e.weekly_limit_pct ?? 0) > 80);
+    }, [employeeRanking]);
+
+    return (
+        <div className="mt-3 p-3 bg-slate-50 rounded-xl">
+            <div className="flex items-center gap-1.5 mb-1.5">
+                <TrendingUp size={12} className="text-slate-400" />
+                <span className="text-[10px] font-bold text-slate-600">OT-Verimlilik \u0130li\u015fkisi</span>
+            </div>
+            <p className="text-[10px] text-slate-500">
+                {atRiskEmployees.length > 0 ? (
+                    <>
+                        <span className="text-red-600 font-medium">{atRiskEmployees.length} \u00e7al\u0131\u015fan</span>{' '}
+                        y\u00fcksek ek mesai yapmas\u0131na ra\u011fmen limite yakla\u015f\u0131yor veya a\u015f\u0131yor.
+                        {atRiskEmployees.slice(0, 3).map(e => (
+                            <span
+                                key={e.employee_id}
+                                className="ml-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full text-[9px] font-bold cursor-pointer hover:bg-red-200 transition-colors"
+                                onClick={() => onPersonClick?.(e.employee_id)}
+                            >
+                                {e.name}
+                            </span>
+                        ))}
+                    </>
+                ) : (
+                    <span className="text-emerald-600 font-medium">Ek mesai yapan \u00e7al\u0131\u015fanlar\u0131n limit kullan\u0131m\u0131 sa\u011fl\u0131kl\u0131 seviyede.</span>
+                )}
+            </p>
         </div>
     );
 }
@@ -466,7 +514,7 @@ export default function OvertimeSection({ onPersonClick }) {
             setData(res.data);
         } catch (err) {
             console.error('OvertimeSection fetch error:', err);
-            setError('Ek mesai verileri yüklenemedi.');
+            setError('Ek mesai verileri y\u00fcklenemedi.');
         } finally {
             setLoading(false);
         }
@@ -511,7 +559,7 @@ export default function OvertimeSection({ onPersonClick }) {
             <div className="bg-white rounded-2xl border border-slate-200/80 p-12">
                 <div className="flex flex-col items-center justify-center text-slate-400">
                     <BarChart3 size={32} className="mb-2 opacity-50" />
-                    <p className="text-sm">Bu dönem için ek mesai verisi bulunamadı.</p>
+                    <p className="text-sm">Bu d\u00f6nem i\u00e7in ek mesai verisi bulunamad\u0131.</p>
                 </div>
             </div>
         );
@@ -528,19 +576,19 @@ export default function OvertimeSection({ onPersonClick }) {
                 <WeeklyHeatmap data={data.weekly_heatmap} />
             </div>
 
-            {/* ─── Kaynak Dağılımı mini cards ─── */}
+            {/* ─── Kaynak Da\u011f\u0131l\u0131m\u0131 mini cards ─── */}
             {data.source_distribution && (
                 <div className="flex gap-2">
                     <div className="flex-1 bg-indigo-50 rounded-lg p-2 text-center">
-                        <p className="text-[10px] text-slate-500">Planlı</p>
+                        <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">Planl\u0131 <InfoTooltip text="Y\u00f6netici taraf\u0131ndan \u00f6nceden atanm\u0131\u015f ek mesai oran\u0131." /></p>
                         <p className="text-sm font-bold text-indigo-700">%{Math.round(data.source_distribution?.intended?.pct || 0)}</p>
                     </div>
                     <div className="flex-1 bg-amber-50 rounded-lg p-2 text-center">
-                        <p className="text-[10px] text-slate-500">Algılanan</p>
+                        <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">Alg\u0131lanan <InfoTooltip text="Sistem taraf\u0131ndan otomatik tespit edilen (vardiya d\u0131\u015f\u0131 \u00e7al\u0131\u015fma) ek mesai oran\u0131." /></p>
                         <p className="text-sm font-bold text-amber-700">%{Math.round(data.source_distribution?.potential?.pct || 0)}</p>
                     </div>
                     <div className="flex-1 bg-violet-50 rounded-lg p-2 text-center">
-                        <p className="text-[10px] text-slate-500">Manuel</p>
+                        <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">Manuel <InfoTooltip text="\u00c7al\u0131\u015fan taraf\u0131ndan elle girilen ek mesai talep oran\u0131." /></p>
                         <p className="text-sm font-bold text-violet-700">%{Math.round(data.source_distribution?.manual?.pct || 0)}</p>
                     </div>
                 </div>
@@ -553,8 +601,14 @@ export default function OvertimeSection({ onPersonClick }) {
                 selectedEmployees={selectedEmployees}
             />
 
-            {/* ─── Haftalık OT Limit Uyarısı ─── */}
+            {/* ─── Haftal\u0131k OT Limit Uyar\u0131s\u0131 ─── */}
             <LimitWarningSection
+                employeeRanking={data.employee_ranking}
+                onPersonClick={onPersonClick}
+            />
+
+            {/* ─── OT-Verimlilik Etkisi ─── */}
+            <OTEfficiencyInsight
                 employeeRanking={data.employee_ranking}
                 onPersonClick={onPersonClick}
             />

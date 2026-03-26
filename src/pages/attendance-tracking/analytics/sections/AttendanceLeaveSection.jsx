@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -550,7 +551,10 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                             <CalendarDays size={14} className="text-white" />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-700">Devam Takvimi</h3>
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            Devam Takvimi
+                            <InfoTooltip text="Aylık devam durumu takvimi. Yeşil = tam gün, turuncu = geç giriş, kırmızı = devamsız, mavi = izinli." />
+                        </h3>
                     </div>
                     {hasCalendar ? (
                         <AttendanceCalendarHeatmap dailyData={dailyCalendarData} period={period} />
@@ -567,7 +571,10 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                             <PieChartIcon size={14} className="text-white" />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-700">İzin Türü Dağılımı</h3>
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            İzin Türü Dağılımı
+                            <InfoTooltip text="İzin türlerine göre kullanılan toplam gün dağılımı. Dilime tıklayarak o türde izin kullanan çalışanları görün." />
+                        </h3>
                     </div>
                     {hasPie ? (
                         <>
@@ -685,7 +692,10 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
                             <TrendingUp size={14} className="text-white" />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-700">Devam Durumu Trend</h3>
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            Devam Durumu Trend
+                            <InfoTooltip text="Günlük devamsız ve izinli çalışan sayılarının zaman içindeki değişimi." />
+                        </h3>
                     </div>
                     <div className="overflow-x-auto -mx-2">
                         <ResponsiveContainer width="100%" height={280} minWidth={400}>
@@ -802,6 +812,19 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                     </ResponsiveContainer>
                 </div>
             )}
+
+            {/* ─── İzin Kullanım Hızı Insight ─── */}
+            <div className="mt-2 p-2 bg-slate-50 rounded-lg">
+                <p className="text-[10px] text-slate-500">
+                    <span className="font-medium">İzin Kullanım Hızı:</span>{' '}
+                    Son dönemde kişi başı ortalama <span className="font-bold text-slate-700">{Number(avgLeavePerPerson).toFixed(1)} gün</span> izin kullanıldı.
+                    {Number(avgLeavePerPerson) > 3 ? (
+                        <span className="text-amber-600 font-medium ml-1">Ortalamanın üzerinde kullanım.</span>
+                    ) : (
+                        <span className="text-emerald-600 font-medium ml-1">Normal düzeyde kullanım.</span>
+                    )}
+                </p>
+            </div>
         </div>
     );
 }
