@@ -573,17 +573,17 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                         <>
                             {/* İzin Kullanım Özeti */}
                             <div className="grid grid-cols-3 gap-2 mb-3">
-                                <div className="bg-blue-50 rounded-lg p-2 text-center border border-blue-100">
-                                    <p className="text-lg font-bold text-blue-700">{totalLeaveDays}</p>
-                                    <p className="text-[10px] text-slate-500">Toplam İzin Günü</p>
+                                <div className="bg-blue-50 rounded-lg p-2 text-center">
+                                    <p className="text-[10px] text-slate-500">Toplam İzin</p>
+                                    <p className="text-sm font-bold text-blue-700">{totalLeaveDays} gün</p>
                                 </div>
-                                <div className="bg-emerald-50 rounded-lg p-2 text-center border border-emerald-100">
-                                    <p className="text-lg font-bold text-emerald-700">{avgLeavePerPerson}</p>
+                                <div className="bg-amber-50 rounded-lg p-2 text-center">
                                     <p className="text-[10px] text-slate-500">Kişi Başı Ort.</p>
+                                    <p className="text-sm font-bold text-amber-700">{avgLeavePerPerson} gün</p>
                                 </div>
-                                <div className="bg-amber-50 rounded-lg p-2 text-center border border-amber-100">
-                                    <p className="text-lg font-bold text-amber-700">{absenceDays}</p>
-                                    <p className="text-[10px] text-slate-500">Devamsızlık Günü</p>
+                                <div className="bg-red-50 rounded-lg p-2 text-center">
+                                    <p className="text-[10px] text-slate-500">Devamsızlık</p>
+                                    <p className="text-sm font-bold text-red-700">{absenceDays} gün</p>
                                 </div>
                             </div>
                             <ResponsiveContainer width="100%" height={280}>
@@ -648,27 +648,27 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                                     </div>
                                 ))}
                             </div>
-                            {/* En çok izin/devamsızlık çalışanları */}
-                            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <CalendarDays size={10} className="text-blue-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] text-slate-500">En Çok İzin</p>
-                                        <p className="text-xs font-bold text-slate-700 truncate">{topLeaveEmployee?.name ?? '\u2014'} ({topLeaveEmployee?.total_days ?? 0} gün)</p>
-                                    </div>
+                            {/* En çok izin/devamsızlık çalışanları — clickable badges */}
+                            {(topLeaveEmployee || topAbsentEmployee) && (
+                                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+                                    {topLeaveEmployee && (
+                                        <span
+                                            className="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded-full cursor-pointer hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
+                                            onClick={() => onPersonClick?.(topLeaveEmployee.employee_id)}
+                                        >
+                                            <CalendarDays size={10} /> En çok izin: {topLeaveEmployee.name} ({topLeaveEmployee.total_days ?? 0} gün)
+                                        </span>
+                                    )}
+                                    {topAbsentEmployee && (
+                                        <span
+                                            className="text-[10px] px-2 py-1 bg-red-100 text-red-700 rounded-full cursor-pointer hover:bg-red-200 transition-colors inline-flex items-center gap-1"
+                                            onClick={() => onPersonClick?.(topAbsentEmployee.employee_id)}
+                                        >
+                                            <AlertTriangle size={10} /> En çok devamsız: {topAbsentEmployee.name} ({topAbsentEmployee.absent_days ?? 0} gün)
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                                        <AlertTriangle size={10} className="text-red-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] text-slate-500">En Çok Devamsız</p>
-                                        <p className="text-xs font-bold text-slate-700 truncate">{topAbsentEmployee?.name ?? '\u2014'} ({topAbsentEmployee?.absent_days ?? 0} gün)</p>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </>
                     ) : (
                         <div className="flex items-center justify-center py-12 text-slate-400 text-sm">
@@ -739,6 +739,32 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+
+                    {/* Haftalık Devamsızlık Deseni — compact inline mini-bars */}
+                    {weekdayAbsenceData.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-slate-100">
+                            <p className="text-[10px] text-slate-400 font-medium mb-2">Haftalık Devamsızlık Deseni</p>
+                            <div className="flex gap-1">
+                                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum'].map((day, i) => {
+                                    const count = weekdayAbsenceData[i]?.count || 0;
+                                    const maxCount = Math.max(...weekdayAbsenceData.map(d => d.count), 1);
+                                    const pct = (count / maxCount) * 100;
+                                    return (
+                                        <div key={day} className="flex-1 text-center">
+                                            <div className="h-10 rounded bg-slate-100 relative overflow-hidden">
+                                                <div
+                                                    className="absolute bottom-0 w-full rounded transition-all bg-red-400"
+                                                    style={{ height: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 mt-0.5 block">{day}</span>
+                                            <span className="text-[9px] font-bold text-slate-600">{count}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Users, Target, GitCompareArrows, Table2,
-    AlertCircle, RefreshCw
+    AlertCircle, RefreshCw, Crosshair
 } from 'lucide-react';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Legend
+    ResponsiveContainer, Legend,
+    ScatterChart, Scatter, Cell, ReferenceLine
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
@@ -368,6 +369,109 @@ function ParallelCoordinatesCard({ employees, teamAvg, showTeamAvg }) {
 }
 
 /* ===================================================================
+   CHART 3: SCATTER — Verimlilik vs Ek Mesai Korelasyonu
+   =================================================================== */
+function ScatterTooltip({ active, payload }) {
+    if (!active || !payload?.[0]) return null;
+    const d = payload[0].payload;
+    return (
+        <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-xl px-3 py-2 text-xs">
+            <p className="font-bold text-slate-700">{d.name}</p>
+            <p className="text-slate-500">Verimlilik: <span className="font-bold">%{d.efficiency?.toFixed(1)}</span></p>
+            <p className="text-slate-500">Ek Mesai: <span className="font-bold">{d.overtime?.toFixed(1)}s</span></p>
+            <p className="text-slate-500">Devam: <span className="font-bold">%{d.attendance?.toFixed(1)}</span></p>
+        </div>
+    );
+}
+
+function ScatterChartCard({ employees, teamAvg }) {
+    const scatterData = useMemo(() => {
+        if (!employees?.length) return [];
+        return employees.map((emp, i) => ({
+            name: emp.name,
+            efficiency: emp.metrics?.efficiency_pct || 0,
+            overtime: emp.metrics?.ot_hours || 0,
+            attendance: emp.metrics?.attendance_pct || 50,
+            fill: COLORS[i % COLORS.length],
+        }));
+    }, [employees]);
+
+    const avgPoint = useMemo(() => ({
+        efficiency: teamAvg?.efficiency_pct ?? 0,
+        overtime: teamAvg?.ot_hours ?? 0,
+    }), [teamAvg]);
+
+    if (!scatterData.length) return null;
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+            {/* Title */}
+            <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shrink-0">
+                    <Crosshair size={16} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-800">Verimlilik vs Ek Mesai</h3>
+            </div>
+
+            <ResponsiveContainer width="100%" height={250}>
+                <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis
+                        type="number"
+                        dataKey="efficiency"
+                        name="Verimlilik"
+                        unit="%"
+                        tick={{ fontSize: 10 }}
+                        domain={[0, 'auto']}
+                    />
+                    <YAxis
+                        type="number"
+                        dataKey="overtime"
+                        name="Ek Mesai"
+                        unit="s"
+                        tick={{ fontSize: 10 }}
+                    />
+                    <ReferenceLine x={avgPoint.efficiency} stroke="#94a3b8" strokeDasharray="4 2" />
+                    <ReferenceLine y={avgPoint.overtime} stroke="#94a3b8" strokeDasharray="4 2" />
+                    <Tooltip content={<ScatterTooltip />} />
+                    <Scatter data={scatterData} shape="circle">
+                        {scatterData.map((entry, i) => (
+                            <Cell
+                                key={i}
+                                fill={entry.fill}
+                                r={Math.max(4, (entry.attendance || 50) / 15)}
+                            />
+                        ))}
+                    </Scatter>
+                </ScatterChart>
+            </ResponsiveContainer>
+
+            {/* Legend */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+                {scatterData.map((entry) => (
+                    <div key={entry.name} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.fill }} />
+                        <span className="text-[11px] font-medium text-slate-600">{entry.name}</span>
+                    </div>
+                ))}
+                <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-0 border-t-2 border-dashed border-slate-400 shrink-0" />
+                    <span className="text-[11px] font-medium text-slate-400">Ekip Ort.</span>
+                </div>
+            </div>
+
+            {/* Insight: quadrant labeling */}
+            <div className="mt-3 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[9px] text-slate-400">
+                <span>Sol Alt: Düşük verimlilik, az mesai</span>
+                <span className="text-right">Sağ Alt: Yüksek verimlilik, az mesai</span>
+                <span>Sol Üst: Düşük verimlilik, çok mesai</span>
+                <span className="text-right">Sağ Üst: Yüksek verimlilik, çok mesai</span>
+            </div>
+        </div>
+    );
+}
+
+/* ===================================================================
    TABLE: DETAYLI KARSILASTIRMA
    =================================================================== */
 function getColorDot(value, thresholdHigh = 90, thresholdLow = 70) {
@@ -377,6 +481,24 @@ function getColorDot(value, thresholdHigh = 90, thresholdLow = 70) {
 }
 
 function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) {
+    // Compute rank per metric: higher is better for most, lower for leave_days
+    const ranksByMetric = useMemo(() => {
+        if (!employees?.length) return {};
+
+        const metricKeys = ['efficiency_pct', 'ot_hours', 'attendance_pct', 'leave_days', 'punctuality_pct'];
+        // Higher is better for all except leave_days (lower = better)
+        const lowerIsBetter = new Set(['leave_days']);
+        const ranks = {};
+        for (const mk of metricKeys) {
+            const sorted = [...employees]
+                .map(e => ({ id: e.employee_id, val: e.metrics?.[mk] ?? 0 }))
+                .sort((a, b) => lowerIsBetter.has(mk) ? a.val - b.val : b.val - a.val);
+            ranks[mk] = {};
+            sorted.forEach((item, idx) => { ranks[mk][item.id] = idx + 1; });
+        }
+        return ranks;
+    }, [employees]);
+
     if (!employees?.length) return null;
 
     const ROWS = [
@@ -507,6 +629,11 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                                                     {showDeviation && (
                                                         <span className={`text-[9px] ml-1 ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                                             ({deviation >= 0 ? '+' : ''}{deviation.toFixed(1)})
+                                                        </span>
+                                                    )}
+                                                    {!row.isTime && ranksByMetric[row.metricKey]?.[emp.employee_id] && (
+                                                        <span className="text-[9px] ml-1 text-slate-400">
+                                                            (#{ranksByMetric[row.metricKey][emp.employee_id]})
                                                         </span>
                                                     )}
                                                 </div>
@@ -646,6 +773,12 @@ export default function ComparisonSection({ onPersonClick }) {
                     showTeamAvg={showTeamAvg}
                 />
             </div>
+
+            {/* Scatter: Verimlilik vs Ek Mesai Korelasyonu */}
+            <ScatterChartCard
+                employees={employees}
+                teamAvg={teamAvg}
+            />
 
             {/* Bottom: Comparison table */}
             <ComparisonTable
