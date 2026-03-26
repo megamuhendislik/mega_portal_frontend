@@ -87,6 +87,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const [leaveStart, setLeaveStart] = useState(null);
     const [leaveEnd, setLeaveEnd] = useState(null);
     const [leaveReason, setLeaveReason] = useState('');
+    const [deductFromBalance, setDeductFromBalance] = useState(true);
+    const [noDeductReason, setNoDeductReason] = useState('');
 
     // Entitlement editing state
     const [editingEntitlement, setEditingEntitlement] = useState(null);
@@ -147,6 +149,11 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
 
     const dateStr = format(date, 'yyyy-MM-dd');
 
+    // Balance-tracked leave type detection
+    const BALANCE_TRACKED_CODES = ['ANNUAL_LEAVE', 'EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'];
+    const selectedLeaveType = requestTypes?.find(t => String(t.id) === String(leaveTypeId));
+    const isBalanceTracked = selectedLeaveType && BALANCE_TRACKED_CODES.includes(selectedLeaveType.code);
+
     /* ───── data loading ───── */
     const loadData = useCallback(() => {
         setLoading(true);
@@ -178,6 +185,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         setLeaveStart(dayjs(dateStr));
         setLeaveEnd(dayjs(dateStr));
         setLeaveReason('');
+        setDeductFromBalance(true);
+        setNoDeductReason('');
         setEditingEntitlement(null);
         setShowAddYear(false);
         setShowHistory(false);
@@ -294,16 +303,27 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             message.warning('Lütfen tüm alanları doldurun');
             return;
         }
+        if (isBalanceTracked && !deductFromBalance && !noDeductReason.trim()) {
+            message.warning('Bakiyeden düşürülmeme nedenini yazınız');
+            return;
+        }
         setSaving(true);
         try {
+            const reasonParts = [leaveReason || 'Muhasebe tarafından oluşturuldu'];
+            if (isBalanceTracked && !deductFromBalance && noDeductReason.trim()) {
+                reasonParts.push(`[Bakiyeden düşürülmedi: ${noDeductReason.trim()}]`);
+            }
             const res = await api.post('/system-data/admin_create_leave/', {
                 employee_id: employee.id,
                 request_type_id: leaveTypeId,
                 start_date: leaveStart.format('YYYY-MM-DD'),
                 end_date: leaveEnd.format('YYYY-MM-DD'),
-                reason: leaveReason || 'Muhasebe tarafından oluşturuldu'
+                reason: reasonParts.join(' '),
+                deduct_from_balance: deductFromBalance,
             });
             message.success(res.data.message || 'İzin oluşturuldu');
+            setDeductFromBalance(true);
+            setNoDeductReason('');
             loadData();
             if (onSaveSuccess) onSaveSuccess();
         } catch (e) {
@@ -1288,6 +1308,27 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             size="small"
                         />
                     </div>
+                    {isBalanceTracked && (
+                        <div className="mt-3 space-y-2">
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={deductFromBalance}
+                                    onChange={e => setDeductFromBalance(e.target.checked)}
+                                    className="rounded border-slate-300"
+                                />
+                                <span className="font-medium text-slate-700">Bakiyeden düşür</span>
+                            </label>
+                            {!deductFromBalance && (
+                                <input
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
+                                    placeholder="Neden bakiyeden düşürülmüyor? (zorunlu)"
+                                    value={noDeductReason}
+                                    onChange={e => setNoDeductReason(e.target.value)}
+                                />
+                            )}
+                        </div>
+                    )}
                     <Button
                         type="primary"
                         icon={<CheckCircleOutlined />}
@@ -1300,7 +1341,9 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                         İzin Oluştur ve Onayla
                     </Button>
                     <div className="text-[10px] text-slate-400">
-                        Admin izni otomatik olarak onaylanacak ve bakiyeden düşülecektir.
+                        {isBalanceTracked && !deductFromBalance
+                            ? 'Admin izni otomatik olarak onaylanacak, bakiyeden düşürülmeyecektir.'
+                            : 'Admin izni otomatik olarak onaylanacak ve bakiyeden düşülecektir.'}
                     </div>
                 </div>
             </div>
