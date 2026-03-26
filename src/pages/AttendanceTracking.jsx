@@ -957,7 +957,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             {Object.values(substituteTeams.teams).map(team => (
                                 <div key={team.principal_id} className="border border-indigo-100 rounded-lg p-3 bg-indigo-50/30">
                                     <div className="text-xs font-semibold text-indigo-600 mb-2">
-                                        {team.principal_name} adına vekalet ({team.valid_from} — {team.valid_to})
+                                        {team.principal_name} adına vekalet ({team.valid_from} — {team.valid_to}) — {team.employees.length} kişi
                                     </div>
                                     <div className="space-y-1">
                                         {team.employees.map(emp => (
