@@ -4,10 +4,22 @@ import { getIstanbulToday, getIstanbulTodayParts, getIstanbulDateOffset } from '
 const AnalyticsFilterContext = createContext(null);
 
 const EXCLUDED_STORAGE_KEY = 'analytics_excluded_employees';
+const EXCLUDED_DEPTS_STORAGE_KEY = 'analytics_excluded_departments';
 
 function loadExcluded() {
     try {
         const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch { /* ignore */ }
+    return [];
+}
+
+function loadExcludedDepts() {
+    try {
+        const raw = localStorage.getItem(EXCLUDED_DEPTS_STORAGE_KEY);
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) return parsed;
@@ -26,6 +38,12 @@ export function AnalyticsFilterProvider({ children }) {
     const [compareDepartments, setCompareDepartments] = useState(false);
     const [showTeamAvg, setShowTeamAvg] = useState(true);
 
+    // New advanced filter states
+    const [autoExcludeLowAttendance, setAutoExcludeLowAttendance] = useState(false);
+    const [attendanceThreshold, setAttendanceThreshold] = useState(50);
+    const [excludedDepartments, setExcludedDepartmentsRaw] = useState(loadExcludedDepts);
+    const [groupByRole, setGroupByRole] = useState(false);
+
     // Wrap department setter to auto-reset compare mode when < 2 depts
     const setSelectedDepartments = useCallback((val) => {
         setSelectedDepartmentsRaw(prev => {
@@ -41,6 +59,15 @@ export function AnalyticsFilterProvider({ children }) {
         setExcludedEmployeesRaw(prev => {
             const next = typeof val === 'function' ? val(prev) : val;
             try { localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+            return next;
+        });
+    }, []);
+
+    // Persist excluded departments to localStorage
+    const setExcludedDepartments = useCallback((val) => {
+        setExcludedDepartmentsRaw(prev => {
+            const next = typeof val === 'function' ? val(prev) : val;
+            try { localStorage.setItem(EXCLUDED_DEPTS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
             return next;
         });
     }, []);
@@ -78,8 +105,19 @@ export function AnalyticsFilterProvider({ children }) {
         if (excludedEmployees.length) params.exclude_employee_ids = excludedEmployees.join(',');
         if (compareDepartments && selectedDepartments.length >= 2) params.compare_departments = '1';
 
+        // Advanced filter query params
+        if (autoExcludeLowAttendance && attendanceThreshold > 0) {
+            params.min_attendance_pct = attendanceThreshold;
+        }
+        if (excludedDepartments.length) {
+            params.exclude_department_ids = excludedDepartments.join(',');
+        }
+        if (groupByRole) {
+            params.group_by_role = '1';
+        }
+
         return params;
-    }, [quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, compareDepartments]);
+    }, [quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, compareDepartments, autoExcludeLowAttendance, attendanceThreshold, excludedDepartments, groupByRole]);
 
     const value = useMemo(() => ({
         quickFilter, setQuickFilter,
@@ -90,8 +128,19 @@ export function AnalyticsFilterProvider({ children }) {
         excludedEmployees, setExcludedEmployees,
         compareDepartments, setCompareDepartments,
         showTeamAvg, setShowTeamAvg,
+        // Advanced filters
+        autoExcludeLowAttendance, setAutoExcludeLowAttendance,
+        attendanceThreshold, setAttendanceThreshold,
+        excludedDepartments, setExcludedDepartments,
+        groupByRole, setGroupByRole,
         queryParams,
-    }), [quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, compareDepartments, showTeamAvg, queryParams, setSelectedDepartments, setExcludedEmployees]);
+    }), [
+        quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles,
+        excludedEmployees, compareDepartments, showTeamAvg, queryParams,
+        setSelectedDepartments, setExcludedEmployees,
+        autoExcludeLowAttendance, attendanceThreshold, excludedDepartments, groupByRole,
+        setExcludedDepartments,
+    ]);
 
     return (
         <AnalyticsFilterContext.Provider value={value}>

@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Select, Switch, DatePicker, Tag, Popover, Badge } from 'antd';
-import { Calendar, Building2, Users, TrendingUp, Briefcase, Settings, X } from 'lucide-react';
+import { Select, Switch, DatePicker, Tag, InputNumber, Badge } from 'antd';
+import {
+    Calendar, Building2, Users, TrendingUp, Briefcase,
+    X, RotateCcw, SlidersHorizontal, ChevronDown, UserX, Filter,
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAnalyticsFilter } from './AnalyticsFilterContext';
 import api from '../../../services/api';
 
 const QUICK_FILTERS = [
     { key: 'this_month', label: 'Bu Ay' },
-    { key: 'last_month', label: 'Ge\u00e7en Ay' },
+    { key: 'last_month', label: 'Geçen Ay' },
     { key: 'last_90', label: 'Son 3 Ay' },
-    { key: 'custom', label: '\u00d6zel Aral\u0131k' },
+    { key: 'custom', label: 'Özel Aralık' },
 ];
 
 export default function GlobalFilterBar() {
@@ -22,6 +25,11 @@ export default function GlobalFilterBar() {
         excludedEmployees, setExcludedEmployees,
         compareDepartments, setCompareDepartments,
         showTeamAvg, setShowTeamAvg,
+        // Advanced filters
+        autoExcludeLowAttendance, setAutoExcludeLowAttendance,
+        attendanceThreshold, setAttendanceThreshold,
+        excludedDepartments, setExcludedDepartments,
+        groupByRole, setGroupByRole,
     } = useAnalyticsFilter();
 
     const [departments, setDepartments] = useState([]);
@@ -30,7 +38,7 @@ export default function GlobalFilterBar() {
     const [empLoading, setEmpLoading] = useState(true);
     const [roles, setRoles] = useState([]);
     const [rolesLoading, setRolesLoading] = useState(true);
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [advancedOpen, setAdvancedOpen] = useState(false);
 
     /* ── Fetch departments ─────────────────────────── */
     useEffect(() => {
@@ -129,6 +137,13 @@ export default function GlobalFilterBar() {
         return map;
     }, [employees]);
 
+    /* ── Department name lookup ─────────────────────── */
+    const deptNameMap = useMemo(() => {
+        const map = {};
+        departments.forEach(d => { map[d.id] = d.name; });
+        return map;
+    }, [departments]);
+
     /* ── Handle quick filter ─────────────────────────── */
     const handleQuickFilter = (key) => {
         setQuickFilter(key);
@@ -156,76 +171,54 @@ export default function GlobalFilterBar() {
         setSelectedEmployees(prev => prev.filter(id => id !== empId));
     };
 
-    /* ── Clear all employees ───────────────────────── */
-    const handleClearAllEmployees = () => {
-        setSelectedEmployees([]);
-    };
-
     /* ── Active filter detection ──────────────────── */
-    const hasActiveFilters = selectedDepartments.length > 0 || selectedEmployees.length > 0 || selectedRoles.length > 0 || excludedEmployees.length > 0;
-    const activeFilterCount = [selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees].filter(a => a.length > 0).length;
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (selectedDepartments.length > 0) count++;
+        if (selectedEmployees.length > 0) count++;
+        if (selectedRoles.length > 0) count++;
+        if (excludedEmployees.length > 0) count++;
+        if (excludedDepartments.length > 0) count++;
+        if (autoExcludeLowAttendance) count++;
+        if (groupByRole) count++;
+        return count;
+    }, [selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, excludedDepartments, autoExcludeLowAttendance, groupByRole]);
+
+    const hasActiveFilters = activeFilterCount > 0;
 
     const clearAllFilters = () => {
         setSelectedDepartments([]);
         setSelectedEmployees([]);
         setSelectedRoles([]);
         setExcludedEmployees([]);
+        setExcludedDepartments([]);
         setQuickFilter('this_month');
         setCompareDepartments(false);
+        setAutoExcludeLowAttendance(false);
+        setAttendanceThreshold(50);
+        setGroupByRole(false);
     };
 
-    /* ── Excluded employees count ──────────────────── */
-    const excludedCount = excludedEmployees.length;
+    /* ── Advanced filter count (for the toggle badge) ── */
+    const advancedFilterCount = useMemo(() => {
+        let count = 0;
+        if (autoExcludeLowAttendance) count++;
+        if (excludedEmployees.length > 0) count++;
+        if (excludedDepartments.length > 0) count++;
+        if (groupByRole) count++;
+        return count;
+    }, [autoExcludeLowAttendance, excludedEmployees, excludedDepartments, groupByRole]);
 
-    /* ── Settings popover content ──────────────────── */
-    const settingsContent = (
-        <div className="w-[320px]">
-            <div className="mb-2 text-sm font-semibold text-slate-700">Analizden Hari\u00e7 Tut</div>
-            <p className="text-xs text-slate-400 mb-3">
-                Se\u00e7ilen \u00e7al\u0131\u015fanlar t\u00fcm analiz sonu\u00e7lar\u0131ndan hari\u00e7 tutulur. Tercihleriniz otomatik kaydedilir.
-            </p>
-            <Select
-                mode="multiple"
-                value={excludedEmployees}
-                onChange={(val) => setExcludedEmployees(val || [])}
-                options={allEmpOptions}
-                size="small"
-                loading={empLoading}
-                className="w-full"
-                popupMatchSelectWidth={false}
-                placeholder="\u00c7al\u0131\u015fan se\u00e7..."
-                maxTagCount={3}
-                maxTagPlaceholder={(omitted) => `+${omitted.length} ki\u015fi`}
-                maxTagTextLength={12}
-                allowClear
-                showSearch
-                filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-            />
-            {excludedCount > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                    {excludedEmployees.map(empId => (
-                        <Tag
-                            key={empId}
-                            closable
-                            onClose={() => setExcludedEmployees(prev => prev.filter(id => id !== empId))}
-                            className="rounded-full border-0 text-xs"
-                            style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
-                        >
-                            {empNameMap[empId] || `#${empId}`}
-                        </Tag>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+    const showDepartmentSelector = departments.length > 1;
 
     return (
         <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 rounded-xl shadow-sm">
-            {/* ── Row 1: Date + Department + Role + Settings ── */}
-            <div className="px-4 py-3 flex flex-wrap items-center gap-4">
-                {/* 1. Date Quick Filters */}
+
+            {/* ══════════════════════════════════════════════════════
+                ROW 1: Tarih & Genel Ayarlar
+               ══════════════════════════════════════════════════════ */}
+            <div className="px-4 py-3 flex flex-wrap items-center gap-3">
+                {/* Date Quick Filters */}
                 <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-slate-400 shrink-0" />
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
@@ -260,38 +253,97 @@ export default function GlobalFilterBar() {
                                 }
                             }}
                             className="rounded-lg"
-                            placeholder={['Ba\u015flang\u0131\u00e7', 'Biti\u015f']}
+                            placeholder={['Başlangıç', 'Bitiş']}
                         />
                     )}
                 </div>
 
-                {/* 2. Department Multi-Select */}
+                {/* Separator */}
+                <div className="w-px h-6 bg-slate-200 hidden sm:block" />
+
+                {/* Team Avg Toggle */}
                 <div className="flex items-center gap-2">
-                    <Building2 size={14} className="text-slate-400 shrink-0" />
-                    <Select
-                        mode="multiple"
-                        value={selectedDepartments}
-                        onChange={handleDepartmentChange}
-                        options={deptOptions}
+                    <TrendingUp size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Ekip Ort.</span>
+                    <Switch
+                        checked={showTeamAvg}
+                        onChange={setShowTeamAvg}
                         size="small"
-                        loading={deptLoading}
-                        className="min-w-[200px]"
-                        popupMatchSelectWidth={false}
-                        placeholder="Departman se\u00e7"
-                        maxTagCount={2}
-                        maxTagPlaceholder={(omitted) => `+${omitted.length} departman`}
-                        maxTagTextLength={10}
-                        allowClear
-                        showSearch
-                        filterOption={(input, option) =>
-                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                        }
                     />
                 </div>
 
-                {/* 3. Role/Position Multi-Select */}
+                {/* Right side: Advanced toggle + Reset + Badge */}
+                <div className="flex items-center gap-2 ml-auto">
+                    {/* Active filter count badge */}
+                    {hasActiveFilters && (
+                        <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-semibold"
+                            title={`${activeFilterCount} aktif filtre`}
+                        >
+                            <Filter size={10} />
+                            {activeFilterCount} filtre aktif
+                        </span>
+                    )}
+
+                    {/* Clear all filters */}
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearAllFilters}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-medium hover:bg-red-50 hover:text-red-500 transition-colors"
+                            title="Tüm filtreleri sıfırla"
+                        >
+                            <RotateCcw size={10} /> Tümünü Sıfırla
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════
+                ROW 2: Kapsam Filtreleri
+               ══════════════════════════════════════════════════════ */}
+            <div className="px-4 pb-3 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-2">
+                {/* Department Multi-Select (only if >1 department) */}
+                {showDepartmentSelector && (
+                    <div className="flex items-center gap-2">
+                        <Building2 size={14} className="text-slate-400 shrink-0" />
+                        <span className="text-xs font-medium text-slate-500 whitespace-nowrap hidden lg:inline">Departman:</span>
+                        <Select
+                            mode="multiple"
+                            value={selectedDepartments}
+                            onChange={handleDepartmentChange}
+                            options={deptOptions}
+                            size="small"
+                            loading={deptLoading}
+                            className="min-w-[200px]"
+                            popupMatchSelectWidth={false}
+                            placeholder="Departman seç"
+                            maxTagCount={2}
+                            maxTagPlaceholder={(omitted) => `+${omitted.length} departman`}
+                            maxTagTextLength={10}
+                            allowClear
+                            showSearch
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        />
+                        {/* Compare toggle (only when >=2 depts selected) */}
+                        {selectedDepartments.length >= 2 && (
+                            <div className="flex items-center gap-1.5 ml-1">
+                                <span className="text-xs font-medium text-slate-500 whitespace-nowrap">Karşılaştır</span>
+                                <Switch
+                                    checked={compareDepartments}
+                                    onChange={setCompareDepartments}
+                                    size="small"
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Role/Position Multi-Select */}
                 <div className="flex items-center gap-2">
                     <Briefcase size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-xs font-medium text-slate-500 whitespace-nowrap hidden lg:inline">Rol:</span>
                     <Select
                         mode="multiple"
                         value={selectedRoles}
@@ -301,7 +353,7 @@ export default function GlobalFilterBar() {
                         loading={rolesLoading}
                         className="min-w-[180px]"
                         popupMatchSelectWidth={false}
-                        placeholder="Rol/Pozisyon se\u00e7"
+                        placeholder="Rol/Pozisyon seç"
                         maxTagCount={2}
                         maxTagPlaceholder={(omitted) => `+${omitted.length} rol`}
                         maxTagTextLength={10}
@@ -313,77 +365,10 @@ export default function GlobalFilterBar() {
                     />
                 </div>
 
-                {/* 4. Department Compare Toggle (only when >=2 depts selected) */}
-                {selectedDepartments.length >= 2 && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Departman Kar\u015f\u0131la\u015ft\u0131r</span>
-                        <Switch
-                            checked={compareDepartments}
-                            onChange={setCompareDepartments}
-                            size="small"
-                        />
-                    </div>
-                )}
-
-                {/* 5. Team Avg Toggle + Clear All + Filter Badge + Settings (pushed to right) */}
-                <div className="flex items-center gap-3 ml-auto">
-                    {/* Active filter count badge */}
-                    {hasActiveFilters && (
-                        <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center" title={`${activeFilterCount} aktif filtre`}>
-                            {activeFilterCount}
-                        </span>
-                    )}
-
-                    {/* Clear all filters */}
-                    {hasActiveFilters && (
-                        <button
-                            onClick={clearAllFilters}
-                            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-medium hover:bg-red-50 hover:text-red-500 transition-colors"
-                        >
-                            <X size={10} /> Tümünü Sıfırla
-                        </button>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                        <TrendingUp size={14} className="text-slate-400 shrink-0" />
-                        <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Ekip Ort.</span>
-                        <Switch
-                            checked={showTeamAvg}
-                            onChange={setShowTeamAvg}
-                            size="small"
-                        />
-                    </div>
-
-                    {/* Settings (Excluded Employees) */}
-                    <Popover
-                        content={settingsContent}
-                        title={null}
-                        trigger="click"
-                        open={settingsOpen}
-                        onOpenChange={setSettingsOpen}
-                        placement="bottomRight"
-                    >
-                        <Badge count={excludedCount} size="small" offset={[-2, 2]}>
-                            <button
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                    excludedCount > 0
-                                        ? 'bg-red-50 text-red-500 hover:bg-red-100'
-                                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                                }`}
-                                title="Ayarlar"
-                            >
-                                <Settings size={16} />
-                            </button>
-                        </Badge>
-                    </Popover>
-                </div>
-            </div>
-
-            {/* ── Row 2: Employee Select + Employee Tags ── */}
-            <div className="px-4 pb-3 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-2">
                 {/* Employee Multi-Select */}
                 <div className="flex items-center gap-2">
                     <Users size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-xs font-medium text-slate-500 whitespace-nowrap hidden lg:inline">Çalışan:</span>
                     <Select
                         mode="multiple"
                         value={selectedEmployees}
@@ -393,9 +378,9 @@ export default function GlobalFilterBar() {
                         loading={empLoading}
                         className="min-w-[240px]"
                         popupMatchSelectWidth={false}
-                        placeholder="\u00c7al\u0131\u015fan se\u00e7 (maks 10)"
+                        placeholder="Çalışan seç (maks 10)"
                         maxTagCount={3}
-                        maxTagPlaceholder={(omitted) => `+${omitted.length} ki\u015fi`}
+                        maxTagPlaceholder={(omitted) => `+${omitted.length} kişi`}
                         maxTagTextLength={12}
                         allowClear
                         showSearch
@@ -405,32 +390,189 @@ export default function GlobalFilterBar() {
                     />
                 </div>
 
-                {/* Selected employee tags */}
+                {/* Selected employee inline tags */}
                 {selectedEmployees.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                         {selectedEmployees.map(empId => (
                             <Tag
                                 key={empId}
                                 closable
                                 onClose={() => handleRemoveEmployee(empId)}
-                                className="rounded-full border-0"
-                                style={{
-                                    backgroundColor: '#eef2ff',
-                                    color: '#4338ca',
-                                }}
+                                className="rounded-full border-0 text-xs"
+                                style={{ backgroundColor: '#eef2ff', color: '#4338ca' }}
                             >
                                 {empNameMap[empId] || `#${empId}`}
                             </Tag>
                         ))}
                         <button
-                            onClick={handleClearAllEmployees}
-                            className="text-xs text-slate-400 hover:text-red-500 transition-colors ml-1"
+                            onClick={() => setSelectedEmployees([])}
+                            className="text-[10px] text-slate-400 hover:text-red-500 transition-colors ml-0.5"
                         >
-                            T\u00fcm\u00fcn\u00fc temizle
+                            Tümünü temizle
                         </button>
                     </div>
                 )}
             </div>
+
+            {/* ══════════════════════════════════════════════════════
+                Advanced Toggle Button (between Row 2 and Row 3)
+               ══════════════════════════════════════════════════════ */}
+            <div className="px-4 pb-1 flex items-center">
+                <button
+                    onClick={() => setAdvancedOpen(!advancedOpen)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        advancedOpen || advancedFilterCount > 0
+                            ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                    }`}
+                >
+                    <SlidersHorizontal size={12} />
+                    <span>Gelişmiş Filtreler</span>
+                    {advancedFilterCount > 0 && (
+                        <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">
+                            {advancedFilterCount}
+                        </span>
+                    )}
+                    <ChevronDown
+                        size={12}
+                        className={`transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`}
+                    />
+                </button>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════
+                ROW 3: Gelişmiş Filtreler (collapsible)
+               ══════════════════════════════════════════════════════ */}
+            {advancedOpen && (
+                <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {/* 3a. Otomatik Hariç Tutma */}
+                        <div className="p-3 bg-white rounded-lg border border-slate-100">
+                            <span className="text-xs font-medium text-slate-600 mb-2 block">Otomatik Hariç Tutma</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoExcludeLowAttendance}
+                                        onChange={(e) => setAutoExcludeLowAttendance(e.target.checked)}
+                                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-xs text-slate-600">Devam oranı</span>
+                                </label>
+                                <InputNumber
+                                    size="small"
+                                    min={0}
+                                    max={100}
+                                    value={attendanceThreshold}
+                                    onChange={(val) => setAttendanceThreshold(val ?? 50)}
+                                    disabled={!autoExcludeLowAttendance}
+                                    className="w-16"
+                                />
+                                <span className="text-xs text-slate-600">% altı olanları hariç tut</span>
+                            </div>
+                        </div>
+
+                        {/* 3d. Rol Bazlı Analiz Modu */}
+                        <div className="p-3 bg-white rounded-lg border border-slate-100">
+                            <span className="text-xs font-medium text-slate-600 mb-2 block">Analiz Modu</span>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={groupByRole}
+                                    onChange={(e) => setGroupByRole(e.target.checked)}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs text-slate-600">Rollere göre grupla ve analiz et</span>
+                            </label>
+                        </div>
+
+                        {/* 3b. Kişi Hariç Tutma */}
+                        <div className="p-3 bg-white rounded-lg border border-slate-100">
+                            <span className="text-xs font-medium text-slate-600 mb-1.5 block">
+                                <UserX size={12} className="inline mr-1 -mt-0.5" />
+                                Analizden Hariç Tutulan Çalışanlar
+                            </span>
+                            <Select
+                                mode="multiple"
+                                value={excludedEmployees}
+                                onChange={(val) => setExcludedEmployees(val || [])}
+                                options={allEmpOptions}
+                                size="small"
+                                loading={empLoading}
+                                className="w-full"
+                                popupMatchSelectWidth={false}
+                                placeholder="Hariç tutulacak çalışan seç..."
+                                maxTagCount={3}
+                                maxTagPlaceholder={(omitted) => `+${omitted.length} kişi`}
+                                maxTagTextLength={12}
+                                allowClear
+                                showSearch
+                                filterOption={(input, option) =>
+                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                }
+                            />
+                            {excludedEmployees.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {excludedEmployees.map(empId => (
+                                        <Tag
+                                            key={empId}
+                                            closable
+                                            onClose={() => setExcludedEmployees(prev => prev.filter(id => id !== empId))}
+                                            className="rounded-full border-0 text-xs"
+                                            style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+                                        >
+                                            {empNameMap[empId] || `#${empId}`}
+                                        </Tag>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3c. Departman Hariç Tutma */}
+                        <div className="p-3 bg-white rounded-lg border border-slate-100">
+                            <span className="text-xs font-medium text-slate-600 mb-1.5 block">
+                                <Building2 size={12} className="inline mr-1 -mt-0.5" />
+                                Hariç Tutulan Departmanlar
+                            </span>
+                            <Select
+                                mode="multiple"
+                                value={excludedDepartments}
+                                onChange={(val) => setExcludedDepartments(val || [])}
+                                options={deptOptions}
+                                size="small"
+                                loading={deptLoading}
+                                className="w-full"
+                                popupMatchSelectWidth={false}
+                                placeholder="Hariç tutulacak departman seç..."
+                                maxTagCount={3}
+                                maxTagPlaceholder={(omitted) => `+${omitted.length} departman`}
+                                maxTagTextLength={10}
+                                allowClear
+                                showSearch
+                                filterOption={(input, option) =>
+                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                }
+                            />
+                            {excludedDepartments.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {excludedDepartments.map(deptId => (
+                                        <Tag
+                                            key={deptId}
+                                            closable
+                                            onClose={() => setExcludedDepartments(prev => prev.filter(id => id !== deptId))}
+                                            className="rounded-full border-0 text-xs"
+                                            style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+                                        >
+                                            {deptNameMap[deptId] || `#${deptId}`}
+                                        </Tag>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
