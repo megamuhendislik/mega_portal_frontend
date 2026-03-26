@@ -408,25 +408,28 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                 </div>
 
                 {/* ── DUAL BAR SECTION ── */}
-                <div className="px-6 pt-5 pb-5 relative">
-                    {/* Target indicator spanning both bars */}
-                    {parseFloat(stats.targetHours) > 0 && (
-                        <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottom" zIndex={1050}>
-                            <div className="absolute z-30 cursor-pointer group" style={{ left: `calc(${stats.indicatorLeft}% + 24px - ${stats.indicatorLeft * 0.48}px)`, top: 44, bottom: 60, width: 16 }}>
-                                <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                                    <svg width="8" height="5" viewBox="0 0 8 5" className="text-indigo-400 group-hover:text-indigo-600 transition-colors"><polygon points="4,5 0,0 8,0" fill="currentColor" /></svg>
-                                </div>
-                                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0 border-l border-dashed border-indigo-300/50 group-hover:border-indigo-500/70 transition-colors" />
-                            </div>
-                        </Popover>
-                    )}
+                <div className="px-6 pt-5 pb-5">
+                    {/* Labels row */}
+                    <div className="flex justify-between items-baseline mb-2">
+                        <span className="text-xs font-bold text-slate-700">Normal Mesai</span>
+                        <span className="text-[11px] text-slate-400 tabular-nums">/ {stats.targetDisplay}</span>
+                    </div>
 
-                    {/* Bar 1: Normal Mesai — scale = target = 100% */}
-                    <div className="mb-4">
-                        <div className="flex justify-between items-baseline mb-2">
-                            <span className="text-xs font-bold text-slate-700">Normal Mesai</span>
-                            <span className="text-[11px] text-slate-400 tabular-nums">/ {stats.targetDisplay}</span>
-                        </div>
+                    {/* === BAR AREA (relative wrapper — indicator % doğrudan bar ile hizalı) === */}
+                    <div className="relative">
+                        {/* Dashed indicator line — doğrudan bar alanıyla aynı coordinate space */}
+                        {parseFloat(stats.targetHours) > 0 && stats.indicatorLeft > 0.5 && stats.indicatorLeft < 99.5 && (
+                            <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottom" zIndex={1050}>
+                                <div className="absolute z-30 cursor-pointer group" style={{ left: `${stats.indicatorLeft}%`, top: 0, bottom: 0, width: 0 }}>
+                                    <div className="absolute top-0 bottom-0 -translate-x-1/2 w-0 border-l-[1.5px] border-dashed border-indigo-400/40 group-hover:border-indigo-500/70 transition-colors" />
+                                    <div className="absolute -top-2 -translate-x-1/2">
+                                        <svg width="8" height="5" viewBox="0 0 8 5" className="text-indigo-400 group-hover:text-indigo-600 transition-colors"><polygon points="4,5 0,0 8,0" fill="currentColor" /></svg>
+                                    </div>
+                                </div>
+                            </Popover>
+                        )}
+
+                        {/* Bar 1: Normal Mesai — target = 100%, shrink-0 segmentler */}
                         <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50">
                             {stats.pCompleted > 0 && <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shrink-0" style={{ width: `${stats.pCompleted}%` }} /></Tooltip>}
                             {(stats.pDutyBar1 || 0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${stats.pDutyBar1}%` }} /></Tooltip>}
@@ -435,7 +438,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             {stats.pMissing > 0 && <Tooltip title={`Eksik: ${stats.missingDisplay}`}><div className="h-full shrink-0" style={{ width: `${stats.pMissing}%`, background: 'repeating-linear-gradient(45deg, #fecdd3, #fecdd3 2px, #f43f5e 2px, #f43f5e 4px)' }} /></Tooltip>}
                             {stats.pRemaining > 0.1 && <Tooltip title={`Kalan: ${fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec))}`}><div className="bg-slate-200/60 h-full shrink-0" style={{ width: `${stats.pRemaining}%` }} /></Tooltip>}
                         </div>
-                        <div className="flex justify-between mt-1.5 text-[10px] font-semibold tabular-nums">
+
+                        {/* Bar 1 labels */}
+                        <div className="flex justify-between mt-1.5 mb-3 text-[10px] font-semibold tabular-nums">
                             <div className="flex gap-2 flex-wrap">
                                 <span className="text-indigo-600">{stats.completedDisplay}</span>
                                 {parseFloat(stats.dutyHours || 0) > 0 && <span className="text-violet-500">+{stats.dutyDisplay}</span>}
@@ -443,25 +448,22 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-500">+{stats.healthReportDisplay}</span>}
                             </div>
                             <div className="flex gap-2">
-                                {parseFloat(stats.missingHours) > 0 && <span className="text-rose-500">-{stats.missingDisplay}</span>}
+                                {parseFloat(stats.missingHours) > 0 && <span className="text-rose-500">-{stats.missingDisplay} eksik</span>}
                                 {(() => { const k = Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec); return k > 60 ? <span className="text-slate-400">{fmtSec(k)} kalan</span> : null; })()}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Bar 2: Toplam Efor — AYNI SCALE (target = 100%) */}
-                    {/* Segmentler Bar 1 ile birebir aynı scale: value/target*100 */}
-                    {/* Taşarsa overflow-hidden keser, badge ile gösterilir */}
-                    <div>
+                        {/* Bar 2 label */}
                         <div className="flex justify-between items-baseline mb-2">
                             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                                 Toplam Efor
-                                <Tooltip title="Normal + OT + İzin + Rapor. Eksik dahil değil — sonraki aya aktarılır."><Info className="w-3 h-3 text-slate-300 cursor-help" /></Tooltip>
+                                <Tooltip title="Normal + OT + İzin + Rapor. Eksik dahil değil."><Info className="w-3 h-3 text-slate-300 cursor-help" /></Tooltip>
                             </span>
                             <span className="text-[11px] font-bold text-slate-500 tabular-nums">{stats.displayTotalDisplay} <span className="text-slate-300">/ {stats.targetDisplay}</span></span>
                         </div>
+
+                        {/* Bar 2: Toplam Efor — AYNI SCALE (target = 100%), shrink-0 */}
                         {(() => {
-                            // HER ZAMAN target scale (Bar 1 ile birebir aynı)
                             const sc = stats._targetSec || 1;
                             const pct = (v) => (v / sc) * 100;
                             const totalSec = stats._realizedSec + (stats._dutySec||0) + stats._leaveSec + stats._hrSec + stats._overtimeSec;
@@ -470,17 +472,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             const overflowSec = Math.max(0, totalSec - sc);
                             return (
                                 <>
-                                    <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50 relative">
+                                    <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50">
                                         {stats._realizedSec > 0 && <Tooltip title={`Normal: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shrink-0" style={{ width: `${pct(stats._realizedSec)}%` }} /></Tooltip>}
                                         {(stats._dutySec||0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${pct(stats._dutySec)}%` }} /></Tooltip>}
                                         {stats._leaveSec > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full shrink-0" style={{ width: `${pct(stats._leaveSec)}%` }} /></Tooltip>}
                                         {stats._hrSec > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full shrink-0" style={{ width: `${pct(stats._hrSec)}%` }} /></Tooltip>}
                                         {stats._overtimeSec > 0 && <Tooltip title={`Onaylı OT: ${stats.overtimeDisplay}`}><div className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full shrink-0" style={{ width: `${pct(stats._overtimeSec)}%` }} /></Tooltip>}
                                         {potSec > 0 && <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}><div className="h-full shrink-0 opacity-50" style={{ width: `${pct(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} /></Tooltip>}
-                                        {/* Hedefe kalan boşluk — shrink-0 yok, kalan alanı kaplar */}
                                         {gapSec > 0 && <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}><div className="h-full flex-1" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #e5e7eb 4px, #e5e7eb 5px)' }} /></Tooltip>}
                                     </div>
-                                    {/* Overflow badge */}
                                     {overflowSec > 0 && (
                                         <div className="flex justify-end mt-1">
                                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hedef +{fmtSec(overflowSec)} aşıldı</span>
@@ -489,6 +489,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 </>
                             );
                         })()}
+                        {/* Bar 2 labels */}
                         <div className="flex justify-between mt-1.5 text-[10px] font-semibold tabular-nums">
                             <div className="flex gap-2 flex-wrap">
                                 <span className="text-indigo-600">{stats.completedDisplay}</span>
@@ -499,7 +500,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 {(stats._potentialOtSec || 0) > 0 && <span className="text-slate-400">+{stats.potentialOtDisplay || fmtSec(stats._potentialOtSec)} pot.</span>}
                             </div>
                         </div>
-                    </div>
+                    </div>{/* end relative bar area */}
+
+                    {/* Bugüne kadar net durum — indicator çizgisinin altı */}
+                    {(() => {
+                        const bal = stats._netWithOtSec ?? 0;
+                        const isOk = bal <= 0;
+                        return (
+                            <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold ${isOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-700' : 'bg-rose-50/50 border-rose-100 text-rose-700'}`}>
+                                {isOk ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+                                <span>Bugüne kadar: {isOk ? '+' : ''}{fmtSec(bal === 0 ? 0 : -bal)} {isOk ? 'ilerde' : 'geride'}</span>
+                                <span className="text-slate-400 font-medium ml-auto text-[10px]">OT dahil</span>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* ── NET DURUM ── */}
