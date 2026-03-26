@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -435,7 +436,10 @@ export default function EfficiencySection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shrink-0">
                             <TrendingUp size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Günlük Verimlilik Trendi</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Günlük Verimlilik Trendi
+                            <InfoTooltip text="Günlük ortalama çalışma saatleri. Kırmızı kesikli çizgi 8 saatlik hedefi gösterir. Kişi seçildiğinde bireysel çizgiler eklenir." />
+                        </h4>
                     </div>
                     {dailyTrendData.length > 0 ? (
                         <div className="overflow-x-auto -mx-2">
@@ -520,7 +524,10 @@ export default function EfficiencySection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                             <Users size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Verimlilik</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Kişi Bazlı Verimlilik
+                            <InfoTooltip text="Çalışanların verimlilik yüzdesine göre sıralaması. Yeşil \u226590%, turuncu %70-90, kırmızı <%70. Çubuğa tıklayarak detay görüntüleyin." />
+                        </h4>
                         {selectedTier && (
                             <button
                                 onClick={() => setSelectedTier(null)}
@@ -618,7 +625,10 @@ export default function EfficiencySection({ onPersonClick }) {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shrink-0">
                         <PieChartIcon size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Verimlilik Dağılımı</h4>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                        Verimlilik Dağılımı
+                        <InfoTooltip text="Ekibin verimlilik seviyelerine göre dağılımı. Segmente tıklayarak o gruptaki çalışanları filtreleyebilirsiniz." />
+                    </h4>
                 </div>
                 {donutData.length > 0 ? (
                     <div className="flex flex-col items-center">

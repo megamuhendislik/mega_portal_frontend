@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -315,7 +316,10 @@ export default function DepartmentRoleSection({ onPersonClick: _onPersonClick })
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-zinc-600 flex items-center justify-center text-white shrink-0">
                             <Building2 size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Departman Karşılaştırması</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Departman Karşılaştırması
+                            <InfoTooltip text="Departmanların verimlilik sıralaması. \u22652 departman seçip 'Karşılaştır' açarak metrik bazlı kıyaslama yapabilirsiniz." />
+                        </h4>
                     </div>
 
                     {compareDepartments && compareBarData && compareBarData.length > 0 ? (
@@ -398,7 +402,10 @@ export default function DepartmentRoleSection({ onPersonClick: _onPersonClick })
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
                             <Briefcase size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Rol/Pozisyon Analizi</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Rol/Pozisyon Analizi
+                            <InfoTooltip text="Rol ve pozisyonlara göre ortalama verimlilik dağılımı." />
+                        </h4>
                     </div>
 
                     {roleDonutData.length > 0 ? (
@@ -454,7 +461,10 @@ export default function DepartmentRoleSection({ onPersonClick: _onPersonClick })
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white shrink-0">
                         <Table2 size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Departman/Rol Detay</h4>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                        Departman/Rol Detay
+                        <InfoTooltip text="Departman veya rol bazında kişi sayısı, verimlilik, ek mesai, devam ve eksik saat detayları." />
+                    </h4>
                 </div>
 
                 {tableData.length > 0 ? (

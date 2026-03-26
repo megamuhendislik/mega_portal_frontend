@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -326,7 +327,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <Coffee size={14} className="text-emerald-600" />
-                        <span className="text-xs text-slate-500 font-medium">Sayılan Mola</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">Sayılan Mola <InfoTooltip text="30 dakikalık izin dahilinde kullanılan mola süresi. Çalışma süresinden düşülür." /></span>
                     </div>
                     <p className="text-xl font-bold text-emerald-700">
                         {avgCountedMinutes != null ? Math.round(avgCountedMinutes) : '—'} <span className="text-sm font-semibold">dk</span>
@@ -338,7 +339,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-red-50 rounded-xl p-3 border border-red-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <AlertTriangle size={14} className="text-red-500" />
-                        <span className="text-xs text-slate-500 font-medium">Sayılmayan Mola</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">Sayılmayan Mola <InfoTooltip text="İzin süresini aşan fazla mola. Çalışma süresinden düşülmez ama verimliliği etkiler." /></span>
                     </div>
                     <p className="text-xl font-bold text-red-600">
                         {avgUncountedMinutes != null ? Math.round(avgUncountedMinutes) : '—'} <span className="text-sm font-semibold">dk</span>
@@ -350,7 +351,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <Timer size={14} className="text-orange-600" />
-                        <span className="text-xs text-slate-500 font-medium">Toplam Dışarıda</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">Toplam Dışarıda <InfoTooltip text="Gün içinde iş istasyonundan uzakta geçirilen toplam süre (sayılan + sayılmayan)." /></span>
                     </div>
                     <p className={`text-xl font-bold ${getAvgBreakColor(avgPotentialMinutes ?? avgCountedMinutes ?? 0)}`}>
                         {avgPotentialMinutes != null
@@ -368,7 +369,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <UtensilsCrossed size={14} className="text-blue-600" />
-                        <span className="text-xs text-slate-500 font-medium">Yemek Oranı</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">Yemek Oranı <InfoTooltip text="İş günlerinde yemek siparişi veren çalışanların oranı." /></span>
                     </div>
                     <p className="text-xl font-bold text-blue-700">
                         %{kpi?.meal_rate_pct != null ? Math.round(kpi.meal_rate_pct) : '—'}
@@ -380,7 +381,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <Utensils size={14} className="text-violet-600" />
-                        <span className="text-xs text-slate-500 font-medium">OT Yemek</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">OT Yemek <InfoTooltip text="Ek mesai yapılan günlerde yemek siparişi oranı." /></span>
                     </div>
                     <p className="text-xl font-bold text-violet-700">
                         %{kpi?.ot_meal_overlap_pct != null ? Math.round(kpi.ot_meal_overlap_pct) : '—'}
@@ -392,7 +393,7 @@ export default function BreakMealSection({ onPersonClick }) {
                 <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
                     <div className="flex items-center gap-1.5 mb-1">
                         <Clock size={14} className="text-orange-600" />
-                        <span className="text-xs text-slate-500 font-medium">Taşma Günü</span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">Taşma Günü <InfoTooltip text="45 dakikadan fazla mola yapılan toplam gün sayısı." /></span>
                     </div>
                     <p className="text-xl font-bold text-orange-700">
                         {kpi?.break_exceeding_count ?? '—'} <span className="text-sm font-semibold">gün</span>
@@ -449,7 +450,10 @@ export default function BreakMealSection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                             <BarChart3 size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Sayılan Mola Dağılımı</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Sayılan Mola Dağılımı
+                            <InfoTooltip text="İzin dahilindeki mola sürelerinin 5 dakikalık dilimlerde dağılımı. Kırmızı çizgi 30 dakikalık izin sınırı." />
+                        </h4>
                     </div>
                     {histogramData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={260}>
@@ -491,7 +495,10 @@ export default function BreakMealSection({ onPersonClick }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shrink-0">
                             <AlertTriangle size={14} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-800">Sayılmayan Mola (Taşma)</h4>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            Sayılmayan Mola (Taşma)
+                            <InfoTooltip text="İzin dışı fazla mola sürelerinin dağılımı. Bu süreler çalışma saatinden düşülmez." />
+                        </h4>
                     </div>
                     {uncountedHistogramData && uncountedHistogramData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={260}>
@@ -527,7 +534,10 @@ export default function BreakMealSection({ onPersonClick }) {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                         <Users size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Kişi Bazlı Mola Analizi (Sayılan + Sayılmayan)</h4>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                        Kişi Bazlı Mola Analizi (Sayılan + Sayılmayan)
+                        <InfoTooltip text="Çalışan başına ortalama mola süresi. Yeşil = sayılan (izin dahili), kırmızı = sayılmayan (taşma)." />
+                    </h4>
                 </div>
                 {employeeBreakData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={400}>
@@ -600,7 +610,10 @@ export default function BreakMealSection({ onPersonClick }) {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white shrink-0">
                         <UtensilsCrossed size={14} />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800">Yemek Sipariş Trendi</h4>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                        Yemek Sipariş Trendi
+                        <InfoTooltip text="Aylık yemek sipariş sayısı (çubuklar) ve sipariş oranı % (çizgi)." />
+                    </h4>
                 </div>
                 {mealTrendData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={250}>

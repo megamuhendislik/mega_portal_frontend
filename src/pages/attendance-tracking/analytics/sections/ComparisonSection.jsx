@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import InfoTooltip from '../shared/InfoTooltip';
 
 /* ===================================================================
    CONSTANTS
@@ -215,7 +216,10 @@ function RadarChartCard({ employees, teamAvg, showTeamAvg }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shrink-0">
                     <Target size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Performans Radarı</h3>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Performans Radarı
+                    <InfoTooltip text="Seçilen çalışanların 5 eksende normalize performans karşılaştırması (0-100 ölçek). Kesikli çizgi ekip ortalaması." />
+                </h3>
             </div>
 
             {/* Radar */}
@@ -312,7 +316,10 @@ function ParallelCoordinatesCard({ employees, teamAvg, showTeamAvg }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0">
                     <GitCompareArrows size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Çok Boyutlu Karşılaştırma</h3>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Çok Boyutlu Karşılaştırma
+                    <InfoTooltip text="Paralel koordinat grafiği: 5 metrikte çalışanların göreceli konumu. Çizgilerin kesişim noktaları sıralama değişimlerini gösterir." />
+                </h3>
             </div>
 
             {/* LineChart (parallel coordinates simulation) */}
@@ -410,7 +417,10 @@ function ScatterChartCard({ employees, teamAvg }) {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shrink-0">
                     <Crosshair size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Verimlilik vs Ek Mesai</h3>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Verimlilik vs Ek Mesai
+                    <InfoTooltip text="Verimlilik ve ek mesai ilişkisi. Nokta büyüklüğü devam oranını gösterir. Kesikli çizgiler ekip ortalaması." />
+                </h3>
             </div>
 
             <ResponsiveContainer width="100%" height={250}>
@@ -554,7 +564,10 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shrink-0">
                     <Table2 size={16} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Detaylı Karşılaştırma</h3>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                    Detaylı Karşılaştırma
+                    <InfoTooltip text="6 metrikte seçilen çalışanların detaylı kıyaslaması. Parantez içi sapma ekip ortalamasından farkı, # sıralamayı gösterir." />
+                </h3>
             </div>
 
             {/* Table */}
