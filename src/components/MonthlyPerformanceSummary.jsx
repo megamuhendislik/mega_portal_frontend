@@ -284,6 +284,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     ytdTarget: periodSummary.cumulative.ytd_target_seconds,
                     ytdCompleted: periodSummary.cumulative.ytd_completed_seconds,
 
+                    // YTD total work (normal + OT + leave + health report)
+                    ytdTotalWork: periodSummary.cumulative.ytd_total_work_seconds || 0,
+                    ytdTotalWorkHours: ((periodSummary.cumulative.ytd_total_work_seconds || 0) / 3600).toFixed(1),
+                    ytdTotalWorkDisplay: fmtSec(periodSummary.cumulative.ytd_total_work_seconds || 0),
+
                     // Annual target
                     annualTargetSeconds: periodSummary.cumulative.annual_target_seconds || 0,
                     annualTargetHours: ((periodSummary.cumulative.annual_target_seconds || 0) / 3600).toFixed(1),
@@ -327,9 +332,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                     })() || [],
 
 
-                    // Visualization Helper — use annual target for progress
+                    // Visualization Helper — use annual target for progress (total work, not just normal)
                     progressPercent: (periodSummary.cumulative.annual_target_seconds || 0) > 0
-                        ? (periodSummary.cumulative.ytd_completed_seconds / periodSummary.cumulative.annual_target_seconds) * 100
+                        ? ((periodSummary.cumulative.ytd_total_work_seconds || periodSummary.cumulative.ytd_completed_seconds || 0) / periodSummary.cumulative.annual_target_seconds) * 100
                         : 0
                 } : null,
 
@@ -659,17 +664,17 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-3xl font-black text-slate-700 tracking-tighter">{stats.cumulative.annualTargetDisplay}</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">Gerçekleşen: <span className="font-bold text-indigo-600">{stats.cumulative.ytdCompletedDisplay}</span> (YTD)</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Bugüne kadar hedef: <span className="font-bold text-slate-600">{stats.cumulative.ytdTargetDisplay}</span></p>
                             </div>
 
-                            {/* 3. YTD Completed */}
+                            {/* 3. YTD Total Work (Normal + OT + Leave + Health Report) */}
                             <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/30 hover:shadow-lg transition-shadow duration-300 group">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">YILLIK GERÇEKLEŞEN</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform">{stats.cumulative.ytdCompletedDisplay}</span>
+                                    <span className="text-3xl font-black text-indigo-600 tracking-tighter group-hover:scale-105 transition-transform">{stats.cumulative.ytdTotalWorkDisplay}</span>
                                 </div>
                                 <div className="w-full bg-indigo-100 rounded-full h-1.5 mt-3 overflow-hidden">
-                                    <div className="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${stats.cumulative.progressPercent}%` }}></div>
+                                    <div className="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${Math.min(100, stats.cumulative.progressPercent)}%` }}></div>
                                 </div>
                             </div>
 
@@ -873,8 +878,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                     <span className="font-mono text-slate-200">{fmtSec(target)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Gerçekleşen:</span>
-                                                                    <span className="font-mono font-bold text-indigo-400">{fmtSec(Math.min(completed, target))}</span>
+                                                                    <span className="text-slate-400">Normal Çalışma:</span>
+                                                                    <span className="font-mono font-bold text-indigo-400">{fmtSec(completed)}</span>
                                                                 </div>
                                                                 {(m.leave_seconds || 0) > 0 && (
                                                                     <div className="flex justify-between">
@@ -911,7 +916,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                         )}
                                                                     </div>
                                                                 )}
-                                                                <div className="flex justify-between pt-3 border-t border-white/10 mt-2">
+                                                                <div className="flex justify-between pt-2 border-t border-white/10 mt-2">
+                                                                    <span className="text-white font-bold">Toplam Efor:</span>
+                                                                    <span className="font-mono font-black text-white">{fmtSec(m.total_work || 0)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between pt-1">
                                                                     <span className={balance >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>Net Fark:</span>
                                                                     <span className={`font-mono font-black text-lg ${balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                                                         {balance > 0 ? '+' : balance < 0 ? '-' : ''}{balanceDisplay}
@@ -965,7 +974,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                                                     <th className="px-6 py-4">Ay</th>
                                                     <th className="px-4 py-4 text-center">Hedef</th>
-                                                    <th className="px-4 py-4 text-center">Normal Çalışma</th>
+                                                    <th className="px-4 py-4 text-center">Toplam Efor</th>
                                                     <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
                                                     <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai <span className="text-[8px] text-slate-400 font-normal">(O/B/P)</span></th>
                                                     <th className="px-4 py-4 text-right">Net Fark</th>
@@ -982,7 +991,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const isFuture = m.month > currentFiscalMonth;
 
                                                         const targetH = (m.target / 3600).toFixed(1);
-                                                        const completedH = (m.completed / 3600).toFixed(1);
+                                                        const totalWorkH = ((m.total_work || 0) / 3600).toFixed(1);
                                                         const missingH = (m.missing / 3600).toFixed(1);
                                                         // Net Fark: cari ay→past_target_balance (hedefe kadar), geçmiş→tam bakiye
                                                         const currentFM = stats.cumulative?.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth();
@@ -1006,7 +1015,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
                                                                 <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">
-                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : <>{completedH} <span className="text-[10px] text-slate-400">sa</span></>}
+                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : <>{totalWorkH} <span className="text-[10px] text-slate-400">sa</span></>}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
                                                                     {isFuture ? <span className="text-slate-300">&mdash;</span> : (parseFloat(missingH) > 0 ? `-${missingH}` : '-')}
