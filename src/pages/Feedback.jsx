@@ -4,7 +4,7 @@ import {
     MessageSquare, Plus, Send, Search, Clock, CheckCircle2, AlertCircle,
     ThumbsUp, AlertTriangle, Lightbulb, Paperclip, X, ChevronRight,
     Eye, FileText, Image, File, Download, Loader2, MessageCircle, XCircle,
-    Trash2, Ban
+    Trash2, Ban, ZoomIn
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -67,6 +67,11 @@ const FileIcon = ({ name }) => {
     if (['jpg', 'jpeg', 'png'].includes(ext)) return <Image size={14} className="text-violet-500" />;
     if (ext === 'pdf') return <FileText size={14} className="text-rose-500" />;
     return <File size={14} className="text-slate-400" />;
+};
+
+const isImageFile = (name) => {
+    const ext = name?.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png'].includes(ext);
 };
 
 const formatDate = (d) => {
@@ -322,6 +327,8 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
     const [newStatus, setNewStatus] = useState('');
     const [statusLoading, setStatusLoading] = useState(false);
     const [downloadingAttId, setDownloadingAttId] = useState(null);
+    const [imagePreviews, setImagePreviews] = useState({});
+    const [lightboxUrl, setLightboxUrl] = useState(null);
 
     useEffect(() => {
         if (feedback) {
@@ -330,9 +337,34 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
         }
     }, [feedback]);
 
-    if (!open || !feedback) return null;
+    // Resim önizlemeleri yükle
+    useEffect(() => {
+        if (!open || !feedback?.attachments?.length) {
+            setImagePreviews({});
+            return;
+        }
+        let cancelled = false;
+        const urls = {};
+        const loadImages = async () => {
+            for (const att of feedback.attachments) {
+                if (!isImageFile(att.file_name)) continue;
+                try {
+                    const res = await api.get(`/feedback/${feedback.id}/attachments/${att.id}/download/`, { responseType: 'blob' });
+                    if (cancelled) break;
+                    const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/png' });
+                    urls[att.id] = URL.createObjectURL(blob);
+                } catch { /* skip */ }
+            }
+            if (!cancelled) setImagePreviews({ ...urls });
+        };
+        loadImages();
+        return () => {
+            cancelled = true;
+            Object.values(urls).forEach(u => URL.revokeObjectURL(u));
+        };
+    }, [open, feedback?.id]);
 
-    const cat = CATEGORIES[feedback.category] || CATEGORIES.COMPLAINT;
+    if (!open || !feedback) return null;
 
     const handleRespond = async () => {
         if (!responseText.trim()) return;
@@ -423,8 +455,41 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                     {feedback.attachments?.length > 0 && (
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ekler</p>
+                            {/* Resim önizlemeleri */}
+                            {feedback.attachments.some(att => isImageFile(att.file_name)) && (
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    {feedback.attachments.filter(att => isImageFile(att.file_name)).map(att => (
+                                        <div key={att.id} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 aspect-[4/3]">
+                                            {imagePreviews[att.id] ? (
+                                                <img
+                                                    src={imagePreviews[att.id]}
+                                                    alt={att.file_name}
+                                                    className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                                                    onClick={() => setLightboxUrl(imagePreviews[att.id])}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Loader2 size={24} className="animate-spin text-slate-300" />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <button
+                                                    onClick={() => imagePreviews[att.id] ? setLightboxUrl(imagePreviews[att.id]) : viewAttachmentProxy(feedback.id, att.id)}
+                                                    className="p-2 rounded-full bg-white/90 shadow-lg text-slate-700 hover:bg-white transition-all"
+                                                >
+                                                    <ZoomIn size={18} />
+                                                </button>
+                                            </div>
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-2 py-1.5">
+                                                <p className="text-xs text-white truncate font-medium">{att.file_name}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {/* Resim olmayan dosyalar */}
                             <div className="space-y-1.5">
-                                {feedback.attachments.map(att => (
+                                {feedback.attachments.filter(att => !isImageFile(att.file_name)).map(att => (
                                     <button
                                         key={att.id}
                                         onClick={() => viewAttachmentProxy(feedback.id, att.id)}
@@ -442,6 +507,16 @@ const FeedbackDetailModal = ({ feedback, open, onClose, isAdmin, onRespond, onSt
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Lightbox */}
+                    {lightboxUrl && (
+                        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
+                            <button onClick={() => setLightboxUrl(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
+                                <X size={24} />
+                            </button>
+                            <img src={lightboxUrl} alt="Önizleme" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
                         </div>
                     )}
 
