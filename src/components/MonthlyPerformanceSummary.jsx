@@ -392,22 +392,23 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
     return (
         <div className="space-y-8">
 
-            {/* Header / Target Overview */}
-            <div className="flex items-end justify-between px-2">
-                <div>
-                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">Aylık Mesai Durumu</h4>
-                    <p className="text-sm text-slate-500 font-medium">Normal çalışma ve fazla mesai detaylı dökümü.</p>
-                </div>
-                <div className="text-right">
-                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{stats.targetDisplay}</span>
-                </div>
-            </div>
-
             {/* ══════ AYLIK MESAİ DURUMU KART ══════ */}
             <div className="bg-white rounded-2xl shadow-lg shadow-slate-100 border border-slate-200 overflow-hidden">
 
+                {/* ── HEADER ── */}
+                <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-slate-100">
+                    <div>
+                        <h4 className="text-sm font-bold text-slate-800">Aylık Mesai Durumu</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Normal çalışma ve fazla mesai dökümü</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-2xl font-black text-slate-800 tabular-nums leading-none">{stats.targetDisplay}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">aylık hedef</div>
+                    </div>
+                </div>
+
                 {/* ── DUAL BAR SECTION ── */}
-                <div className="px-6 pt-6 pb-5 relative">
+                <div className="px-6 pt-5 pb-5 relative">
                     {/* Target indicator spanning both bars */}
                     {parseFloat(stats.targetHours) > 0 && (
                         <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottom" zIndex={1050}>
@@ -427,12 +428,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             <span className="text-[11px] text-slate-400 tabular-nums">/ {stats.targetDisplay}</span>
                         </div>
                         <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50">
-                            {stats.pCompleted > 0 && <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full" style={{ width: `${stats.pCompleted}%` }} /></Tooltip>}
-                            {(stats.pDutyBar1 || 0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full" style={{ width: `${stats.pDutyBar1}%` }} /></Tooltip>}
-                            {stats.pLeaveBar1 > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full" style={{ width: `${stats.pLeaveBar1}%` }} /></Tooltip>}
-                            {stats.pReportBar1 > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full" style={{ width: `${stats.pReportBar1}%` }} /></Tooltip>}
-                            {stats.pMissing > 0 && <Tooltip title={`Eksik: ${stats.missingDisplay}`}><div className="h-full" style={{ width: `${stats.pMissing}%`, background: 'repeating-linear-gradient(45deg, #fecdd3, #fecdd3 2px, #f43f5e 2px, #f43f5e 4px)' }} /></Tooltip>}
-                            {stats.pRemaining > 0.1 && <Tooltip title={`Kalan: ${fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec))}`}><div className="bg-slate-200/60 h-full" style={{ width: `${stats.pRemaining}%` }} /></Tooltip>}
+                            {stats.pCompleted > 0 && <Tooltip title={`Tamamlanan: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shrink-0" style={{ width: `${stats.pCompleted}%` }} /></Tooltip>}
+                            {(stats.pDutyBar1 || 0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${stats.pDutyBar1}%` }} /></Tooltip>}
+                            {stats.pLeaveBar1 > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full shrink-0" style={{ width: `${stats.pLeaveBar1}%` }} /></Tooltip>}
+                            {stats.pReportBar1 > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full shrink-0" style={{ width: `${stats.pReportBar1}%` }} /></Tooltip>}
+                            {stats.pMissing > 0 && <Tooltip title={`Eksik: ${stats.missingDisplay}`}><div className="h-full shrink-0" style={{ width: `${stats.pMissing}%`, background: 'repeating-linear-gradient(45deg, #fecdd3, #fecdd3 2px, #f43f5e 2px, #f43f5e 4px)' }} /></Tooltip>}
+                            {stats.pRemaining > 0.1 && <Tooltip title={`Kalan: ${fmtSec(Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec))}`}><div className="bg-slate-200/60 h-full shrink-0" style={{ width: `${stats.pRemaining}%` }} /></Tooltip>}
                         </div>
                         <div className="flex justify-between mt-1.5 text-[10px] font-semibold tabular-nums">
                             <div className="flex gap-2 flex-wrap">
@@ -470,14 +471,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                             return (
                                 <>
                                     <div className="h-6 w-full bg-slate-100 rounded-md flex overflow-hidden ring-1 ring-slate-200/50 relative">
-                                        {stats._realizedSec > 0 && <Tooltip title={`Normal: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full" style={{ width: `${pct(stats._realizedSec)}%` }} /></Tooltip>}
-                                        {(stats._dutySec||0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full" style={{ width: `${pct(stats._dutySec)}%` }} /></Tooltip>}
-                                        {stats._leaveSec > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full" style={{ width: `${pct(stats._leaveSec)}%` }} /></Tooltip>}
-                                        {stats._hrSec > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full" style={{ width: `${pct(stats._hrSec)}%` }} /></Tooltip>}
-                                        {stats._overtimeSec > 0 && <Tooltip title={`Onaylı OT: ${stats.overtimeDisplay}`}><div className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full" style={{ width: `${pct(stats._overtimeSec)}%` }} /></Tooltip>}
-                                        {potSec > 0 && <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}><div className="h-full opacity-50" style={{ width: `${pct(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} /></Tooltip>}
-                                        {/* Hedefe kalan boşluk */}
-                                        {gapSec > 0 && <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}><div className="h-full" style={{ width: `${pct(gapSec)}%`, background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #e5e7eb 4px, #e5e7eb 5px)' }} /></Tooltip>}
+                                        {stats._realizedSec > 0 && <Tooltip title={`Normal: ${stats.completedDisplay}`}><div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shrink-0" style={{ width: `${pct(stats._realizedSec)}%` }} /></Tooltip>}
+                                        {(stats._dutySec||0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${pct(stats._dutySec)}%` }} /></Tooltip>}
+                                        {stats._leaveSec > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full shrink-0" style={{ width: `${pct(stats._leaveSec)}%` }} /></Tooltip>}
+                                        {stats._hrSec > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full shrink-0" style={{ width: `${pct(stats._hrSec)}%` }} /></Tooltip>}
+                                        {stats._overtimeSec > 0 && <Tooltip title={`Onaylı OT: ${stats.overtimeDisplay}`}><div className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full shrink-0" style={{ width: `${pct(stats._overtimeSec)}%` }} /></Tooltip>}
+                                        {potSec > 0 && <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}><div className="h-full shrink-0 opacity-50" style={{ width: `${pct(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} /></Tooltip>}
+                                        {/* Hedefe kalan boşluk — shrink-0 yok, kalan alanı kaplar */}
+                                        {gapSec > 0 && <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}><div className="h-full flex-1" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #e5e7eb 4px, #e5e7eb 5px)' }} /></Tooltip>}
                                     </div>
                                     {/* Overflow badge */}
                                     {overflowSec > 0 && (
