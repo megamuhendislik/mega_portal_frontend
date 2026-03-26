@@ -728,9 +728,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                                             const balanceDisplay = fmtSec(Math.abs(balance));
                                             // Cumulative from reduced breakdown
-                                            const cumulativeBalanceSec = typeof m.cumulativeBalance === 'number' ? m.cumulativeBalance * 3600 : 0;
+                                            const cumulativeBalanceSec = m.cumulativeBalanceRaw || 0;
                                             const cumulativeDisplay = fmtSec(Math.abs(cumulativeBalanceSec));
-                                            const isCumulativePos = (typeof m.cumulativeBalance === 'number' ? m.cumulativeBalance : 0) >= 0;
+                                            const isCumulativePos = (m.cumulativeBalanceRaw || 0) >= 0;
 
                                             return (
                                                 <div
