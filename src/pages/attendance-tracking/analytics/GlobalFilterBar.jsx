@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Select, Switch, DatePicker, Tag, Popover, Badge } from 'antd';
-import { Calendar, Building2, Users, TrendingUp, Briefcase, Settings } from 'lucide-react';
+import { Calendar, Building2, Users, TrendingUp, Briefcase, Settings, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAnalyticsFilter } from './AnalyticsFilterContext';
 import api from '../../../services/api';
@@ -161,6 +161,19 @@ export default function GlobalFilterBar() {
         setSelectedEmployees([]);
     };
 
+    /* ── Active filter detection ──────────────────── */
+    const hasActiveFilters = selectedDepartments.length > 0 || selectedEmployees.length > 0 || selectedRoles.length > 0 || excludedEmployees.length > 0;
+    const activeFilterCount = [selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees].filter(a => a.length > 0).length;
+
+    const clearAllFilters = () => {
+        setSelectedDepartments([]);
+        setSelectedEmployees([]);
+        setSelectedRoles([]);
+        setExcludedEmployees([]);
+        setQuickFilter('this_month');
+        setCompareDepartments(false);
+    };
+
     /* ── Excluded employees count ──────────────────── */
     const excludedCount = excludedEmployees.length;
 
@@ -312,8 +325,25 @@ export default function GlobalFilterBar() {
                     </div>
                 )}
 
-                {/* 5. Team Avg Toggle + Settings (pushed to right) */}
+                {/* 5. Team Avg Toggle + Clear All + Filter Badge + Settings (pushed to right) */}
                 <div className="flex items-center gap-3 ml-auto">
+                    {/* Active filter count badge */}
+                    {hasActiveFilters && (
+                        <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center" title={`${activeFilterCount} aktif filtre`}>
+                            {activeFilterCount}
+                        </span>
+                    )}
+
+                    {/* Clear all filters */}
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearAllFilters}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-medium hover:bg-red-50 hover:text-red-500 transition-colors"
+                        >
+                            <X size={10} /> Tümünü Sıfırla
+                        </button>
+                    )}
+
                     <div className="flex items-center gap-2">
                         <TrendingUp size={14} className="text-slate-400 shrink-0" />
                         <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Ekip Ort.</span>

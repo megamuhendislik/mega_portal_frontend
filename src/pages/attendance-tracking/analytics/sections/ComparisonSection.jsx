@@ -36,6 +36,42 @@ const PARALLEL_AXES = [
 ];
 
 /* ===================================================================
+   TIER BADGE HELPERS
+   =================================================================== */
+function getTierLabel(emp) {
+    const score = emp.metrics?.total_score ?? emp.normalized?.efficiency ?? 0;
+    if (score >= 90) return 'A+';
+    if (score >= 80) return 'A';
+    if (score >= 70) return 'B';
+    if (score >= 60) return 'C';
+    return 'D';
+}
+
+function getTierClass(emp) {
+    const score = emp.metrics?.total_score ?? emp.normalized?.efficiency ?? 0;
+    if (score >= 90) return 'bg-emerald-100 text-emerald-700';
+    if (score >= 80) return 'bg-blue-100 text-blue-700';
+    if (score >= 70) return 'bg-amber-100 text-amber-700';
+    if (score >= 60) return 'bg-orange-100 text-orange-700';
+    return 'bg-red-100 text-red-700';
+}
+
+/* ===================================================================
+   STRONGEST / WEAKEST AXIS HELPERS
+   =================================================================== */
+function getStrongestAxis(emp) {
+    const n = emp.normalized || {};
+    const axes = RADAR_AXES.map(a => ({ label: a.label, value: n[a.key] ?? 0 }));
+    return axes.reduce((max, a) => a.value > max.value ? a : max, axes[0])?.label;
+}
+
+function getWeakestAxis(emp) {
+    const n = emp.normalized || {};
+    const axes = RADAR_AXES.map(a => ({ label: a.label, value: n[a.key] ?? 0 }));
+    return axes.reduce((min, a) => a.value < min.value ? a : min, axes[0])?.label;
+}
+
+/* ===================================================================
    SKELETON LOADER
    =================================================================== */
 function SkeletonCard({ height = 320 }) {
@@ -134,6 +170,26 @@ function RawValueTooltip({ active, payload, label, employeesData, teamAvg }) {
 /* ===================================================================
    CHART 1: RADAR CHART — Performans Radari
    =================================================================== */
+function StrengthsWeaknesses({ employees }) {
+    if (!employees?.length) return null;
+    return (
+        <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+            {employees.map((emp, idx) => {
+                const strongest = getStrongestAxis(emp);
+                const weakest = getWeakestAxis(emp);
+                return (
+                    <div key={emp.employee_id} className="flex items-center gap-2 text-[10px]">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                        <span className="font-bold text-slate-700 w-20 truncate">{emp.name}</span>
+                        <span className="text-emerald-600">&uarr; {strongest}</span>
+                        <span className="text-red-500">&darr; {weakest}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function RadarChartCard({ employees, teamAvg, showTeamAvg }) {
     const radarData = useMemo(() => {
         if (!employees?.length) return [];
@@ -221,6 +277,9 @@ function RadarChartCard({ employees, teamAvg, showTeamAvg }) {
                     </div>
                 )}
             </div>
+
+            {/* Güçlü/Zayıf Yönler */}
+            <StrengthsWeaknesses employees={employees} />
         </div>
     );
 }
@@ -391,7 +450,12 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                                     style={{ color: COLORS[i % COLORS.length] }}
                                     onClick={() => onPersonClick?.(emp.employee_id)}
                                 >
-                                    {emp.name}
+                                    <div className="flex items-center gap-1.5">
+                                        {emp.name}
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${getTierClass(emp)}`}>
+                                            {getTierLabel(emp)}
+                                        </span>
+                                    </div>
                                 </th>
                             ))}
                             <th className="px-3 py-2 text-left font-bold text-slate-400 whitespace-nowrap">
@@ -430,6 +494,9 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                                         } else {
                                             val = emp.metrics?.[row.metricKey];
                                         }
+                                        // Compute deviation from team avg
+                                        const showDeviation = !row.isTime && typeof val === 'number' && typeof teamVal === 'number';
+                                        const deviation = showDeviation ? val - teamVal : 0;
                                         return (
                                             <td key={emp.employee_id} className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
                                                 <div className="flex items-center gap-1.5">
@@ -437,6 +504,11 @@ function ComparisonTable({ employees, teamAvg, bestPerformers, onPersonClick }) 
                                                         <span className={`w-2 h-2 rounded-full shrink-0 ${getColorDot(val)}`} />
                                                     )}
                                                     <span>{row.format(val)}</span>
+                                                    {showDeviation && (
+                                                        <span className={`text-[9px] ml-1 ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                            ({deviation >= 0 ? '+' : ''}{deviation.toFixed(1)})
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                         );
