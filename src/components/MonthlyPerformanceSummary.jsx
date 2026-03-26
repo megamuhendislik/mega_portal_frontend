@@ -422,14 +422,20 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
 
                     {/* === BAR AREA (relative wrapper — indicator % doğrudan bar ile hizalı) === */}
                     <div className="relative">
-                        {/* Dashed indicator line — doğrudan bar alanıyla aynı coordinate space */}
+                        {/* Dashed indicator — repeating-linear-gradient ile, tüm bar alanını kapsar */}
                         {parseFloat(stats.targetHours) > 0 && stats.indicatorLeft > 0.5 && stats.indicatorLeft < 99.5 && (
-                            <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottom" zIndex={1050}>
-                                <div className="absolute z-30 cursor-pointer group" style={{ left: `${stats.indicatorLeft}%`, top: 0, bottom: 0, width: 0 }}>
-                                    <div className="absolute top-0 bottom-0 -translate-x-1/2 w-0 border-l-[1.5px] border-dashed border-indigo-400/40 group-hover:border-indigo-500/70 transition-colors" />
-                                    <div className="absolute -top-2 -translate-x-1/2">
-                                        <svg width="8" height="5" viewBox="0 0 8 5" className="text-indigo-400 group-hover:text-indigo-600 transition-colors"><polygon points="4,5 0,0 8,0" fill="currentColor" /></svg>
+                            <Popover content={<EffortDetailPopover stats={stats} />} trigger="click" placement="bottomLeft" zIndex={1050}>
+                                <div
+                                    className="absolute z-30 cursor-pointer group"
+                                    style={{ left: `calc(${stats.indicatorLeft}% - 6px)`, top: -2, bottom: -2, width: 12 }}
+                                >
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2">
+                                        <svg width="8" height="5" viewBox="0 0 8 5" className="text-indigo-500 group-hover:text-indigo-700 transition-colors"><polygon points="4,5 0,0 8,0" fill="currentColor" /></svg>
                                     </div>
+                                    <div
+                                        className="absolute left-1/2 -translate-x-1/2 opacity-60 group-hover:opacity-100 transition-opacity"
+                                        style={{ top: 6, bottom: 0, width: 2, backgroundImage: 'repeating-linear-gradient(to bottom, #6366f1, #6366f1 4px, transparent 4px, transparent 8px)' }}
+                                    />
                                 </div>
                             </Popover>
                         )}
