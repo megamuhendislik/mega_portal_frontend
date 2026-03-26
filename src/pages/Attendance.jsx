@@ -268,7 +268,19 @@ const Attendance = () => {
                                         type="date"
                                         value={selectedDate}
                                         onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        onChange={(e) => {
+                                            const newDate = e.target.value;
+                                            setSelectedDate(newDate);
+                                            // Auto-sync fiscal month/year when date is outside current period
+                                            const [y, m, d] = newDate.split('-').map(Number);
+                                            let targetMonth = d >= 26 ? m : m - 1;
+                                            let targetYear = y;
+                                            if (targetMonth > 11) { targetMonth = 0; targetYear += 1; }
+                                            if (targetMonth !== viewMonth || targetYear !== viewYear) {
+                                                setViewMonth(targetMonth);
+                                                setViewYear(targetYear);
+                                            }
+                                        }}
                                         className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all cursor-pointer hover:bg-white"
                                     />
                                 </div>

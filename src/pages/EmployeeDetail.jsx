@@ -961,7 +961,7 @@ const EmployeeDetail = () => {
                                             >
                                                 <UserCheck size={14} /> Aktif Et
                                             </button>
-                                            {isCurrentUserAdmin && !targetIsAdmin && (
+                                            {canEdit && !targetIsAdmin && (
                                                 <button
                                                     onClick={handleDelete}
                                                     className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors"

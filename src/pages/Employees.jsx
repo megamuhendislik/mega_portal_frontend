@@ -3,7 +3,7 @@ import { Plus, Search, Filter, ChevronDown, ChevronRight, Check, X, XCircle, Use
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday, getIstanbulYear } from '../utils/dateUtils';
-import { Settings, Trash2, Edit2, Download, Upload, CalendarRange } from 'lucide-react';
+import { Settings, Trash2, Edit2, Download, Upload, CalendarRange, UserX, UserCheck } from 'lucide-react';
 import { Modal } from 'antd';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
@@ -1393,6 +1393,48 @@ const Employees = () => {
         }
     };
 
+    const handleDeactivate = async (employeeId) => {
+        Modal.confirm({
+            title: 'Çalışanı Pasife Al',
+            content: (
+                <div className="space-y-2 text-sm">
+                    <p className="text-red-600 font-bold">Bu çalışan pasife alınacaktır.</p>
+                    <p>Tüm bekleyen talepleri iptal edilecek ve erişimi kapatılacaktır.</p>
+                </div>
+            ),
+            okText: 'Pasife Al',
+            cancelText: 'Vazgeç',
+            okButtonProps: { danger: true },
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${employeeId}/deactivate/`);
+                    toast.success('Çalışan pasife alındı.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'Pasife alma başarısız.');
+                }
+            },
+        });
+    };
+
+    const handleActivate = async (employeeId) => {
+        Modal.confirm({
+            title: 'Çalışanı Aktif Et',
+            content: 'Bu çalışan tekrar aktif edilecektir.',
+            okText: 'Aktif Et',
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${employeeId}/activate/`);
+                    toast.success('Çalışan aktif edildi.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'Aktif etme başarısız.');
+                }
+            },
+        });
+    };
+
     const handleEdit = (emp) => {
         // Populate formData from emp
         // Need to parse permissions, schedule etc.
@@ -1760,8 +1802,17 @@ const Employees = () => {
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => empData && handleEdit(empData)} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Düzenle"><Edit2 size={15} /></button>
-                        {showSettings && hasPermission('SYSTEM_FULL_ACCESS') && empData && !empData.is_admin && !empData.is_active && (
-                            <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
+                        {showSettings && hasPermission('PAGE_EMPLOYEES') && empData && !empData.is_admin && (
+                            <>
+                                {empData.is_active ? (
+                                    <button onClick={() => handleDeactivate(empData.id)} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors" title="Pasife Al"><UserX size={15} /></button>
+                                ) : (
+                                    <button onClick={() => handleActivate(empData.id)} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors" title="Aktif Et"><UserCheck size={15} /></button>
+                                )}
+                                {!empData.is_active && (
+                                    <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
