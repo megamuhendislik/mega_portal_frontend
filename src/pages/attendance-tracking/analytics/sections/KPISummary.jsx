@@ -19,13 +19,14 @@ const KPI_TOOLTIPS = {
     missing: 'Hedef saate ulaşılamayan toplam eksik çalışma saatleri.',
     weekly_ot_limit: 'Ekip ortalaması haftalık 30 saatlik ek mesai limitinin ne kadarını kullanıyor.',
     punctuality: 'Vardiya başlangıcına \u00b115 dakika içinde giriş yapanların oranı.',
-    health_score: 'Bile\u015fik skor: %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma.',
-    meal_rate: '\u0130\u015f g\u00fcnlerinde yemek sipari\u015fi veren \u00e7al\u0131\u015fanlar\u0131n oran\u0131.',
-    avg_break: 'Ekip ortalamas\u0131 g\u00fcnl\u00fck mola s\u00fcresi (izin dahilindeki say\u0131lan mola).',
-    target_hit: 'G\u00fcnl\u00fck hedef saatini tutturan \u00e7al\u0131\u015fan say\u0131s\u0131 / toplam \u00e7al\u0131\u015fan.',
-    late_arrival: 'Vardiya ba\u015flang\u0131c\u0131ndan 15+ dakika sonra giri\u015f yapanlar\u0131n oran\u0131.',
-    net_status: 'Toplam \u00e7al\u0131\u015f\u0131lan - toplam hedef saat. Pozitif = fazla \u00e7al\u0131\u015fma, negatif = eksik.',
-    active_ratio: 'Se\u00e7ilen d\u00f6nemde en az 1 g\u00fcn devam kayd\u0131 olan \u00e7al\u0131\u015fan say\u0131s\u0131.',
+    health_score: 'Bileşik skor: %30 Verimlilik + %30 Devam + %20 Dakiklik + %20 Eksik Azaltma.',
+    meal_rate: 'İş günlerinde yemek siparişi veren çalışanların oranı.',
+    break_allowance: 'Günlük mola izni dahilinde kullanılan ortalama mola süresi. Bu süre çalışma saatinden düşülür.',
+    break_overflow: 'Günlük 30 dakikalık mola iznini aşan fazla mola süresi. Bu süre çalışma saatinden düşülmez ama iş verimliliğini etkiler.',
+    target_hit: 'Günlük hedef saatini tutturan çalışan sayısı / toplam çalışan.',
+    late_arrival: 'Vardiya başlangıcı + tolerans süresinden sonra giriş yapanların oranı. Tolerans çalışanın takvimine göre belirlenir.',
+    net_status: 'Toplam çalışılan - toplam hedef saat. Pozitif = fazla çalışma, negatif = eksik.',
+    active_ratio: 'Seçilen dönemde en az 1 gün devam kaydı olan çalışan sayısı.',
 };
 
 /* ===================================================================
@@ -49,7 +50,7 @@ function MiniSparkline({ data, color = '#6366f1', height = 20, width = 60 }) {
 }
 
 /* ===================================================================
-   SPARKLINE COLOR MAP (gradient → sparkline stroke)
+   SPARKLINE COLOR MAP (gradient -> sparkline stroke)
    =================================================================== */
 const SPARKLINE_COLORS = {
     'from-blue-500 to-indigo-600': '#6366f1',
@@ -65,7 +66,7 @@ const SPARKLINE_COLORS = {
 };
 
 /* ===================================================================
-   CARD CONFIGS
+   CARD CONFIGS (14 cards — break split into allowance + overflow)
    =================================================================== */
 const CARD_CONFIGS = [
     {
@@ -180,7 +181,7 @@ const CARD_CONFIGS = [
         icon: AlarmClock,
         gradient: 'from-sky-500 to-blue-600',
         getValue: (kpi, empCount, extra) => extra?.avgOnTimePct ?? null,
-        formatValue: (v) => v != null ? `%${v}` : '—',
+        formatValue: (v) => v != null ? `%${v}` : '\u2014',
         deltaKey: null,
         inverted: false,
         getProgress: (kpi, empCount, extra) => extra?.avgOnTimePct ?? 0,
@@ -193,7 +194,7 @@ const CARD_CONFIGS = [
         icon: HeartPulse,
         gradient: 'from-pink-500 to-rose-600',
         getValue: (kpi) => kpi?.health_score ?? null,
-        formatValue: (v) => v != null ? `%${v}` : '—',
+        formatValue: (v) => v != null ? `%${v}` : '\u2014',
         deltaKey: null,
         inverted: false,
         getProgress: (kpi) => kpi?.health_score ?? 0,
@@ -210,27 +211,51 @@ const CARD_CONFIGS = [
         deltaKey: null,
         inverted: false,
         getProgress: (kpi) => kpi?.meal_rate_pct ?? 0,
-        getTooltip: () => '\u0130\u015f g\u00fcnlerinde yemek sipari\u015fi veren \u00e7al\u0131\u015fanlar\u0131n oran\u0131.',
+        getTooltip: () => 'İş günlerinde yemek siparişi veren çalışanların oranı.',
         trendKey: 'meal_rate',
     },
     {
-        key: 'avg_break',
-        label: 'Ort. Mola',
+        key: 'break_allowance',
+        label: 'Mola Hakkı',
         icon: Coffee,
-        gradient: 'from-amber-500 to-orange-600',
-        getValue: (kpi) => kpi?.avg_break_minutes ?? null,
+        gradient: 'from-emerald-500 to-green-600',
+        getValue: (kpi, empCount, extra) => extra?.breakAllowanceMinutes ?? null,
         formatValue: (v) => v != null ? `${v} dk` : '\u2014',
+        subtitle: '/ 30 dk izin',
         deltaKey: null,
         inverted: false,
-        getProgress: (kpi) => Math.min(100, ((kpi?.avg_break_minutes ?? 0) / 45) * 100),
-        getTooltip: () => 'Ekip ortalamas\u0131 g\u00fcnl\u00fck mola s\u00fcresi (izin dahilindeki say\u0131lan mola).',
-        progressColor: (kpi) => {
-            const mins = kpi?.avg_break_minutes ?? 0;
-            if (mins > 45) return '#ef4444';
-            if (mins >= 30) return '#f59e0b';
+        getProgress: (kpi, empCount, extra) => Math.min(100, ((extra?.breakAllowanceMinutes ?? 0) / 30) * 100),
+        getTooltip: () => 'Günlük mola izni dahilinde kullanılan ortalama mola süresi. Bu süre çalışma saatinden düşülür.',
+        progressColor: (kpi, empCount, extra) => {
+            const mins = extra?.breakAllowanceMinutes ?? 0;
+            if (mins > 30) return '#f59e0b';
             return '#10b981';
         },
-        trendKey: 'avg_break',
+        trendKey: 'break_allowance',
+    },
+    {
+        key: 'break_overflow',
+        label: 'Mola Hak Aşımı',
+        icon: AlertTriangle,
+        gradient: 'from-red-500 to-rose-600',
+        getValue: (kpi, empCount, extra) => extra?.breakOverflowMinutes ?? null,
+        formatValue: (v) => v != null ? `${v} dk` : '\u2014',
+        subtitle: 'izin dışı fazla mola',
+        deltaKey: null,
+        inverted: true,
+        getProgress: (kpi, empCount, extra) => Math.min(100, ((extra?.breakOverflowMinutes ?? 0) / 30) * 100),
+        getTooltip: () => 'Günlük 30 dakikalık mola iznini aşan fazla mola süresi. Bu süre çalışma saatinden düşülmez ama iş verimliliğini etkiler.',
+        dynamicGradient: (kpi, empCount, extra) => {
+            const mins = extra?.breakOverflowMinutes ?? 0;
+            return mins > 0 ? 'from-red-500 to-rose-600' : 'from-emerald-500 to-green-600';
+        },
+        progressColor: (kpi, empCount, extra) => {
+            const mins = extra?.breakOverflowMinutes ?? 0;
+            if (mins > 15) return '#ef4444';
+            if (mins > 0) return '#f59e0b';
+            return '#10b981';
+        },
+        trendKey: 'break_overflow',
     },
     {
         key: 'target_hit',
@@ -249,13 +274,13 @@ const CARD_CONFIGS = [
         getTooltip: (kpi, empCount, extra) => {
             const d = extra?.targetHitData;
             if (!d || !d.total) return 'Hedef tutturma verisi yok';
-            return `${d.hit}/${d.total} \u00e7al\u0131\u015fan hedefi tutturdu (%${Math.round((d.hit / d.total) * 100)})`;
+            return `${d.hit}/${d.total} çalışan hedefi tutturdu (%${Math.round((d.hit / d.total) * 100)})`;
         },
         trendKey: 'target_hit',
     },
     {
         key: 'late_arrival',
-        label: 'Ge\u00e7 Kalma',
+        label: 'Geç Kalma',
         icon: AlarmClock,
         gradient: 'from-red-500 to-rose-600',
         getValue: (kpi, empCount, extra) => extra?.avgLatePct ?? null,
@@ -265,7 +290,9 @@ const CARD_CONFIGS = [
         getProgress: (kpi, empCount, extra) => Math.max(0, 100 - (extra?.avgLatePct ?? 0)),
         getTooltip: (kpi, empCount, extra) => {
             const pct = extra?.avgLatePct ?? 0;
-            return `Ge\u00e7 kalma oran\u0131: %${pct} \u2014 d\u00fc\u015f\u00fck olmas\u0131 iyidir`;
+            const tolInfo = extra?.toleranceInfo;
+            const tolNote = tolInfo?.note || '';
+            return `Geç kalma oranı: %${pct} \u2014 düşük olması iyidir. ${tolNote}`;
         },
         progressColor: (kpi, empCount, extra) => {
             const pct = extra?.avgLatePct ?? 0;
@@ -298,8 +325,8 @@ const CARD_CONFIGS = [
             const v = extra?.netHours;
             if (v == null) return 'Net durum verisi yok';
             return v >= 0
-                ? `Ekip ${v.toFixed(1)} saat fazla \u00e7al\u0131\u015ft\u0131`
-                : `Ekip ${Math.abs(v).toFixed(1)} saat eksik \u00e7al\u0131\u015ft\u0131`;
+                ? `Ekip ${v.toFixed(1)} saat fazla çalıştı`
+                : `Ekip ${Math.abs(v).toFixed(1)} saat eksik çalıştı`;
         },
         dynamicGradient: (kpi, empCount, extra) => {
             const v = extra?.netHours ?? 0;
@@ -324,7 +351,7 @@ const CARD_CONFIGS = [
         getTooltip: (kpi, empCount, extra) => {
             const d = extra?.activeRatio;
             if (!d || !d.total) return 'Aktif oran verisi yok';
-            return `${d.active}/${d.total} \u00e7al\u0131\u015fan d\u00f6nemde aktif (%${Math.round((d.active / d.total) * 100)})`;
+            return `${d.active}/${d.total} çalışan dönemde aktif (%${Math.round((d.active / d.total) * 100)})`;
         },
         trendKey: 'active_ratio',
     },
@@ -377,7 +404,7 @@ function DeltaBadge({ delta, inverted }) {
    KPI CARD
    =================================================================== */
 function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
-    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor, dynamicGradient } = config;
+    const { label, icon: Icon, gradient, getValue, formatValue, deltaKey, inverted, getProgress, getTooltip, progressColor, dynamicGradient, subtitle } = config;
 
     const value = getValue(kpi, employeeCount, extra);
     const delta = deltaKey ? kpi?.vs_prev?.[deltaKey] : null;
@@ -404,10 +431,13 @@ function KPICard({ config, kpi, employeeCount, extra, sparklineData }) {
                     </div>
                 </div>
 
-                {/* Value */}
-                <div className="text-2xl font-bold text-slate-800 leading-tight mb-2">
+                {/* Value + optional subtitle */}
+                <div className="text-2xl font-bold text-slate-800 leading-tight mb-1">
                     {formatValue(value)}
                 </div>
+                {subtitle && (
+                    <div className="text-[10px] text-slate-400 mb-1">{subtitle}</div>
+                )}
 
                 {/* Delta + Progress */}
                 <div className="flex items-center justify-between gap-2">
@@ -463,19 +493,22 @@ export default function KPISummary() {
     const [data, setData] = useState(null);
     const [entryExitData, setEntryExitData] = useState(null);
     const [workHoursData, setWorkHoursData] = useState(null);
+    const [breakMealData, setBreakMealData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [teamRes, eeRes, whRes] = await Promise.allSettled([
+            const [teamRes, eeRes, whRes, bmRes] = await Promise.allSettled([
                 api.get('/attendance-analytics/team-overview/', { params: queryParams }),
                 api.get('/attendance-analytics/entry-exit/', { params: queryParams }),
                 api.get('/attendance-analytics/work-hours/', { params: queryParams }),
+                api.get('/attendance-analytics/break-meal/', { params: queryParams }),
             ]);
             if (teamRes.status === 'fulfilled') setData(teamRes.value.data);
             if (eeRes.status === 'fulfilled') setEntryExitData(eeRes.value.data);
             if (whRes.status === 'fulfilled') setWorkHoursData(whRes.value.data);
+            if (bmRes.status === 'fulfilled') setBreakMealData(bmRes.value.data);
         } catch (err) {
             console.error('KPISummary fetch error:', err);
         } finally {
@@ -513,6 +546,24 @@ export default function KPISummary() {
         return Math.round(sum / ranking.length);
     }, [entryExitData?.performance_ranking]);
 
+    // Tolerance info from entry-exit response
+    const toleranceInfo = useMemo(() => {
+        return entryExitData?.tolerance_info || null;
+    }, [entryExitData?.tolerance_info]);
+
+    // Break data from break-meal endpoint
+    const breakAllowanceMinutes = useMemo(() => {
+        const bmKpi = breakMealData?.kpi;
+        if (!bmKpi) return kpi?.avg_break_minutes ?? null;
+        return bmKpi.avg_break_minutes ?? null;
+    }, [breakMealData?.kpi, kpi?.avg_break_minutes]);
+
+    const breakOverflowMinutes = useMemo(() => {
+        const bmKpi = breakMealData?.kpi;
+        if (!bmKpi) return 0;
+        return bmKpi.avg_uncounted_break_minutes ?? 0;
+    }, [breakMealData?.kpi]);
+
     // Card 12: Net status (OT - missing)
     const netHours = useMemo(() => {
         const kpiData = data?.kpi;
@@ -535,9 +586,12 @@ export default function KPISummary() {
         avgOnTimePct,
         targetHitData,
         avgLatePct,
+        toleranceInfo,
+        breakAllowanceMinutes,
+        breakOverflowMinutes,
         netHours,
         activeRatio,
-    }), [avgOnTimePct, targetHitData, avgLatePct, netHours, activeRatio]);
+    }), [avgOnTimePct, targetHitData, avgLatePct, toleranceInfo, breakAllowanceMinutes, breakOverflowMinutes, netHours, activeRatio]);
 
     // Extract sparkline data per KPI key from monthly_trend
     const sparklineMap = useMemo(() => {
@@ -563,8 +617,10 @@ export default function KPISummary() {
         map.health = monthlyTrend.map(m => m.health_score ?? 0);
         // meal_rate: meal_rate_pct per month
         map.meal_rate = monthlyTrend.map(m => m.meal_rate_pct ?? 0);
-        // avg_break: avg_break_minutes per month
-        map.avg_break = monthlyTrend.map(m => m.avg_break_minutes ?? 0);
+        // break_allowance: avg_break_minutes per month
+        map.break_allowance = monthlyTrend.map(m => m.avg_break_minutes ?? 0);
+        // break_overflow: avg_uncounted_break_minutes per month
+        map.break_overflow = monthlyTrend.map(m => m.avg_uncounted_break_minutes ?? 0);
         // target_hit: target hit count per month (approx from efficiency)
         map.target_hit = monthlyTrend.map(m => m.target_hit_count ?? m.avg_efficiency_pct ?? 0);
         // late_arrival: late percentage per month
@@ -583,8 +639,8 @@ export default function KPISummary() {
     /* Loading skeleton */
     if (loading) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => <SkeletonCard key={i} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
+                {Array.from({ length: 14 }, (_, i) => <SkeletonCard key={i} />)}
             </div>
         );
     }
@@ -593,7 +649,7 @@ export default function KPISummary() {
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
             {CARD_CONFIGS.map(config => (
                 <KPICard
                     key={config.key}
