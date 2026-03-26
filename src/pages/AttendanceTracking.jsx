@@ -17,8 +17,7 @@ import {
 } from './attendance-tracking/AttendanceComponents';
 import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
 
-const PersonalAttendanceAnalytics = React.lazy(() => import('./attendance-tracking/analytics/PersonalAttendanceAnalytics'));
-const TeamAttendanceAnalyticsV2 = React.lazy(() => import('./attendance-tracking/analytics/TeamAttendanceAnalyticsV2'));
+const TeamAnalyticsV3 = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalyticsV3'));
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -64,7 +63,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
     const [teamTab, setTeamTab] = useState('primary'); // 'primary' | 'secondary'
-    const [analyticsTab, setAnalyticsTab] = useState('personal'); // 'personal' | 'team'
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -779,31 +777,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             {/* Analytics View */}
             {viewMode === 'analytics' && (
-                <div className="space-y-4">
-                    {/* Sub-tab: Kisisel / Ekip */}
-                    <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
-                        <button
-                            onClick={() => setAnalyticsTab('personal')}
-                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                analyticsTab === 'personal' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            Kisisel
-                        </button>
-                        <button
-                            onClick={() => setAnalyticsTab('team')}
-                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                analyticsTab === 'team' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            Ekip
-                        </button>
-                    </div>
-                    <Suspense fallback={<div className="bg-white rounded-2xl p-6 animate-pulse"><div className="h-60 bg-slate-100 rounded-xl" /></div>}>
-                        {analyticsTab === 'personal' && <PersonalAttendanceAnalytics />}
-                        {analyticsTab === 'team' && <TeamAttendanceAnalyticsV2 />}
-                    </Suspense>
-                </div>
+                <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>}>
+                    <TeamAnalyticsV3 />
+                </Suspense>
             )}
 
             {/* Overtime Management View */}
