@@ -1,14 +1,49 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import { getIstanbulToday, getIstanbulTodayParts, getIstanbulDateOffset } from '../../../utils/dateUtils';
 
 const AnalyticsFilterContext = createContext(null);
 
+const EXCLUDED_STORAGE_KEY = 'analytics_excluded_employees';
+
+function loadExcluded() {
+    try {
+        const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch { /* ignore */ }
+    return [];
+}
+
 export function AnalyticsFilterProvider({ children }) {
     const [quickFilter, setQuickFilter] = useState('this_month');
     const [customRange, setCustomRange] = useState({ start: null, end: null });
-    const [selectedDepartment, setSelectedDepartment] = useState(null);
+    const [selectedDepartmentsRaw, setSelectedDepartmentsRaw] = useState([]);
     const [selectedEmployees, setSelectedEmployees] = useState([]);
+    const [selectedRoles, setSelectedRoles] = useState([]);
+    const [excludedEmployees, setExcludedEmployeesRaw] = useState(loadExcluded);
+    const [compareDepartments, setCompareDepartments] = useState(false);
     const [showTeamAvg, setShowTeamAvg] = useState(true);
+
+    // Wrap department setter to auto-reset compare mode when < 2 depts
+    const setSelectedDepartments = useCallback((val) => {
+        setSelectedDepartmentsRaw(prev => {
+            const next = typeof val === 'function' ? val(prev) : val;
+            if (next.length < 2) setCompareDepartments(false);
+            return next;
+        });
+    }, []);
+    const selectedDepartments = selectedDepartmentsRaw;
+
+    // Persist excluded employees to localStorage
+    const setExcludedEmployees = useCallback((val) => {
+        setExcludedEmployeesRaw(prev => {
+            const next = typeof val === 'function' ? val(prev) : val;
+            try { localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+            return next;
+        });
+    }, []);
 
     const queryParams = useMemo(() => {
         const params = {};
@@ -37,20 +72,26 @@ export function AnalyticsFilterProvider({ children }) {
             }
         }
 
-        if (selectedDepartment) params.department_id = selectedDepartment;
+        if (selectedDepartments.length) params.department_ids = selectedDepartments.join(',');
         if (selectedEmployees.length) params.employee_ids = selectedEmployees.join(',');
+        if (selectedRoles.length) params.position_ids = selectedRoles.join(',');
+        if (excludedEmployees.length) params.exclude_employee_ids = excludedEmployees.join(',');
+        if (compareDepartments && selectedDepartments.length >= 2) params.compare_departments = '1';
 
         return params;
-    }, [quickFilter, customRange, selectedDepartment, selectedEmployees]);
+    }, [quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, compareDepartments]);
 
     const value = useMemo(() => ({
         quickFilter, setQuickFilter,
         customRange, setCustomRange,
-        selectedDepartment, setSelectedDepartment,
+        selectedDepartments, setSelectedDepartments,
         selectedEmployees, setSelectedEmployees,
+        selectedRoles, setSelectedRoles,
+        excludedEmployees, setExcludedEmployees,
+        compareDepartments, setCompareDepartments,
         showTeamAvg, setShowTeamAvg,
         queryParams,
-    }), [quickFilter, customRange, selectedDepartment, selectedEmployees, showTeamAvg, queryParams]);
+    }), [quickFilter, customRange, selectedDepartments, selectedEmployees, selectedRoles, excludedEmployees, compareDepartments, showTeamAvg, queryParams, setSelectedDepartments, setExcludedEmployees]);
 
     return (
         <AnalyticsFilterContext.Provider value={value}>
