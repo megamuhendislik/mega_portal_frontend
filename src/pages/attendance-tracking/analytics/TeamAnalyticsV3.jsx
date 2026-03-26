@@ -2,12 +2,14 @@ import React, { Suspense, lazy, useState, useCallback } from 'react';
 import { AnalyticsFilterProvider, useAnalyticsFilter } from './AnalyticsFilterContext';
 import GlobalFilterBar from './GlobalFilterBar';
 import CollapsibleSection from './shared/CollapsibleSection';
-import { Target, Clock, CalendarCheck, Users } from 'lucide-react';
+import { Target, Clock, CalendarCheck, Users, AlarmClock, Coffee } from 'lucide-react';
 
 const KPISummary = lazy(() => import('./sections/KPISummary'));
 const EfficiencySection = lazy(() => import('./sections/EfficiencySection'));
 const OvertimeSection = lazy(() => import('./sections/OvertimeSection'));
 const AttendanceLeaveSection = lazy(() => import('./sections/AttendanceLeaveSection'));
+const PunctualitySection = lazy(() => import('./sections/PunctualitySection'));
+const BreakMealSection = lazy(() => import('./sections/BreakMealSection'));
 const ComparisonSection = lazy(() => import('./sections/ComparisonSection'));
 const PersonDetailDrawer = lazy(() => import('./sections/PersonDetailDrawer'));
 
@@ -56,6 +58,30 @@ function TeamAnalyticsV3Inner() {
             >
                 <Suspense fallback={<SectionLoader />}>
                     <OvertimeSection onPersonClick={handlePersonClick} />
+                </Suspense>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+                title="Dakiklik & Gün İçi"
+                icon={AlarmClock}
+                iconGradient="from-cyan-500 to-blue-600"
+                subtitle="Giriş/çıkış dağılımı, geç kalma ve dakiklik performansı"
+                defaultOpen={true}
+            >
+                <Suspense fallback={<SectionLoader />}>
+                    <PunctualitySection onPersonClick={handlePersonClick} />
+                </Suspense>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+                title="Mola & Yemek"
+                icon={Coffee}
+                iconGradient="from-orange-500 to-amber-600"
+                subtitle="Mola süreleri, taşmalar ve yemek sipariş analizi"
+                defaultOpen={true}
+            >
+                <Suspense fallback={<SectionLoader />}>
+                    <BreakMealSection onPersonClick={handlePersonClick} />
                 </Suspense>
             </CollapsibleSection>
 
