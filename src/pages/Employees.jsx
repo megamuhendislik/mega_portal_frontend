@@ -1809,9 +1809,7 @@ const Employees = () => {
                                 ) : (
                                     <button onClick={() => handleActivate(empData.id)} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors" title="Aktif Et"><UserCheck size={15} /></button>
                                 )}
-                                {!empData.is_active && (
-                                    <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
-                                )}
+                                <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                             </>
                         )}
                     </div>
