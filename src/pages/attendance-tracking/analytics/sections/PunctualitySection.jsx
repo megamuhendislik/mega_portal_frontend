@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Clock, Target, BarChart3, AlertCircle, RefreshCw, AlarmClock } from 'lucide-react';
+import { Clock, Target, BarChart3, AlertCircle, RefreshCw, AlarmClock, Award, AlertTriangle } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ReferenceLine, ResponsiveContainer, Legend, Cell
@@ -205,6 +205,19 @@ export default function PunctualitySection({ onPersonClick }) {
 
     const totalRecords = entryStats.total_records || exitStats.total_records || 0;
 
+    // ─── Best punctual & worst consistent employees ───
+    const bestPunctualEmployee = useMemo(() => {
+        const ranking = data?.performance_ranking || [];
+        if (!ranking.length) return null;
+        return ranking.reduce((max, e) => ((e.on_time_pct ?? 0) > (max?.on_time_pct ?? 0)) ? e : max, null);
+    }, [data?.performance_ranking]);
+
+    const worstConsistentEmployee = useMemo(() => {
+        const ranking = data?.performance_ranking || [];
+        if (!ranking.length) return null;
+        return ranking.reduce((max, e) => ((e.consistency_std ?? 0) > (max?.consistency_std ?? 0)) ? e : max, null);
+    }, [data?.performance_ranking]);
+
     /* ─── Loading skeleton ─── */
     if (loading) {
         return (
@@ -345,64 +358,71 @@ export default function PunctualitySection({ onPersonClick }) {
                         <h4 className="text-sm font-bold text-slate-800">Dakiklik Performansı</h4>
                     </div>
                     {punctualityBarData.length > 0 ? (
-                        <div className="overflow-x-auto -mx-2">
-                            <ResponsiveContainer width="100%" height={400}>
-                                <BarChart
-                                    layout="vertical"
-                                    data={punctualityBarData}
-                                    margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
-                                    onClick={(e) => {
-                                        const empId = e?.activePayload?.[0]?.payload?.employee_id;
-                                        if (empId) onPersonClick?.(empId);
-                                    }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                                    <XAxis
-                                        type="number"
-                                        tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                        domain={[0, 100]}
-                                        tickFormatter={(v) => `%${v}`}
-                                    />
-                                    <YAxis
-                                        type="category"
-                                        dataKey="shortName"
-                                        width={100}
-                                        tick={{ fontSize: 10, fill: '#64748b' }}
-                                    />
-                                    <Tooltip content={<PunctualityBarTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                                    <Legend
-                                        wrapperStyle={{ fontSize: '11px' }}
-                                        iconSize={10}
-                                        formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
-                                    />
-                                    <Bar
-                                        dataKey="on_time_pct"
-                                        stackId="punct"
-                                        fill={PUNCTUALITY_COLORS.onTime}
-                                        name="Zamanında"
-                                        maxBarSize={20}
-                                        cursor="pointer"
-                                    />
-                                    <Bar
-                                        dataKey="early_pct"
-                                        stackId="punct"
-                                        fill={PUNCTUALITY_COLORS.early}
-                                        name="Erken"
-                                        maxBarSize={20}
-                                        cursor="pointer"
-                                    />
-                                    <Bar
-                                        dataKey="late_pct"
-                                        stackId="punct"
-                                        fill={PUNCTUALITY_COLORS.late}
-                                        name="Geç"
-                                        radius={[0, 4, 4, 0]}
-                                        maxBarSize={20}
-                                        cursor="pointer"
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <>
+                            <div className="overflow-x-auto -mx-2">
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <BarChart
+                                        layout="vertical"
+                                        data={punctualityBarData}
+                                        margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
+                                        onClick={(e) => {
+                                            const empId = e?.activePayload?.[0]?.payload?.employee_id;
+                                            if (empId) onPersonClick?.(empId);
+                                        }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                                        <XAxis
+                                            type="number"
+                                            tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                            domain={[0, 100]}
+                                            tickFormatter={(v) => `%${v}`}
+                                        />
+                                        <YAxis
+                                            type="category"
+                                            dataKey="shortName"
+                                            width={100}
+                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                        />
+                                        <Tooltip content={<PunctualityBarTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                                        <Legend
+                                            wrapperStyle={{ fontSize: '11px' }}
+                                            iconSize={10}
+                                            formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
+                                        />
+                                        <Bar
+                                            dataKey="on_time_pct"
+                                            stackId="punct"
+                                            fill={PUNCTUALITY_COLORS.onTime}
+                                            name="Zamanında"
+                                            maxBarSize={20}
+                                            cursor="pointer"
+                                        />
+                                        <Bar
+                                            dataKey="early_pct"
+                                            stackId="punct"
+                                            fill={PUNCTUALITY_COLORS.early}
+                                            name="Erken"
+                                            maxBarSize={20}
+                                            cursor="pointer"
+                                        />
+                                        <Bar
+                                            dataKey="late_pct"
+                                            stackId="punct"
+                                            fill={PUNCTUALITY_COLORS.late}
+                                            name="Geç"
+                                            radius={[0, 4, 4, 0]}
+                                            maxBarSize={20}
+                                            cursor="pointer"
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-[10px] text-slate-500">
+                                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Zamanında (±15 dk)</div>
+                                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Erken (15+ dk önce)</div>
+                                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Geç (15+ dk sonra)</div>
+                            </div>
+                        </>
                     ) : (
                         <div className="flex items-center justify-center h-[400px] text-slate-300">
                             <p className="text-xs">Çalışan dakiklik verisi bulunamadı</p>
@@ -468,6 +488,28 @@ export default function PunctualitySection({ onPersonClick }) {
                                 ? `${Number(exitStats.std_dev_minutes).toFixed(1)} dk`
                                 : '—'}
                         </p>
+                    </div>
+                </div>
+
+                {/* Dakiklik Özet — Additional insight cards */}
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                    {/* En Dakik Çalışan */}
+                    <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <Award size={14} className="text-emerald-600" />
+                            <span className="text-[10px] text-slate-500 font-medium">En Dakik</span>
+                        </div>
+                        <p className="text-sm font-bold text-emerald-700 truncate">{bestPunctualEmployee?.name ?? '—'}</p>
+                        <p className="text-[10px] text-slate-400">%{bestPunctualEmployee?.on_time_pct?.toFixed(0) ?? '—'} zamanında</p>
+                    </div>
+                    {/* En Tutarsız Çalışan */}
+                    <div className="bg-red-50 rounded-xl p-3 border border-red-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <AlertTriangle size={14} className="text-red-500" />
+                            <span className="text-[10px] text-slate-500 font-medium">En Tutarsız</span>
+                        </div>
+                        <p className="text-sm font-bold text-red-700 truncate">{worstConsistentEmployee?.name ?? '—'}</p>
+                        <p className="text-[10px] text-slate-400">{worstConsistentEmployee?.consistency_std?.toFixed(1) ?? '—'} sapma</p>
                     </div>
                 </div>
 

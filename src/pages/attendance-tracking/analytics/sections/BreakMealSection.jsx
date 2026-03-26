@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Coffee, AlertTriangle, UtensilsCrossed, Timer, Users, BarChart3,
-    AlertCircle, RefreshCw, Utensils
+    AlertCircle, RefreshCw, Utensils, Zap, Clock
 } from 'lucide-react';
 import {
     BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
@@ -187,6 +187,30 @@ export default function BreakMealSection({ onPersonClick }) {
     /* ─── OT meal correlation ─── */
     const otMealCorrelation = data?.ot_meal_correlation;
 
+    /* ─── Break quality insights ─── */
+    const shortBreakCount = useMemo(() => {
+        return (data?.break_histogram || [])
+            .filter(b => parseInt(b.range) < 10)
+            .reduce((sum, b) => sum + (b.count || 0), 0);
+    }, [data?.break_histogram]);
+
+    const longBreakCount = useMemo(() => {
+        return (data?.break_histogram || [])
+            .filter(b => parseInt(b.range) >= 60)
+            .reduce((sum, b) => sum + (b.count || 0), 0);
+    }, [data?.break_histogram]);
+
+    /* ─── Meal behavior insights ─── */
+    const topMealEmployee = useMemo(() => {
+        const emps = otMealCorrelation?.employees || [];
+        return emps.length > 0 ? emps.reduce((max, e) => (e.meal_days > (max?.meal_days ?? 0)) ? e : max, null) : null;
+    }, [otMealCorrelation]);
+
+    const noMealOtEmployee = useMemo(() => {
+        const emps = (otMealCorrelation?.employees || []).filter(e => e.ot_hours > 4 && e.meal_days === 0);
+        return emps.length > 0 ? emps.reduce((max, e) => (e.ot_hours > (max?.ot_hours ?? 0)) ? e : max, null) : null;
+    }, [otMealCorrelation]);
+
     /* ─── Find the index of the "30" bucket for ReferenceLine ─── */
     const referenceIndex = useMemo(() => {
         return histogramData.findIndex(d => {
@@ -312,6 +336,39 @@ export default function BreakMealSection({ onPersonClick }) {
                         {kpi?.break_exceeding_count ?? '—'} <span className="text-sm font-semibold">gün</span>
                     </p>
                     <p className="text-[10px] text-slate-400">45 dk+ mola yapılan gün</p>
+                </div>
+            </div>
+
+            {/* ═══ Break Quality Insights ═══ */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Kısa Mola Uyarısı */}
+                <div className="bg-amber-50/50 rounded-xl p-3 border border-amber-100/50">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <Zap size={14} className="text-amber-600" />
+                        <span className="text-[10px] text-slate-500 font-medium">Kısa Molalar (&lt;10 dk)</span>
+                    </div>
+                    <p className="text-sm font-bold text-amber-700">{shortBreakCount} gün</p>
+                    <p className="text-[10px] text-slate-400">10 dakikadan kısa mola yapılan gün</p>
+                </div>
+                {/* Uzun Mola Uyarısı */}
+                <div className="bg-red-50/50 rounded-xl p-3 border border-red-100/50">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <Clock size={14} className="text-red-500" />
+                        <span className="text-[10px] text-slate-500 font-medium">Uzun Molalar (&gt;60 dk)</span>
+                    </div>
+                    <p className="text-sm font-bold text-red-700">{longBreakCount} gün</p>
+                    <p className="text-[10px] text-slate-400">60 dakikadan uzun mola yapılan gün</p>
+                </div>
+                {/* Yemeksiz OT */}
+                <div className="bg-violet-50/50 rounded-xl p-3 border border-violet-100/50">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <UtensilsCrossed size={14} className="text-violet-600" />
+                        <span className="text-[10px] text-slate-500 font-medium">Yemeksiz Ek Mesai</span>
+                    </div>
+                    <p className="text-sm font-bold text-violet-700">
+                        %{100 - (kpi?.ot_meal_overlap_pct ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-slate-400">OT yapıp yemek sipariş etmeyen oran</p>
                 </div>
             </div>
 
@@ -497,6 +554,35 @@ export default function BreakMealSection({ onPersonClick }) {
                                         ? Math.round(otMealCorrelation.ot_day_meal_rate_pct)
                                         : '—'}
                                 </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Yemek Davranış Özeti ─── */}
+                {otMealCorrelation?.employees?.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                        <h5 className="text-xs font-bold text-slate-600 mb-2">Yemek Davranış Özeti</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                            {/* En Çok Sipariş */}
+                            <div className="flex items-center gap-2 bg-blue-50/50 rounded-lg p-2">
+                                <UtensilsCrossed size={12} className="text-blue-500" />
+                                <div>
+                                    <p className="text-[10px] text-slate-500">En Çok Sipariş</p>
+                                    <p className="text-xs font-bold text-blue-700 truncate">
+                                        {topMealEmployee?.name ?? '—'} ({topMealEmployee?.meal_days ?? 0} gün)
+                                    </p>
+                                </div>
+                            </div>
+                            {/* En Az Sipariş (OT yapıp yemek almayan) */}
+                            <div className="flex items-center gap-2 bg-orange-50/50 rounded-lg p-2">
+                                <AlertTriangle size={12} className="text-orange-500" />
+                                <div>
+                                    <p className="text-[10px] text-slate-500">OT Yapıp Yemek Almayan</p>
+                                    <p className="text-xs font-bold text-orange-700 truncate">
+                                        {noMealOtEmployee?.name ?? '—'} ({noMealOtEmployee?.ot_hours?.toFixed(1) ?? 0}s OT)
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
