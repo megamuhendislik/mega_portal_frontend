@@ -509,16 +509,16 @@ export default function SubstituteAuditTab() {
                                             </td>
                                             <td className="py-2.5 px-2">
                                                 <div className="flex flex-wrap gap-1">
-                                                    {scopeNames.slice(0, showMax).map((name, i) => (
+                                                    {scopeNames.slice(0, showMax).map((emp) => (
                                                         <span
-                                                            key={i}
+                                                            key={emp.id}
                                                             className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-medium border border-indigo-100"
                                                         >
-                                                            {name}
+                                                            {emp.name}
                                                         </span>
                                                     ))}
                                                     {overflow > 0 && (
-                                                        <Tooltip title={scopeNames.slice(showMax).join(', ')}>
+                                                        <Tooltip title={scopeNames.slice(showMax).map(e => e.name).join(', ')}>
                                                             <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200 cursor-help">
                                                                 +{overflow}
                                                             </span>
