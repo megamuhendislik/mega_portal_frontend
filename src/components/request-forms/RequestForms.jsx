@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy } from 'lucide-react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 import { DatePicker, ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
@@ -1332,13 +1332,14 @@ export const ExternalDutyForm = ({
 
     // Which steps are active per duty category
     const STEP_MAP = {
-        REMOTE_WORK:     [0, 1, 8, 3, 7],
-        SITE_VISIT:      [0, 1, 8, 2, 3, 4, 5, 6, 7],
-        CUSTOMER_VISIT:  [0, 1, 8, 2, 3, 4, 5, 6, 7],
-        TRAINING:        [0, 1, 8, 2, 3, 7],
-        MEETING:         [0, 1, 8, 2, 3, 7],
-        OTHER:           [0, 1, 8, 2, 3, 4, 5, 6, 7],
-        '':              [0],
+        REMOTE_WORK:       [0, 1, 8, 3, 7],
+        SITE_VISIT:        [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        CUSTOMER_VISIT:    [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        INSTITUTION_VISIT: [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        TRAINING:          [0, 1, 8, 2, 3, 7],
+        MEETING:           [0, 1, 8, 2, 3, 7],
+        OTHER:             [0, 1, 8, 2, 3, 4, 5, 6, 7],
+        '':                [0],
     };
 
     const taskType = externalDutyForm.task_type || '';
@@ -1362,6 +1363,7 @@ export const ExternalDutyForm = ({
         TRAINING: 'Eğitim',
         MEETING: 'Toplantı',
         CUSTOMER_VISIT: 'Müşteri Ziyareti',
+        INSTITUTION_VISIT: 'Kurum Ziyareti',
         OTHER: 'Diğer',
     };
     const transportTypeLabels = {
@@ -1401,6 +1403,13 @@ export const ExternalDutyForm = ({
             icon: Users,
             color: 'blue',
         },
+        {
+            key: 'INSTITUTION',
+            label: 'Kurum Ziyareti',
+            desc: 'Resmi kurum, firma veya kuruluş ziyareti',
+            icon: Landmark,
+            color: 'amber',
+        },
     ];
 
     const handleDutyCategorySelect = (category) => {
@@ -1408,6 +1417,7 @@ export const ExternalDutyForm = ({
         if (category === 'REMOTE_WORK') newTaskType = 'REMOTE_WORK';
         else if (category === 'FIELD') newTaskType = 'SITE_VISIT';
         else if (category === 'EVENT') newTaskType = 'MEETING';
+        else if (category === 'INSTITUTION') newTaskType = 'INSTITUTION_VISIT';
 
         setExternalDutyForm({ ...externalDutyForm, task_type: newTaskType });
         // Jump to next step after selection
@@ -1420,6 +1430,7 @@ export const ExternalDutyForm = ({
         if (t === 'REMOTE_WORK') return 'REMOTE_WORK';
         if (['SITE_VISIT', 'CUSTOMER_VISIT', 'OTHER'].includes(t)) return 'FIELD';
         if (['TRAINING', 'MEETING'].includes(t)) return 'EVENT';
+        if (t === 'INSTITUTION_VISIT') return 'INSTITUTION';
         return '';
     };
 
@@ -1427,6 +1438,7 @@ export const ExternalDutyForm = ({
         emerald: { card: 'border-emerald-200 bg-emerald-50/50', active: 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 shadow-lg shadow-emerald-100', icon: 'text-emerald-600', text: 'text-emerald-700' },
         purple:  { card: 'border-purple-200 bg-purple-50/50',  active: 'border-purple-500 bg-purple-50 ring-2 ring-purple-200 shadow-lg shadow-purple-100',  icon: 'text-purple-600',  text: 'text-purple-700' },
         blue:    { card: 'border-blue-200 bg-blue-50/50',    active: 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 shadow-lg shadow-blue-100',    icon: 'text-blue-600',    text: 'text-blue-700' },
+        amber:   { card: 'border-amber-200 bg-amber-50/50',  active: 'border-amber-500 bg-amber-50 ring-2 ring-amber-200 shadow-lg shadow-amber-100',  icon: 'text-amber-600',  text: 'text-amber-700' },
     };
 
     const Step0 = () => (
@@ -1438,7 +1450,7 @@ export const ExternalDutyForm = ({
                     <p className="mt-1">Görev tipine göre form adımları otomatik olarak ayarlanacaktır.</p>
                 </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {dutyCategories.map(cat => {
                     const CatIcon = cat.icon;
                     const selected = getSelectedCategory() === cat.key;
