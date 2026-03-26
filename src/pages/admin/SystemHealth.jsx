@@ -29,7 +29,8 @@ import {
     MoonIcon,
     UserIcon,
     FunnelIcon,
-    CalculatorIcon
+    CalculatorIcon,
+    ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -65,6 +66,7 @@ import OTGroupingAuditTab from './system-health/OTGroupingAuditTab';
 import MonthlyAuditTab from './system-health/MonthlyAuditTab';
 import ScheduleAuditTab from './system-health/ScheduleAuditTab';
 import EmployeeDebugTab from './system-health/EmployeeDebugTab';
+import SubstituteAuditTab from './system-health/SubstituteAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -153,6 +155,7 @@ export default function SystemHealth() {
                         { id: 'monthly_audit', name: 'Aylik Denetim', icon: CalculatorIcon },
                         { id: 'schedule_audit', name: 'Takvim Denetim', icon: ClockIcon },
                         { id: 'employee_debug', name: 'Çalışan Debug', icon: UsersIcon },
+                        { id: 'substitute_audit', name: 'Vekalet Denetimi', icon: ArrowsRightLeftIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -213,6 +216,7 @@ export default function SystemHealth() {
                 {activeTab === 'monthly_audit' && <MonthlyAuditTab />}
                 {activeTab === 'schedule_audit' && <ScheduleAuditTab />}
                 {activeTab === 'employee_debug' && <EmployeeDebugTab />}
+                {activeTab === 'substitute_audit' && <SubstituteAuditTab />}
             </div>
 
         </div>
