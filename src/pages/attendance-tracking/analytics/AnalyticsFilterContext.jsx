@@ -8,9 +8,7 @@ export function AnalyticsFilterProvider({ children }) {
     const [customRange, setCustomRange] = useState({ start: null, end: null });
     const [selectedDepartment, setSelectedDepartment] = useState(null);
     const [selectedEmployees, setSelectedEmployees] = useState([]);
-    const [comparisonMode, setComparisonMode] = useState('none'); // none|vs_employee|vs_team_avg|vs_period
-    const [comparisonPeriod, setComparisonPeriod] = useState({ start: null, end: null });
-    const [comparisonEmployees, setComparisonEmployees] = useState([]);
+    const [showTeamAvg, setShowTeamAvg] = useState(true);
 
     const queryParams = useMemo(() => {
         const params = {};
@@ -30,6 +28,9 @@ export function AnalyticsFilterProvider({ children }) {
             params.end_date = todayStr;
         } else if (quickFilter === 'last_30') {
             params.start_date = getIstanbulDateOffset(-30);
+            params.end_date = todayStr;
+        } else if (quickFilter === 'last_90') {
+            params.start_date = getIstanbulDateOffset(-90);
             params.end_date = todayStr;
         } else if (quickFilter === 'last_month') {
             const d = new Date(year, month - 2, 26);
@@ -58,11 +59,9 @@ export function AnalyticsFilterProvider({ children }) {
         customRange, setCustomRange,
         selectedDepartment, setSelectedDepartment,
         selectedEmployees, setSelectedEmployees,
-        comparisonMode, setComparisonMode,
-        comparisonPeriod, setComparisonPeriod,
-        comparisonEmployees, setComparisonEmployees,
+        showTeamAvg, setShowTeamAvg,
         queryParams,
-    }), [quickFilter, customRange, selectedDepartment, selectedEmployees, comparisonMode, comparisonPeriod, comparisonEmployees, queryParams]);
+    }), [quickFilter, customRange, selectedDepartment, selectedEmployees, showTeamAvg, queryParams]);
 
     return (
         <AnalyticsFilterContext.Provider value={value}>
