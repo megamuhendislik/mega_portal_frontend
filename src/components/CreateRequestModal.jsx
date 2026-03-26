@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope } from 'lucide-react';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope, Download } from 'lucide-react';
+import { message } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
@@ -162,6 +163,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     // FIFO Preview
     const [fifoPreview, setFifoPreview] = useState(null);
+
+    // Petition download loading
+    const [petitionLoading, setPetitionLoading] = useState(false);
 
     // Excuse leave balance
     const [excuseBalance, setExcuseBalance] = useState(null);
@@ -512,6 +516,36 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         setSelectedType(type);
         setStep(2);
         setError(null);
+    };
+
+    const handleDownloadPetition = async (leaveRequestId = null) => {
+        setPetitionLoading(true);
+        try {
+            const payload = leaveRequestId
+                ? { leave_request_id: leaveRequestId }
+                : { start_date: leaveForm.start_date, end_date: leaveForm.end_date };
+
+            const res = await api.post('/leave/requests/generate-petition/', payload, {
+                responseType: 'blob'
+            });
+
+            const contentDisp = res.headers['content-disposition'] || '';
+            const match = contentDisp.match(/filename="?(.+?)"?$/);
+            const filename = match ? decodeURIComponent(match[1]) : 'Yillik_Izin_Dilekce.docx';
+
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            message.error('Dilekçe oluşturulamadı.');
+        } finally {
+            setPetitionLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -1278,35 +1312,55 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                 {/* Footer - Show for all types except OVERTIME without manual open */}
                 {step === 2 && (selectedType !== 'OVERTIME' || showOvertimeSubmit) && (
-                    <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-all text-sm"
-                        >
-                            İptal
-                        </button>
-                        <button
-                            form="requestForm"
-                            type="submit"
-                            disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
-                            className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
-                                ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
-                                    selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
-                                        selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
-                                            selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
-                                                selectedType === 'HEALTH_REPORT' || selectedType === 'HOSPITAL_VISIT' ? 'bg-red-600 hover:bg-red-700' :
-                                                        'bg-emerald-600 hover:bg-emerald-700'}
-                                ${(loading || isInsufficientBalance) ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
-                            `}
-                        >
-                            {loading ? 'Gönderiliyor...' : (
-                                <>
-                                    <Check size={18} />
-                                    {selectedType === 'OVERTIME' ? 'Manuel Talep Gönder' : 'Talep Oluştur'}
-                                </>
-                            )}
-                        </button>
+                    <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+                        <div>
+                            {selectedType === 'LEAVE' && (() => {
+                                const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+                                const isAnnual = typeObj && typeObj.code === 'ANNUAL_LEAVE';
+                                if (!isAnnual || !leaveForm.start_date || !leaveForm.end_date) return null;
+                                return (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadPetition()}
+                                        disabled={petitionLoading}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <Download size={16} />
+                                        {petitionLoading ? 'Hazırlanıyor...' : 'Dilekçe İndir'}
+                                    </button>
+                                );
+                            })()}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-all text-sm"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                form="requestForm"
+                                type="submit"
+                                disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
+                                className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
+                                    ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
+                                        selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
+                                            selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
+                                                selectedType === 'CARDLESS_ENTRY' ? 'bg-purple-600 hover:bg-purple-700' :
+                                                    selectedType === 'HEALTH_REPORT' || selectedType === 'HOSPITAL_VISIT' ? 'bg-red-600 hover:bg-red-700' :
+                                                            'bg-emerald-600 hover:bg-emerald-700'}
+                                    ${(loading || isInsufficientBalance) ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
+                                `}
+                            >
+                                {loading ? 'Gönderiliyor...' : (
+                                    <>
+                                        <Check size={18} />
+                                        {selectedType === 'OVERTIME' ? 'Manuel Talep Gönder' : 'Talep Oluştur'}
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 )}
 

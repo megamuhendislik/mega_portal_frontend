@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2 } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2, Download } from 'lucide-react';
 import { Modal, message } from 'antd';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   const [error, setError] = useState('');
   const [timeLockInfo, setTimeLockInfo] = useState(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [petitionLoading, setPetitionLoading] = useState(false);
   const [employeeHistory, setEmployeeHistory] = useState([]);
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
@@ -329,6 +330,33 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
       setError('DOCX dosyası indirilemedi. Lütfen tekrar deneyin.');
     } finally {
       setDownloadLoading(false);
+    }
+  };
+
+  const handleDownloadPetition = async (leaveRequestId) => {
+    setPetitionLoading(true);
+    try {
+      const res = await api.post('/leave/requests/generate-petition/', { leave_request_id: leaveRequestId }, {
+        responseType: 'blob'
+      });
+
+      const contentDisp = res.headers['content-disposition'] || '';
+      const match = contentDisp.match(/filename="?(.+?)"?$/);
+      const filename = match ? decodeURIComponent(match[1]) : 'Yillik_Izin_Dilekce.docx';
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Dilekçe indirme hatası:', err);
+      message.error('Dilekçe oluşturulamadı.');
+    } finally {
+      setPetitionLoading(false);
     }
   };
 
@@ -1210,6 +1238,16 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
               >
                 <FileText size={16} />
                 {downloadLoading ? 'İndiriliyor...' : 'Resmi Form İndir (DOCX)'}
+              </button>
+            )}
+            {requestType === 'LEAVE' && request.request_type_detail?.code === 'ANNUAL_LEAVE' && !isEditing && (
+              <button
+                onClick={() => handleDownloadPetition(request.id)}
+                disabled={petitionLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={16} />
+                {petitionLoading ? 'Hazırlanıyor...' : 'Dilekçe İndir'}
               </button>
             )}
           </div>

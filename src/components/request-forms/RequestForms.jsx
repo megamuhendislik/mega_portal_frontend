@@ -165,6 +165,54 @@ export const LeaveRequestForm = ({
                             </div>
                         </details>
                     )}
+                    {/* FIFO Kesinti Preview */}
+                    {fifoPreview?.breakdown_list?.length > 0 && (
+                        <div className="mt-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3">
+                            <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1.5">
+                                📋 Bu Talep İçin Yıl Bazlı Kesinti
+                            </h4>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className="text-slate-500 border-b border-blue-200">
+                                            <th className="text-left py-1 pr-2">Yıl</th>
+                                            <th className="text-center py-1 px-1">Hak</th>
+                                            <th className="text-center py-1 px-1">Kullanılan</th>
+                                            <th className="text-center py-1 px-1">Kalan</th>
+                                            <th className="text-center py-1 px-1">Kesinti</th>
+                                            <th className="text-center py-1 px-1">Sonrası</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {fifoPreview.breakdown_list.map((row, i) => (
+                                            <tr key={i} className={`border-b border-blue-100 ${row.to_deduct > 0 ? 'bg-amber-50/50' : ''}`}>
+                                                <td className="py-1.5 pr-2 font-bold text-slate-700">{row.year}</td>
+                                                <td className="text-center text-slate-600">{row.days_entitled}</td>
+                                                <td className="text-center text-amber-600">{row.days_used}</td>
+                                                <td className="text-center text-slate-700 font-semibold">{row.remaining_before}</td>
+                                                <td className="text-center">
+                                                    {row.to_deduct > 0
+                                                        ? <span className="text-red-600 font-bold">-{row.to_deduct}</span>
+                                                        : <span className="text-slate-400">—</span>
+                                                    }
+                                                </td>
+                                                <td className="text-center">
+                                                    <span className={`font-bold ${row.remaining_after > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                        {row.remaining_after}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length > 1 && (
+                                <p className="text-[10px] text-blue-600 mt-2 font-medium">
+                                    ℹ️ {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length} farklı yıldan kesilecek → {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length} ayrı dilekçe oluşacak
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {entitlementInfo && !entitlementInfo.has_entitlement && (
                         <div className="mt-2 text-xs text-red-600 font-bold flex items-start gap-2 bg-red-50 p-3 rounded-lg border border-red-200">
                             <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
