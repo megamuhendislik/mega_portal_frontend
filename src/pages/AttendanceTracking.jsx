@@ -214,6 +214,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     // Turkish-aware normalize for search: lowercase + strip diacritics (ışık → isik)
     const trNorm = (s) => (s || '').toLocaleLowerCase('tr').replace(/[şçöüğı]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i' })[c]);
 
+    // Kullanıcı sadece vekil mi? (yönetici değil, sadece vekalet ile ekip görüyor)
+    const isOnlySubstitute = hierarchyData.length === 0 && secondaryTeam.length === 0 && substituteTeams != null;
+
     // Filter Logic (Common for List) — use primaryStats for primary tab
     const activeStats = teamTab === 'secondary' ? secondaryStats : primaryStats;
     const avgOT = activeStats.length > 0 ? activeStats.reduce((a, c) => a + (c.total_overtime || 0), 0) / activeStats.length : 0;
@@ -746,19 +749,21 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             Liste
                         </button>
                     )}
-                    <button
-                        onClick={() => setViewMode('analytics')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                            viewMode === 'analytics'
-                                ? teamTab === 'secondary'
-                                    ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
-                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                        <BarChart3 size={14} />
-                        Analiz
-                    </button>
+                    {!isOnlySubstitute && (
+                        <button
+                            onClick={() => setViewMode('analytics')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                viewMode === 'analytics'
+                                    ? teamTab === 'secondary'
+                                        ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
+                                        : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                            <BarChart3 size={14} />
+                            Analiz
+                        </button>
+                    )}
                     <button
                         onClick={() => setViewMode('overtime')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -775,8 +780,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             )}
 
-            {/* Analytics View */}
-            {viewMode === 'analytics' && (
+            {/* Analytics View — vekiller göremez */}
+            {viewMode === 'analytics' && !isOnlySubstitute && (
                 <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>}>
                     <TeamAnalyticsV3 />
                 </Suspense>
