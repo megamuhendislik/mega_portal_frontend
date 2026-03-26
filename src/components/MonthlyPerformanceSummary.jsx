@@ -83,7 +83,7 @@ const EffortDetailPopover = ({ stats }) => {
     );
 };
 
-const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
+const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
 
     const stats = useMemo(() => {
         if (periodSummary) {
@@ -732,10 +732,12 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                             const cumulativeDisplay = fmtSec(Math.abs(cumulativeBalanceSec));
                                             const isCumulativePos = (m.cumulativeBalanceRaw || 0) >= 0;
 
+                                            const canClick = !isFuture && onMonthSelect;
                                             return (
                                                 <div
                                                     key={idx}
-                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1`}
+                                                    className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1 ${canClick ? 'cursor-pointer' : ''}`}
+                                                    onClick={canClick ? () => onMonthSelect(getIstanbulYear(), m.month) : undefined}
                                                 >
                                                     {/* Normal Work Bar (Indigo) — sadece gecmis + mevcut */}
                                                     {(isPast || isCurrentMonth) && (
@@ -950,8 +952,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary }) => {
                                                         const monthNetH = (monthNetSec / 3600).toFixed(1);
                                                         const isMonthNetPositive = monthNetSec >= 0;
 
+                                                        const canClickRow = !isFuture && onMonthSelect;
                                                         return (
-                                                            <tr key={m.month} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'}`}>
+                                                            <tr key={m.month} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'} ${canClickRow ? 'cursor-pointer hover:bg-indigo-50/30' : ''}`}
+                                                                onClick={canClickRow ? () => onMonthSelect(getIstanbulYear(), m.month) : undefined}>
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
                                                                     {isPast ? (
                                                                         <span className="text-emerald-500 text-sm">&#10003;</span>

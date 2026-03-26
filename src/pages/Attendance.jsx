@@ -369,7 +369,7 @@ const Attendance = () => {
                         {/* 2. Monthly Summary Section */}
                         {/* Includes 3-part progress bar and Net Status Card */}
                         <div id="attendance-content-start" className="bg-white p-1 rounded-3xl scroll-mt-24">
-                            <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} />
+                            <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} onMonthSelect={(year, month) => { setViewYear(year); setViewMonth(month - 1); }} />
                             <MonthlyBalanceCarousel periodSummary={periodSummary} />
                         </div>
 
