@@ -1931,7 +1931,7 @@ export const ExternalDutyForm = ({
                     <Clock className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Gün Bazlı Çalışma Saatleri</h4>
-                        <p className="mt-1 text-xs">Her gün için başlangıç ve bitiş saatlerini girin. Mola hesaplanmaz, direkt çalışma süresi alınır.</p>
+                        <p className="mt-1 text-xs">Her gün için başlangıç ve bitiş saatlerini girin. Öğle molası otomatik düşülür, net çalışma süresi hesaplanır.</p>
                     </div>
                 </div>
 
