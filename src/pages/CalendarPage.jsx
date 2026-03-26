@@ -11,7 +11,7 @@ import {
     Plus, Users, Globe, Lock, Bell, ChevronLeft, ChevronRight,
     Calendar as CalendarIcon, CalendarCheck, ClipboardList, Heart,
     CreditCard, MapPin, Building2, Trash2, Edit3, Clock, Star,
-    UsersRound, X as XIcon
+    UsersRound, X as XIcon, Download, Search, Repeat, LayoutGrid, Columns3, GripVertical
 } from 'lucide-react';
 
 moment.locale('tr');
@@ -42,7 +42,7 @@ const EVENT_ICONS = {
 const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
 // ─── Month Grid Component ───
-const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDate, onSelectDate }) => {
+const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDate, onSelectDate, onQuickAdd, onDragStart, onDrop }) => {
     const startOfMonth = moment(currentMonth).startOf('month');
     const endOfMonth = moment(currentMonth).endOf('month');
 
@@ -81,6 +81,12 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
     const today = getIstanbulToday();
     const selectedStr = selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : null;
 
+    const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+    const handleDrop = (e, dateStr) => {
+        e.preventDefault();
+        if (onDrop) onDrop(dateStr);
+    };
+
     return (
         <div>
             {/* Day headers */}
@@ -111,6 +117,10 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                             const dotTypes = [...new Set(dayEvents.map(e => e.type))].slice(0, 4);
                             const extraCount = [...new Set(dayEvents.map(e => e.type))].length - 4;
 
+                            // Show up to 2 event titles
+                            const previewEvents = dayEvents.slice(0, 2);
+                            const overflowCount = dayEvents.length - 2;
+
                             let cellClass = 'bg-white';
                             if (!isCurrentMonth) cellClass = 'bg-slate-50';
                             if (isWeekend && isCurrentMonth) cellClass = 'bg-amber-50/60';
@@ -121,12 +131,15 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                             if (isToday && !isSelected) cellClass += ' ring-2 ring-inset ring-violet-400';
 
                             return (
-                                <button
+                                <div
                                     key={dateStr}
                                     onClick={() => onSelectDate(d.toDate())}
+                                    onDoubleClick={() => onQuickAdd && onQuickAdd(d.toDate())}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, dateStr)}
                                     className={`
                                         relative flex flex-col items-center justify-start p-1.5 min-h-[60px] md:min-h-[72px]
-                                        transition-all hover:bg-violet-50 cursor-pointer
+                                        transition-all hover:bg-violet-50 cursor-pointer select-none
                                         ${cellClass}
                                     `}
                                     title={isHoliday ? dayEvents.find(e => e.type === 'HOLIDAY')?.title : undefined}
@@ -150,11 +163,147 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                                             )}
                                         </div>
                                     )}
-                                </button>
+
+                                    {/* Event previews (hidden on small screens) */}
+                                    <div className="hidden md:flex flex-col gap-0.5 w-full mt-0.5">
+                                        {previewEvents.map(evt => {
+                                            const colors = EVENT_COLORS[evt.type] || EVENT_COLORS.PERSONAL;
+                                            const isDraggable = evt.type === 'PERSONAL' && evt.is_owner;
+                                            return (
+                                                <div
+                                                    key={evt.id}
+                                                    draggable={isDraggable}
+                                                    onDragStart={(e) => {
+                                                        if (isDraggable && onDragStart) {
+                                                            onDragStart(evt);
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                        }
+                                                    }}
+                                                    className={`text-[8px] leading-tight truncate px-1 py-0.5 rounded border-l-2 ${isSelected ? 'bg-white/20 text-white border-white/50' : `bg-white/80 ${colors.text} ${colors.border}`}`}
+                                                >
+                                                    {evt.title}
+                                                </div>
+                                            );
+                                        })}
+                                        {overflowCount > 0 && (
+                                            <span className={`text-[8px] font-bold text-center ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                                                +{overflowCount} daha
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+};
+
+// ─── Week Grid Component ───
+const WeekGrid = ({ currentDate, events, holidays, onSelectDate, onQuickAdd, onEdit, onDelete }) => {
+    const weekStart = moment(currentDate).startOf('isoWeek');
+    const days = Array.from({ length: 7 }, (_, i) => weekStart.clone().add(i, 'days'));
+    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00-20:00
+    const today = getIstanbulToday();
+
+    // Group events by date
+    const eventsByDate = useMemo(() => {
+        const map = {};
+        days.forEach(d => {
+            const dateStr = d.format('YYYY-MM-DD');
+            map[dateStr] = events.filter(evt => {
+                const evtStart = moment(evt.start).format('YYYY-MM-DD');
+                const evtEnd = moment(evt.end).format('YYYY-MM-DD');
+                return dateStr >= evtStart && dateStr <= evtEnd;
+            });
+        });
+        return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [events, weekStart.format('YYYY-MM-DD')]);
+
+    return (
+        <div className="overflow-x-auto">
+            {/* Day headers */}
+            <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200">
+                <div className="p-2" />
+                {days.map(d => {
+                    const dateStr = d.format('YYYY-MM-DD');
+                    const isToday = dateStr === today;
+                    const isHoliday = holidays.has(dateStr);
+                    return (
+                        <div
+                            key={dateStr}
+                            className={`p-2 text-center border-l border-slate-200 cursor-pointer hover:bg-violet-50/50 ${isToday ? 'bg-violet-50' : ''} ${isHoliday ? 'bg-red-50' : ''}`}
+                            onClick={() => onSelectDate(d.toDate())}
+                        >
+                            <p className={`text-[10px] font-bold uppercase ${isToday ? 'text-violet-600' : 'text-slate-400'}`}>{d.format('ddd')}</p>
+                            <p className={`text-lg font-black ${isToday ? 'text-violet-700' : isHoliday ? 'text-red-600' : 'text-slate-800'}`}>{d.date()}</p>
+                        </div>
+                    );
+                })}
+            </div>
+            {/* Hour rows with overlaid events */}
+            <div className="relative">
+                {hours.map(h => (
+                    <div key={h} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-100" style={{ minHeight: 48 }}>
+                        <div className="p-1 text-[10px] font-bold text-slate-400 text-right pr-2 pt-0.5">
+                            {String(h).padStart(2, '0')}:00
+                        </div>
+                        {days.map(d => {
+                            const dateStr = d.format('YYYY-MM-DD');
+                            return (
+                                <div
+                                    key={`${dateStr}-${h}`}
+                                    className="border-l border-slate-100 relative hover:bg-violet-50/30 cursor-pointer"
+                                    style={{ minHeight: 48 }}
+                                    onClick={() => onQuickAdd(d.toDate(), h)}
+                                />
+                            );
+                        })}
+                    </div>
+                ))}
+                {/* Overlay events as absolute positioned blocks */}
+                {days.map((d, dayIdx) => {
+                    const dateStr = d.format('YYYY-MM-DD');
+                    const dayEvents = (eventsByDate[dateStr] || []).filter(evt => !evt.allDay);
+                    return dayEvents.map(evt => {
+                        const startMom = moment(evt.start);
+                        const endMom = moment(evt.end);
+                        const startHour = startMom.hour() + startMom.minute() / 60;
+                        const endHour = endMom.hour() + endMom.minute() / 60;
+                        const clampedStart = Math.max(startHour, 7);
+                        const clampedEnd = Math.min(endHour, 21);
+                        if (clampedEnd <= clampedStart) return null;
+                        const top = (clampedStart - 7) * 48;
+                        const height = Math.max(24, (clampedEnd - clampedStart) * 48);
+                        const colors = EVENT_COLORS[evt.type] || EVENT_COLORS.PERSONAL;
+                        const canModify = evt.type === 'PERSONAL' && evt.is_owner;
+                        return (
+                            <div
+                                key={`${evt.id}-${dateStr}`}
+                                className={`absolute rounded-lg ${colors.bg} ${colors.border} border px-1.5 py-0.5 overflow-hidden z-10 group cursor-pointer`}
+                                style={{
+                                    top: `${top + 41}px`,
+                                    left: `calc(60px + ${dayIdx} * ((100% - 60px) / 7) + 2px)`,
+                                    width: `calc((100% - 60px) / 7 - 4px)`,
+                                    height: `${height}px`,
+                                }}
+                                title={`${evt.title} (${formatIstanbulTime(evt.start)} - ${formatIstanbulTime(evt.end)})`}
+                            >
+                                <p className={`text-[10px] font-bold ${colors.text} truncate`}>{evt.title}</p>
+                                <p className="text-[9px] text-slate-500">{formatIstanbulTime(evt.start)}</p>
+                                {canModify && (
+                                    <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100">
+                                        <button onClick={e => { e.stopPropagation(); onEdit(evt); }} className="p-0.5 rounded bg-white/80 text-blue-500 hover:text-blue-700"><Edit3 size={10} /></button>
+                                        <button onClick={e => { e.stopPropagation(); onDelete(evt); }} className="p-0.5 rounded bg-white/80 text-red-500 hover:text-red-700"><Trash2 size={10} /></button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    });
+                })}
             </div>
         </div>
     );
@@ -228,6 +377,7 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
                                     const timeStr = evt.allDay
                                         ? 'Tüm Gün'
                                         : `${formatIstanbulTime(evt.start)} - ${formatIstanbulTime(evt.end)}`;
+                                    const hasRecurrence = evt.recurrence && evt.recurrence !== 'NONE';
 
                                     return (
                                         <div key={evt.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${colors.border} ${colors.bg} group`}>
@@ -235,7 +385,17 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
                                                 <IconComp size={14} />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={`text-xs font-bold ${colors.text} truncate`}>{evt.title}</p>
+                                                <div className="flex items-center gap-1">
+                                                    <p className={`text-xs font-bold ${colors.text} truncate`}>{evt.title}</p>
+                                                    {hasRecurrence && (
+                                                        <span title="Tekrarlı etkinlik" className="shrink-0">
+                                                            <Repeat size={10} className={colors.text} />
+                                                        </span>
+                                                    )}
+                                                    {evt.is_recurrence_instance && (
+                                                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1 rounded shrink-0">kopya</span>
+                                                    )}
+                                                </div>
                                                 <p className="text-[10px] text-slate-500 font-medium">{timeStr}</p>
                                                 {evt.location && (
                                                     <p className="text-[10px] text-slate-400 truncate mt-0.5">{evt.location}</p>
@@ -245,20 +405,20 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
                                                 )}
                                             </div>
                                             {canModify && (
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                <div className="flex items-center gap-1 shrink-0">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); onEdit(evt); }}
-                                                        className="p-1 rounded-md hover:bg-blue-100 text-blue-500 transition-colors"
+                                                        className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-400 hover:text-blue-600 transition-colors"
                                                         title="Düzenle"
                                                     >
-                                                        <Edit3 size={13} />
+                                                        <Edit3 size={14} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); onDelete(evt); }}
-                                                        className="p-1 rounded-md hover:bg-red-100 text-red-500 transition-colors"
+                                                        className="p-1.5 rounded-lg hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
                                                         title="Sil"
                                                     >
-                                                        <Trash2 size={13} />
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             )}
@@ -314,7 +474,7 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
 };
 
 // ─── Team Table ───
-const TeamTable = ({ teamData, selectedDate }) => {
+const TeamTable = ({ teamData }) => {
     if (!teamData || teamData.length === 0) {
         return (
             <div className="text-center py-6 text-slate-400">
@@ -360,16 +520,16 @@ const TeamTable = ({ teamData, selectedDate }) => {
                                     </div>
                                 </td>
                                 <td className="text-center py-2.5 px-3">
-                                    {hasLeave ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-700">İzinli</span> : <span className="text-slate-300">—</span>}
+                                    {hasLeave ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-700">İzinli</span> : <span className="text-slate-300">&mdash;</span>}
                                 </td>
                                 <td className="text-center py-2.5 px-3">
-                                    {hasOT ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">Var</span> : <span className="text-slate-300">—</span>}
+                                    {hasOT ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">Var</span> : <span className="text-slate-300">&mdash;</span>}
                                 </td>
                                 <td className="text-center py-2.5 px-3">
-                                    {hasHealth ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">Rapor</span> : <span className="text-slate-300">—</span>}
+                                    {hasHealth ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">Rapor</span> : <span className="text-slate-300">&mdash;</span>}
                                 </td>
                                 <td className="text-center py-2.5 px-3">
-                                    {hasCardless ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700">Var</span> : <span className="text-slate-300">—</span>}
+                                    {hasCardless ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700">Var</span> : <span className="text-slate-300">&mdash;</span>}
                                 </td>
                             </tr>
                         );
@@ -391,6 +551,15 @@ const CalendarPage = () => {
     const [holidays, setHolidays] = useState(new Set());
     const [halfDayHolidays, setHalfDayHolidays] = useState(new Set());
     const [loading, setLoading] = useState(false);
+
+    // View mode: month or week
+    const [viewMode, setViewMode] = useState('month');
+
+    // Search
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Drag state
+    const [dragEvent, setDragEvent] = useState(null);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -421,8 +590,14 @@ const CalendarPage = () => {
         setLoading(true);
         try {
             const mDate = moment(currentDate);
-            const start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
-            const end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
+            let start, end;
+            if (viewMode === 'week') {
+                start = mDate.clone().startOf('isoWeek').subtract(1, 'days').format('YYYY-MM-DD');
+                end = mDate.clone().endOf('isoWeek').add(1, 'days').format('YYYY-MM-DD');
+            } else {
+                start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
+                end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
+            }
 
             let url = `/calendar-events/?start=${start}&end=${end}`;
             if (showOTAssignments) url += '&include_ot_assignments=true';
@@ -437,7 +612,12 @@ const CalendarPage = () => {
             const newHolidays = new Set();
             const newHalfDays = new Set();
 
+            const seenIds = new Set();
             rawEvents.forEach(evt => {
+                // Deduplicate by id (M2M visibility queries can return same event via multiple paths)
+                if (seenIds.has(evt.id)) return;
+                seenIds.add(evt.id);
+
                 const eventStart = new Date(evt.start);
                 const eventEnd = new Date(evt.end);
 
@@ -458,7 +638,7 @@ const CalendarPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentDate, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless]);
+    }, [currentDate, viewMode, showOTAssignments, showOTRequests, showLeaves, showHealthReports, showCardless]);
 
     useEffect(() => { fetchCalendarData(); }, [fetchCalendarData]);
 
@@ -477,11 +657,42 @@ const CalendarPage = () => {
             .catch(() => setTeamData([]));
     }, [showTeamView, isManager, currentDate]);
 
+    // Filtered events (search)
+    const filteredEvents = useMemo(() => {
+        if (!searchTerm.trim()) return events;
+        const q = searchTerm.toLowerCase();
+        return events.filter(e =>
+            (e.title || '').toLowerCase().includes(q) ||
+            (e.description || '').toLowerCase().includes(q) ||
+            (e.location || '').toLowerCase().includes(q)
+        );
+    }, [events, searchTerm]);
+
     // Navigation
-    const goToPrevMonth = () => setCurrentDate(moment(currentDate).subtract(1, 'month').toDate());
-    const goToNextMonth = () => setCurrentDate(moment(currentDate).add(1, 'month').toDate());
+    const goToPrev = () => {
+        if (viewMode === 'week') {
+            setCurrentDate(moment(currentDate).subtract(1, 'week').toDate());
+        } else {
+            setCurrentDate(moment(currentDate).subtract(1, 'month').toDate());
+        }
+    };
+    const goToNext = () => {
+        if (viewMode === 'week') {
+            setCurrentDate(moment(currentDate).add(1, 'week').toDate());
+        } else {
+            setCurrentDate(moment(currentDate).add(1, 'month').toDate());
+        }
+    };
     const goToToday = () => { setCurrentDate(getIstanbulTodayDate()); setSelectedDate(getIstanbulTodayDate()); };
-    const monthTitle = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(currentDate);
+
+    const navTitle = useMemo(() => {
+        if (viewMode === 'week') {
+            const ws = moment(currentDate).startOf('isoWeek');
+            const we = moment(currentDate).endOf('isoWeek');
+            return `${ws.format('D MMM')} - ${we.format('D MMM YYYY')}`;
+        }
+        return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(currentDate);
+    }, [currentDate, viewMode]);
 
     // Event handlers
     const handleEdit = (evt) => {
@@ -521,10 +732,60 @@ const CalendarPage = () => {
         setShowModal(true);
     };
 
+    const handleQuickAdd = (date, hour) => {
+        setSelectedDate(date);
+        setSelectedEventData(null);
+        setShowModal(true);
+    };
+
     const handleModalSuccess = () => {
         setShowModal(false);
         setSelectedEventData(null);
         fetchCalendarData();
+    };
+
+    // Drag-to-reschedule
+    const handleDragStart = (evt) => {
+        setDragEvent(evt);
+    };
+
+    const handleDrop = async (targetDateStr) => {
+        if (!dragEvent || !dragEvent.db_id) { setDragEvent(null); return; }
+        const sourceDateStr = moment(dragEvent.start).format('YYYY-MM-DD');
+        if (sourceDateStr === targetDateStr) { setDragEvent(null); return; }
+        try {
+            const dayDiff = moment(targetDateStr).diff(moment(sourceDateStr), 'days');
+            const newStart = moment(dragEvent.start).add(dayDiff, 'days').toISOString();
+            const newEnd = moment(dragEvent.end).add(dayDiff, 'days').toISOString();
+            await api.patch(`/personal-events/${dragEvent.db_id}/`, {
+                start_time: newStart,
+                end_time: newEnd,
+            });
+            toast.success('Etkinlik taşındı.');
+            fetchCalendarData();
+        } catch {
+            toast.error('Etkinlik taşınamadı.');
+        } finally {
+            setDragEvent(null);
+        }
+    };
+
+    // iCal export
+    const handleExportICal = async () => {
+        try {
+            const response = await api.get('/personal-events/export-ical/', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'takvim.ics');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Takvim dosyası indirildi.');
+        } catch {
+            toast.error('Takvim dışa aktarılamadı.');
+        }
     };
 
     // Filter toggle config
@@ -557,20 +818,64 @@ const CalendarPage = () => {
                         <p className="text-slate-500 text-sm font-medium mt-0.5">Planlarınızı ve etkinliklerinizi yönetin</p>
                     </div>
 
-                    {/* Month Navigation */}
-                    <div className="flex items-center gap-2">
+                    {/* Navigation + View Toggle + Search */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Etkinlik ara..."
+                                className="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-300 w-40 md:w-48"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <XIcon size={12} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* View mode toggle */}
+                        <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                            <button
+                                onClick={() => setViewMode('month')}
+                                className={`p-1.5 rounded-md transition-all ${viewMode === 'month' ? 'bg-white shadow-sm text-violet-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                title="Ay görünümü"
+                            >
+                                <LayoutGrid size={16} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('week')}
+                                className={`p-1.5 rounded-md transition-all ${viewMode === 'week' ? 'bg-white shadow-sm text-violet-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                title="Hafta görünümü"
+                            >
+                                <Columns3 size={16} />
+                            </button>
+                        </div>
+
                         <button onClick={goToToday} className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
                             Bugün
                         </button>
                         <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
-                            <button onClick={goToPrevMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                            <button onClick={goToPrev} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
                                 <ChevronLeft size={18} />
                             </button>
-                            <span className="px-3 text-sm font-bold text-slate-800 capitalize min-w-[140px] text-center">{monthTitle}</span>
-                            <button onClick={goToNextMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
+                            <span className="px-3 text-sm font-bold text-slate-800 capitalize min-w-[140px] text-center">{navTitle}</span>
+                            <button onClick={goToNext} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
                                 <ChevronRight size={18} />
                             </button>
                         </div>
+
+                        {/* iCal export */}
+                        <button
+                            onClick={handleExportICal}
+                            className="p-1.5 text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                            title="iCal olarak dışa aktar"
+                        >
+                            <Download size={16} />
+                        </button>
                     </div>
                 </div>
 
@@ -612,16 +917,31 @@ const CalendarPage = () => {
 
             {/* ─── 2-Column Body ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5">
-                {/* Left: Month Grid */}
+                {/* Left: Month or Week Grid */}
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-sm">
-                    <MonthGrid
-                        currentMonth={currentDate}
-                        events={events}
-                        holidays={holidays}
-                        halfDayHolidays={halfDayHolidays}
-                        selectedDate={selectedDate}
-                        onSelectDate={setSelectedDate}
-                    />
+                    {viewMode === 'month' ? (
+                        <MonthGrid
+                            currentMonth={currentDate}
+                            events={filteredEvents}
+                            holidays={holidays}
+                            halfDayHolidays={halfDayHolidays}
+                            selectedDate={selectedDate}
+                            onSelectDate={setSelectedDate}
+                            onQuickAdd={handleQuickAdd}
+                            onDragStart={handleDragStart}
+                            onDrop={handleDrop}
+                        />
+                    ) : (
+                        <WeekGrid
+                            currentDate={currentDate}
+                            events={filteredEvents}
+                            holidays={holidays}
+                            onSelectDate={setSelectedDate}
+                            onQuickAdd={handleQuickAdd}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                        />
+                    )}
 
                     {/* Legend */}
                     <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100">
@@ -638,7 +958,7 @@ const CalendarPage = () => {
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-sm min-h-[400px] lg:min-h-0">
                     <DayDetailPanel
                         date={selectedDate}
-                        events={events}
+                        events={filteredEvents}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onAdd={handleAdd}
@@ -665,6 +985,17 @@ const CalendarPage = () => {
                 <AgendaEventModal
                     onClose={() => { setShowModal(false); setSelectedEventData(null); }}
                     onSuccess={handleModalSuccess}
+                    onDelete={async (eventId) => {
+                        try {
+                            await api.delete(`/personal-events/${eventId}/`);
+                            toast.success('Etkinlik silindi.');
+                            setShowModal(false);
+                            setSelectedEventData(null);
+                            fetchCalendarData();
+                        } catch {
+                            toast.error('Silme sırasında hata oluştu.');
+                        }
+                    }}
                     initialDate={selectedDate}
                     initialData={selectedEventData}
                 />

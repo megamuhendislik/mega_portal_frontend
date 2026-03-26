@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, AlignLeft, Users, Building, Building2, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight, MapPin } from 'lucide-react';
+import { X, Clock, AlignLeft, Users, Building, Building2, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight, MapPin, Repeat } from 'lucide-react';
 import api from '../services/api';
 import moment from 'moment';
 import toast, { Toaster } from 'react-hot-toast';
 import ModalOverlay from './ui/ModalOverlay';
 import { toIstanbulParts, formatIstanbulTime } from '../utils/dateUtils';
 
-const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null }) => {
+const AgendaEventModal = ({ onClose, onSuccess, onDelete, initialDate, initialData = null }) => {
     const [loading, setLoading] = useState(false);
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
@@ -16,6 +16,8 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
     const [visibility, setVisibility] = useState(initialData?.visibility || 'PRIVATE');
     const [eventType, setEventType] = useState(initialData?.event_type || 'PERSONAL');
     const [location, setLocation] = useState(initialData?.location || '');
+    const [recurrence, setRecurrence] = useState(initialData?.recurrence || 'NONE');
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState(initialData?.recurrence_end_date || '');
 
     // UI State
     const [shareMode, setShareMode] = useState(initialData?.shared_with?.length > 0 || initialData?.shared_departments?.length > 0 ? 'SHARED' : 'PRIVATE');
@@ -172,6 +174,8 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                 visibility,
                 event_type: eventType,
                 location,
+                recurrence,
+                recurrence_end_date: recurrence !== 'NONE' ? (recurrenceEndDate || null) : null,
             };
 
             if (initialData?.id) {
@@ -181,13 +185,14 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                 await api.post('/personal-events/', payload);
                 toast.success("Etkinlik oluşturuldu.");
             }
-            // Small delay to let toast show
+            setLoading(false);
             setTimeout(() => {
                 onSuccess();
-            }, 800);
+            }, 600);
         } catch (error) {
             console.error("Failed to save event:", error);
-            toast.error("Hata: " + (error.response?.data?.detail || error.message));
+            const msg = error.response?.data?.detail || error.response?.data?.non_field_errors?.[0] || error.message;
+            toast.error("Hata: " + msg);
             setLoading(false);
         }
     };
@@ -391,6 +396,36 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
                                         placeholder="Örn: Toplantı Odası A, Ofis Katı 3"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Recurrence */}
+                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+                                <h4 className="text-sm font-bold text-indigo-800 flex items-center gap-2">
+                                    <Repeat size={16} className="text-indigo-500" /> Tekrarlama
+                                </h4>
+                                <select
+                                    value={recurrence}
+                                    onChange={e => setRecurrence(e.target.value)}
+                                    className="w-full p-2.5 rounded-lg border border-indigo-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                >
+                                    <option value="NONE">Tekrar Yok</option>
+                                    <option value="DAILY">Her Gün</option>
+                                    <option value="WEEKLY">Her Hafta</option>
+                                    <option value="BIWEEKLY">İki Haftada Bir</option>
+                                    <option value="MONTHLY">Her Ay</option>
+                                    <option value="YEARLY">Her Yıl</option>
+                                </select>
+                                {recurrence !== 'NONE' && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-indigo-600 mb-1">Bitiş Tarihi (Opsiyonel)</label>
+                                        <input
+                                            type="date"
+                                            value={recurrenceEndDate}
+                                            onChange={e => setRecurrenceEndDate(e.target.value)}
+                                            className="w-full p-2 rounded-lg border border-indigo-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -603,7 +638,21 @@ const AgendaEventModal = ({ onClose, onSuccess, initialDate, initialData = null 
 
                 </form>
 
-                <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
+                    {initialData?.id && onDelete && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (!window.confirm(`"${formData.title}" etkinliğini silmek istediğinize emin misiniz?`)) return;
+                                onDelete(initialData.id);
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 font-bold transition-colors border border-red-200"
+                        >
+                            <Trash2 size={15} />
+                            Sil
+                        </button>
+                    )}
+                    <div className="flex-1" />
                     <button
                         onClick={onClose}
                         className="px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-200 font-bold transition-colors"
