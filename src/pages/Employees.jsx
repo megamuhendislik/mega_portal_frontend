@@ -1190,7 +1190,7 @@ const Employees = () => {
                 api.get('/attendance/fiscal-calendars/'),
                 api.get('/roles/'),
                 api.get('/employee-tags/'),
-                api.get('/departments/hierarchy/').catch(() => ({ data: [] }))
+                api.get('/departments/hierarchy/', { params: showInactive ? { include_inactive: 'true' } : {} }).catch(() => ({ data: [] }))
             ]);
             setEmployees(empRes.data.results || empRes.data);
             setDepartments(deptRes.data.results || deptRes.data);
