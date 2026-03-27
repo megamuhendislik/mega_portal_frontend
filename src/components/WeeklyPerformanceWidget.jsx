@@ -1,6 +1,16 @@
 import React from 'react';
 import { Calendar, TrendingUp, Clock, AlertCircle } from 'lucide-react';
-// Recharts unused here
+
+function fmtDecHours(h) {
+    if (!h || h === 0) return '0 dk';
+    const abs = Math.abs(h);
+    const hours = Math.floor(abs);
+    const mins = Math.round((abs - hours) * 60);
+    const sign = h < 0 ? '-' : '';
+    if (hours === 0) return `${sign}${mins} dk`;
+    if (mins === 0) return `${sign}${hours} saat`;
+    return `${sign}${hours} saat ${mins} dk`;
+}
 
 
 const WeeklyPerformanceWidget = ({ summary, loading }) => {
@@ -58,17 +68,17 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
             {/* Main Stat */}
             <div className="mb-6">
                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-                        {totalWorked.toFixed(1)}
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                        {fmtDecHours(totalWorked)}
                     </h2>
-                    <span className="text-sm font-bold text-slate-400">/ {target.toFixed(1)} sa</span>
+                    <span className="text-sm font-bold text-slate-400">/ {fmtDecHours(target)}</span>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="relative pt-3">
                     <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
                         <span>İlerleme %{progress.toFixed(0)}</span>
-                        <span>{remaining > 0 ? `${remaining.toFixed(1)} sa kaldı` : 'Hedef Aşıldı'}</span>
+                        <span>{remaining > 0 ? `${fmtDecHours(remaining)} kaldı` : 'Hedef Aşıldı'}</span>
                     </div>
                     <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div
@@ -86,7 +96,7 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
                         <TrendingUp size={14} className="text-emerald-500" />
                         <span className="text-[10px] font-bold text-slate-500 uppercase">Ek Mesai</span>
                     </div>
-                    <p className="text-lg font-bold text-slate-800">{overtime.toFixed(1)} <span className="text-xs text-slate-400 font-normal">sa</span></p>
+                    <p className="text-lg font-bold text-slate-800">{fmtDecHours(overtime)}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-1">

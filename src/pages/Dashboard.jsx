@@ -509,7 +509,7 @@ const Dashboard = () => {
                                         <span className="text-[9px] font-bold text-amber-500">HAFTALIK LİMİT</span>
                                     </div>
                                     <span className={`text-[9px] font-bold ${colorClass}`}>
-                                        {used}/{limit} sa
+                                        {used}/{limit} saat
                                     </span>
                                 </div>
                                 {label && (
@@ -639,7 +639,7 @@ const Dashboard = () => {
                                         {(() => {
                                             const used = monthlySummary?.excuse_leave_hours_used || 0;
                                             const entitled = monthlySummary?.excuse_leave_hours_entitled || 18;
-                                            const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
+                                            const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
                                             return `${fmtH(used)} / ${fmtH(entitled)}`;
                                         })()}
                                     </span>

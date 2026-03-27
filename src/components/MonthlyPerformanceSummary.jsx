@@ -3,13 +3,30 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 import { Popover, Tooltip } from 'antd';
 import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
-// Saniye → "X.XX saat" (2 ondalık, dakika gizli)
+// Saniye → "X saat Y dk" formatı
 function fmtSec(s) {
-    if (!s) return '0 saat';
+    if (!s) return '0 dk';
     const neg = s < 0;
-    const h = Math.abs(s) / 3600;
+    const totalMin = Math.round(Math.abs(s) / 60);
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
     const sign = neg ? '-' : '';
-    return `${sign}${h.toFixed(2)} saat`;
+    if (hours === 0) return `${sign}${mins} dk`;
+    if (mins === 0) return `${sign}${hours} saat`;
+    return `${sign}${hours} saat ${mins} dk`;
+}
+
+// Ondalık saat → "X saat Y dk" formatı (örn: 163.5 → "163 saat 30 dk")
+function fmtHours(h) {
+    if (!h || h === 0) return '0 dk';
+    const neg = h < 0;
+    const abs = Math.abs(parseFloat(h));
+    const hours = Math.floor(abs);
+    const mins = Math.round((abs - hours) * 60);
+    const sign = neg ? '-' : '';
+    if (hours === 0) return `${sign}${mins} dk`;
+    if (mins === 0) return `${sign}${hours} saat`;
+    return `${sign}${hours} saat ${mins} dk`;
 }
 
 const EffortDetailPopover = ({ stats }) => {
@@ -347,7 +364,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                             acc.push({
                                 ...month,
                                 cumulativeBalanceRaw: currentCumulative,
-                                cumulativeBalance: (currentCumulative / 3600).toFixed(1)
+                                cumulativeBalance: fmtHours(currentCumulative / 3600)
                             });
                             return acc;
                         }, []);
@@ -600,10 +617,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                             <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">BİR ÖNCEKİ AYDAN DEVREDEN</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className={`text-3xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                        {parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? '' : '+'}{stats.cumulative.prevMonthCarryOver}
+                                    <span className={`text-2xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? '' : '+'}{fmtHours(stats.cumulative.prevMonthCarryOver)}
                                     </span>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">sa</span>
                                 </div>
                             </div>
 
@@ -634,10 +650,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                 </div>
                                 <div className="text-[10px] uppercase font-bold text-white/80 mb-2 tracking-widest relative z-10">TOPLAM BAKİYE</div>
                                 <div className="flex items-baseline gap-1 relative z-10">
-                                    <span className="text-4xl font-black tracking-tighter">
-                                        {parseFloat(stats.cumulative.totalNetBalance) > 0 ? '+' : ''}{stats.cumulative.totalNetBalance}
+                                    <span className="text-3xl font-black tracking-tighter">
+                                        {parseFloat(stats.cumulative.totalNetBalance) > 0 ? '+' : ''}{fmtHours(stats.cumulative.totalNetBalance)}
                                     </span>
-                                    <span className="text-xs font-bold text-white/70 uppercase">sa</span>
                                 </div>
                             </div>
                         </div>
@@ -941,15 +956,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                         const isCurrent = m.month === currentFiscalMonth;
                                                         const isFuture = m.month > currentFiscalMonth;
 
-                                                        const targetH = (m.target / 3600).toFixed(1);
-                                                        const totalWorkH = ((m.total_work || 0) / 3600).toFixed(1);
-                                                        const missingH = (m.missing / 3600).toFixed(1);
+                                                        const targetH = fmtSec(m.target);
+                                                        const totalWorkH = fmtSec(m.total_work || 0);
+                                                        const missingH = fmtSec(m.missing);
+                                                        const missingRaw = (m.missing || 0) / 3600;
                                                         // Net Fark: cari ay→past_target_balance (hedefe kadar), geçmiş→tam bakiye
                                                         const currentFM = stats.cumulative?.currentFiscalMonth || stats.fiscalMonth || getIstanbulMonth();
                                                         const monthNetSec = m.month === currentFM
                                                             ? (m.past_target_balance ?? m.balance ?? 0)
                                                             : (m.balance ?? 0);
-                                                        const monthNetH = (monthNetSec / 3600).toFixed(1);
+                                                        const monthNetH = fmtSec(Math.abs(monthNetSec));
                                                         const isMonthNetPositive = monthNetSec >= 0;
 
                                                         const canClickRow = !isFuture && onMonthSelect;
@@ -966,23 +982,23 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                                     )}
                                                                     <span className={isFuture ? 'text-slate-400' : ''}>{monthNames[m.month - 1]}</span>
                                                                 </td>
-                                                                <td className="px-4 py-4 text-center font-mono text-slate-500">{targetH} <span className="text-[10px] text-slate-300">sa</span></td>
-                                                                <td className="px-4 py-4 text-center font-mono font-bold text-slate-700">
-                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : <>{totalWorkH} <span className="text-[10px] text-slate-400">sa</span></>}
+                                                                <td className="px-4 py-4 text-center font-mono text-slate-500 text-[11px]">{targetH}</td>
+                                                                <td className="px-4 py-4 text-center font-mono font-bold text-slate-700 text-[11px]">
+                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : <>{totalWorkH}</>}
                                                                 </td>
-                                                                <td className="px-4 py-4 text-center font-mono font-medium text-rose-500">
-                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : (parseFloat(missingH) > 0 ? `-${missingH}` : '-')}
+                                                                <td className="px-4 py-4 text-center font-mono font-medium text-rose-500 text-[11px]">
+                                                                    {isFuture ? <span className="text-slate-300">&mdash;</span> : (missingRaw > 0 ? `-${missingH}` : '-')}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-center">
                                                                     {isFuture ? (
                                                                         <span className="text-slate-300">&mdash;</span>
                                                                     ) : (
-                                                                        <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold">
-                                                                            <span className="text-emerald-600">{((m.ot_approved || 0) / 3600).toFixed(1)}</span>
+                                                                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono font-bold">
+                                                                            <span className="text-emerald-600">{fmtSec(m.ot_approved || 0)}</span>
                                                                             <span className="text-slate-300">/</span>
-                                                                            <span className="text-amber-600">{((m.ot_pending || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-amber-600">{fmtSec(m.ot_pending || 0)}</span>
                                                                             <span className="text-slate-300">/</span>
-                                                                            <span className="text-slate-500">{((m.ot_potential || 0) / 3600).toFixed(1)}</span>
+                                                                            <span className="text-slate-500">{fmtSec(m.ot_potential || 0)}</span>
                                                                         </div>
                                                                     )}
                                                                 </td>
@@ -990,8 +1006,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                                     {isFuture ? (
                                                                         <span className="text-slate-300 text-xs">&mdash;</span>
                                                                     ) : (
-                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-tight ${isMonthNetPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
-                                                                            {isMonthNetPositive && parseFloat(monthNetH) > 0 ? '+' : ''}{monthNetH} sa
+                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-black tracking-tight ${isMonthNetPositive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-1 ring-rose-100'}`}>
+                                                                            {isMonthNetPositive && monthNetSec > 0 ? '+' : monthNetSec < 0 ? '-' : ''}{monthNetH}
                                                                         </span>
                                                                     )}
                                                                 </td>

@@ -237,8 +237,9 @@ const TimeRange = ({ req }) => {
 const formatMinutesLabel = (totalMin) => {
     const h = Math.floor(totalMin / 60);
     const m = totalMin % 60;
-    if (m === 0) return `${h} Saat`;
-    return `${h}s ${m}dk`;
+    if (h === 0) return `${m} dk`;
+    if (m === 0) return `${h} saat`;
+    return `${h} saat ${m} dk`;
 };
 
 const DurationCell = ({ req }) => {
@@ -493,7 +494,7 @@ const ExpandableRequestRow = ({
                         {/* View Details */}
                         {onViewDetails && (
                             <button
-                                onClick={(e) => { e.stopPropagation(); onViewDetails(req, req.type); }}
+                                onClick={(e) => { e.stopPropagation(); onViewDetails(req, req._type || req.type); }}
                                 className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
                                 title="Detaylar"
                             >

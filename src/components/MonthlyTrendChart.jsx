@@ -4,6 +4,8 @@ import { formatDate, toIstanbulParts } from '../utils/dateUtils';
 import { Activity } from 'lucide-react';
 import useIsMobile from '../hooks/useIsMobile';
 
+const fmtH = (v) => { const h = Math.floor(Math.abs(v)); const m = Math.round((Math.abs(v) - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
+
 const MonthlyTrendChart = ({ logs }) => {
     const isMobile = useIsMobile();
 
@@ -26,7 +28,7 @@ const MonthlyTrendChart = ({ logs }) => {
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                 Normal
                             </span>
-                            <span className="font-bold font-mono text-sm">{dataPoint.normal.toFixed(1)} sa</span>
+                            <span className="font-bold font-mono text-sm">{fmtH(dataPoint.normal)}</span>
                         </div>
                         {dataPoint.overtime > 0 && (
                             <div className="flex justify-between items-center text-emerald-600">
@@ -34,12 +36,12 @@ const MonthlyTrendChart = ({ logs }) => {
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                     Fazla Mesai
                                 </span>
-                                <span className="font-bold font-mono text-sm">+{dataPoint.overtime.toFixed(1)} sa</span>
+                                <span className="font-bold font-mono text-sm">+{fmtH(dataPoint.overtime)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center text-slate-500 pt-2 border-t border-slate-100 mt-1">
                             <span className="font-bold text-[10px] uppercase tracking-wider">Toplam</span>
-                            <span className="font-black text-slate-800 text-sm">{(dataPoint.normal + dataPoint.overtime).toFixed(1)} sa</span>
+                            <span className="font-black text-slate-800 text-sm">{fmtH(dataPoint.normal + dataPoint.overtime)}</span>
                         </div>
                     </div>
                 </div>

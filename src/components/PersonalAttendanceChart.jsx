@@ -4,6 +4,8 @@ import { formatDate, toIstanbulParts } from '../utils/dateUtils';
 import { BarChart3 } from 'lucide-react';
 import useIsMobile from '../hooks/useIsMobile';
 
+const fmtH = (v) => { const h = Math.floor(Math.abs(v)); const m = Math.round((Math.abs(v) - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
+
 const PersonalAttendanceChart = ({ logs }) => {
     const isMobile = useIsMobile();
     // Aggregation Fix: Group logs by unique date
@@ -44,23 +46,23 @@ const PersonalAttendanceChart = ({ logs }) => {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center group">
                             <span className="text-slate-500 font-medium group-hover:text-slate-700 transition-colors">Hedef</span>
-                            <span className="font-mono font-bold text-slate-700">{dataPoint.target ? dataPoint.target.toFixed(1) : '0.0'} sa</span>
+                            <span className="font-mono font-bold text-slate-700">{dataPoint.target ? fmtH(dataPoint.target) : '0 dk'}</span>
                         </div>
                         <div className="w-full h-px bg-slate-100 my-1"></div>
                         <div className="flex justify-between items-center text-emerald-600">
                             <span className="font-medium">Normal</span>
-                            <span className="font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">{dataPoint.normal.toFixed(1)} sa</span>
+                            <span className="font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">{fmtH(dataPoint.normal)}</span>
                         </div>
                         {dataPoint.overtime > 0 && (
                             <div className="flex justify-between items-center text-blue-600">
                                 <span className="font-medium">Fazla Mesai</span>
-                                <span className="font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-lg">+{dataPoint.overtime.toFixed(1)} sa</span>
+                                <span className="font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-lg">+{fmtH(dataPoint.overtime)}</span>
                             </div>
                         )}
                         {dataPoint.missing > 0 && (
                             <div className="flex justify-between items-center text-rose-500">
                                 <span className="font-medium">Eksik</span>
-                                <span className="font-mono font-bold bg-rose-50 px-2 py-0.5 rounded-lg">-{dataPoint.missing.toFixed(1)} sa</span>
+                                <span className="font-mono font-bold bg-rose-50 px-2 py-0.5 rounded-lg">-{fmtH(dataPoint.missing)}</span>
                             </div>
                         )}
                     </div>

@@ -10,10 +10,23 @@ import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulNow, formatIstanbulTime } from '../../utils/dateUtils';
 
 export const formatMinutes = (minutes) => {
-    if (!minutes) return '0s 0dk';
+    if (!minutes) return '0 dk';
     const hours = Math.floor(Math.abs(minutes) / 60);
     const mins = Math.abs(minutes) % 60;
-    return `${hours}s ${mins}dk`;
+    if (hours === 0) return `${mins} dk`;
+    if (mins === 0) return `${hours} saat`;
+    return `${hours} saat ${mins} dk`;
+};
+
+/** Decimal saat değerini "X saat Y dk" formatına çevirir (örn: 15.5 → "15 saat 30 dk") */
+export const formatDecimalHours = (decimalHours) => {
+    if (!decimalHours || decimalHours === 0) return '0 dk';
+    const abs = Math.abs(decimalHours);
+    const hours = Math.floor(abs);
+    const mins = Math.round((abs - hours) * 60);
+    if (hours === 0) return `${mins} dk`;
+    if (mins === 0) return `${hours} saat`;
+    return `${hours} saat ${mins} dk`;
 };
 
 const round2 = (v) => Math.round((v || 0) * 100) / 100;
@@ -190,10 +203,10 @@ export const EmployeeAttendanceRow = ({
                             return used > 0 ? (
                                 <span
                                     className={`inline-flex items-center gap-1 mt-0.5 text-[9px] px-1.5 py-0.5 rounded border ${cls}`}
-                                    title={`Haftalık limit: ${limit} sa, Kullanılan: ${used} sa, Kalan: ${remaining} sa`}
+                                    title={`Haftalık limit: ${limit} saat, Kullanılan: ${used} saat, Kalan: ${remaining} saat`}
                                 >
                                     {ratio > 0.7 && <AlertTriangle size={10} />}
-                                    Haftalık: {used}/{limit} sa {label && <b>&mdash; {label}</b>}
+                                    Haftalık: {used}/{limit} saat {label && <b>&mdash; {label}</b>}
                                 </span>
                             ) : null;
                         })()}
@@ -467,7 +480,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                     (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'text-amber-600' :
                                     'text-emerald-600'
                                 }`}>
-                                    {weeklyOtData.used_hours}/{weeklyOtData.limit_hours} sa
+                                    {weeklyOtData.used_hours}/{weeklyOtData.limit_hours} saat
                                 </span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">

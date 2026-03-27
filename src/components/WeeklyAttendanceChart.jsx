@@ -6,6 +6,8 @@ import { tr } from 'date-fns/locale';
 import useIsMobile from '../hooks/useIsMobile';
 import { getIstanbulTodayDate } from '../utils/dateUtils';
 
+const fmtH = (v) => { const h = Math.floor(Math.abs(v)); const m = Math.round((Math.abs(v) - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
+
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
     const isMobile = useIsMobile();
     const [weekStart, setWeekStart] = useState(startOfWeek(getIstanbulTodayDate(), { weekStartsOn: 1 }));
@@ -117,18 +119,18 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                     <div className="space-y-1.5 mb-3">
                         <div className="flex justify-between items-center">
                             <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Normal</span>
-                            <span className="font-bold text-slate-700">{dataPoint.normal.toFixed(1)} sa</span>
+                            <span className="font-bold text-slate-700">{fmtH(dataPoint.normal)}</span>
                         </div>
                         {dataPoint.overtime > 0 && (
                             <div className="flex justify-between items-center">
                                 <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Ek Mesai</span>
-                                <span className="font-bold text-emerald-600">+{dataPoint.overtime.toFixed(1)} sa</span>
+                                <span className="font-bold text-emerald-600">+{fmtH(dataPoint.overtime)}</span>
                             </div>
                         )}
                         {dataPoint.missing > 0 && (
                             <div className="flex justify-between items-center">
                                 <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500"></div>Eksik</span>
-                                <span className="font-bold text-rose-600">-{dataPoint.missing.toFixed(1)} sa</span>
+                                <span className="font-bold text-rose-600">-{fmtH(dataPoint.missing)}</span>
                             </div>
                         )}
                     </div>

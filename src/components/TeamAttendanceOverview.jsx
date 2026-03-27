@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { User, Users, ChevronRight, ChevronDown, Calendar, Maximize2, Minimize2, ArrowUpRight, ArrowDownRight, LayoutList, LayoutGrid, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 import { getIstanbulDay } from '../utils/dateUtils';
+import { formatMinutes, formatDecimalHours } from '../pages/attendance-tracking/AttendanceComponents';
 
 const StatusBadge = ({ status, isOnLeave, isOnDuty, leaveStatus }) => {
     if (isOnDuty) {
@@ -56,13 +57,13 @@ const StackedProgressBar = ({ completed, missing, remaining, target }) => {
     return (
         <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex mb-1 border border-slate-200">
             {/* Completed */}
-            <div style={{ width: `${pC}%` }} className="h-full bg-emerald-500" title={`Tamamlanan: ${c} sa`} />
+            <div style={{ width: `${pC}%` }} className="h-full bg-emerald-500" title={`Tamamlanan: ${formatDecimalHours(c)}`} />
 
             {/* Missing */}
-            <div style={{ width: `${pM}%` }} className="h-full bg-red-400" title={`Eksik: ${m} sa`} />
+            <div style={{ width: `${pM}%` }} className="h-full bg-red-400" title={`Eksik: ${formatDecimalHours(m)}`} />
 
             {/* Remaining */}
-            <div style={{ width: `${pR}%` }} className="h-full bg-slate-300" title={`Kalan: ${r} sa`} />
+            <div style={{ width: `${pR}%` }} className="h-full bg-slate-300" title={`Kalan: ${formatDecimalHours(r)}`} />
         </div>
     );
 };
@@ -104,7 +105,7 @@ const GroupAverageRow = ({ children, depth = 1 }) => {
                         {dailyAvgMissing > 0.01 && (
                             <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
                                 <TrendingDown size={9} />
-                                Günlük ort. eksik: {dailyAvgMissing.toFixed(1)} sa
+                                Günlük ort. eksik: {formatDecimalHours(dailyAvgMissing)}
                             </p>
                         )}
                     </div>
@@ -114,19 +115,16 @@ const GroupAverageRow = ({ children, depth = 1 }) => {
                 <div className="col-span-2 flex flex-col justify-center">
                     <span className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider">Bugün Ort.</span>
                     <div className="flex items-baseline gap-1 text-xs">
-                        <span className="font-bold text-slate-700">{Math.floor(avgTodayMin / 60)}</span>
-                        <span className="text-slate-500">sa</span>
-                        <span className="font-bold text-slate-700">{avgTodayMin % 60}</span>
-                        <span className="text-slate-500">dk</span>
+                        <span className="font-bold text-slate-700">{formatMinutes(avgTodayMin)}</span>
                     </div>
                 </div>
 
                 {/* Col 3: Avg Progress Bar */}
                 <div className="col-span-3">
                     <div className="flex justify-between text-[10px] text-slate-500 mb-1 px-1">
-                        <span>Ort. Hedef: <b className="text-slate-700">{avgTarget.toFixed(0)}</b> sa</span>
+                        <span>Ort. Hedef: <b className="text-slate-700">{formatDecimalHours(avgTarget)}</b></span>
                         {avgMissing > 0.01 && (
-                            <span>Ort. Eksik: <b className="text-red-500">{avgMissing.toFixed(1)}</b> sa</span>
+                            <span>Ort. Eksik: <b className="text-red-500">{formatDecimalHours(avgMissing)}</b></span>
                         )}
                     </div>
                     <StackedProgressBar
@@ -139,18 +137,18 @@ const GroupAverageRow = ({ children, depth = 1 }) => {
 
                 {/* Col 4: Avg Net Balance */}
                 <div className="col-span-1 text-right">
-                    <div className={clsx("font-bold text-base leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
-                        {isPositive ? '+' : ''}{avgBalance.toFixed(1)}
+                    <div className={clsx("font-bold text-sm leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
+                        {isPositive ? '+' : '-'}{formatDecimalHours(Math.abs(avgBalance))}
                     </div>
                     <span className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">ort.</span>
                 </div>
 
                 {/* Col 5: Avg Total Work */}
                 <div className="col-span-2 text-right pr-2">
-                    <div className="font-bold text-slate-800 text-base leading-none mb-1">
-                        {avgTotalWork.toFixed(1)}
+                    <div className="font-bold text-slate-800 text-sm leading-none mb-1">
+                        {formatDecimalHours(avgTotalWork)}
                     </div>
-                    <div className="text-[9px] text-blue-500 uppercase tracking-wide font-medium">ort. saat</div>
+                    <div className="text-[9px] text-blue-500 uppercase tracking-wide font-medium">ort.</div>
                 </div>
             </div>
         </div>
@@ -235,19 +233,16 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
                             <StatusBadge status={node.status} isOnLeave={node.isOnLeave} isOnDuty={node.isOnDuty} leaveStatus={node.leaveStatus} />
                         </div>
                         <div className="flex items-baseline gap-1 text-xs">
-                            <span className="font-bold text-slate-700">{Math.floor(node.totalTodayMinutes / 60)}</span>
-                            <span className="text-slate-500">sa</span>
-                            <span className="font-bold text-slate-700">{node.totalTodayMinutes % 60}</span>
-                            <span className="text-slate-500">dk</span>
+                            <span className="font-bold text-slate-700">{formatMinutes(node.totalTodayMinutes)}</span>
                         </div>
                     </div>
 
                     {/* Column 3: Monthly Progress Bar */}
                     <div className="col-span-3">
                         <div className="flex justify-between text-[10px] text-slate-500 mb-1 px-1">
-                            <span>Hedef: <b className="text-slate-700">{parseFloat(node.monthTarget || 0).toFixed(0)}</b> sa</span>
+                            <span>Hedef: <b className="text-slate-700">{formatDecimalHours(parseFloat(node.monthTarget || 0))}</b></span>
                             {parseFloat(node.summaryRemaining || 0) > 0 && (
-                                <span>Kalan: <b className="text-amber-600">{parseFloat(node.summaryRemaining || 0).toFixed(1)}</b> sa</span>
+                                <span>Kalan: <b className="text-amber-600">{formatDecimalHours(parseFloat(node.summaryRemaining || 0))}</b></span>
                             )}
                         </div>
                         <StackedProgressBar
@@ -260,22 +255,20 @@ const HierarchicalRow = ({ node, onMemberClick, depth = 0, expandedIds, toggleEx
 
                     {/* Column 4: Net Balance */}
                     <div className="col-span-1 text-right">
-                        <div className={clsx("font-bold text-base leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
-                            {isPositive ? '+' : ''}{balance.toFixed(1)}
+                        <div className={clsx("font-bold text-sm leading-none mb-1", isPositive ? "text-emerald-600" : "text-red-500")}>
+                            {isPositive ? '+' : '-'}{formatDecimalHours(Math.abs(balance))}
                         </div>
-                        <span className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">saat</span>
                     </div>
 
                     {/* Column 5: Total Work & OT */}
                     <div className="col-span-2 text-right pr-2">
-                        <div className="font-bold text-slate-800 text-base leading-none mb-1">
-                            {parseFloat(node.summaryTotalWork || 0).toFixed(1)}
+                        <div className="font-bold text-slate-800 text-sm leading-none mb-1">
+                            {formatDecimalHours(parseFloat(node.summaryTotalWork || 0))}
                         </div>
-                        <div className="text-[9px] text-slate-400 uppercase tracking-wide font-medium">saat</div>
 
                         {hasOt && (
                             <div className="mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-block border border-emerald-200">
-                                +{Math.floor(otMinutes / 60)}s {otMinutes % 60}dk Ek
+                                +{formatMinutes(otMinutes)} Ek
                             </div>
                         )}
                     </div>
@@ -409,7 +402,7 @@ const PerformanceTableView = ({ teamData }) => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className={clsx("font-bold text-sm", isPositive ? "text-emerald-600" : "text-red-500")}>
-                                            {isPositive ? '+' : ''}{balance.toFixed(1)} sa
+                                            {isPositive ? '+' : '-'}{formatDecimalHours(Math.abs(balance))}
                                         </span>
                                     </td>
 
@@ -469,7 +462,7 @@ const PerformanceTableView = ({ teamData }) => {
                                                 {dailyAvgMissing > 0.01 && (
                                                     <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
                                                         <TrendingDown size={9} />
-                                                        Günlük ort. eksik: {dailyAvgMissing.toFixed(1)} sa
+                                                        Günlük ort. eksik: {formatDecimalHours(dailyAvgMissing)}
                                                     </p>
                                                 )}
                                             </div>
@@ -477,11 +470,11 @@ const PerformanceTableView = ({ teamData }) => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className={clsx("font-bold text-sm", isPos ? "text-emerald-600" : "text-red-500")}>
-                                            {isPos ? '+' : ''}{avgBalance.toFixed(1)} sa
+                                            {isPos ? '+' : '-'}{formatDecimalHours(Math.abs(avgBalance))}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-right text-sm font-bold text-blue-700">{avgWorked.toFixed(1)}</td>
-                                    <td className="px-4 py-3 text-right text-sm text-slate-500">{avgTarget.toFixed(0)}</td>
+                                    <td className="px-4 py-3 text-right text-sm font-bold text-blue-700">{formatDecimalHours(avgWorked)}</td>
+                                    <td className="px-4 py-3 text-right text-sm text-slate-500">{formatDecimalHours(avgTarget)}</td>
                                     <td className="px-4 py-3 text-right">
                                         <span className="text-sm font-bold text-slate-700">{avgBreakRatio}%</span>
                                         <span className="text-xs text-slate-400 ml-1">({Math.round(avgBreakMin)}dk)</span>
@@ -497,15 +490,15 @@ const PerformanceTableView = ({ teamData }) => {
                                             <div className="flex items-center gap-4 text-xs">
                                                 <span className="font-semibold text-red-600 flex items-center gap-1.5">
                                                     <TrendingDown size={12} />
-                                                    Aylık Ort. Eksik: {avgMissing.toFixed(1)} sa/kişi
+                                                    Aylık Ort. Eksik: {formatDecimalHours(avgMissing)}/kişi
                                                 </span>
                                                 <span className="text-slate-400">|</span>
                                                 <span className="font-semibold text-red-500">
-                                                    Günlük Ort. Eksik: {dailyAvgMissing.toFixed(1)} sa/kişi
+                                                    Günlük Ort. Eksik: {formatDecimalHours(dailyAvgMissing)}/kişi
                                                 </span>
                                                 <span className="text-slate-400">|</span>
                                                 <span className="text-slate-500">
-                                                    Toplam Ekip Eksik: {(avgMissing * cnt).toFixed(0)} sa
+                                                    Toplam Ekip Eksik: {formatDecimalHours(avgMissing * cnt)}
                                                 </span>
                                             </div>
                                         </td>
