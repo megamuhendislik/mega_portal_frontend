@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import api from '../../../services/api';
 import {
     MagnifyingGlassIcon,
@@ -13,46 +13,51 @@ import {
 
 export default function DailyRecordAuditTab() {
     const [employeeSearch, setEmployeeSearch] = useState('');
-    const [employees, setEmployees] = useState([]);
+    const [allEmployees, setAllEmployees] = useState([]);
+    const [filteredEmployees, setFilteredEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [date, setDate] = useState('');
     const [loading, setLoading] = useState(false);
-    const [searchLoading, setSearchLoading] = useState(false);
+    const [employeesLoading, setEmployeesLoading] = useState(true);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [recoveryMessage, setRecoveryMessage] = useState(null);
+    const [showDropdown, setShowDropdown] = useState(false);
 
-    // Employee search with debounce
-    const searchEmployees = useCallback(async (query) => {
-        if (query.length < 2) {
-            setEmployees([]);
-            return;
-        }
-        setSearchLoading(true);
-        try {
-            const res = await api.get(`/employees/?search=${encodeURIComponent(query)}&page_size=10`);
-            setEmployees(res.data.results || res.data || []);
-        } catch {
-            setEmployees([]);
-        } finally {
-            setSearchLoading(false);
-        }
-    }, []);
+    // Load all employees once
+    useState(() => {
+        api.get('/employees/', { params: { page_size: 500 } })
+            .then(res => {
+                const list = (res.data.results || res.data || [])
+                    .filter(e => e.is_active !== false)
+                    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'tr'));
+                setAllEmployees(list);
+            })
+            .catch(() => {})
+            .finally(() => setEmployeesLoading(false));
+    });
 
-    // Debounced search
-    const [searchTimer, setSearchTimer] = useState(null);
     const handleSearchChange = (val) => {
         setEmployeeSearch(val);
         setSelectedEmployee(null);
-        if (searchTimer) clearTimeout(searchTimer);
-        const timer = setTimeout(() => searchEmployees(val), 300);
-        setSearchTimer(timer);
+        if (val.length < 2) {
+            setFilteredEmployees([]);
+            setShowDropdown(false);
+            return;
+        }
+        const q = val.toLowerCase();
+        const matched = allEmployees.filter(e =>
+            (e.full_name || '').toLowerCase().includes(q) ||
+            (e.registration_number || '').toLowerCase().includes(q)
+        ).slice(0, 10);
+        setFilteredEmployees(matched);
+        setShowDropdown(true);
     };
 
     const selectEmployee = (emp) => {
         setSelectedEmployee(emp);
         setEmployeeSearch(emp.full_name || `${emp.first_name} ${emp.last_name}`);
-        setEmployees([]);
+        setShowDropdown(false);
     };
 
     const handleQuery = async () => {
@@ -157,10 +162,10 @@ export default function DailyRecordAuditTab() {
                             placeholder="Isim veya sicil no ile arayin..."
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
-                        {searchLoading && <div className="absolute right-3 top-9 text-xs text-gray-400">Araniyor...</div>}
-                        {employees.length > 0 && (
+                        {employeesLoading && <div className="absolute right-3 top-9 text-xs text-gray-400">Yükleniyor...</div>}
+                        {showDropdown && filteredEmployees.length > 0 && (
                             <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                {employees.map(emp => (
+                                {filteredEmployees.map(emp => (
                                     <button
                                         key={emp.id}
                                         onClick={() => selectEmployee(emp)}
