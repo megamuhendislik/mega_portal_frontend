@@ -5,7 +5,7 @@ import {
 import { Select, Spin, Empty, Tooltip } from 'antd';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday } from '../../utils/dateUtils';
+import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday, fmtH } from '../../utils/dateUtils';
 import OTDayDetailDrawer from './OTDayDetailDrawer';
 import CreateAssignmentModal from './CreateAssignmentModal';
 
@@ -481,7 +481,7 @@ export default function UnifiedOvertimePanel() {
               const primaryStatus = member.statuses[0];
               const color = STATUS_COLORS[primaryStatus]?.dot || '#6b7280';
               return (
-                <Tooltip key={member.employeeId} title={`${member.name}: ${member.hours.toFixed(1)} sa`}>
+                <Tooltip key={member.employeeId} title={`${member.name}: ${fmtH(member.hours)}`}>
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-black/30 shadow-sm transition-transform duration-150 hover:scale-110 hover:z-10"
                     style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}40` }}

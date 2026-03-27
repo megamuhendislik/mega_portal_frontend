@@ -7,6 +7,7 @@ import {
 import { Tooltip } from 'antd';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import { fmtH } from '../../../../utils/dateUtils';
 import InfoTooltip from '../shared/InfoTooltip';
 
 /* ===================================================================
@@ -325,8 +326,8 @@ const CARD_CONFIGS = [
             const v = extra?.netHours;
             if (v == null) return 'Net durum verisi yok';
             return v >= 0
-                ? `Ekip ${v.toFixed(1)} saat fazla çalıştı`
-                : `Ekip ${Math.abs(v).toFixed(1)} saat eksik çalıştı`;
+                ? `Ekip ${fmtH(v)} fazla çalıştı`
+                : `Ekip ${fmtH(Math.abs(v))} eksik çalıştı`;
         },
         dynamicGradient: (kpi, empCount, extra) => {
             const v = extra?.netHours ?? 0;

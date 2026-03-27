@@ -6,7 +6,7 @@ import {
 import { Select, Progress, Spin, Empty, Modal, Input, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday } from '../../utils/dateUtils';
+import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday, fmtH, fmtSec } from '../../utils/dateUtils';
 import OTDayDetailPanel from './OTDayDetailPanel';
 import OverrideConfirmModal from './OverrideConfirmModal';
 import CreateAssignmentModal from './CreateAssignmentModal';
@@ -546,7 +546,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
           {/* Total hours */}
           {cellInfo.totalHours > 0 && (
             <span className="text-[9px] font-bold text-slate-500">
-              {cellInfo.totalHours.toFixed(1)}sa
+              {fmtH(cellInfo.totalHours)}
             </span>
           )}
         </div>
@@ -822,19 +822,19 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
           <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Onaylı</div>
-          <div className="text-lg font-black text-emerald-700 mt-0.5">{summary.approved.toFixed(1)} sa</div>
+          <div className="text-lg font-black text-emerald-700 mt-0.5">{fmtH(summary.approved)}</div>
         </div>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
           <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Bekleyen</div>
-          <div className="text-lg font-black text-amber-700 mt-0.5">{summary.pending.toFixed(1)} sa</div>
+          <div className="text-lg font-black text-amber-700 mt-0.5">{fmtH(summary.pending)}</div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-3">
           <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Reddedilen</div>
-          <div className="text-lg font-black text-red-700 mt-0.5">{summary.rejected.toFixed(1)} sa</div>
+          <div className="text-lg font-black text-red-700 mt-0.5">{fmtH(summary.rejected)}</div>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
           <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Algılanan</div>
-          <div className="text-lg font-black text-blue-700 mt-0.5">{summary.potential.toFixed(1)} sa</div>
+          <div className="text-lg font-black text-blue-700 mt-0.5">{fmtH(summary.potential)}</div>
         </div>
       </div>
 
@@ -862,7 +862,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                   : 'Algılanan mesai'}
               </div>
               <div className="text-xs mt-1">
-                Süre: {claimModal.data.duration_hours || claimModal.data.actual_overtime_hours || (claimModal.data.actual_overtime_seconds ? (claimModal.data.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
+                Süre: {claimModal.data.duration_hours ? fmtH(claimModal.data.duration_hours) : claimModal.data.actual_overtime_hours ? fmtH(claimModal.data.actual_overtime_hours) : claimModal.data.actual_overtime_seconds ? fmtSec(claimModal.data.actual_overtime_seconds) : '0 dk'}
               </div>
             </div>
 

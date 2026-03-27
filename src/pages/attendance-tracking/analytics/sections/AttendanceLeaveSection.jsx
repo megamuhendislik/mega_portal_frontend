@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useAnalyticsFilter } from '../AnalyticsFilterContext';
 import api from '../../../../services/api';
+import { fmtH } from '../../../../utils/dateUtils';
 import InfoTooltip from '../shared/InfoTooltip';
 
 /* ═══════════════════════════════════════════════════
@@ -180,7 +181,7 @@ function AttendanceCalendarHeatmap({ dailyData, period }) {
                                 <div
                                     className={`w-9 h-9 rounded-lg ${getCellClass(cell)} transition-all cursor-default
                                         hover:ring-2 hover:ring-slate-300 hover:ring-offset-1 flex items-center justify-center`}
-                                    title={`${cell.dayLabel}: ${cell.avgHours > 0 ? cell.avgHours.toFixed(1) + 's ort.' : 'Veri yok'}${cell.presentCount ? ' | ' + cell.presentCount + ' tam' : ''}${cell.lateCount ? ', ' + cell.lateCount + ' geç' : ''}${cell.absentCount ? ', ' + cell.absentCount + ' devamsız' : ''}${cell.leaveCount ? ', ' + cell.leaveCount + ' izinli' : ''}`}
+                                    title={`${cell.dayLabel}: ${cell.avgHours > 0 ? fmtH(cell.avgHours) + ' ort.' : 'Veri yok'}${cell.presentCount ? ' | ' + cell.presentCount + ' tam' : ''}${cell.lateCount ? ', ' + cell.lateCount + ' geç' : ''}${cell.absentCount ? ', ' + cell.absentCount + ' devamsız' : ''}${cell.leaveCount ? ', ' + cell.leaveCount + ' izinli' : ''}`}
                                 >
                                     <span className="text-[8px] font-bold text-white/80">
                                         {cell.date.getDate()}

@@ -3,6 +3,7 @@ import {
   Clock, CheckCircle, XCircle, Send, X,
   AlertTriangle, User, Shield, Briefcase
 } from 'lucide-react';
+import { fmtH, fmtSec } from '../../utils/dateUtils';
 import { Tag, Button, Popconfirm, Input, message } from 'antd';
 import api from '../../services/api';
 
@@ -371,7 +372,7 @@ export default function OTDayDetailPanel({
                         </span>
                       )}
                       <span className="font-bold text-blue-700">
-                        {pot.duration_hours || pot.actual_overtime_hours || (pot.actual_overtime_seconds ? (pot.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
+                        {pot.duration_hours ? fmtH(pot.duration_hours) : pot.actual_overtime_hours ? fmtH(pot.actual_overtime_hours) : pot.actual_overtime_seconds ? fmtSec(pot.actual_overtime_seconds) : '0 dk'}
                       </span>
                     </div>
                   </div>

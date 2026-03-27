@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { Trophy } from 'lucide-react';
 import useIsMobile from '../hooks/useIsMobile';
+import { fmtH } from '../utils/dateUtils';
 
 const TeamComparisonChart = ({ data }) => {
     const isMobile = useIsMobile();
@@ -29,11 +30,11 @@ const TeamComparisonChart = ({ data }) => {
                     <div className="space-y-1.5">
                         <div className="flex justify-between items-baseline gap-3">
                             <span className="text-slate-500">Hedef:</span>
-                            <span className="font-semibold text-slate-700">{item.target.toFixed(1)} sa</span>
+                            <span className="font-semibold text-slate-700">{fmtH(item.target)}</span>
                         </div>
                         <div className="flex justify-between items-baseline gap-3">
                             <span className="text-slate-500">Çalışma:</span>
-                            <span className="font-bold text-indigo-600">{item.actual.toFixed(1)} sa</span>
+                            <span className="font-bold text-indigo-600">{fmtH(item.actual)}</span>
                         </div>
                         <div className="mt-2 pt-2 border-t border-slate-100">
                             <div className={`flex justify-between items-baseline ${isMet ? 'text-emerald-600' : 'text-amber-600'}`}>

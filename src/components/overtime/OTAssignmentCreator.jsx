@@ -7,7 +7,7 @@ import {
   CircleCheck, Activity, CircleDot, ArrowRight, UserCheck
 } from 'lucide-react';
 import api from '../../services/api';
-import { getIstanbulToday, toIstanbulParts } from '../../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts, fmtH } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import ModalOverlay from '../ui/ModalOverlay';
 
@@ -952,7 +952,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                             </Tooltip>
                           </div>
                           <span className="text-xs font-bold text-slate-700">
-                            {projectedTotal.toFixed(1)} / {weeklyLimit} sa
+                            {fmtH(projectedTotal)} / {weeklyLimit} saat
                           </span>
                         </div>
 
@@ -973,9 +973,9 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         {/* Breakdown text */}
                         {newHours > 0 && (
                           <div className="text-[10px] text-slate-500">
-                            <span className="font-bold text-slate-600">Mevcut: {currentUsed.toFixed(1)} sa</span>
+                            <span className="font-bold text-slate-600">Mevcut: {fmtH(currentUsed)}</span>
                             <span className="mx-1">+</span>
-                            <span className="font-bold text-violet-600">Yeni: {newHours.toFixed(1)} sa</span>
+                            <span className="font-bold text-violet-600">Yeni: {fmtH(newHours)}</span>
                           </div>
                         )}
                       </div>
@@ -1156,7 +1156,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <div className="flex items-center gap-2">
                           <ShieldAlert size={16} className="text-red-600 flex-shrink-0" />
                           <span className="text-xs font-bold text-red-700">
-                            Haftalık limit aşılacak! {projectedTotal.toFixed(1)} / {weeklyLimit} sa ({Math.round(progressPercent)}%)
+                            Haftalık limit aşılacak! {fmtH(projectedTotal)} / {weeklyLimit} saat ({Math.round(progressPercent)}%)
                           </span>
                         </div>
                         <p className="text-[10px] text-red-600 ml-6">
@@ -1256,13 +1256,13 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                               <td className="py-2.5 px-3 text-xs font-medium text-slate-700">
                                 {row._requestedHours != null ? (
                                   <span>
-                                    {row._requestedHours.toFixed(1)} sa
+                                    {fmtH(row._requestedHours)}
                                     {row._maxHours != null && (
-                                      <span className="text-[10px] text-slate-400 ml-1">/ max {parseFloat(row._maxHours).toFixed(1)}</span>
+                                      <span className="text-[10px] text-slate-400 ml-1">/ max {fmtH(row._maxHours)}</span>
                                     )}
                                   </span>
                                 ) : row._maxHours != null ? (
-                                  <span className="text-slate-500">max {parseFloat(row._maxHours).toFixed(1)} sa</span>
+                                  <span className="text-slate-500">max {fmtH(row._maxHours)}</span>
                                 ) : (
                                   '-'
                                 )}

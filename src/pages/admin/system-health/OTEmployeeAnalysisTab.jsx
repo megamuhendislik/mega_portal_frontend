@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 import dayjs from 'dayjs';
+import { fmtH } from '../../../utils/dateUtils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -214,7 +215,7 @@ export default function OTEmployeeAnalysisTab() {
             width: 100,
             render: (_, r) => (
                 <span className="text-xs">
-                    {r.ot_summary?.potential?.count || 0} / {(r.ot_summary?.potential?.hours || 0).toFixed(1)}sa
+                    {r.ot_summary?.potential?.count || 0} / {fmtH(r.ot_summary?.potential?.hours || 0)}
                 </span>
             ),
         },
@@ -224,7 +225,7 @@ export default function OTEmployeeAnalysisTab() {
             width: 100,
             render: (_, r) => (
                 <span className="text-xs">
-                    {r.ot_summary?.pending?.count || 0} / {(r.ot_summary?.pending?.hours || 0).toFixed(1)}sa
+                    {r.ot_summary?.pending?.count || 0} / {fmtH(r.ot_summary?.pending?.hours || 0)}
                 </span>
             ),
         },
@@ -234,7 +235,7 @@ export default function OTEmployeeAnalysisTab() {
             width: 100,
             render: (_, r) => (
                 <span className="text-xs font-bold text-emerald-700">
-                    {r.ot_summary?.approved?.count || 0} / {(r.ot_summary?.approved?.hours || 0).toFixed(1)}sa
+                    {r.ot_summary?.approved?.count || 0} / {fmtH(r.ot_summary?.approved?.hours || 0)}
                 </span>
             ),
         },
@@ -244,7 +245,7 @@ export default function OTEmployeeAnalysisTab() {
             width: 100,
             render: (_, r) => (
                 <span className="text-xs text-red-600">
-                    {r.ot_summary?.rejected?.count || 0} / {(r.ot_summary?.rejected?.hours || 0).toFixed(1)}sa
+                    {r.ot_summary?.rejected?.count || 0} / {fmtH(r.ot_summary?.rejected?.hours || 0)}
                 </span>
             ),
         },
@@ -252,7 +253,7 @@ export default function OTEmployeeAnalysisTab() {
             title: 'Att. OT',
             key: 'attendance_ot',
             width: 80,
-            render: (_, r) => <span className="text-xs font-bold text-indigo-700">{(r.attendance_ot_hours || 0).toFixed(1)}sa</span>,
+            render: (_, r) => <span className="text-xs font-bold text-indigo-700">{fmtH(r.attendance_ot_hours || 0)}</span>,
         },
         {
             title: 'Sorun',
@@ -346,27 +347,27 @@ export default function OTEmployeeAnalysisTab() {
                     <div className="rounded-xl border p-4 bg-slate-50 border-slate-200">
                         <div className="text-2xl font-bold text-slate-700">{summary.totals?.potential?.count || 0}</div>
                         <div className="text-xs font-medium text-slate-600">Potansiyel</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{(summary.totals?.potential?.hours || 0).toFixed(1)} saat</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{fmtH(summary.totals?.potential?.hours || 0)}</div>
                     </div>
                     <div className="rounded-xl border p-4 bg-amber-50 border-amber-200">
                         <div className="text-2xl font-bold text-amber-700">{summary.totals?.pending?.count || 0}</div>
                         <div className="text-xs font-medium text-amber-600">Bekleyen</div>
-                        <div className="text-[10px] text-amber-500 mt-0.5">{(summary.totals?.pending?.hours || 0).toFixed(1)} saat</div>
+                        <div className="text-[10px] text-amber-500 mt-0.5">{fmtH(summary.totals?.pending?.hours || 0)}</div>
                     </div>
                     <div className="rounded-xl border p-4 bg-emerald-50 border-emerald-200">
                         <div className="text-2xl font-bold text-emerald-700">{summary.totals?.approved?.count || 0}</div>
                         <div className="text-xs font-medium text-emerald-600">Onaylı</div>
-                        <div className="text-[10px] text-emerald-500 mt-0.5">{(summary.totals?.approved?.hours || 0).toFixed(1)} saat</div>
+                        <div className="text-[10px] text-emerald-500 mt-0.5">{fmtH(summary.totals?.approved?.hours || 0)}</div>
                     </div>
                     <div className="rounded-xl border p-4 bg-red-50 border-red-200">
                         <div className="text-2xl font-bold text-red-700">{summary.totals?.rejected?.count || 0}</div>
                         <div className="text-xs font-medium text-red-600">Reddedilen</div>
-                        <div className="text-[10px] text-red-500 mt-0.5">{(summary.totals?.rejected?.hours || 0).toFixed(1)} saat</div>
+                        <div className="text-[10px] text-red-500 mt-0.5">{fmtH(summary.totals?.rejected?.hours || 0)}</div>
                     </div>
                     <div className="rounded-xl border p-4 bg-gray-50 border-gray-200">
                         <div className="text-2xl font-bold text-gray-700">{summary.totals?.cancelled?.count || 0}</div>
                         <div className="text-xs font-medium text-gray-600">İptal</div>
-                        <div className="text-[10px] text-gray-500 mt-0.5">{(summary.totals?.cancelled?.hours || 0).toFixed(1)} saat</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">{fmtH(summary.totals?.cancelled?.hours || 0)}</div>
                     </div>
                     <div className={`rounded-xl border p-4 ${hasIssues ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                         <div className={`text-2xl font-bold ${hasIssues ? 'text-red-700' : 'text-green-700'}`}>

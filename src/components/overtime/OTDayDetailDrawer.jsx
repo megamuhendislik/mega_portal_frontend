@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Drawer, Tag, Button, Popconfirm, Input, InputNumber, message, Spin, Collapse } from 'antd';
 import api from '../../services/api';
-import { getIstanbulToday } from '../../utils/dateUtils';
+import { getIstanbulToday, fmtH, fmtSec } from '../../utils/dateUtils';
 
 // --- Config maps ---
 
@@ -386,7 +386,7 @@ function PotentialCard({ pot }) {
           </span>
         )}
         <span className="font-bold text-blue-400">
-          {pot.actual_overtime_hours || (pot.actual_overtime_seconds ? (pot.actual_overtime_seconds / 3600).toFixed(1) : '0')} sa
+          {pot.actual_overtime_hours ? fmtH(pot.actual_overtime_hours) : pot.actual_overtime_seconds ? fmtSec(pot.actual_overtime_seconds) : '0 dk'}
         </span>
       </div>
 

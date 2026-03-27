@@ -37,6 +37,7 @@ import {
     RollbackOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
+import { fmtH } from '../../../utils/dateUtils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -175,7 +176,7 @@ function getProblemDescription(record) {
             lines.push('Giriş/çıkış saatleri CSV ile sistem arasında farklı.');
         }
         const diffH = Math.abs((record.csv_total_hours || 0) - (record.sys_total_hours || 0));
-        if (diffH > 0.5) lines.push(`Toplam saat farkı: ${diffH.toFixed(1)} saat.`);
+        if (diffH > 0.5) lines.push(`Toplam saat farkı: ${fmtH(diffH)}.`);
     } else if (cat === 'SESSION_MISMATCH') {
         lines.push(`Oturum sayısı uyuşmuyor: CSV'de ${csvCount}, sistemde ${sysCount} oturum.`);
         if (has2359) lines.push('Ek olarak, sistemde son çıkış 23:59:59 — gece yarısı kapama sorunu.');
@@ -1725,14 +1726,14 @@ export default function PdksCompareTab() {
                     const diff = Math.abs(csvH - sysH);
                     const differs = diff > 0.1;
                     return (
-                        <Tooltip title={`CSV: ${csvH.toFixed(1)}sa, Sistem: ${sysH.toFixed(1)}sa`}>
+                        <Tooltip title={`CSV: ${fmtH(csvH)}, Sistem: ${fmtH(sysH)}`}>
                             <div className="text-xs font-mono leading-tight">
                                 <div className={differs ? 'text-red-600 font-bold' : 'text-gray-600'}>
-                                    {csvH.toFixed(1)}/{sysH.toFixed(1)}
+                                    {fmtH(csvH)} / {fmtH(sysH)}
                                 </div>
                                 {differs && (
                                     <div className="text-[10px] text-orange-500">
-                                        {diff > 0 ? (csvH > sysH ? '+' : '-') : ''}{diff.toFixed(1)}sa
+                                        {diff > 0 ? (csvH > sysH ? '+' : '-') : ''}{fmtH(diff)}
                                     </div>
                                 )}
                             </div>

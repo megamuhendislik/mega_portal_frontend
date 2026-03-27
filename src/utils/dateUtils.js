@@ -271,3 +271,32 @@ export function formatTR(date, options = {}) {
     if (isNaN(d.getTime())) return '';
     return new Intl.DateTimeFormat('tr-TR', { timeZone: TZ, ...options }).format(d);
 }
+
+/**
+ * Ondalık saat → "X saat Y dk" formatı (örn: 8.5 → "8 saat 30 dk")
+ */
+export function fmtH(v) {
+    if (!v || v === 0) return '0 dk';
+    const abs = Math.abs(parseFloat(v));
+    const h = Math.floor(abs);
+    const m = Math.round((abs - h) * 60);
+    const sign = parseFloat(v) < 0 ? '-' : '';
+    if (h === 0) return `${sign}${m} dk`;
+    if (m === 0) return `${sign}${h} saat`;
+    return `${sign}${h} saat ${m} dk`;
+}
+
+/**
+ * Saniye → "X saat Y dk" formatı (örn: 30600 → "8 saat 30 dk")
+ */
+export function fmtSec(s) {
+    if (!s) return '0 dk';
+    const neg = s < 0;
+    const totalMin = Math.round(Math.abs(s) / 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const sign = neg ? '-' : '';
+    if (h === 0) return `${sign}${m} dk`;
+    if (m === 0) return `${sign}${h} saat`;
+    return `${sign}${h} saat ${m} dk`;
+}
