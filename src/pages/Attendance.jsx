@@ -127,22 +127,6 @@ const Attendance = () => {
             setLogs(logsRes.data.results || logsRes.data);
             setPeriodSummary(sumRes.data);
 
-            // DEBUG: Monthly summary accounting equation check
-            const sd = sumRes.data;
-            if (sd) {
-                const completed = sd.completed_seconds || 0;
-                const missing = sd.missing_seconds || 0;
-                const hr = sd.health_report_seconds || 0;
-                const leave = sd.leave_seconds || 0;
-                const duty = sd.duty_seconds || 0;
-                const target = sd.target_gross || sd.target_seconds || 0;
-                const total = completed + missing + hr + leave + duty;
-                const drift = Math.abs(total - target);
-                console.log(`[MONTHLY-DEBUG] Employee ${selectedEmployeeId} | Period ${startDate} - ${endDate}`);
-                console.log(`  completed: ${(completed/3600).toFixed(2)}h | missing: ${(missing/3600).toFixed(2)}h | hr: ${(hr/3600).toFixed(2)}h | leave: ${(leave/3600).toFixed(2)}h | duty: ${(duty/3600).toFixed(2)}h`);
-                console.log(`  TOTAL: ${(total/3600).toFixed(2)}h | TARGET: ${(target/3600).toFixed(2)}h | DRIFT: ${(drift/3600).toFixed(2)}h ${drift > 300 ? '⚠️ STALE' : '✅ OK'}`);
-            }
-
             // Fetch leave coverage for the period
             if (selectedEmployeeId && startDate && endDate) {
                 try {
