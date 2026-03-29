@@ -1599,6 +1599,17 @@ export const ExternalDutyForm = ({
                                                 {dayPreview?.is_off_day && (
                                                     <span className="text-[10px] text-red-400 font-medium">Tatil / hafta sonu — tümü ek mesai</span>
                                                 )}
+                                                {dayPreview?.existing_card_minutes > 0 && (
+                                                    <div className="w-full mt-1 pt-1 border-t border-dashed border-slate-200 flex items-center gap-3 flex-wrap">
+                                                        <span className="text-[10px] text-blue-500 font-bold">
+                                                            Mevcut kart: {dayPreview.existing_card_records?.map(c => `${c.check_in}-${c.check_out}`).join(', ')} ({Math.floor(dayPreview.existing_card_minutes / 60)}s {dayPreview.existing_card_minutes % 60}dk)
+                                                        </span>
+                                                        <span className="text-[10px] text-purple-600 font-bold">
+                                                            Birleşik → Normal: {Math.floor(dayPreview.combined_normal_minutes / 60)}s {dayPreview.combined_normal_minutes % 60}dk
+                                                            {dayPreview.combined_ot_minutes > 0 && ` + OT: ${Math.floor(dayPreview.combined_ot_minutes / 60)}s ${dayPreview.combined_ot_minutes % 60}dk`}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1607,19 +1618,46 @@ export const ExternalDutyForm = ({
                         </div>
 
                         {dutyHoursPreview && (
-                            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                                <div className="text-center">
-                                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Normal Mesai</span>
-                                    <span className="block font-black text-emerald-600 text-lg">
-                                        {Math.floor(dutyHoursPreview.totals.total_normal_work_minutes / 60)}s {dutyHoursPreview.totals.total_normal_work_minutes % 60}dk
-                                    </span>
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="text-center">
+                                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Görev Normal Mesai</span>
+                                        <span className="block font-black text-emerald-600 text-lg">
+                                            {Math.floor(dutyHoursPreview.totals.total_normal_work_minutes / 60)}s {dutyHoursPreview.totals.total_normal_work_minutes % 60}dk
+                                        </span>
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Görev Ek Mesai</span>
+                                        <span className="block font-black text-amber-600 text-lg">
+                                            {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="text-center">
-                                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Ek Mesai</span>
-                                    <span className="block font-black text-amber-600 text-lg">
-                                        {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
-                                    </span>
-                                </div>
+                                {dutyHoursPreview.totals.existing_card_minutes > 0 && (
+                                    <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                                        <span className="block text-[10px] text-purple-400 font-bold uppercase mb-1">Birleşik Hesaplama (Kart + Görev)</span>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div>
+                                                <span className="block text-[10px] text-slate-400">Kart</span>
+                                                <span className="block font-bold text-blue-600">
+                                                    {Math.floor(dutyHoursPreview.totals.existing_card_minutes / 60)}s {dutyHoursPreview.totals.existing_card_minutes % 60}dk
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] text-slate-400">Normal</span>
+                                                <span className="block font-bold text-emerald-600">
+                                                    {Math.floor(dutyHoursPreview.totals.combined_normal_minutes / 60)}s {dutyHoursPreview.totals.combined_normal_minutes % 60}dk
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] text-slate-400">Ek Mesai</span>
+                                                <span className="block font-bold text-amber-600">
+                                                    {Math.floor(dutyHoursPreview.totals.combined_ot_minutes / 60)}s {dutyHoursPreview.totals.combined_ot_minutes % 60}dk
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
