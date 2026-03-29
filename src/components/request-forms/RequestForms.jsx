@@ -1500,7 +1500,7 @@ export const ExternalDutyForm = ({
                     <AlertCircle className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Mesai Hesaplama</h4>
-                        <p className="mt-1">Görev tarihleri içinde normal mesai saatlerine denk gelen saatler <strong>normal mesai</strong>, mesai dışı saatler <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
+                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Günlük mesai hedefine kadar <strong>normal mesai</strong>, hedefi aşan kısım <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-5">
