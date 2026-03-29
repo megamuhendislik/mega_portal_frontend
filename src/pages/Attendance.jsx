@@ -115,15 +115,14 @@ const Attendance = () => {
     // Consolidated loading for initial render
     const isLoading = isPeriodLoading && !logs.length;
 
-    const fetchPeriodData = useCallback(async (forceRefresh = false) => {
+    const fetchPeriodData = useCallback(async () => {
         if (!selectedEmployeeId || !startDate || !endDate) return;
         // Only show loading if we have no data yet (first load)
         if (!logs.length) setIsPeriodLoading(true);
         try {
-            const forceParam = forceRefresh ? '&force=true' : '';
             const [logsRes, sumRes] = await Promise.all([
                 api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`),
-                api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}${forceParam}`)
+                api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`)
             ]);
             setLogs(logsRes.data.results || logsRes.data);
             setPeriodSummary(sumRes.data);
@@ -370,7 +369,7 @@ const Attendance = () => {
                         {/* 2. Monthly Summary Section */}
                         {/* Includes 3-part progress bar and Net Status Card */}
                         <div id="attendance-content-start" className="bg-white p-1 rounded-3xl scroll-mt-24">
-                            <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} onMonthSelect={(year, month) => { setViewYear(year); setViewMonth(month - 1); }} onForceRefresh={() => fetchPeriodData(true)} />
+                            <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} onMonthSelect={(year, month) => { setViewYear(year); setViewMonth(month - 1); }} />
                             <MonthlyBalanceCarousel periodSummary={periodSummary} />
                         </div>
 
