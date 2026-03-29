@@ -200,10 +200,10 @@ export default function RequestAnalysisTab() {
     };
 
     const fmtHour = (hours) => {
-        if (!hours) return '0 sa';
+        if (!hours) return '0:00';
         const h = Math.floor(hours);
         const m = Math.round((hours - h) * 60);
-        return m > 0 ? `${h} sa ${m} dk` : `${h} sa`;
+        return `${h}:${String(m).padStart(2, '0')}`;
     };
 
     if (loading && !data) {

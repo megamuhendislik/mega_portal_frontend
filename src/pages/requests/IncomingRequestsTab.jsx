@@ -203,7 +203,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     // Override detail modal (from ExpandableRequestRow "Karar Değiştir" button)
     const handleViewDetail = (req) => {
         setSelectedRequest(req);
-        setSelectedRequestType(req.type);
+        setSelectedRequestType(req._type || req.type);
         setShowDetailModal(true);
     };
 
@@ -222,6 +222,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
         start_date: r.start_date || r.date || r.created_at,
         type: r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN'),
+        _type: r.request_type_detail?.category === 'EXTERNAL_DUTY' ? 'EXTERNAL_DUTY' : (r.type === 'CARDLESS' ? 'CARDLESS_ENTRY' : (r.type || 'UNKNOWN')),
         _source: source,
         _isSubstitute: isSubstitute,
         _principalName: principalName,

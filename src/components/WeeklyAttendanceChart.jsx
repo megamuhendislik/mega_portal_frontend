@@ -6,7 +6,7 @@ import { tr } from 'date-fns/locale';
 import useIsMobile from '../hooks/useIsMobile';
 import { getIstanbulTodayDate } from '../utils/dateUtils';
 
-const fmtH = (v) => { const h = Math.floor(Math.abs(v)); const m = Math.round((Math.abs(v) - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
+const fmtH = (v) => { const h = Math.floor(Math.abs(v)); const m = Math.round((Math.abs(v) - h) * 60); return `${h}:${String(m).padStart(2, '0')}`; };
 
 const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h if not provided
     const isMobile = useIsMobile();

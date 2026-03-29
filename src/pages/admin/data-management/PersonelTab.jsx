@@ -305,7 +305,7 @@ export default function PersonelTab({ initialEmployee }) {
                     const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
                     const isSettled = bd && bd.compensated !== 0;
 
-                    const fmtH = (sec) => (Math.abs(sec) / 3600).toFixed(1);
+                    const fmtH = (sec) => { const totalMin = Math.round(Math.abs(sec) / 60); const h = Math.floor(totalMin / 60); const m = totalMin % 60; return `${h}:${String(m).padStart(2, '0')}`; };
                     const sign = (sec) => sec >= 0 ? '+' : '-';
                     const MNAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 

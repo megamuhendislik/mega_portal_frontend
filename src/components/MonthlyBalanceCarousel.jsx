@@ -35,8 +35,11 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
 
     const fmtHours = (sec) => {
         if (sec == null) return null;
-        const h = (Math.abs(sec) / 3600).toFixed(1);
-        return sec >= 0 ? `+${h}` : `-${h}`;
+        const totalMin = Math.round(Math.abs(sec) / 60);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const formatted = `${h}:${String(m).padStart(2, '0')}`;
+        return sec >= 0 ? `+${formatted}` : `-${formatted}`;
     };
 
     return (

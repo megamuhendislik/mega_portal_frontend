@@ -3,15 +3,13 @@ import { PieChart, Briefcase, Calendar, Star, TrendingUp, AlertCircle, Clock } f
 import clsx from 'clsx';
 
 function fmtSec(s) {
-    if (!s) return '0 dk';
+    if (!s) return '0:00';
     const neg = s < 0;
     const totalMin = Math.round(Math.abs(s) / 60);
-    const hours = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
     const sign = neg ? '-' : '';
-    if (hours === 0) return `${sign}${mins} dk`;
-    if (mins === 0) return `${sign}${hours} saat`;
-    return `${sign}${hours} saat ${mins} dk`;
+    return `${sign}${h}:${String(m).padStart(2, '0')}`;
 }
 
 const MonthlyPerformanceWidget = ({ summary, loading }) => {

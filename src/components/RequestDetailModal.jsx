@@ -9,7 +9,9 @@ import ModalOverlay from './ui/ModalOverlay';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 
-const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate }) => {
+const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate }) => {
+  // EXTERNAL_DUTY uses LEAVE endpoints/logic — normalize for all internal checks
+  const requestType = rawRequestType === 'EXTERNAL_DUTY' ? 'LEAVE' : rawRequestType;
   const { user } = useAuth();
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideAction, setOverrideAction] = useState('approve');
@@ -55,8 +57,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType, onUpdate })
   }, [isOpen, request?.id, requestType]);
 
   useEffect(() => {
-    if (request?.status === 'PENDING' &&
-        request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
+    if (request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
         request?.start_date && request?.end_date) {
       const fetchPreview = async () => {
         setDutyPreviewLoading(true);

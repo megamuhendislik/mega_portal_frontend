@@ -2,14 +2,12 @@ import React from 'react';
 import { Calendar, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 
 function fmtDecHours(h) {
-    if (!h || h === 0) return '0 dk';
+    if (!h || h === 0) return '0:00';
     const abs = Math.abs(h);
     const hours = Math.floor(abs);
     const mins = Math.round((abs - hours) * 60);
     const sign = h < 0 ? '-' : '';
-    if (hours === 0) return `${sign}${mins} dk`;
-    if (mins === 0) return `${sign}${hours} saat`;
-    return `${sign}${hours} saat ${mins} dk`;
+    return `${sign}${hours}:${String(mins).padStart(2, '0')}`;
 }
 
 

@@ -34,12 +34,10 @@ function formatDateShort(dateStr) {
 }
 
 function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '0 dk';
+    if (!seconds || seconds <= 0) return '0:00';
     const h = Math.floor(seconds / 3600);
     const m = Math.round((seconds % 3600) / 60);
-    if (h > 0 && m > 0) return `${h} sa ${m} dk`;
-    if (h > 0) return `${h} sa`;
-    return `${m} dk`;
+    return `${h}:${String(m).padStart(2, '0')}`;
 }
 
 function isDatePast(dateStr) {

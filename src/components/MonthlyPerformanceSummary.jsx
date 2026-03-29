@@ -3,30 +3,26 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 import { Popover, Tooltip } from 'antd';
 import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
-// Saniye → "X saat Y dk" formatı
+// Saniye → "H:MM" formatı
 function fmtSec(s) {
-    if (!s) return '0 dk';
+    if (!s) return '0:00';
     const neg = s < 0;
     const totalMin = Math.round(Math.abs(s) / 60);
-    const hours = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
     const sign = neg ? '-' : '';
-    if (hours === 0) return `${sign}${mins} dk`;
-    if (mins === 0) return `${sign}${hours} saat`;
-    return `${sign}${hours} saat ${mins} dk`;
+    return `${sign}${h}:${String(m).padStart(2, '0')}`;
 }
 
-// Ondalık saat → "X saat Y dk" formatı (örn: 163.5 → "163 saat 30 dk")
+// Ondalık saat → "H:MM" formatı (örn: 163.5 → "163:30")
 function fmtHours(h) {
-    if (!h || h === 0) return '0 dk';
+    if (!h || h === 0) return '0:00';
     const neg = h < 0;
     const abs = Math.abs(parseFloat(h));
     const hours = Math.floor(abs);
     const mins = Math.round((abs - hours) * 60);
     const sign = neg ? '-' : '';
-    if (hours === 0) return `${sign}${mins} dk`;
-    if (mins === 0) return `${sign}${hours} saat`;
-    return `${sign}${hours} saat ${mins} dk`;
+    return `${sign}${hours}:${String(mins).padStart(2, '0')}`;
 }
 
 const EffortDetailPopover = ({ stats }) => {

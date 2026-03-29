@@ -10,23 +10,20 @@ import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulNow, formatIstanbulTime } from '../../utils/dateUtils';
 
 export const formatMinutes = (minutes) => {
-    if (!minutes) return '0 dk';
+    if (!minutes) return '0:00';
     const hours = Math.floor(Math.abs(minutes) / 60);
     const mins = Math.abs(minutes) % 60;
-    if (hours === 0) return `${mins} dk`;
-    if (mins === 0) return `${hours} saat`;
-    return `${hours} saat ${mins} dk`;
+    return `${hours}:${String(mins).padStart(2, '0')}`;
 };
 
-/** Decimal saat değerini "X saat Y dk" formatına çevirir (örn: 15.5 → "15 saat 30 dk") */
+/** Decimal saat → "H:MM" formatı (örn: 15.5 → "15:30") */
 export const formatDecimalHours = (decimalHours) => {
-    if (!decimalHours || decimalHours === 0) return '0 dk';
+    if (!decimalHours || decimalHours === 0) return '0:00';
     const abs = Math.abs(decimalHours);
     const hours = Math.floor(abs);
     const mins = Math.round((abs - hours) * 60);
-    if (hours === 0) return `${mins} dk`;
-    if (mins === 0) return `${hours} saat`;
-    return `${hours} saat ${mins} dk`;
+    const sign = decimalHours < 0 ? '-' : '';
+    return `${sign}${hours}:${String(mins).padStart(2, '0')}`;
 };
 
 const round2 = (v) => Math.round((v || 0) * 100) / 100;
@@ -172,7 +169,7 @@ export const EmployeeAttendanceRow = ({
                                             <span className="block mt-0.5">Görev: {s.today_ot_assignment.task_description}</span>
                                         )}
                                         {s.today_ot_assignment.max_hours > 0 && (
-                                            <span className="block mt-0.5">Maks: {s.today_ot_assignment.max_hours} saat</span>
+                                            <span className="block mt-0.5">Maks: {formatDecimalHours(s.today_ot_assignment.max_hours)}</span>
                                         )}
                                         <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-slate-800" />
                                     </span>
@@ -203,10 +200,10 @@ export const EmployeeAttendanceRow = ({
                             return used > 0 ? (
                                 <span
                                     className={`inline-flex items-center gap-1 mt-0.5 text-[9px] px-1.5 py-0.5 rounded border ${cls}`}
-                                    title={`Haftalık limit: ${limit} saat, Kullanılan: ${used} saat, Kalan: ${remaining} saat`}
+                                    title={`Haftalık limit: ${formatDecimalHours(limit)}, Kullanılan: ${formatDecimalHours(used)}, Kalan: ${formatDecimalHours(remaining)}`}
                                 >
                                     {ratio > 0.7 && <AlertTriangle size={10} />}
-                                    Haftalık: {used}/{limit} saat {label && <b>&mdash; {label}</b>}
+                                    Haftalık: {formatDecimalHours(used)}/{formatDecimalHours(limit)} {label && <b>&mdash; {label}</b>}
                                 </span>
                             ) : null;
                         })()}
@@ -480,7 +477,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                     (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'text-amber-600' :
                                     'text-emerald-600'
                                 }`}>
-                                    {weeklyOtData.used_hours}/{weeklyOtData.limit_hours} saat
+                                    {formatDecimalHours(weeklyOtData.used_hours)}/{formatDecimalHours(weeklyOtData.limit_hours)}
                                 </span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">

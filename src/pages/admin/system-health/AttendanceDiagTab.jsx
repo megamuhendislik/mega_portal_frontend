@@ -41,7 +41,7 @@ export default function AttendanceDiagTab() {
         const hours = Math.floor(Math.abs(h));
         const mins = Math.round((Math.abs(h) - hours) * 60);
         const sign = h < 0 ? '-' : '';
-        return `${sign}${hours}s ${mins}dk`;
+        return `${sign}${hours}:${String(mins).padStart(2, '0')}`;
     };
 
     const getBadge = (m) => {

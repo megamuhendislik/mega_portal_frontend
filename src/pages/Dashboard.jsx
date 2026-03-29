@@ -509,7 +509,7 @@ const Dashboard = () => {
                                         <span className="text-[9px] font-bold text-amber-500">HAFTALIK LİMİT</span>
                                     </div>
                                     <span className={`text-[9px] font-bold ${colorClass}`}>
-                                        {used}/{limit} saat
+                                        {used}:00/{limit}:00
                                     </span>
                                 </div>
                                 {label && (
@@ -528,7 +528,7 @@ const Dashboard = () => {
                                 </div>
                                 {ratio >= 0.7 && (
                                     <p className={`text-[8px] mt-0.5 ${colorClass}`}>
-                                        Kalan: {remaining} saat
+                                        Kalan: {remaining}:00
                                     </p>
                                 )}
                             </div>
@@ -639,7 +639,7 @@ const Dashboard = () => {
                                         {(() => {
                                             const used = monthlySummary?.excuse_leave_hours_used || 0;
                                             const entitled = monthlySummary?.excuse_leave_hours_entitled || 18;
-                                            const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); if (h === 0) return `${m} dk`; if (m === 0) return `${h} saat`; return `${h} saat ${m} dk`; };
+                                            const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return `${h}:${String(m).padStart(2, '0')}`; };
                                             return `${fmtH(used)} / ${fmtH(entitled)}`;
                                         })()}
                                     </span>
