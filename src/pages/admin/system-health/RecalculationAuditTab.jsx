@@ -123,7 +123,7 @@ export default function RecalculationAuditTab() {
         try {
             const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/full-recalculation/', body, { timeout: 600000 });
+            const res = await api.post('/system/health-check/full-recalculation/', body, { timeout: 1800000 });
             setFrcResult(res.data);
         } catch (e) {
             setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
