@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark } from 'lucide-react';
+import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 import { DatePicker, ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
@@ -1577,7 +1577,7 @@ export const ExternalDutyForm = ({
                                         </div>
 
                                         {dayPreview && seg.start_time && seg.end_time && (
-                                            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-100 text-xs">
+                                            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-100 text-xs flex-wrap">
                                                 {dayPreview.normal_work_minutes > 0 && (
                                                     <span className="text-emerald-600 font-bold">
                                                         Normal: {Math.floor(dayPreview.normal_work_minutes / 60)}s {dayPreview.normal_work_minutes % 60}dk
@@ -1592,6 +1592,12 @@ export const ExternalDutyForm = ({
                                                     <span className="text-slate-400 text-[10px]">
                                                         ({dayPreview.overtime_segments.map(s => `${s.start}-${s.end}`).join(' + ')})
                                                     </span>
+                                                )}
+                                                {dayPreview && !dayPreview.is_off_day && dayPreview.shift_target_minutes > 0 && (
+                                                    <span className="text-[10px] text-slate-400">Hedef: {Math.floor(dayPreview.shift_target_minutes / 60)}s {dayPreview.shift_target_minutes % 60}dk</span>
+                                                )}
+                                                {dayPreview?.is_off_day && (
+                                                    <span className="text-[10px] text-red-400 font-medium">Tatil / hafta sonu — tümü ek mesai</span>
                                                 )}
                                             </div>
                                         )}
@@ -1616,6 +1622,31 @@ export const ExternalDutyForm = ({
                                 </div>
                             </div>
                         )}
+
+                        {dutyHoursPreview && (() => {
+                            const firstWorkingDay = dutyHoursPreview.days?.find(d => !d.is_off_day);
+                            const shiftTargetMin = firstWorkingDay?.shift_target_minutes;
+                            const hasOffDay = dutyHoursPreview.days?.some(d => d.is_off_day);
+                            return (
+                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 space-y-1.5">
+                                    <div className="flex items-start gap-2">
+                                        <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
+                                        <div className="space-y-1">
+                                            <p className="font-bold">Hesaplama Kuralları</p>
+                                            <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
+                                                <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
+                                                {shiftTargetMin > 0 && (
+                                                    <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
+                                                )}
+                                                <li>Hedefi aşan süre <strong>ek mesai</strong> olarak otomatik onaylanır</li>
+                                                {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>ek mesai</strong> sayılır</li>}
+                                                <li>Aynı gün kart verisi varsa birleştirilir</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {dutyHoursLoading && (
                             <div className="text-center py-2">
@@ -1984,6 +2015,30 @@ export const ExternalDutyForm = ({
                         <div className="animate-pulse text-sm text-slate-400">Mesai hesaplanıyor...</div>
                     </div>
                 ) : null}
+                {dutyHoursPreview && (() => {
+                    const firstWorkingDay = dutyHoursPreview.days?.find(d => !d.is_off_day);
+                    const shiftTargetMin = firstWorkingDay?.shift_target_minutes;
+                    const hasOffDay = dutyHoursPreview.days?.some(d => d.is_off_day);
+                    return (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 space-y-1.5">
+                            <div className="flex items-start gap-2">
+                                <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
+                                <div className="space-y-1">
+                                    <p className="font-bold">Hesaplama Kuralları</p>
+                                    <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
+                                        <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
+                                        {shiftTargetMin > 0 && (
+                                            <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
+                                        )}
+                                        <li>Hedefi aşan süre <strong>ek mesai</strong> olarak otomatik onaylanır</li>
+                                        {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>ek mesai</strong> sayılır</li>}
+                                        <li>Aynı gün kart verisi varsa birleştirilir</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
                 {!isRemote && (
                     <SummaryCard title="Lokasyon" icon={MapPin}>
                         <SummaryRow label="Şehir" value={`${externalDutyForm.duty_city} ${externalDutyForm.duty_district}`.trim()} />

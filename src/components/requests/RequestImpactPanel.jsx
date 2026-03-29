@@ -431,6 +431,34 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                 return <CardlessEntryPanel req={req} mode={mode} />;
             case 'MEAL':
                 return <MealPanel req={req} mode={mode} />;
+            case 'EXTERNAL_DUTY': {
+                const dwi = req.duty_work_info;
+                const totalOtMin = dwi?.total_ot_minutes || 0;
+                return (
+                    <>
+                        <Section title="Dış Görev Detayı" icon={<FileText size={14} className="text-indigo-600" />} color="blue">
+                            <InfoRow label="Tarih" value={`${formatDate(req.start_date)} — ${formatDate(req.end_date)}`} />
+                            {req.leave_type_name && <InfoRow label="Görev Türü" value={req.leave_type_name} />}
+                            {req.reason && <InfoRow label="Açıklama" value={req.reason} />}
+                            {dwi && (
+                                <>
+                                    <InfoRow label="Normal Mesai" value={dwi.total_work_minutes > 0 ? `${Math.floor(dwi.total_work_minutes / 60)}s ${dwi.total_work_minutes % 60}dk` : '-'} />
+                                    <InfoRow label="Ek Mesai" value={totalOtMin > 0 ? `${Math.floor(totalOtMin / 60)}s ${totalOtMin % 60}dk` : '-'} />
+                                </>
+                            )}
+                        </Section>
+                        <div className="md:col-span-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                            <p className="font-bold mb-1">Onay Bilgilendirme</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                <li>Onaylandığında çalışanın mesai kaydına işlenecektir</li>
+                                <li>Öğle molası düşülmez, tüm görev süresi çalışma sayılır</li>
+                                <li>Mesai hedefini aşan süre otomatik onaylı ek mesai olarak kaydedilecektir</li>
+                                {totalOtMin > 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s {totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> ek mesai içermektedir</li>}
+                            </ul>
+                        </div>
+                    </>
+                );
+            }
             default:
                 return (
                     <Section title="Talep Detayı" icon={<FileText size={14} className="text-slate-600" />} color="slate">
