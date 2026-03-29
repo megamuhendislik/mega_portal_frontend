@@ -993,14 +993,16 @@ export default function RecalculationAuditTab() {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            {frcResult.mode === 'dry_run' && frcResult.summary?.total_employees_changed > 0 && (
+                            {frcResult.mode === 'dry_run' && (
                                 <button
                                     onClick={() => runFullRecalculation('apply')}
                                     disabled={frcLoading}
                                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
                                 >
                                     <WrenchScrewdriverIcon className="w-4 h-4" />
-                                    Onayla ve Uygula
+                                    {frcResult.summary?.total_employees_changed > 0
+                                        ? 'Onayla ve Uygula'
+                                        : 'Aylık Özetleri Yeniden Hesapla'}
                                 </button>
                             )}
                             <button
