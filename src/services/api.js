@@ -5,6 +5,8 @@ const api = axios.create({
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
     },
 });
 
@@ -14,6 +16,9 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        // Cache-busting: her isteğe benzersiz timestamp ekle (proxy cache bypass)
+        config.params = config.params || {};
+        config.params._t = Date.now();
         // Strip "undefined" / "null" string values from query params to prevent backend 500 errors
         if (config.params) {
             Object.keys(config.params).forEach(key => {

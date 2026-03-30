@@ -28,11 +28,17 @@ export const AuthProvider = ({ children }) => {
         };
         checkAuth();
 
-        // Cross-tab logout sync: if another tab clears the token, logout here too
+        // Cross-tab sync: başka sekmede token değişirse veya silinirse login'e yönlendir
         const handleStorageChange = (e) => {
-            if (e.key === 'access_token' && !e.newValue) {
-                setUser(null);
-                window.location.href = '/login';
+            if (e.key === 'access_token') {
+                if (!e.newValue) {
+                    // Token silindi — logout
+                    setUser(null);
+                    window.location.href = '/login';
+                } else if (e.oldValue && e.newValue !== e.oldValue) {
+                    // Token değişti — başka kullanıcı giriş yaptı, sayfayı yenile
+                    window.location.reload();
+                }
             }
         };
         window.addEventListener('storage', handleStorageChange);
@@ -52,19 +58,21 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (username, password, remember = false) => {
+        // Önceki kullanıcının tüm verilerini temizle (LAN proxy cache bypass)
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
+
         const response = await api.post('/token/', { username, password });
         const { access, refresh } = response.data;
 
         if (remember) {
             localStorage.setItem('access_token', access);
             localStorage.setItem('refresh_token', refresh);
-            sessionStorage.removeItem('access_token');
-            sessionStorage.removeItem('refresh_token');
         } else {
             sessionStorage.setItem('access_token', access);
             sessionStorage.setItem('refresh_token', refresh);
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
         }
 
         // Fetch user details immediately after login
