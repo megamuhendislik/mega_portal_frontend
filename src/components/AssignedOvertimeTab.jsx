@@ -130,7 +130,7 @@ const EmptyState = ({ text }) => (
 // OVERTIME DETAIL CARD (rich info for claimable items)
 // ═══════════════════════════════════════════════════════════
 
-const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
+const OvertimeDetailCard = ({ item, type, onClaim, onClaimMaxAllowed, claimed }) => {
     const entries = item.entries || [];
     const isOffDay = item.is_off_day;
     const _p = toIstanbulParts(item.date + 'T00:00:00');
@@ -288,14 +288,27 @@ const OvertimeDetailCard = ({ item, type, onClaim, claimed }) => {
                             <span className="text-[9px] text-slate-400 text-right max-w-[100px]">Kartla çıkış yapınız</span>
                         </div>
                     ) : item.actual_overtime_hours > 0 && (item.check_out_time || isDatePast(item.date)) ? (
-                        <button onClick={onClaim}
-                            className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
-                                type === 'potential'
-                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                            }`}>
-                            <Send size={11} /> Talep Et
-                        </button>
+                        type === 'intended' && item.actual_overtime_hours > item.max_duration_hours ? (
+                            <div className="flex flex-col items-end gap-1.5">
+                                <button onClick={onClaimMaxAllowed}
+                                    className="px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Send size={11} /> İzin Verilen ({item.max_duration_hours} sa)
+                                </button>
+                                <button onClick={onClaim}
+                                    className="px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 border border-blue-300 text-blue-700 hover:bg-blue-50">
+                                    <TrendingUp size={10} /> Tamamını ({item.actual_overtime_hours} sa)
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={onClaim}
+                                className={`px-3.5 py-1.5 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1 ${
+                                    type === 'potential'
+                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}>
+                                <Send size={11} /> Talep Et
+                            </button>
+                        )
                     ) : isDatePast(item.date) && !item.check_out_time ? (
                         <div className="flex flex-col items-end gap-1">
                             <Pill color="slate">Çalışma Yok</Pill>
@@ -734,10 +747,11 @@ const AssignedOvertimeTab = () => {
     const handleClaim = async (reason, selectedManagerId) => {
         setActionLoading(true);
         try {
-            const { type, target } = claimModal;
+            const { type, target, claimMode } = claimModal;
             if (type === 'INTENDED') {
                 const intendedPayload = { reason: reason || undefined };
                 if (selectedManagerId) intendedPayload.target_approver_id = selectedManagerId;
+                if (claimMode) intendedPayload.claim_mode = claimMode;
                 // Task 13: Include selected potential segment IDs
                 const potentialIds = selectedIntendedPotentials[target.assignment_id] || [];
                 if (potentialIds.length > 0) {
@@ -1038,8 +1052,15 @@ const AssignedOvertimeTab = () => {
                                                     claimed={item.already_claimed}
                                                     onClaim={() => setClaimModal({
                                                         open: true, type: 'INTENDED', target: item,
-                                                        title: 'Planlı Mesai Talep Et',
-                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.claimable_hours || item.actual_overtime_hours} saat`,
+                                                        claimMode: 'full',
+                                                        title: 'Planlı Mesai Talep Et (Tamamı)',
+                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.actual_overtime_hours} saat`,
+                                                    })}
+                                                    onClaimMaxAllowed={() => setClaimModal({
+                                                        open: true, type: 'INTENDED', target: item,
+                                                        claimMode: 'max_allowed',
+                                                        title: 'Planlı Mesai Talep Et (İzin Verilen)',
+                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.max_duration_hours} saat (max)`,
                                                     })}
                                                 />
                                                 {sameDatePotentials.length > 0 && !item.already_claimed && !item.claim_status && (
@@ -1096,7 +1117,7 @@ const AssignedOvertimeTab = () => {
                                 return (
                                     <div key={group.group_key} className="rounded-xl border border-slate-100 bg-white p-4 mb-3 hover:border-blue-200 transition-all">
                                         {/* Date header */}
-                                        <div className="flex items-center gap-2 mb-3">
+                                        <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-1.5">
                                                 <span className="text-lg font-black text-slate-800">{dayNum}</span>
                                                 <div className="flex flex-col">
@@ -1104,6 +1125,14 @@ const AssignedOvertimeTab = () => {
                                                     <span className="text-[10px] font-bold text-slate-400">{dayName}</span>
                                                 </div>
                                             </div>
+                                            {group.items[0]?.daily_total_ot_seconds > 0 && (
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100">
+                                                    <TrendingUp size={12} className="text-emerald-600" />
+                                                    <span className="text-xs font-bold text-emerald-700">
+                                                        Günlük Toplam: {formatDuration(group.items[0].daily_total_ot_seconds)}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Segment checkboxes */}
