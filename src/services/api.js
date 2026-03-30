@@ -43,7 +43,7 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Flag to prevent multiple concurrent refresh requests
+// Flag to prevent multiple concurrent refresh requests (in-tab)
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -59,12 +59,43 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+// Cross-tab refresh coordination: wait for another tab's refresh result
+const waitForCrossTabRefresh = () => {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            window.removeEventListener('storage', handler);
+            reject(new Error('Cross-tab refresh timeout'));
+        }, 10000);
+
+        const handler = (e) => {
+            if (e.key === 'access_token' && e.newValue) {
+                clearTimeout(timeout);
+                window.removeEventListener('storage', handler);
+                resolve(e.newValue);
+            } else if (e.key === '_token_refresh_lock' && e.newValue === 'failed') {
+                clearTimeout(timeout);
+                window.removeEventListener('storage', handler);
+                reject(new Error('Cross-tab refresh failed'));
+            }
+        };
+        window.addEventListener('storage', handler);
+    });
+};
+
+// Check if another tab is currently refreshing (within last 15 seconds)
+const isAnotherTabRefreshing = () => {
+    const lockTime = localStorage.getItem('_token_refresh_lock');
+    if (!lockTime || lockTime === 'failed') return false;
+    return (Date.now() - parseInt(lockTime, 10)) < 15000;
+};
+
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
+            // In-tab queue: another request in THIS tab is already refreshing
             if (isRefreshing) {
                 return new Promise(function (resolve, reject) {
                     failedQueue.push({ resolve, reject });
@@ -77,7 +108,21 @@ api.interceptors.response.use(
             }
 
             originalRequest._retry = true;
+
+            // Cross-tab check: another TAB is already refreshing
+            if (isAnotherTabRefreshing()) {
+                try {
+                    const newToken = await waitForCrossTabRefresh();
+                    originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
+                    return api(originalRequest);
+                } catch {
+                    // Cross-tab refresh failed or timed out, try ourselves
+                }
+            }
+
             isRefreshing = true;
+            // Set cross-tab lock with timestamp
+            localStorage.setItem('_token_refresh_lock', String(Date.now()));
 
             try {
                 let refreshToken = localStorage.getItem('refresh_token');
@@ -99,6 +144,8 @@ api.interceptors.response.use(
 
                 const { access } = response.data;
                 storage.setItem('access_token', access);
+                // Clear the lock (other tabs will pick up the new access_token via storage event)
+                localStorage.removeItem('_token_refresh_lock');
 
                 api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
 
@@ -118,6 +165,10 @@ api.interceptors.response.use(
                 originalRequest.headers['Authorization'] = `Bearer ${access}`;
                 return api(originalRequest);
             } catch (refreshError) {
+                // Signal failure to other tabs
+                localStorage.setItem('_token_refresh_lock', 'failed');
+                setTimeout(() => localStorage.removeItem('_token_refresh_lock'), 1000);
+
                 processQueue(refreshError, null);
                 isRefreshing = false;
 

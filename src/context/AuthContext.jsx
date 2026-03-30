@@ -28,16 +28,24 @@ export const AuthProvider = ({ children }) => {
         };
         checkAuth();
 
-        // Cross-tab sync: başka sekmede token değişirse veya silinirse login'e yönlendir
+        // Cross-tab sync: başka sekmede logout olursa login'e yönlendir
         const handleStorageChange = (e) => {
             if (e.key === 'access_token') {
                 if (!e.newValue) {
-                    // Token silindi — logout
+                    // Token silindi — logout (başka tab'dan)
                     setUser(null);
                     window.location.href = '/login';
-                } else if (e.oldValue && e.newValue !== e.oldValue) {
-                    // Token değişti — başka kullanıcı giriş yaptı, sayfayı yenile
-                    window.location.reload();
+                }
+                // Token değişimi (refresh) durumunda reload YAPMA —
+                // yeni token zaten localStorage'da, sonraki API çağrısı onu kullanacak.
+                // Aynı kullanıcının token refresh'i sayfayı kırmaz.
+            }
+            // Refresh token silindi (logout) — eğer access da yoksa login'e git
+            if (e.key === 'refresh_token' && !e.newValue) {
+                const hasAccess = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+                if (!hasAccess) {
+                    setUser(null);
+                    window.location.href = '/login';
                 }
             }
         };
