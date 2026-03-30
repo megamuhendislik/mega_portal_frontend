@@ -823,7 +823,7 @@ const EmployeeDetail = () => {
                                                 </div>
                                                 <div>
                                                     <span className="text-sm font-medium text-slate-700">Haftalık Ek Mesai Limiti</span>
-                                                    <p className="text-xs text-slate-400">Son 7 günde (rolling window) yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
+                                                    <p className="text-xs text-slate-400">Pazartesi-Pazar takvim haftası içinde yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
                                                 </div>
                                             </div>
                                             <div className="max-w-xs">

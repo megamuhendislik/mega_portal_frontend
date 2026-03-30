@@ -33,7 +33,7 @@ const helpContent = [
             },
             {
                 title: 'Haftalık Ek Mesai Limiti',
-                description: 'Özet kartlarının altında haftalık ek mesai limit çubuğu yer alır. Son 7 günlük pencerede onaylanmış ve bekleyen mesai toplamını gösterir. Renk kodları: yeşil (%0-70), turuncu (%70-90), kırmızı (%90-100). Limit dolduğunda yeni talep oluşturulamaz.'
+                description: 'Özet kartlarının altında haftalık ek mesai limit çubuğu yer alır. Pazartesi-Pazar takvim haftası içinde onaylanmış ve bekleyen mesai toplamını gösterir. Her Pazartesi sıfırlanır. Renk kodları: yeşil (%0-70), turuncu (%70-90), kırmızı (%90-100). Limit dolduğunda yeni talep oluşturulamaz.'
             },
             {
                 title: 'Mola Takibi',
@@ -285,7 +285,7 @@ const helpContent = [
             },
             {
                 title: 'Haftalık Limit Kontrolu',
-                description: 'Her çalışanın haftalık ek mesai limiti vardır (varsayılan 30 saat). Son 7 gündeki onaylanmış ve bekleyen mesai toplamı bu limiti aşamaz. Limit dolduğunda talep formlari devre dışı kalır.'
+                description: 'Her çalışanın haftalık ek mesai limiti vardır (varsayılan 30 saat). Pazartesi-Pazar takvim haftası içindeki onaylanmış ve bekleyen mesai toplamı bu limiti aşamaz. Her Pazartesi sayaç sıfırlanır. Limit dolduğunda talep formları devre dışı kalır.'
             },
             {
                 title: 'Talep Durumlari',
@@ -300,7 +300,7 @@ const helpContent = [
         ],
         faq: [
             { q: 'Potansiyel mesai nedir?', a: 'Vardiya sonrası, öncesi veya tatil gününde çalıştığınızda sistem otomatik olarak algilar ve potansiyel mesai kaydı oluştürür. Bu kaydı talep ederek resmi mesai talebine donusturebilirsiniz.' },
-            { q: 'Haftalık limit nasıl hesaplanıyor?', a: 'Son 7 gündeki onaylanmış ve bekleyen mesai toplamı hesaplanır. Varsayılan limit 30 saattir, çalışan bazında değişebilir.' },
+            { q: 'Haftalık limit nasıl hesaplanıyor?', a: 'Pazartesi-Pazar takvim haftası içindeki onaylanmış ve bekleyen mesai toplamı hesaplanır. Her Pazartesi sayaç sıfırlanır. Varsayılan limit 30 saattir, çalışan bazında değişebilir.' },
             { q: 'Planli mesaimi görmüyorum, neden?', a: 'Yönetiçiniz size mesai görevi atamış olmalidir. Atanan mesaileri "Ek Mesai" sekmesinden kontrol edin.' },
             { q: 'Manuel giriş ile potansiyel mesai farkı nedir?', a: 'Potansiyel mesai sistemin kart okutma verilerinizden otomatik tespit ettigi mesaidir. Manuel giriş ise siz kendiniz tarih ve saat girerek oluştürürsunuz.' },
             { q: 'Mesai talebim kime gidiyor?', a: 'Birincil veya ikincil yöneticinize gider. İkincil yönetici sadece ek mesai işlemleri için yetkilidir. Talep oluşturma sırasında yönetici seçimi yapabilirsiniz.' },
