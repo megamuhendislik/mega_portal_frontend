@@ -11,6 +11,7 @@ import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow
 import CreateRequestModal from '../../components/CreateRequestModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import { isMidnightBoundary } from '../../utils/midnightWarning';
 
 const filterChipColors = {
     blue:    { bg50: 'bg-blue-50',    text700: 'text-blue-700',    ring200: 'ring-blue-200',    text600: 'text-blue-600' },
@@ -83,6 +84,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [showPotential, setShowPotential] = useState(true);
+    const [hideCancelled, setHideCancelled] = useState(() => {
+        try { return localStorage.getItem('myreqs_hide_cancelled') !== 'false'; } catch { return true; /* ignore */ }
+    });
     const [claimingId, setClaimingId] = useState(null);
 
     // Modal states
@@ -376,9 +380,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                 if (effectiveStatus !== statusFilter) return false;
             }
             if (!showPotential && r.status === 'POTENTIAL') return false;
+            if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter, showPotential, dateFrom, dateTo]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential, hideCancelled, dateFrom, dateTo]);
 
     const counts = useMemo(() => {
         const dateFiltered = allMyRequests.filter(r => {
@@ -528,6 +533,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                         <Tooltip title="Sistem tarafından algılanan fazla mesai tespitleri. Bunlar henüz talep olarak oluşturulmamıştır. 'Talep Et' butonuyla resmi talep oluşturabilirsiniz.">
                             <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
                         </Tooltip>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                        <input type="checkbox" checked={hideCancelled} onChange={(e) => { setHideCancelled(e.target.checked); try { localStorage.setItem('myreqs_hide_cancelled', e.target.checked); } catch { /* ignore */ } }} className="w-3.5 h-3.5 text-blue-600 rounded" />
+                        İptal Edilenleri Gizle
                     </label>
                 </div>
             </div>
@@ -734,6 +743,15 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
                                 <XCircle size={18} className="text-slate-400" />
                             </button>
                         </div>
+                        {/* 23:59 kartsız çıkış uyarısı */}
+                        {claimModal.target && isMidnightBoundary(claimModal.target.end_time) && (
+                            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                                <span className="text-amber-500 mt-0.5">⚠</span>
+                                <p className="text-sm text-amber-700 m-0">
+                                    Bu talep 23:59'a kadar uzanan bir kayda dayanmaktadır. Çıkış kartı basılmamış olabilir. Lütfen gerçek çalışma saatlerinizi kontrol ediniz.
+                                </p>
+                            </div>
+                        )}
                         {claimModal.target && (
                             <p className="text-sm text-slate-500">
                                 {claimModal.target.date} &bull; {claimModal.target.start_time?.slice(0,5)} - {claimModal.target.end_time?.slice(0,5)}
