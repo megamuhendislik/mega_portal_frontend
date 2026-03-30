@@ -553,7 +553,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   <span className="text-sm font-bold text-blue-600">{request.total_days}</span>
                 </div>
                 {/* Mazeret izni saat aralığı */}
-                {request.start_time && request.end_time && (
+                {request.start_time && request.end_time && request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-600">Saat Aralığı</span>
                     <span className="text-sm font-bold text-orange-600">
@@ -561,6 +561,40 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     </span>
                   </div>
                 )}
+                {/* Dış Görev — gün bazlı çalışma saatleri */}
+                {request.request_type_detail?.category === 'EXTERNAL_DUTY' && (() => {
+                  const segs = request.date_segments || [];
+                  if (segs.length === 0 && request.start_time && request.end_time) {
+                    return (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600">Görev Saati</span>
+                        <span className="text-sm font-bold text-purple-600">
+                          {request.start_time?.substring(0, 5)} - {request.end_time?.substring(0, 5)}
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (segs.length > 0) {
+                    return (
+                      <div className="pt-1">
+                        <span className="text-[10px] font-bold text-purple-600 uppercase mb-1.5 block">Görev Saatleri</span>
+                        <div className="space-y-1">
+                          {segs.map((seg, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-purple-50/60 p-2 rounded-lg border border-purple-100">
+                              <span className="text-slate-600 font-medium">
+                                {new Date(seg.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' })}
+                              </span>
+                              <span className="text-purple-700 font-bold">
+                                {seg.start_time?.substring(0, 5)} - {seg.end_time?.substring(0, 5)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {/* Yil Bazli Kesim */}
                 {request.usage_breakdown && Object.keys(request.usage_breakdown).length > 0 && (
                   <div className="pt-2">

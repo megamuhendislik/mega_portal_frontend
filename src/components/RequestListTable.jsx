@@ -272,6 +272,20 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     {formatTime(req.start_time)} - {formatTime(req.end_time)}
                                                 </span>
                                             )}
+                                            {/* External Duty (Dış Görev) saat bilgisi */}
+                                            {req.type === 'LEAVE' && req.request_type_detail?.category === 'EXTERNAL_DUTY' && (() => {
+                                                const segs = req.date_segments || [];
+                                                const st = req.start_time || (segs.length > 0 ? segs[0]?.start_time : null);
+                                                const et = req.end_time || (segs.length > 0 ? segs[segs.length - 1]?.end_time : null);
+                                                if (!st || !et) return null;
+                                                return (
+                                                    <span className="text-xs font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5">
+                                                        <Clock size={10} />
+                                                        {formatTime(st)} - {formatTime(et)}
+                                                        {segs.length > 1 && <span className="text-purple-400 font-normal ml-0.5">({segs.length} gün)</span>}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                     </td>
 
@@ -293,18 +307,42 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             {/* Type-specific badges */}
                                             <div className="flex flex-wrap items-center gap-1.5">
                                                 {req.type === 'LEAVE' && (() => {
+                                                    const isExternalDuty = req.request_type_detail?.category === 'EXTERNAL_DUTY';
                                                     const segs = req.date_segments || req.duty_work_info?.date_segments;
                                                     const hasTimes = req.start_time && req.end_time;
                                                     const segSingle = !hasTimes && Array.isArray(segs) && segs.length === 1 && segs[0]?.start_time && segs[0]?.end_time;
                                                     const st = hasTimes ? req.start_time : segSingle ? segs[0].start_time : null;
                                                     const et = hasTimes ? req.end_time : segSingle ? segs[0].end_time : null;
+
+                                                    // External Duty: toplam süreyi segmentlerden hesapla
+                                                    if (isExternalDuty && Array.isArray(segs) && segs.length > 0) {
+                                                        let totalMin = 0;
+                                                        segs.forEach(s => {
+                                                            if (s.start_time && s.end_time) {
+                                                                const [sh, sm] = s.start_time.split(':').map(Number);
+                                                                const [eh, em] = s.end_time.split(':').map(Number);
+                                                                totalMin += (eh * 60 + em) - (sh * 60 + sm);
+                                                            }
+                                                        });
+                                                        const hrs = Math.floor(totalMin / 60);
+                                                        const mins = totalMin % 60;
+                                                        return (<>
+                                                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-bold rounded">
+                                                                {hrs > 0 ? `${hrs}s ` : ''}{mins > 0 ? `${mins}dk` : hrs > 0 ? '' : '0dk'}
+                                                            </span>
+                                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">
+                                                                Dış Görev
+                                                            </span>
+                                                        </>);
+                                                    }
+
                                                     const isPartial = st && et;
                                                     return (<>
-                                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded">
+                                                        <span className={`px-2 py-0.5 text-xs font-bold rounded ${isExternalDuty ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
                                                             {isPartial
                                                                 ? calculateDuration(st, et)
                                                                 : `${(req.total_days || 1) * 9} Saat`}
-                                                            {!isPartial && <span className="text-blue-400 font-normal"> (Tam gün)</span>}
+                                                            {!isPartial && <span className={`font-normal ${isExternalDuty ? 'text-purple-400' : 'text-blue-400'}`}> (Tam gün)</span>}
                                                         </span>
                                                         {req.leave_type_name && (
                                                             <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">

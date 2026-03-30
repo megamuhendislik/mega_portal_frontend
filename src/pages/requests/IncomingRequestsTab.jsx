@@ -3,11 +3,12 @@ import {
     Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Tooltip } from 'antd';
+import { Tooltip, Modal } from 'antd';
 import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import { isMidnightBoundary } from '../../utils/midnightWarning';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0 }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
@@ -567,6 +568,21 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Approve/reject handler wrapper
     const wrapApprove = (r, notes) => {
+        // 23:59 OT uyarı kontrolü
+        if ((r.type === 'OVERTIME' || r._type === 'OVERTIME') && isMidnightBoundary(r.end_time)) {
+            Modal.confirm({
+                title: '⚠ Kartsız Çıkış İhtimali',
+                content: 'Bu talep 23:59\'da sonlanan bir kayda dayanmaktadır. Çalışanın çıkış kartı basmamış olma ihtimali bulunmaktadır. Gerçek çalışma saatlerini doğruladığınızdan emin olunuz.',
+                okText: 'Onayla',
+                cancelText: 'İptal',
+                okButtonProps: { danger: false },
+                onOk: () => {
+                    if (r._isSubstitute) handleSubstituteApprove(r);
+                    else handleApprove(r, notes);
+                },
+            });
+            return;
+        }
         if (r._isSubstitute) handleSubstituteApprove(r);
         else handleApprove(r, notes);
     };

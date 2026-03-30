@@ -5,6 +5,7 @@ import {
     Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield, CalendarHeart
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
+import { isMidnightBoundary } from '../../utils/midnightWarning';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const formatDate = (dateString) => {
@@ -434,6 +435,11 @@ const ExpandableRequestRow = ({
                 {/* Saat Araligi */}
                 <td className="px-3 py-3">
                     <TimeRange req={req} />
+                    {req.end_time && isMidnightBoundary(req.end_time) && (req.type === 'OVERTIME' || req._type === 'OVERTIME') && (
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                            ⚠ Kartsız Çıkış İhtimali
+                        </span>
+                    )}
                 </td>
 
                 {/* Sure */}
