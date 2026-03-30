@@ -294,7 +294,12 @@ const Dashboard = () => {
     useSmartPolling(fetchDashboardData, 60000);
 
     // Format Helpers
-    const formatHours = (sec) => ((sec || 0) / 3600).toFixed(1);
+    const formatHours = (sec) => {
+        const totalMin = Math.round((sec || 0) / 60);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return `${h}:${String(m).padStart(2, '0')}`;
+    };
     const formatMin = (sec) => Math.floor((sec || 0) / 60);
 
     // Request Item Component
