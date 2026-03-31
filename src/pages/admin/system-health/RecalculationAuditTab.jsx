@@ -1111,6 +1111,14 @@ export default function RecalculationAuditTab() {
                                 color="blue"
                             />
                         )}
+                        {(frcResult.summary?.status_fixed || 0) > 0 && (
+                            <SummaryCard
+                                icon={<WrenchScrewdriverIcon className="w-6 h-6 text-amber-600" />}
+                                label={frcResult.mode === 'dry_run' ? 'Durum Duzeltilecek' : 'Durum Duzeltildi'}
+                                value={frcResult.summary.status_fixed}
+                                color="amber"
+                            />
+                        )}
                     </div>
 
                     {/* Global Diff Summary */}
