@@ -1119,6 +1119,14 @@ export default function RecalculationAuditTab() {
                                 color="amber"
                             />
                         )}
+                        {(frcResult.summary?.gate_recovered || 0) > 0 && (
+                            <SummaryCard
+                                icon={<WrenchScrewdriverIcon className="w-6 h-6 text-cyan-600" />}
+                                label={frcResult.mode === 'dry_run' ? 'Kurtarilacak Kart Verisi' : 'Kurtarilan Kart Verisi'}
+                                value={frcResult.summary.gate_recovered}
+                                color="blue"
+                            />
+                        )}
                     </div>
 
                     {/* Global Diff Summary */}
