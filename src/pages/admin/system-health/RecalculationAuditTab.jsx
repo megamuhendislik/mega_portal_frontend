@@ -1021,7 +1021,11 @@ export default function RecalculationAuditTab() {
                                 </div>
                                 {(frcResult.summary?.restored_requests || 0) > 0 && (
                                     <div className="text-xs font-medium text-green-700 ml-7">
-                                        {frcResult.summary.restored_requests} iptal edilmiş talep onaylandı ve hesaplamalar güncellendi
+                                        {frcResult.summary.restored_requests} iptal edilmiş talep kurtarıldı
+                                        {(frcResult.summary?.restored_approved || 0) > 0 && ` (${frcResult.summary.restored_approved} onaylı`}
+                                        {(frcResult.summary?.restored_pending || 0) > 0 && `, ${frcResult.summary.restored_pending} bekleyen`}
+                                        {(frcResult.summary?.restored_approved || 0) > 0 && ')'}
+                                        {' — hesaplamalar güncellendi'}
                                     </div>
                                 )}
                                 {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
