@@ -1119,22 +1119,22 @@ export default function RecalculationAuditTab() {
                                 color="amber"
                             />
                         )}
-                        {(frcResult.summary?.gate_extended || 0) > 0 && (
+                        {(frcResult.summary?.gate_rebuilt || 0) > 0 && (
                             <SummaryCard
                                 icon={<WrenchScrewdriverIcon className="w-6 h-6 text-teal-600" />}
-                                label={frcResult.mode === 'dry_run' ? 'Kisaltilmis Kayit' : 'Uzatilan Kayit'}
-                                value={frcResult.summary.gate_extended}
+                                label={frcResult.mode === 'dry_run' ? 'Overlap Temizlenecek' : 'Overlap Temizlendi'}
+                                value={frcResult.summary.gate_rebuilt}
                                 color="green"
                             />
                         )}
                     </div>
 
-                    {/* Kart Veri Eşleştirme Detayları */}
+                    {/* Overlap Temizleme Detayları */}
                     {frcResult.summary?.gate_details?.length > 0 && (
                         <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
                             <h4 className="font-bold text-cyan-800 text-sm mb-3">
-                                Kart Veri Eşleştirme Detayları
-                                <span className="ml-2 text-xs font-normal text-cyan-600">({frcResult.summary.gate_details.length} kayıt)</span>
+                                Overlap Temizleme Detayları
+                                <span className="ml-2 text-xs font-normal text-cyan-600">({frcResult.summary.gate_details.length} gün)</span>
                             </h4>
                             <div className="overflow-x-auto max-h-96 overflow-y-auto">
                                 <table className="w-full text-xs">
@@ -1142,10 +1142,9 @@ export default function RecalculationAuditTab() {
                                         <tr className="text-left text-cyan-700 border-b border-cyan-200">
                                             <th className="pb-2 pr-3">Çalışan</th>
                                             <th className="pb-2 pr-3">Tarih</th>
-                                            <th className="pb-2 pr-3">Vardiya Sonu</th>
-                                            <th className="pb-2 pr-3">Mevcut Çıkış</th>
-                                            <th className="pb-2 pr-3">Kart Çıkış</th>
-                                            <th className="pb-2 pr-3">Fark</th>
+                                            <th className="pb-2 pr-3">Eski Kayıt</th>
+                                            <th className="pb-2 pr-3">Yeni Kayıt</th>
+                                            <th className="pb-2 pr-3">Kart Çiftleri</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1153,11 +1152,10 @@ export default function RecalculationAuditTab() {
                                             <tr key={i} className="border-b border-cyan-100 hover:bg-cyan-100/50">
                                                 <td className="py-1.5 pr-3 font-medium text-slate-800">{gd.emp}</td>
                                                 <td className="py-1.5 pr-3 text-slate-600">{gd.date}</td>
-                                                <td className="py-1.5 pr-3 font-mono text-slate-500">{gd.shift_end || '—'}</td>
-                                                <td className="py-1.5 pr-3 font-mono text-red-600 font-bold">{gd.att_out}</td>
-                                                <td className="py-1.5 pr-3 font-mono text-green-700 font-bold">{gd.gate_out}</td>
-                                                <td className="py-1.5 pr-3">
-                                                    <span className="text-amber-600 font-bold">+{gd.diff_min}dk</span>
+                                                <td className="py-1.5 pr-3 font-mono text-red-600 font-bold">{gd.old_count}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-green-700 font-bold">{gd.new_count}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-slate-600 text-xs">
+                                                    {(gd.pairs || []).map((p, j) => <span key={j} className="mr-2">{p[0]}-{p[1]}</span>)}
                                                 </td>
                                             </tr>
                                         ))}
