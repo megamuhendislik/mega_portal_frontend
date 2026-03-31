@@ -1021,7 +1021,7 @@ export default function RecalculationAuditTab() {
                                 </div>
                                 {(frcResult.summary?.restored_requests || 0) > 0 && (
                                     <div className="text-xs font-medium text-green-700 ml-7">
-                                        {frcResult.summary.restored_requests} iptal edilmiş talep PENDING durumuna alındı
+                                        {frcResult.summary.restored_requests} iptal edilmiş talep onaylandı ve hesaplamalar güncellendi
                                     </div>
                                 )}
                                 {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
