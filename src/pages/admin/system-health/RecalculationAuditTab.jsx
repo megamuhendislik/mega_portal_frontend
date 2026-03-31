@@ -1122,9 +1122,17 @@ export default function RecalculationAuditTab() {
                         {(frcResult.summary?.gate_recovered || 0) > 0 && (
                             <SummaryCard
                                 icon={<WrenchScrewdriverIcon className="w-6 h-6 text-cyan-600" />}
-                                label={frcResult.mode === 'dry_run' ? 'Kurtarilacak Kart Verisi' : 'Kurtarilan Kart Verisi'}
+                                label={frcResult.mode === 'dry_run' ? 'Kayip Gun' : 'Kurtarilan Kayip Gun'}
                                 value={frcResult.summary.gate_recovered}
                                 color="blue"
+                            />
+                        )}
+                        {(frcResult.summary?.gate_extended || 0) > 0 && (
+                            <SummaryCard
+                                icon={<WrenchScrewdriverIcon className="w-6 h-6 text-teal-600" />}
+                                label={frcResult.mode === 'dry_run' ? 'Kisaltilmis Kayit' : 'Uzatilan Kayit'}
+                                value={frcResult.summary.gate_extended}
+                                color="green"
                             />
                         )}
                     </div>
