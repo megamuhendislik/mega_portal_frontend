@@ -1140,32 +1140,38 @@ export default function RecalculationAuditTab() {
                     {/* Kart Veri Eşleştirme Detayları */}
                     {frcResult.summary?.gate_details?.length > 0 && (
                         <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
-                            <h4 className="font-bold text-cyan-800 text-sm mb-3">Kart Veri Eşleştirme Detayları</h4>
-                            <div className="overflow-x-auto">
+                            <h4 className="font-bold text-cyan-800 text-sm mb-3">
+                                Kart Veri Eşleştirme Detayları
+                                <span className="ml-2 text-xs font-normal text-cyan-600">({frcResult.summary.gate_details.length} kayıt)</span>
+                            </h4>
+                            <div className="overflow-x-auto max-h-96 overflow-y-auto">
                                 <table className="w-full text-xs">
-                                    <thead>
+                                    <thead className="sticky top-0 bg-cyan-50">
                                         <tr className="text-left text-cyan-700 border-b border-cyan-200">
                                             <th className="pb-2 pr-3">Tip</th>
                                             <th className="pb-2 pr-3">Çalışan</th>
                                             <th className="pb-2 pr-3">Tarih</th>
-                                            <th className="pb-2 pr-3">Detay</th>
+                                            <th className="pb-2 pr-3">Kart Giriş</th>
+                                            <th className="pb-2 pr-3">Kart Çıkış</th>
+                                            <th className="pb-2 pr-3">Mevcut Çıkış</th>
+                                            <th className="pb-2 pr-3">Fark</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {frcResult.summary.gate_details.map((gd, i) => (
                                             <tr key={i} className="border-b border-cyan-100 hover:bg-cyan-100/50">
                                                 <td className="py-1.5 pr-3">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${gd.type === 'KAYIP_GUN' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                        {gd.type === 'KAYIP_GUN' ? 'Kayıp Gün' : 'Kısaltılmış'}
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${gd.type === 'KAYIP' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {gd.type === 'KAYIP' ? 'Kayıp' : 'Kısaltılmış'}
                                                     </span>
                                                 </td>
-                                                <td className="py-1.5 pr-3 font-medium text-slate-800">{gd.emp} <span className="text-slate-400">(ID:{gd.emp_id})</span></td>
+                                                <td className="py-1.5 pr-3 font-medium text-slate-800">{gd.emp}</td>
                                                 <td className="py-1.5 pr-3 text-slate-600">{gd.date}</td>
-                                                <td className="py-1.5 text-slate-700">
-                                                    {gd.type === 'KAYIP_GUN'
-                                                        ? <span>Kart: <b>{gd.gate_in}</b> → <b>{gd.gate_out}</b></span>
-                                                        : <span>Mevcut: <b>{gd.att_out}</b> → Kart: <b className="text-green-700">{gd.gate_out}</b> <span className="text-amber-600 font-bold">(+{gd.diff_min}dk)</span></span>
-                                                    }
+                                                <td className="py-1.5 pr-3 font-mono text-slate-700">{gd.gate_in}</td>
+                                                <td className="py-1.5 pr-3 font-mono font-bold text-green-700">{gd.gate_out}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-slate-500">{gd.att_out || '—'}</td>
+                                                <td className="py-1.5 pr-3">
+                                                    {gd.diff_min ? <span className="text-amber-600 font-bold">+{gd.diff_min}dk</span> : '—'}
                                                 </td>
                                             </tr>
                                         ))}
