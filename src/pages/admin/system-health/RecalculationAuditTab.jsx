@@ -1119,14 +1119,6 @@ export default function RecalculationAuditTab() {
                                 color="amber"
                             />
                         )}
-                        {(frcResult.summary?.gate_recovered || 0) > 0 && (
-                            <SummaryCard
-                                icon={<WrenchScrewdriverIcon className="w-6 h-6 text-cyan-600" />}
-                                label={frcResult.mode === 'dry_run' ? 'Kayip Gun' : 'Kurtarilan Kayip Gun'}
-                                value={frcResult.summary.gate_recovered}
-                                color="blue"
-                            />
-                        )}
                         {(frcResult.summary?.gate_extended || 0) > 0 && (
                             <SummaryCard
                                 icon={<WrenchScrewdriverIcon className="w-6 h-6 text-teal-600" />}
@@ -1148,30 +1140,24 @@ export default function RecalculationAuditTab() {
                                 <table className="w-full text-xs">
                                     <thead className="sticky top-0 bg-cyan-50">
                                         <tr className="text-left text-cyan-700 border-b border-cyan-200">
-                                            <th className="pb-2 pr-3">Tip</th>
                                             <th className="pb-2 pr-3">Çalışan</th>
                                             <th className="pb-2 pr-3">Tarih</th>
-                                            <th className="pb-2 pr-3">Kart Giriş</th>
-                                            <th className="pb-2 pr-3">Kart Çıkış</th>
+                                            <th className="pb-2 pr-3">Vardiya Sonu</th>
                                             <th className="pb-2 pr-3">Mevcut Çıkış</th>
+                                            <th className="pb-2 pr-3">Kart Çıkış</th>
                                             <th className="pb-2 pr-3">Fark</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {frcResult.summary.gate_details.map((gd, i) => (
                                             <tr key={i} className="border-b border-cyan-100 hover:bg-cyan-100/50">
-                                                <td className="py-1.5 pr-3">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${gd.type === 'KAYIP' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                        {gd.type === 'KAYIP' ? 'Kayıp' : 'Kısaltılmış'}
-                                                    </span>
-                                                </td>
                                                 <td className="py-1.5 pr-3 font-medium text-slate-800">{gd.emp}</td>
                                                 <td className="py-1.5 pr-3 text-slate-600">{gd.date}</td>
-                                                <td className="py-1.5 pr-3 font-mono text-slate-700">{gd.gate_in}</td>
-                                                <td className="py-1.5 pr-3 font-mono font-bold text-green-700">{gd.gate_out}</td>
-                                                <td className="py-1.5 pr-3 font-mono text-slate-500">{gd.att_out || '—'}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-slate-500">{gd.shift_end || '—'}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-red-600 font-bold">{gd.att_out}</td>
+                                                <td className="py-1.5 pr-3 font-mono text-green-700 font-bold">{gd.gate_out}</td>
                                                 <td className="py-1.5 pr-3">
-                                                    {gd.diff_min ? <span className="text-amber-600 font-bold">+{gd.diff_min}dk</span> : '—'}
+                                                    <span className="text-amber-600 font-bold">+{gd.diff_min}dk</span>
                                                 </td>
                                             </tr>
                                         ))}
