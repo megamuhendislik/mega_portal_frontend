@@ -1000,8 +1000,8 @@ export default function RecalculationAuditTab() {
                                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
                                 >
                                     <WrenchScrewdriverIcon className="w-4 h-4" />
-                                    {frcResult.summary?.total_employees_changed > 0
-                                        ? 'Onayla ve Uygula'
+                                    {(frcResult.summary?.total_employees_changed > 0 || frcResult.summary?.restored_requests > 0 || frcResult.summary?.dedup_manual_ot > 0)
+                                        ? `Onayla ve Uygula${frcResult.summary?.restored_requests > 0 ? ` (${frcResult.summary.restored_requests} talep kurtarılacak)` : ''}`
                                         : 'Aylık Özetleri Yeniden Hesapla'}
                                 </button>
                             )}
@@ -1014,9 +1014,21 @@ export default function RecalculationAuditTab() {
                             </button>
                         </div>
                         {frcResult.mode === 'apply' && (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
-                                <CheckCircleIcon className="w-5 h-5" />
-                                Degisiklikler basariyla uygulandi!
+                            <div className="flex flex-col gap-1 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircleIcon className="w-5 h-5" />
+                                    Degisiklikler basariyla uygulandi!
+                                </div>
+                                {(frcResult.summary?.restored_requests || 0) > 0 && (
+                                    <div className="text-xs font-medium text-green-700 ml-7">
+                                        {frcResult.summary.restored_requests} iptal edilmiş talep PENDING durumuna alındı
+                                    </div>
+                                )}
+                                {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
+                                    <div className="text-xs font-medium text-green-700 ml-7">
+                                        {frcResult.summary.dedup_manual_ot} duplikat MANUAL_OT kaydı temizlendi
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1077,6 +1089,22 @@ export default function RecalculationAuditTab() {
                                 label="Sorunlu Calisan"
                                 value={frcResult.summary.total_employees_with_issues}
                                 color="red"
+                            />
+                        )}
+                        {(frcResult.summary?.restored_requests || 0) > 0 && (
+                            <SummaryCard
+                                icon={<CheckCircleIcon className="w-6 h-6 text-emerald-600" />}
+                                label={frcResult.mode === 'dry_run' ? 'Kurtarilacak Talep' : 'Kurtarilan Talep'}
+                                value={frcResult.summary.restored_requests}
+                                color="green"
+                            />
+                        )}
+                        {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
+                            <SummaryCard
+                                icon={<CheckCircleIcon className="w-6 h-6 text-blue-600" />}
+                                label={frcResult.mode === 'dry_run' ? 'Temizlenecek Duplikat' : 'Temizlenen Duplikat'}
+                                value={frcResult.summary.dedup_manual_ot}
+                                color="blue"
                             />
                         )}
                     </div>
