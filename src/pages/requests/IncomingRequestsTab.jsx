@@ -99,7 +99,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 setSubstituteData(null);
             }
             if (allTeamRes.status === 'fulfilled') {
-                setAllTeamData(allTeamRes.value.data || []);
+                const atData = allTeamRes.value.data || [];
+                console.log('[fetchAllData] all_team toplam:', atData.length,
+                    'EXTERNAL_DUTY:', atData.filter(r => r.type === 'EXTERNAL_DUTY').length,
+                    'APPROVED ED:', atData.filter(r => r.type === 'EXTERNAL_DUTY' && r.status === 'APPROVED').map(r => ({ id: r.request_id, status: r.status, can_override: r.can_override }))
+                );
+                setAllTeamData(atData);
             }
         } catch (e) {
             console.error('IncomingRequestsTab fetchAllData error:', e);
