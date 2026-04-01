@@ -158,6 +158,37 @@ const getStatusBadge = (status) => {
 
 // ─── Time Range Renderer ──────────────────────────────────────────────────
 const TimeRange = ({ req }) => {
+    const effectiveType = req._type || req.type;
+
+    // External Duty: show segment times or global times
+    if (effectiveType === 'EXTERNAL_DUTY') {
+        if (req.start_time && req.end_time) {
+            return (
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
+                    {formatTime(req.start_time)} - {formatTime(req.end_time)}
+                </span>
+            );
+        }
+        const segTimes = getSegmentTimes(req);
+        if (segTimes?.start && segTimes?.end) {
+            return (
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
+                    {formatTime(segTimes.start)} - {formatTime(segTimes.end)}
+                </span>
+            );
+        }
+        if (segTimes?.segmentCount > 1) {
+            return (
+                <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                    {segTimes.segmentCount} gün <span className="text-indigo-400 font-normal">(parçalı)</span>
+                </span>
+            );
+        }
+        return <span className="text-xs text-indigo-400">Tam gün</span>;
+    }
+
     if (req.type === 'OVERTIME' && req.start_time && req.end_time) {
         return (
             <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">

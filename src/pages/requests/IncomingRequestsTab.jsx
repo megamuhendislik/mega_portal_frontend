@@ -117,18 +117,27 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // --- Approval / Rejection Handlers ---
     const handleApprove = async (req, notes) => {
+        const effectiveType = req._type || req.type;
+        console.log('[handleApprove] req.id:', req.id, 'req.type:', req.type, '_type:', req._type, 'effectiveType:', effectiveType);
         try {
-            if (req.type === 'LEAVE') {
+            if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
+                console.log('[handleApprove] → POST /leave/requests/' + req.id + '/approve_reject/');
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'OVERTIME') {
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
+            } else {
+                console.warn('[handleApprove] Bilinmeyen talep tipi:', req.type, req);
+                message.warning('Bilinmeyen talep tipi: ' + req.type);
+                return;
             }
+            console.log('[handleApprove] Başarılı, veri yenileniyor...');
+            message.success('Talep onaylandı');
             await fetchAllData();
             onDataChange?.();
         } catch (e) {
-            console.error('Approve error:', e);
+            console.error('[handleApprove] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
             try { await fetchAllData(); } catch {}
@@ -137,18 +146,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     const handleReject = async (req, reason) => {
         if (!reason) return;
+        console.log('[handleReject] req.id:', req.id, 'req.type:', req.type);
         try {
-            if (req.type === 'LEAVE') {
+            if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'reject', reason });
             } else if (req.type === 'OVERTIME') {
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'reject', reason });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/reject/`, { reason });
+            } else {
+                console.warn('[handleReject] Bilinmeyen talep tipi:', req.type);
+                return;
             }
+            message.success('Talep reddedildi');
             await fetchAllData();
             onDataChange?.();
         } catch (e) {
-            console.error('Reject error:', e);
+            console.error('[handleReject] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
             try { await fetchAllData(); } catch {}
@@ -157,7 +171,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     const handleSubstituteApprove = async (req) => {
         try {
-            if (req.type === 'LEAVE') {
+            if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, {
                     action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
                 });
@@ -180,7 +194,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const handleSubstituteReject = async (req, reason) => {
         if (!reason) return;
         try {
-            if (req.type === 'LEAVE') {
+            if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, {
                     action: 'reject', reason, acting_as_substitute_for: req.principal_id,
                 });
