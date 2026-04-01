@@ -37,7 +37,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [personFilter, setPersonFilter] = useState('ALL');
 
     // Pagination
-    const PAGE_SIZE = 50;
+    const PAGE_SIZE = searchText ? 9999 : 50;
     const [pendingPage, setPendingPage] = useState(1);
     const [teamPage, setTeamPage] = useState(1);
 
@@ -489,7 +489,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             if (searchText) {
                 const s = searchText.toLowerCase();
-                if (!r.employee_name?.toLowerCase().includes(s)) return false;
+                const fields = [
+                    r.employee_name, r.employee_department, r.leave_type_name,
+                    r.reason, r.target_approver_name, r.approved_by_name,
+                    String(r.request_id || r.id || ''),
+                ];
+                if (!fields.some(f => f && String(f).toLowerCase().includes(s))) return false;
             }
             // Date range filter (SPECIAL_LEAVE with PENDING status bypasses — manager should always see pending special leaves)
             const skipDateFilter = r.type === 'SPECIAL_LEAVE' && r.status === 'PENDING';
@@ -526,7 +531,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             if (searchText) {
                 const s = searchText.toLowerCase();
-                if (!r.employee_name?.toLowerCase().includes(s)) return false;
+                const fields = [
+                    r.employee_name, r.employee_department, r.leave_type_name,
+                    r.reason, r.target_approver_name, r.approved_by_name,
+                    String(r.request_id || r.id || ''),
+                ];
+                if (!fields.some(f => f && String(f).toLowerCase().includes(s))) return false;
             }
             const skipDateFilter2 = r.type === 'SPECIAL_LEAVE' && r.status === 'PENDING';
             if (!skipDateFilter2 && dateFrom) {
