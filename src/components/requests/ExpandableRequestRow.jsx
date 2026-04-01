@@ -138,6 +138,12 @@ const statusConfig = {
         label: 'Potansiyel',
         icon: <AlertCircle size={12} />,
     },
+    BUNDLED: {
+        bg: 'bg-cyan-100',
+        text: 'text-cyan-700',
+        label: 'Birleştirildi',
+        icon: <CheckCircle2 size={12} />,
+    },
     DELIVERED: {
         bg: 'bg-blue-100',
         text: 'text-blue-700',
