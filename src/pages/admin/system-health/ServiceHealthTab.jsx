@@ -92,28 +92,53 @@ export default function ServiceHealthTab() {
                         {loading ? 'Yukleniyor...' : 'Yenile'}
                     </button>
                     {data.health_status === 'CRITICAL' && (
-                        <button
-                            onClick={async () => {
-                                if (!confirm('Duplikat AUTO_SPLIT kayıtları temizlenecek. Devam?')) return;
-                                try {
-                                    const dryRes = await api.post('/system/health-check/cleanup-duplicate-splits/', { dry_run: true });
-                                    const dryData = dryRes.data;
-                                    if (dryData.duplicate_groups === 0 && dryData.orphan_splits === 0) {
-                                        alert('Temizlenecek duplikat bulunamadı.');
-                                        return;
+                        <>
+                            <button
+                                onClick={async () => {
+                                    if (!confirm('Duplikat AUTO_SPLIT kayıtları temizlenecek. Devam?')) return;
+                                    try {
+                                        const dryRes = await api.post('/system/health-check/cleanup-duplicate-splits/', { dry_run: true });
+                                        const dryData = dryRes.data;
+                                        if (dryData.duplicate_groups === 0 && dryData.orphan_splits === 0) {
+                                            alert('Temizlenecek duplikat bulunamadı.');
+                                            return;
+                                        }
+                                        if (!confirm(`${dryData.total_duplicates_deleted} duplikat + ${dryData.orphan_splits} yetim kayıt silinecek. Onaylıyor musunuz?`)) return;
+                                        await api.post('/system/health-check/cleanup-duplicate-splits/', { dry_run: false });
+                                        alert('Temizlik tamamlandı!');
+                                        fetchData();
+                                    } catch (e) {
+                                        alert('Hata: ' + (e.response?.data?.error || e.message));
                                     }
-                                    if (!confirm(`${dryData.total_duplicates_deleted} duplikat + ${dryData.orphan_splits} yetim kayıt silinecek. Onaylıyor musunuz?`)) return;
-                                    await api.post('/system/health-check/cleanup-duplicate-splits/', { dry_run: false });
-                                    alert('Temizlik tamamlandı!');
-                                    fetchData();
-                                } catch (e) {
-                                    alert('Hata: ' + (e.response?.data?.error || e.message));
-                                }
-                            }}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold"
-                        >
-                            Duplikat Temizle
-                        </button>
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold"
+                            >
+                                Duplikat Temizle
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const dryRes = await api.post('/system/health-check/nuke-and-recalc-today/', { dry_run: true });
+                                        const d = dryRes.data;
+                                        if (!confirm(
+                                            `BUGÜN TEMİZLE + YENİDEN HESAPLA\n\n` +
+                                            `${d.split_records_to_delete} SPLIT/AUTO_SPLIT kayıt silinecek\n` +
+                                            `${d.spammed_notes_to_clean} spamlanmış note temizlenecek\n` +
+                                            `Tüm aktif çalışanlar yeniden hesaplanacak\n\n` +
+                                            `Devam edilsin mi?`
+                                        )) return;
+                                        const res = await api.post('/system/health-check/nuke-and-recalc-today/', { dry_run: false });
+                                        alert(res.data.message);
+                                        fetchData();
+                                    } catch (e) {
+                                        alert('Hata: ' + (e.response?.data?.error || e.message));
+                                    }
+                                }}
+                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-bold"
+                            >
+                                Bugunu Temizle + Recalc
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
