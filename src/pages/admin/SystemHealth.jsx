@@ -67,6 +67,7 @@ import OTGroupingAuditTab from './system-health/OTGroupingAuditTab';
 import MonthlyAuditTab from './system-health/MonthlyAuditTab';
 import ScheduleAuditTab from './system-health/ScheduleAuditTab';
 import EmployeeDebugTab from './system-health/EmployeeDebugTab';
+import RequestHealthTab from './system-health/RequestHealthTab';
 import SubstituteAuditTab from './system-health/SubstituteAuditTab';
 import DailyRecordAuditTab from './system-health/DailyRecordAuditTab';
 
@@ -159,6 +160,7 @@ export default function SystemHealth() {
                         { id: 'employee_debug', name: 'Çalışan Debug', icon: UsersIcon },
                         { id: 'substitute_audit', name: 'Vekalet Denetimi', icon: ArrowsRightLeftIcon },
                         { id: 'daily_record_audit', name: 'Kayıt Denetimi', icon: MagnifyingGlassIcon },
+                        { id: 'request_health', name: 'Talep Sağlığı', icon: ClipboardDocumentCheckIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -221,6 +223,7 @@ export default function SystemHealth() {
                 {activeTab === 'employee_debug' && <EmployeeDebugTab />}
                 {activeTab === 'substitute_audit' && <SubstituteAuditTab />}
                 {activeTab === 'daily_record_audit' && <DailyRecordAuditTab />}
+                {activeTab === 'request_health' && <RequestHealthTab />}
             </div>
 
         </div>
