@@ -422,7 +422,7 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
     };
 
     const renderTypePanel = () => {
-        switch (req.type) {
+        switch (req._type || req.type) {
             case 'OVERTIME':
                 return <OvertimePanel req={req} mode={mode} />;
             case 'LEAVE':
@@ -434,17 +434,75 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
             case 'EXTERNAL_DUTY': {
                 const dwi = req.duty_work_info;
                 const totalOtMin = dwi?.total_ot_minutes || 0;
+                const segments = req.date_segments || [];
+                const isPendingDuty = req.status === 'PENDING';
+
+                // Calculate total minutes from segments
+                let segTotalMin = 0;
+                if (segments.length > 0) {
+                    for (const s of segments) {
+                        if (s.start_time && s.end_time) {
+                            const [sh, sm] = s.start_time.split(':').map(Number);
+                            const [eh, em] = s.end_time.split(':').map(Number);
+                            let diff = (eh * 60 + em) - (sh * 60 + sm);
+                            if (diff < 0) diff += 24 * 60;
+                            segTotalMin += diff;
+                        }
+                    }
+                }
+
                 return (
                     <>
                         <Section title="Dış Görev Detayı" icon={<FileText size={14} className="text-indigo-600" />} color="blue">
                             <InfoRow label="Tarih" value={`${formatDate(req.start_date)} — ${formatDate(req.end_date)}`} />
                             {req.leave_type_name && <InfoRow label="Görev Türü" value={req.leave_type_name} />}
                             {req.reason && <InfoRow label="Açıklama" value={req.reason} />}
-                            {dwi && (
+
+                            {/* Approved: show actual work info */}
+                            {dwi && (dwi.total_work_minutes > 0 || totalOtMin > 0) && (
                                 <>
                                     <InfoRow label="Normal Mesai" value={dwi.total_work_minutes > 0 ? `${Math.floor(dwi.total_work_minutes / 60)}s ${dwi.total_work_minutes % 60}dk` : '-'} />
                                     <InfoRow label="Ek Mesai" value={totalOtMin > 0 ? `${Math.floor(totalOtMin / 60)}s ${totalOtMin % 60}dk` : '-'} />
                                 </>
+                            )}
+
+                            {/* Pending: show day-by-day segments */}
+                            {isPendingDuty && segments.length > 0 && (
+                                <div className="mt-2">
+                                    <span className="text-[10px] font-bold text-blue-600 uppercase mb-1 block">Gün Bazlı Çalışma</span>
+                                    <div className="space-y-1">
+                                        {segments.map((seg, i) => (
+                                            <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-blue-100">
+                                                <span className="text-slate-600 font-medium">
+                                                    {seg.date ? new Date(seg.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' }) : '-'}
+                                                </span>
+                                                <span className="text-blue-700 font-bold">
+                                                    {seg.start_time || '--:--'} - {seg.end_time || '--:--'}
+                                                </span>
+                                                {seg.start_time && seg.end_time && (() => {
+                                                    const [sh, sm] = seg.start_time.split(':').map(Number);
+                                                    const [eh, em] = seg.end_time.split(':').map(Number);
+                                                    let diff = (eh * 60 + em) - (sh * 60 + sm);
+                                                    if (diff < 0) diff += 24 * 60;
+                                                    const h = Math.floor(diff / 60);
+                                                    const m = diff % 60;
+                                                    return <span className="text-slate-400 text-[10px]">{h > 0 ? `${h}s ` : ''}{m > 0 ? `${m}dk` : ''}</span>;
+                                                })()}
+                                            </div>
+                                        ))}
+                                        {segTotalMin > 0 && (
+                                            <div className="flex items-center justify-between text-xs bg-blue-50 p-2 rounded-lg border border-blue-200 font-bold">
+                                                <span className="text-blue-700">Toplam</span>
+                                                <span className="text-blue-800">{Math.floor(segTotalMin / 60)}s {segTotalMin % 60 > 0 ? `${segTotalMin % 60}dk` : ''}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pending without segments: show global times */}
+                            {isPendingDuty && segments.length === 0 && req.start_time && req.end_time && (
+                                <InfoRow label="Çalışma Saatleri" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} />
                             )}
                         </Section>
                         <div className="md:col-span-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">

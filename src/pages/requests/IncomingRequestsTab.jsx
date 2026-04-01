@@ -3,7 +3,7 @@ import {
     Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Tooltip, Modal } from 'antd';
+import { Tooltip, Modal, message } from 'antd';
 import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
@@ -125,10 +125,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
             }
-            fetchAllData();
+            await fetchAllData();
             onDataChange?.();
         } catch (e) {
-            alert(e.response?.data?.error || 'İşlem başarısız');
+            console.error('Approve error:', e);
+            const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
+            message.error(errorMsg);
+            try { await fetchAllData(); } catch {}
         }
     };
 
@@ -142,10 +145,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/reject/`, { reason });
             }
-            fetchAllData();
+            await fetchAllData();
             onDataChange?.();
         } catch (e) {
-            alert(e.response?.data?.error || 'İşlem başarısız');
+            console.error('Reject error:', e);
+            const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
+            message.error(errorMsg);
+            try { await fetchAllData(); } catch {}
         }
     };
 
