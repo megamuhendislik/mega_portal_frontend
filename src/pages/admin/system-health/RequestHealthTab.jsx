@@ -31,6 +31,8 @@ export default function RequestHealthTab() {
     const [showOrphans, setShowOrphans] = useState(false);
     const [diagnosticResult, setDiagnosticResult] = useState(null);
     const [diagLoading, setDiagLoading] = useState(false);
+    const [fullReport, setFullReport] = useState(null);
+    const [reportLoading, setReportLoading] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -149,6 +151,129 @@ export default function RequestHealthTab() {
         } finally {
             setDiagLoading(false);
         }
+    };
+
+    // Full Analysis
+    const runFullAnalysis = async () => {
+        setReportLoading(true);
+        setFullReport(null);
+        const lines = [];
+        const now = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
+        lines.push(`=== TALEP SAĞLIK RAPORU === ${now}`);
+        lines.push(`Toplam talep (all_team): ${allTeamData.length}`);
+        lines.push('');
+
+        // 1. Type breakdown
+        const byType = {};
+        allTeamData.forEach(r => { byType[r.type] = (byType[r.type] || 0) + 1; });
+        lines.push('--- TİP DAĞILIMI ---');
+        Object.entries(byType).sort((a, b) => b[1] - a[1]).forEach(([t, c]) => lines.push(`  ${t}: ${c}`));
+        lines.push('');
+
+        // 2. Status breakdown
+        const byStatus = {};
+        allTeamData.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });
+        lines.push('--- DURUM DAĞILIMI ---');
+        Object.entries(byStatus).sort((a, b) => b[1] - a[1]).forEach(([s, c]) => lines.push(`  ${s}: ${c}`));
+        lines.push('');
+
+        // 3. External Duty deep analysis
+        const edReqs = allTeamData.filter(r => r.type === 'EXTERNAL_DUTY');
+        lines.push(`--- DIŞ GÖREV ANALİZİ (${edReqs.length} talep) ---`);
+        for (const r of edReqs) {
+            const id = r.request_id || r.id;
+            const issues = [];
+
+            // Check attendance for approved
+            if (r.status === 'APPROVED') {
+                try {
+                    const attRes = await api.get(`/leave/requests/${id}/`);
+                    const dwi = attRes.data?.duty_work_info;
+                    if (!dwi || (!dwi.attendance_records?.length && !dwi.total_work_minutes)) {
+                        issues.push('ATTENDANCE YOK — onaylı ama mesai kaydı oluşmamış');
+                    } else {
+                        const attCount = dwi.attendance_records?.length || 0;
+                        const normalMin = dwi.total_work_minutes || 0;
+                        const otMin = dwi.total_ot_minutes || 0;
+                        issues.push(`OK — ${attCount} kayıt, ${Math.floor(normalMin/60)}s${normalMin%60}dk normal, ${Math.floor(otMin/60)}s${otMin%60}dk OT`);
+                    }
+                } catch (e) {
+                    issues.push(`API HATA: ${e.response?.status || e.message}`);
+                }
+            }
+
+            if (!r.start_time && !r.end_time && (!r.date_segments || r.date_segments.length === 0)) {
+                issues.push('SAAT YOK — start_time/end_time ve date_segments boş');
+            }
+
+            if (r.status === 'PENDING' && !r.target_approver_name) {
+                issues.push('ONAYLAYAN YOK — target_approver boş');
+            }
+
+            const line = `  #${id} | ${r.employee_name} | ${r.start_date || r.date} | ${r.start_time || '-'}-${r.end_time || '-'} | ${r.status} | override:${r.can_override} | ${issues.join(' | ') || 'OK'}`;
+            lines.push(line);
+        }
+        lines.push('');
+
+        // 4. Approved requests without override
+        const noOverride = allTeamData.filter(r => r.status === 'APPROVED' && r.can_override === false);
+        lines.push(`--- ONAYLANMIŞ AMA OVERRIDE YOK (${noOverride.length}) ---`);
+        noOverride.forEach(r => {
+            lines.push(`  #${r.request_id || r.id} | ${r.type} | ${r.employee_name} | ${r.start_date || r.date} | ${r.approved_by_name || '-'}`);
+        });
+        lines.push('');
+
+        // 5. Pending without approver
+        const pendingNoApprover = allTeamData.filter(r => r.status === 'PENDING' && !r.target_approver_name);
+        lines.push(`--- BEKLEYEN AMA ONAYLAYAN YOK (${pendingNoApprover.length}) ---`);
+        pendingNoApprover.forEach(r => {
+            lines.push(`  #${r.request_id || r.id} | ${r.type} | ${r.employee_name} | ${r.start_date || r.date}`);
+        });
+        lines.push('');
+
+        // 6. Date anomalies (future dates > 30 days)
+        const today = new Date();
+        const futureThreshold = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const futureDates = allTeamData.filter(r => {
+            const d = new Date(r.start_date || r.date);
+            return d > futureThreshold;
+        });
+        lines.push(`--- UZAK GELECEK TARİHLİ (>30 gün) (${futureDates.length}) ---`);
+        futureDates.forEach(r => {
+            lines.push(`  #${r.request_id || r.id} | ${r.type} | ${r.employee_name} | ${r.start_date || r.date} | ${r.status}`);
+        });
+        lines.push('');
+
+        // 7. Duplicate check (same employee + date + type)
+        const seen = {};
+        const duplicates = [];
+        allTeamData.forEach(r => {
+            const key = `${r.employee_id || r.employee_name}-${r.start_date || r.date}-${r.type}`;
+            if (seen[key]) {
+                duplicates.push({ first: seen[key], second: r });
+            } else {
+                seen[key] = r;
+            }
+        });
+        lines.push(`--- MUHTEMEL DUPLIKAT (${duplicates.length}) ---`);
+        duplicates.forEach(({ first, second }) => {
+            lines.push(`  ${first.employee_name} | ${first.start_date || first.date} | ${first.type} → #${first.request_id || first.id} (${first.status}) vs #${second.request_id || second.id} (${second.status})`);
+        });
+        lines.push('');
+
+        // 8. Orphan check
+        const teamIds = new Set(allTeamData.filter(r => r.type === 'LEAVE' || r.type === 'EXTERNAL_DUTY').map(r => String(r.request_id || r.id)));
+        const orphans = leaveRequests.filter(lr => !teamIds.has(String(lr.id)));
+        lines.push(`--- YETİM TALEPLER (DB'de var, all_team'de yok) (${orphans.length}) ---`);
+        orphans.forEach(r => {
+            lines.push(`  #${r.id} | ${r.request_type_detail?.name || '-'} | ${r.employee_detail?.full_name || '-'} | ${r.start_date} | ${r.status}`);
+        });
+
+        lines.push('');
+        lines.push('=== RAPOR SONU ===');
+
+        setFullReport(lines.join('\n'));
+        setReportLoading(false);
     };
 
     const types = [...new Set(allTeamData.map(r => r.type))].sort();
@@ -372,6 +497,43 @@ export default function RequestHealthTab() {
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Full Analysis */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-slate-700">Tam Analiz Raporu</h3>
+                    <div className="flex gap-2">
+                        <button onClick={runFullAnalysis} disabled={reportLoading || allTeamData.length === 0}
+                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                            {reportLoading ? 'Analiz yapılıyor...' : 'Tam Analiz Çalıştır'}
+                        </button>
+                        {fullReport && (
+                            <button onClick={() => {
+                                const blob = new Blob([fullReport], { type: 'text/plain;charset=utf-8' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `talep_saglik_raporu_${new Date().toISOString().slice(0, 10)}.txt`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                            }}
+                                className="px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-lg hover:bg-slate-700">
+                                TXT İndir
+                            </button>
+                        )}
+                    </div>
+                </div>
+                {reportLoading && (
+                    <div className="text-center py-8">
+                        <div className="animate-pulse text-indigo-500 font-bold">Dış görev talepleri kontrol ediliyor... (API istekleri yapılıyor)</div>
+                    </div>
+                )}
+                {fullReport && (
+                    <pre className="p-4 bg-slate-900 text-green-400 rounded-xl text-[11px] leading-relaxed overflow-x-auto max-h-[600px] overflow-y-auto font-mono whitespace-pre">
+                        {fullReport}
+                    </pre>
+                )}
             </div>
         </div>
     );
