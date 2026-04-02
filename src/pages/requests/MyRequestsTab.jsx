@@ -66,7 +66,7 @@ const StatCard = ({ label, value, icon, color, tooltip }) => (
     </div>
 );
 
-const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
+const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     // Data states
     const [requests, setRequests] = useState([]);
     const [overtimeRequests, setOvertimeRequests] = useState([]);
@@ -364,6 +364,17 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
 
     const filtered = useMemo(() => {
         return allMyRequests.filter(r => {
+            // Global search filter
+            if (searchText) {
+                const s = searchText.toLowerCase();
+                const fields = [
+                    r.leave_type_name, r.type_label, r.reason,
+                    r.target_approver_name, r.approved_by_name,
+                    r.description, r.task_description,
+                    String(r.id || ''),
+                ];
+                if (!fields.some(f => f && String(f).toLowerCase().includes(s))) return false;
+            }
             // Date range filter
             if (dateFrom) {
                 const reqDateStr = (r._sortDate || r.start_date || r.date || r.created_at || '').substring(0, 10);
@@ -383,7 +394,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
             if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter, showPotential, hideCancelled, dateFrom, dateTo]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential, hideCancelled, dateFrom, dateTo, searchText]);
 
     const counts = useMemo(() => {
         const dateFiltered = allMyRequests.filter(r => {
@@ -425,7 +436,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger }) => {
     }, [handleEditOvertimeClick, handleViewDetails]);
 
     // Reset page when filters change
-    useEffect(() => { setCurrentPage(1); }, [typeFilter, statusFilter, showPotential, dateFrom, dateTo]);
+    useEffect(() => { setCurrentPage(1); }, [typeFilter, statusFilter, showPotential, dateFrom, dateTo, searchText]);
 
     // Pagination
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

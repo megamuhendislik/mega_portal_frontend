@@ -27,7 +27,7 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
   </button>
 );
 
-export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false }) {
+export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false, searchText = '' }) {
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
   const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
   // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz
@@ -167,6 +167,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
             <IncomingRequestsTab
               filterType="overtime"
               refreshTrigger={refreshTrigger}
+              parentSearchText={searchText}
             />
           )}
         </div>

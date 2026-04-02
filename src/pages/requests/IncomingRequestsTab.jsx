@@ -9,7 +9,7 @@ import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
-const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0 }) => {
+const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '' }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -36,8 +36,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [dateTo, setDateTo] = useState(null);
     const [personFilter, setPersonFilter] = useState('ALL');
 
+    // Effective search: parent global search OR local search
+    const effectiveSearch = parentSearchText || searchText;
+
     // Pagination
-    const PAGE_SIZE = searchText ? 9999 : 50;
+    const PAGE_SIZE = effectiveSearch ? 9999 : 50;
     const [pendingPage, setPendingPage] = useState(1);
     const [teamPage, setTeamPage] = useState(1);
 
@@ -487,8 +490,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 const effectiveStatus = statusGroup[r.status] || r.status;
                 if (effectiveStatus !== statusFilter) return false;
             }
-            if (searchText) {
-                const s = searchText.toLowerCase();
+            if (effectiveSearch) {
+                const s = effectiveSearch.toLowerCase();
                 const fields = [
                     r.employee_name, r.employee_department, r.leave_type_name,
                     r.reason, r.target_approver_name, r.approved_by_name,
@@ -513,7 +516,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter]);
+    }, [currentItems, typeFilter, statusFilter, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // Filtered pending actionable items (for "Onay Bekleyen" section)
     const filteredPendingActionable = useMemo(() => {
@@ -529,8 +532,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 const effectiveStatus = statusGroup[r.status] || r.status;
                 if (effectiveStatus !== statusFilter) return false;
             }
-            if (searchText) {
-                const s = searchText.toLowerCase();
+            if (effectiveSearch) {
+                const s = effectiveSearch.toLowerCase();
                 const fields = [
                     r.employee_name, r.employee_department, r.leave_type_name,
                     r.reason, r.target_approver_name, r.approved_by_name,
@@ -553,7 +556,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter]);
+    }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // All team filtered items (for "Ekip Talepleri" section — ALL statuses)
     const allTeamFiltered = useMemo(() => {
@@ -565,7 +568,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     }, [activeSubTab, filtered]);
 
     // Reset pagination when filters change
-    useEffect(() => { setPendingPage(1); setTeamPage(1); }, [typeFilter, statusFilter, searchText, dateFrom, dateTo, personFilter, activeSubTab]);
+    useEffect(() => { setPendingPage(1); setTeamPage(1); }, [typeFilter, statusFilter, effectiveSearch, dateFrom, dateTo, personFilter, activeSubTab]);
 
     // Paginated pending
     const pendingTotalPages = Math.max(1, Math.ceil(filteredPendingActionable.length / PAGE_SIZE));

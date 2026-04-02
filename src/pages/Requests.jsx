@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-    Layers, ArrowDownLeft, CalendarCheck, BarChart3
+    Layers, ArrowDownLeft, CalendarCheck, BarChart3, Search, X
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -48,6 +48,9 @@ const Requests = () => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true });
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // Global search — shared across all tabs
+    const [searchText, setSearchText] = useState('');
 
     // Manager detection — PRIMARY / SECONDARY counts
     const [primaryCount, setPrimaryCount] = useState(0);
@@ -115,6 +118,25 @@ const Requests = () => {
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{title}</h1>
                     <p className="text-slate-500 font-medium">{subtitle}</p>
                 </div>
+                {/* Global Search */}
+                <div className="relative w-full md:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                        type="text"
+                        placeholder="Tüm taleplerde ara..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold w-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                    />
+                    {searchText && (
+                        <button
+                            onClick={() => setSearchText('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Navigation Tabs */}
@@ -162,6 +184,7 @@ const Requests = () => {
                         <MyRequestsTab
                             onDataChange={handleDataChange}
                             refreshTrigger={refreshTrigger}
+                            searchText={searchText}
                         />
                     )}
                 </div>
@@ -175,6 +198,7 @@ const Requests = () => {
                                 refreshTrigger={refreshTrigger}
                                 primaryCount={primaryCount}
                                 secondaryCount={secondaryCount}
+                                parentSearchText={searchText}
                             />
                         )}
                     </div>
@@ -188,6 +212,7 @@ const Requests = () => {
                             primaryCount={primaryCount}
                             secondaryCount={secondaryCount}
                             teamCountsLoading={teamCountsLoading}
+                            searchText={searchText}
                         />
                     )}
                 </div>
