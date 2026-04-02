@@ -308,9 +308,9 @@ export default function RecalculationAuditTab() {
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Calisan ID (opsiyonel)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Sicil No (opsiyonel)</label>
                     <input
-                        type="number"
+                        type="text"
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
                         placeholder="Tumu"
