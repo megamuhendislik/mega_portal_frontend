@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Upload, Button, Card, Table, Collapse, Tag, Alert, Statistic, Row, Col, Popconfirm, message, Spin, Empty } from 'antd';
-import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, CopyOutlined } from '@ant-design/icons';
+import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, CopyOutlined, DownloadOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
 
 const { Dragger } = Upload;
@@ -53,6 +53,34 @@ export default function PdksRawImportTab() {
       message.error(err.response?.data?.error || 'Yükleme sırasında hata oluştu.');
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleDownloadTxt = async () => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('mode', results?.mode || 'dry_run');
+      formData.append('format', 'txt');
+      const response = await api.post('/system/health-check/pdks-raw-import/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        responseType: 'blob',
+        timeout: 120000,
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const disposition = response.headers['content-disposition'];
+      const filename = disposition ? disposition.split('filename=')[1]?.replace(/"/g, '') : 'pdks_raw_import.txt';
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      message.success('TXT raporu indiriliyor...');
+    } catch (err) {
+      message.error('TXT indirme sırasında hata oluştu.');
     }
   };
 
@@ -179,6 +207,14 @@ export default function PdksRawImportTab() {
                 DB&apos;ye Yükle ({summary.new_events} event)
               </Button>
             </Popconfirm>
+          )}
+          {results && (
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTxt}
+            >
+              TXT İndir
+            </Button>
           )}
         </div>
       </Card>
