@@ -37,14 +37,40 @@ export default function RequestHealthTab() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [teamRes, leaveRes] = await Promise.allSettled([
+            const [teamRes, leaveRes, otRes] = await Promise.allSettled([
                 api.get('/team-requests/all_team/'),
                 api.get('/leave/requests/', { params: { page_size: 9999 } }),
+                api.get('/overtime-requests/', { params: { page_size: 9999 } }),
             ]);
             if (teamRes.status === 'fulfilled') setAllTeamData(teamRes.value.data || []);
             if (leaveRes.status === 'fulfilled') {
                 const d = leaveRes.value.data;
                 setLeaveRequests(d?.results || d || []);
+            }
+            // OT requests — merge into allTeamData for comprehensive view
+            if (otRes.status === 'fulfilled') {
+                const otData = otRes.value.data?.results || otRes.value.data || [];
+                // Add OT requests not already in allTeamData
+                const existingOtIds = new Set(
+                    (teamRes.status === 'fulfilled' ? teamRes.value.data || [] : [])
+                        .filter(r => r.type === 'OVERTIME')
+                        .map(r => r.request_id || r.id)
+                );
+                const missingOt = otData.filter(r => !existingOtIds.has(r.id)).map(r => ({
+                    ...r,
+                    request_id: r.id,
+                    type: 'OVERTIME',
+                    employee_name: r.employee_detail?.full_name || r.employee_name || '',
+                    start_date: r.date,
+                    start_time: r.start_time ? String(r.start_time).substring(0, 5) : null,
+                    end_time: r.end_time ? String(r.end_time).substring(0, 5) : null,
+                    target_approver_name: r.target_approver_detail?.full_name || '',
+                    approved_by_name: r.approval_manager_detail?.full_name || '',
+                    _source: 'OT_DIRECT',
+                }));
+                if (missingOt.length > 0) {
+                    setAllTeamData(prev => [...prev, ...missingOt]);
+                }
             }
         } catch (e) {
             console.error('RequestHealthTab fetch error:', e);
