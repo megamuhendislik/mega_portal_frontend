@@ -11,6 +11,7 @@ export default function PdksRawImportTab() {
   const [applying, setApplying] = useState(false);
   const [results, setResults] = useState(null);
   const [cleanImport, setCleanImport] = useState(false);
+  const [recalculate, setRecalculate] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [timeFrom, setTimeFrom] = useState('');
@@ -25,6 +26,7 @@ export default function PdksRawImportTab() {
       formData.append('file', file);
       formData.append('mode', 'dry_run');
       if (cleanImport) formData.append('clean_import', 'true');
+      if (recalculate) formData.append('recalculate', 'true');
       if (dateFrom) formData.append('date_from', dateFrom);
       if (dateTo) formData.append('date_to', dateTo);
       if (timeFrom) formData.append('time_from', timeFrom);
@@ -54,6 +56,7 @@ export default function PdksRawImportTab() {
       formData.append('file', file);
       formData.append('mode', 'apply');
       if (cleanImport) formData.append('clean_import', 'true');
+      if (recalculate) formData.append('recalculate', 'true');
       if (dateFrom) formData.append('date_from', dateFrom);
       if (dateTo) formData.append('date_to', dateTo);
       if (timeFrom) formData.append('time_from', timeFrom);
@@ -283,6 +286,17 @@ export default function PdksRawImportTab() {
             message="Dikkat: Temiz yükleme CSV'deki tarih aralığındaki TÜM GateEventLog kayıtlarını siler ve CSV'den yeniden yükler."
           />
         )}
+        <label className="flex items-center gap-2 mb-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={recalculate}
+            onChange={(e) => setRecalculate(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-sm font-medium text-indigo-600">
+            Yükle + Hesapla (yeni event eklenen günleri otomatik recalculate et)
+          </span>
+        </label>
         <div className="flex gap-2">
           <Button
             type="primary"
