@@ -60,11 +60,40 @@ export default function PdksRawImportTab() {
       if (timeTo) formData.append('time_to', timeTo);
       const { data } = await api.post('/system/health-check/pdks-raw-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 180000,
+        timeout: 600000,
       });
       setResults(data);
-      const cleanMsg = data.summary?.cleaned ? ` (${data.summary.cleaned} eski silindi)` : '';
-      message.success(`${data.summary?.created || 0} event GateEventLog'a eklendi.${cleanMsg}`);
+      const s = data.summary || {};
+      const parts = [`${s.created || 0} event eklendi`];
+      if (s.cleaned) parts.push(`${s.cleaned} eski GateEventLog silindi`);
+      if (s.att_deleted) parts.push(`${s.att_deleted} Attendance silindi`);
+      if (s.recalculated) parts.push(`${s.recalculated} gün yeniden hesaplandı`);
+      message.success(parts.join(', '));
+      // Otomatik TXT indir
+      try {
+        const txtForm = new FormData();
+        txtForm.append('file', file);
+        txtForm.append('mode', 'apply');
+        txtForm.append('format', 'txt');
+        if (cleanImport) txtForm.append('clean_import', 'true');
+        if (dateFrom) txtForm.append('date_from', dateFrom);
+        if (dateTo) txtForm.append('date_to', dateTo);
+        if (timeFrom) txtForm.append('time_from', timeFrom);
+        if (timeTo) txtForm.append('time_to', timeTo);
+        const txtRes = await api.post('/system/health-check/pdks-raw-import/', txtForm, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          responseType: 'blob',
+          timeout: 120000,
+        });
+        const url = window.URL.createObjectURL(new Blob([txtRes.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `pdks_import_result_${new Date().toISOString().slice(0,10)}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch { /* TXT indirme opsiyonel */ }
     } catch (err) {
       message.error(err.response?.data?.error || 'Yükleme sırasında hata oluştu.');
     } finally {
@@ -347,7 +376,8 @@ export default function PdksRawImportTab() {
             <Alert
               type="info"
               showIcon
-              message={`${summary.cleaned} eski GateEventLog kaydı silindi (temiz yükleme).`}
+              message={`Temiz Yükleme: ${summary.cleaned} GateEventLog silindi, ${summary.att_deleted || 0} Attendance silindi, ${summary.recalculated || 0} gün yeniden hesaplandı`}
+              description={summary.recalc_errors?.length > 0 ? `${summary.recalc_errors.length} hesaplama hatası` : null}
             />
           )}
 
