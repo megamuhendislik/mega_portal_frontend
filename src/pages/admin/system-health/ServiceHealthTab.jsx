@@ -34,6 +34,7 @@ export default function ServiceHealthTab() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [expandedEmp, setExpandedEmp] = useState(null);
+    const [gateLogDate, setGateLogDate] = useState(new Date().toISOString().slice(0, 10));
 
     const fetchData = async () => {
         setLoading(true);
@@ -141,6 +142,39 @@ export default function ServiceHealthTab() {
                         </>
                     )}
                 </div>
+            </div>
+
+            {/* Gate Event Log Download */}
+            <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold text-gray-600">Gate Event Log:</span>
+                <input
+                    type="date"
+                    value={gateLogDate}
+                    onChange={(e) => setGateLogDate(e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+                <button
+                    onClick={async () => {
+                        try {
+                            const res = await api.get(`/system/health-check/gate-event-log/?date=${gateLogDate}&format=txt`, {
+                                responseType: 'blob',
+                            });
+                            const url = window.URL.createObjectURL(new Blob([res.data]));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `gate_event_log_${gateLogDate}.txt`);
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                            console.error('Gate log download failed', err);
+                        }
+                    }}
+                    className="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+                >
+                    Gate Log Indir (TXT)
+                </button>
             </div>
 
             {/* Issues */}
