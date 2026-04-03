@@ -11,6 +11,8 @@ export default function PdksRawImportTab() {
   const [applying, setApplying] = useState(false);
   const [results, setResults] = useState(null);
   const [cleanImport, setCleanImport] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const handleAnalyze = async () => {
     if (!file) return message.warning('Lütfen bir CSV dosyası seçin.');
@@ -21,6 +23,8 @@ export default function PdksRawImportTab() {
       formData.append('file', file);
       formData.append('mode', 'dry_run');
       if (cleanImport) formData.append('clean_import', 'true');
+      if (dateFrom) formData.append('date_from', dateFrom);
+      if (dateTo) formData.append('date_to', dateTo);
       const { data } = await api.post('/system/health-check/pdks-raw-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 120000,
@@ -46,6 +50,8 @@ export default function PdksRawImportTab() {
       formData.append('file', file);
       formData.append('mode', 'apply');
       if (cleanImport) formData.append('clean_import', 'true');
+      if (dateFrom) formData.append('date_from', dateFrom);
+      if (dateTo) formData.append('date_to', dateTo);
       const { data } = await api.post('/system/health-check/pdks-raw-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000,
@@ -179,6 +185,27 @@ export default function PdksRawImportTab() {
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen CSV dosyasını yükleyin. Event&apos;ler GateEventLog tablosuna raw olarak eklenir, Attendance kayıtlarına dokunulmaz.
         </p>
+        <div className="flex items-center gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Başlangıç Tarihi</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Bitiş Tarihi</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-4">Boş bırakılırsa CSV&apos;deki tüm tarihler işlenir</p>
+        </div>
         <Dragger {...uploadProps} className="mb-3">
           <p className="ant-upload-drag-icon"><InboxOutlined /></p>
           <p className="ant-upload-text">CSV dosyasını sürükle veya tıkla</p>
