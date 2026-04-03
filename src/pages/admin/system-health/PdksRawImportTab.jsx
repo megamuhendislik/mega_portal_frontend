@@ -10,6 +10,7 @@ export default function PdksRawImportTab() {
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [results, setResults] = useState(null);
+  const [cleanImport, setCleanImport] = useState(false);
 
   const handleAnalyze = async () => {
     if (!file) return message.warning('Lütfen bir CSV dosyası seçin.');
@@ -19,6 +20,7 @@ export default function PdksRawImportTab() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('mode', 'dry_run');
+      if (cleanImport) formData.append('clean_import', 'true');
       const { data } = await api.post('/system/health-check/pdks-raw-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 120000,
@@ -43,12 +45,14 @@ export default function PdksRawImportTab() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('mode', 'apply');
+      if (cleanImport) formData.append('clean_import', 'true');
       const { data } = await api.post('/system/health-check/pdks-raw-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000,
       });
       setResults(data);
-      message.success(`${data.summary?.created || 0} event GateEventLog'a eklendi.`);
+      const cleanMsg = data.summary?.cleaned ? ` (${data.summary.cleaned} eski silindi)` : '';
+      message.success(`${data.summary?.created || 0} event GateEventLog'a eklendi.${cleanMsg}`);
     } catch (err) {
       message.error(err.response?.data?.error || 'Yükleme sırasında hata oluştu.');
     } finally {
@@ -180,6 +184,25 @@ export default function PdksRawImportTab() {
           <p className="ant-upload-text">CSV dosyasını sürükle veya tıkla</p>
           <p className="ant-upload-hint">SicilID, EventTime, Direction, EventID sütunları beklenir</p>
         </Dragger>
+        <label className="flex items-center gap-2 mb-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={cleanImport}
+            onChange={(e) => setCleanImport(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+          />
+          <span className="text-sm font-medium text-red-600">
+            Temiz Yükleme (eski verileri sil + yeniden yükle)
+          </span>
+        </label>
+        {cleanImport && (
+          <Alert
+            type="warning"
+            showIcon
+            className="mb-3"
+            message="Dikkat: Temiz yükleme CSV'deki tarih aralığındaki TÜM GateEventLog kayıtlarını siler ve CSV'den yeniden yükler."
+          />
+        )}
         <div className="flex gap-2">
           <Button
             type="primary"
@@ -268,6 +291,14 @@ export default function PdksRawImportTab() {
               </Card>
             </Col>
           </Row>
+
+          {summary?.cleaned > 0 && (
+            <Alert
+              type="info"
+              showIcon
+              message={`${summary.cleaned} eski GateEventLog kaydı silindi (temiz yükleme).`}
+            />
+          )}
 
           {isApplyMode && (
             <Alert
