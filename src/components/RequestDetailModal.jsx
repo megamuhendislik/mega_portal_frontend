@@ -1265,7 +1265,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && !isEditing && (
+            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && requestType !== 'EXTERNAL_DUTY' && !isEditing && (
               <button
                 onClick={() => handleDownloadDocx(request.id)}
                 disabled={downloadLoading}
