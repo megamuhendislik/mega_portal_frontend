@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulToday } from '../../utils/dateUtils';
-import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package } from 'lucide-react';
+import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package, Receipt } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const STATUS_CONFIG = {
@@ -10,6 +10,183 @@ const STATUS_CONFIG = {
     ORDERED: { label: 'Sipariş Verildi', bg: 'bg-green-100', text: 'text-green-700', icon: Check },
     DELIVERED: { label: 'Teslim Edildi', bg: 'bg-blue-100', text: 'text-blue-700', icon: Package },
     CANCELLED: { label: 'İptal Edildi', bg: 'bg-red-100', text: 'text-red-700', icon: Ban },
+};
+
+const generateReceiptImage = (record, includePersonal) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 360;
+    const pad = 24;
+    const lineH = 28;
+    const dpr = window.devicePixelRatio || 2;
+
+    // Build content lines
+    const lines = [];
+    if (includePersonal) {
+        lines.push({ label: 'Personel', value: record.employee?.full_name || '-' });
+        lines.push({ label: 'Departman', value: record.employee?.department?.name || '-' });
+        lines.push({ type: 'divider' });
+    }
+    const dateObj = new Date(record.date + 'T00:00:00');
+    const dateStr = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' });
+    lines.push({ label: 'Tarih', value: dateStr });
+    if (record.description) lines.push({ label: 'Tercih', value: record.description });
+    if (record.order_note) lines.push({ label: 'Not', value: record.order_note });
+    lines.push({ type: 'divider' });
+    const statusCfg = STATUS_CONFIG[record.status] || STATUS_CONFIG.PENDING;
+    lines.push({ label: 'Durum', value: statusCfg.label, status: record.status });
+    lines.push({ type: 'divider' });
+    lines.push({ label: 'Fiş No', value: `#${record.id}` });
+    if (record.created_at) {
+        const createdDate = new Date(record.created_at);
+        lines.push({ label: 'Oluşturulma', value: createdDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }) });
+    }
+
+    // Calculate height — handle text wrapping for long values
+    const maxValueWidth = W - pad * 2 - 100;
+    const measureWrappedLines = (text, fontSize) => {
+        ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+        const words = text.split(' ');
+        let currentLine = '';
+        let count = 1;
+        for (const word of words) {
+            const test = currentLine ? `${currentLine} ${word}` : word;
+            if (ctx.measureText(test).width > maxValueWidth && currentLine) {
+                count++;
+                currentLine = word;
+            } else {
+                currentLine = test;
+            }
+        }
+        return count;
+    };
+
+    // Pre-calculate canvas size
+    canvas.width = W;
+    canvas.height = 800; // temp for measuring
+    let totalH = 80; // header (title + subtitle + gap)
+    for (const line of lines) {
+        if (line.type === 'divider') { totalH += 16; }
+        else {
+            const wrappedCount = measureWrappedLines(line.value || '-', 13);
+            totalH += lineH * wrappedCount;
+        }
+    }
+    totalH += 24; // bottom padding
+
+    // Set real canvas size with DPR
+    canvas.width = W * dpr;
+    canvas.height = totalH * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = totalH + 'px';
+    ctx.scale(dpr, dpr);
+
+    // Background with rounded corners
+    const radius = 16;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(W - radius, 0);
+    ctx.quadraticCurveTo(W, 0, W, radius);
+    ctx.lineTo(W, totalH - radius);
+    ctx.quadraticCurveTo(W, totalH, W - radius, totalH);
+    ctx.lineTo(radius, totalH);
+    ctx.quadraticCurveTo(0, totalH, 0, totalH - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Subtle border
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Header
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MEGA MÜHENDİSLİK', W / 2, 32);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('Yemek Sipariş Fişi', W / 2, 50);
+
+    // Divider after header
+    let y = 66;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, y);
+    ctx.lineTo(W - pad, y);
+    ctx.stroke();
+    y += 16;
+
+    // Content lines
+    ctx.textAlign = 'left';
+    for (const line of lines) {
+        if (line.type === 'divider') {
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(pad, y + 8);
+            ctx.lineTo(W - pad, y + 8);
+            ctx.stroke();
+            y += 16;
+            continue;
+        }
+
+        // Label
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(line.label, pad, y + 6);
+
+        // Value with wrapping
+        const valueX = pad + 100;
+        ctx.font = line.label === 'Durum' ? 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' : '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+        // Status color
+        if (line.status) {
+            const colors = { PENDING: '#d97706', ORDERED: '#16a34a', DELIVERED: '#2563eb', CANCELLED: '#dc2626' };
+            ctx.fillStyle = colors[line.status] || '#1e293b';
+            // Draw status dot
+            ctx.beginPath();
+            ctx.arc(valueX, y + 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText(line.value, valueX + 12, y + 6);
+        } else {
+            ctx.fillStyle = '#1e293b';
+            // Word wrap
+            const words = (line.value || '-').split(' ');
+            let currentLine = '';
+            let lineY = y;
+            for (const word of words) {
+                const test = currentLine ? `${currentLine} ${word}` : word;
+                if (ctx.measureText(test).width > maxValueWidth && currentLine) {
+                    ctx.fillText(currentLine, valueX, lineY + 6);
+                    currentLine = word;
+                    lineY += lineH;
+                } else {
+                    currentLine = test;
+                }
+            }
+            ctx.fillText(currentLine, valueX, lineY + 6);
+        }
+
+        const wrappedCount = measureWrappedLines(line.value || '-', 13);
+        y += lineH * wrappedCount;
+    }
+
+    // Export as JPEG
+    canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `yemek-fis-${record.id}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 'image/jpeg', 0.92);
 };
 
 const MealOrders = () => {
@@ -20,6 +197,7 @@ const MealOrders = () => {
     const [editingNote, setEditingNote] = useState(null);
     const [noteText, setNoteText] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [includePersonalInfo, setIncludePersonalInfo] = useState(false);
 
     // Cancel modal
     const [cancellingRecord, setCancellingRecord] = useState(null);
@@ -42,14 +220,14 @@ const MealOrders = () => {
             ]);
             setData(listRes.data.results || listRes.data);
             setSummary(summaryRes.data);
-        } catch (error) {
+        } catch {
             toast.error("Veriler yüklenirken hata oluştu.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchData(); }, [date]);
+    useEffect(() => { fetchData(); }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Employee search for create-on-behalf
     useEffect(() => {
@@ -71,7 +249,7 @@ const MealOrders = () => {
             await api.post(`/meal-orders/${id}/mark_ordered/`, { is_ordered: !currentStatus });
             toast.success("Durum güncellendi.");
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("İşlem başarısız.");
         }
     };
@@ -84,7 +262,7 @@ const MealOrders = () => {
             setCancellingRecord(null);
             setCancelReason('');
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("İptal işlemi başarısız.");
         }
     };
@@ -104,8 +282,8 @@ const MealOrders = () => {
             setNewMealDesc('');
             setEmployeeSearch('');
             fetchData();
-        } catch (error) {
-            toast.error(error.response?.data?.error || "Talep oluşturulamadı.");
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Talep oluşturulamadı.");
         } finally {
             setCreating(false);
         }
@@ -121,7 +299,7 @@ const MealOrders = () => {
             toast.success("Not kaydedildi.");
             setEditingNote(null);
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("Not kaydedilemedi.");
         }
     };
@@ -219,7 +397,7 @@ const MealOrders = () => {
 
             {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <input
                         type="text"
                         placeholder="Personel veya departman ara..."
@@ -227,6 +405,15 @@ const MealOrders = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full md:w-80 px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none whitespace-nowrap">
+                        <input
+                            type="checkbox"
+                            checked={includePersonalInfo}
+                            onChange={(e) => setIncludePersonalInfo(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Fişe bilgileri ekle
+                    </label>
                 </div>
 
                 {loading ? (
@@ -278,29 +465,36 @@ const MealOrders = () => {
                                             </td>
                                             <td className="px-5 py-3 text-center">{getStatusBadge(record)}</td>
                                             <td className="px-5 py-3 text-center">
-                                                {isFinalized ? (
-                                                    <span className="text-xs text-slate-400">-</span>
-                                                ) : (
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <button
-                                                            onClick={() => handleMarkOrdered(record.id, record.is_ordered)}
-                                                            className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                                record.is_ordered
-                                                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                                                    : 'bg-green-600 text-white hover:bg-green-700'
-                                                            }`}
-                                                        >
-                                                            {record.is_ordered ? <><Undo2 size={13} /> Geri Al</> : <><Check size={13} /> Sipariş</>}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setCancellingRecord(record); setCancelReason(''); }}
-                                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                            title="Talebi iptal et"
-                                                        >
-                                                            <Ban size={13} /> İptal
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {!isFinalized && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleMarkOrdered(record.id, record.is_ordered)}
+                                                                className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                                    record.is_ordered
+                                                                        ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                                                        : 'bg-green-600 text-white hover:bg-green-700'
+                                                                }`}
+                                                            >
+                                                                {record.is_ordered ? <><Undo2 size={13} /> Geri Al</> : <><Check size={13} /> Sipariş</>}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setCancellingRecord(record); setCancelReason(''); }}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                                title="Talebi iptal et"
+                                                            >
+                                                                <Ban size={13} /> İptal
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => generateReceiptImage(record, includePersonalInfo)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                                                        title="Fiş indir"
+                                                    >
+                                                        <Receipt size={13} /> Fiş
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
