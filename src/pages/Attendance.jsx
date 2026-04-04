@@ -391,32 +391,59 @@ const Attendance = () => {
                             {monthlyWeeklyOt?.weeks?.length > 0 && (() => {
                                 const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
                                 const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
+                                const todayTs = new Date().setHours(0, 0, 0, 0);
                                 return (
-                                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-100 overflow-x-auto">
-                                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Haftalık OT</span>
-                                        <div className="flex items-center gap-4 flex-1 justify-end">
-                                            {monthlyWeeklyOt.weeks.map((week, i) => {
-                                                const isUnlimited = week.is_unlimited;
-                                                const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                                                const dotColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
-                                                const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-slate-500';
-                                                return (
-                                                    <div key={i}
-                                                        className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
-                                                        onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
-                                                        title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
-                                                    >
-                                                        <span className="text-[8px] text-slate-400 whitespace-nowrap">{fmtShort(week.window_start)}–{fmtShort(week.window_end)}</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                                                            <span className={`text-[10px] font-bold tabular-nums ${textColor}`}>
-                                                                {isUnlimited ? `${week.used_hours}` : `${week.used_hours}/${week.limit_hours}`}
-                                                            </span>
-                                                        </div>
+                                    <div className="flex items-stretch justify-evenly px-3 py-2.5 border-t border-slate-100">
+                                        {monthlyWeeklyOt.weeks.map((week, i) => {
+                                            const isUnlimited = week.is_unlimited;
+                                            const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
+                                            const wsDate = new Date(week.window_start + 'T00:00:00');
+                                            const weDate = new Date(week.window_end + 'T23:59:59');
+                                            const isPast = weDate.getTime() < todayTs;
+                                            const isCurrent = wsDate.getTime() <= todayTs && weDate.getTime() >= todayTs;
+                                            const isFuture = wsDate.getTime() > todayTs;
+
+                                            // Renk: geçmiş=slate, aktif=indigo vurgulu, gelecek=slate açık
+                                            let borderCls, bgCls, dotColor, textColor, dateColor;
+                                            if (isCurrent) {
+                                                borderCls = 'border-indigo-300 ring-1 ring-indigo-200';
+                                                bgCls = 'bg-indigo-50 hover:bg-indigo-100';
+                                                dotColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-indigo-500';
+                                                textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-indigo-700';
+                                                dateColor = 'text-indigo-500';
+                                            } else if (isPast) {
+                                                borderCls = 'border-slate-200';
+                                                bgCls = 'bg-slate-50 hover:bg-slate-100';
+                                                dotColor = ratio >= 0.9 ? 'bg-red-400' : ratio >= 0.7 ? 'bg-amber-300' : 'bg-emerald-400';
+                                                textColor = ratio >= 0.9 ? 'text-red-500' : ratio >= 0.7 ? 'text-amber-500' : 'text-slate-600';
+                                                dateColor = 'text-slate-400';
+                                            } else {
+                                                borderCls = 'border-slate-100 border-dashed';
+                                                bgCls = 'bg-white hover:bg-slate-50';
+                                                dotColor = 'bg-slate-300';
+                                                textColor = 'text-slate-400';
+                                                dateColor = 'text-slate-300';
+                                            }
+
+                                            return (
+                                                <div key={i}
+                                                    className={`flex-1 flex flex-col items-center gap-0.5 px-1.5 py-1.5 mx-0.5 rounded-lg border ${borderCls} ${bgCls} cursor-pointer transition-all`}
+                                                    onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                                    title={`${fmtShort(wsDate.toISOString().slice(0,10))} – ${fmtShort(weDate.toISOString().slice(0,10))}\n${isCurrent ? 'Bu hafta' : isPast ? 'Geçmiş' : 'Gelecek'}`}
+                                                >
+                                                    {isCurrent && <span className="text-[7px] font-bold text-indigo-500 uppercase tracking-widest leading-none">Bu Hafta</span>}
+                                                    <span className={`text-[8px] font-medium whitespace-nowrap leading-none ${dateColor}`}>
+                                                        {fmtShort(week.window_start)}–{fmtShort(week.window_end)}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                                        <span className={`text-[10px] font-bold tabular-nums leading-none ${textColor}`}>
+                                                            {isUnlimited ? `${week.used_hours}` : `${week.used_hours}/${week.limit_hours}`}
+                                                        </span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })()}
