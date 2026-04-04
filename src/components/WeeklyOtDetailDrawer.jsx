@@ -40,7 +40,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
     if (employeeId) params.employee_id = employeeId;
     if (referenceDate) params.reference_date = referenceDate;
 
-    api.get('/attendance/overtime-requests/weekly-ot-status/', { params })
+    api.get('/overtime-requests/weekly-ot-status/', { params })
       .then(res => setData(res.data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));

@@ -65,7 +65,7 @@ const Attendance = () => {
     // --- EFFECT: Fetch monthly weekly OT ---
     useEffect(() => {
         const apiMonth = viewMonth + 1; // 0-based → 1-based
-        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+        api.get('/overtime-requests/weekly-ot-status/', {
             params: { month_view: true, year: viewYear, month: apiMonth }
         }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
     }, [viewYear, viewMonth]);

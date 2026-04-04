@@ -55,7 +55,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     // Fetch monthly weekly OT limit data
     useEffect(() => {
-        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+        api.get('/overtime-requests/weekly-ot-status/', {
             params: { month_view: true, year, month }
         }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
     }, [year, month]);

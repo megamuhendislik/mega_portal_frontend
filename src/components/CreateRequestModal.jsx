@@ -242,7 +242,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             return;
         }
         if (!dutyStartDate) return;
-        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+        api.get('/overtime-requests/weekly-ot-status/', {
             params: { reference_date: dutyStartDate }
         }).then(res => setWeeklyOtForDuty(res.data)).catch(() => setWeeklyOtForDuty(null));
     }, [dutyOtMinutes, selectedType, dutyStartDate]);

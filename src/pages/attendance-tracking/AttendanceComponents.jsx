@@ -394,7 +394,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
 
     useEffect(() => {
         if (employee?.employee_id) {
-            api.get(`/attendance/overtime-requests/weekly-ot-status/?employee_id=${employee.employee_id}`)
+            api.get(`/overtime-requests/weekly-ot-status/?employee_id=${employee.employee_id}`)
                 .then(res => setWeeklyOtData(res.data))
                 .catch(() => setWeeklyOtData(null));
         } else {
