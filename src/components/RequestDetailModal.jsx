@@ -19,7 +19,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [timeLockInfo, setTimeLockInfo] = useState(null);
-  const [downloadLoading, setDownloadLoading] = useState(false);
+  // downloadLoading removed — export-docx endpoint deleted, only petition remains
   const [petitionLoading, setPetitionLoading] = useState(false);
   const [employeeHistory, setEmployeeHistory] = useState([]);
   const [dutyPreview, setDutyPreview] = useState(null);
@@ -349,28 +349,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       setError(err.response?.data?.error || 'Override işlemi başarısız oldu');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDownloadDocx = async (requestId) => {
-    setDownloadLoading(true);
-    try {
-      const response = await api.get(`/leave/requests/${requestId}/export-docx/`, {
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `izin_talebi_${requestId}.docx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('DOCX indirme hatasi:', err);
-      setError('DOCX dosyası indirilemedi. Lütfen tekrar deneyin.');
-    } finally {
-      setDownloadLoading(false);
     }
   };
 
@@ -1317,16 +1295,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {mode !== 'incoming' && (requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && requestType !== 'EXTERNAL_DUTY' && !isEditing && (
-              <button
-                onClick={() => handleDownloadDocx(request.id)}
-                disabled={downloadLoading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileText size={16} />
-                {downloadLoading ? 'İndiriliyor...' : 'Resmi Form İndir (DOCX)'}
-              </button>
-            )}
             {mode !== 'incoming' && requestType === 'LEAVE' && request.request_type_detail?.code === 'ANNUAL_LEAVE' && !isEditing && (
               <button
                 onClick={() => handleDownloadPetition(request.id)}
