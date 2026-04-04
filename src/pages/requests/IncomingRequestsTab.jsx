@@ -25,6 +25,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [daysBack, setDaysBack] = useState(90);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState(null);
+    const [metaInfo, setMetaInfo] = useState(null);
 
     // Sub-tab: 'primary_team' | 'secondary_team'
     const [activeSubTab, setActiveSubTab] = useState('primary_team');
@@ -100,6 +101,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             );
             setAllTeamData(atData);
         }
+        if (d._meta) setMetaInfo(d._meta);
     }, [parentProvidesSubs]);
 
     // Legacy fallback: original 7 parallel calls
@@ -1013,6 +1015,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Truncation warning */}
+            {metaInfo?.is_truncated && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-xs text-amber-700">
+                    <Info size={14} className="text-amber-500 flex-shrink-0" />
+                    <span>
+                        Toplam <strong>{metaInfo.all_team_total}</strong> talep bulundu, en son <strong>{metaInfo.result_cap}</strong> tanesi gösteriliyor.
+                        Daha fazla görmek için zaman aralığını değiştirin veya filtre kullanın.
+                    </span>
                 </div>
             )}
 
