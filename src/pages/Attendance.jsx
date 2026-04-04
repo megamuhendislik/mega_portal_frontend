@@ -371,34 +371,40 @@ const Attendance = () => {
                 ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
 
-                        {/* 1. Haftalık OT Limit Barı — her zaman görünür */}
-                        {todaySummary?.weekly_ot_limit_hours > 0 && (() => {
-                            const used = todaySummary.weekly_ot_used_hours || 0;
-                            const limit = todaySummary.weekly_ot_limit_hours;
-                            const remaining = todaySummary.weekly_ot_remaining_hours ?? Math.max(0, limit - used);
-                            const ratio = used / (limit || 1);
-                            const pct = Math.min(100, Math.round(ratio * 100));
-                            const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
-                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
-                            const borderColor = ratio >= 0.9 ? 'border-red-200' : ratio >= 0.7 ? 'border-amber-200' : 'border-slate-200';
+                        {/* 1. Haftalık OT Limitleri — kompakt yatay, her zaman görünür */}
+                        {monthlyWeeklyOt?.weeks?.length > 0 && (() => {
+                            const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                            const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
                             return (
-                                <div className={`bg-white rounded-2xl border ${borderColor} p-4 cursor-pointer hover:shadow-md transition-shadow`}
-                                    onClick={() => { setWeeklyOtDrawerRefDate(null); setWeeklyOtDrawerOpen(true); }}
-                                    title="Detay için tıklayın"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Clock size={14} className="text-amber-500" />
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Haftalık Ek Mesai</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`text-sm font-black tabular-nums ${textColor}`}>{used}/{limit} sa</span>
-                                            <span className="text-[10px] text-slate-400 tabular-nums">Kalan: {remaining} sa</span>
-                                        </div>
+                                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <Clock size={12} className="text-amber-500" />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Haftalık OT</span>
                                     </div>
-                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                        <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                                    </div>
+                                    {monthlyWeeklyOt.weeks.map((week, i) => {
+                                        const isUnlimited = week.is_unlimited;
+                                        const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
+                                        const pct = Math.min(100, Math.round(ratio * 100));
+                                        const ringColor = ratio >= 0.9 ? 'border-red-400 bg-red-50' : ratio >= 0.7 ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50';
+                                        const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+                                        return (
+                                            <div key={i}
+                                                className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-xl border ${ringColor} cursor-pointer hover:shadow-md transition-all`}
+                                                onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                                title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
+                                            >
+                                                <div className="text-[8px] text-slate-400 font-semibold whitespace-nowrap">{fmtShort(week.window_start)}–{fmtShort(week.window_end)}</div>
+                                                <div className={`text-[11px] font-black tabular-nums ${textColor}`}>
+                                                    {isUnlimited ? `${week.used_hours}sa` : `${week.used_hours}/${week.limit_hours}`}
+                                                </div>
+                                                {!isUnlimited && (
+                                                    <div className="w-full h-1 bg-slate-200 rounded-full mt-0.5 overflow-hidden">
+                                                        <div className={`h-full rounded-full ${ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${pct}%` }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })()}
@@ -417,49 +423,6 @@ const Attendance = () => {
                             <MonthlyBalanceCarousel periodSummary={periodSummary} />
                         </div>
 
-                        {/* 2.5. Haftalık Ek Mesai Limitleri */}
-                        {monthlyWeeklyOt?.weeks?.length > 0 && (
-                            <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
-                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <Clock size={14} className="text-amber-500" />
-                                    Haftalık Ek Mesai Limitleri
-                                </h3>
-                                <div className="space-y-2">
-                                    {monthlyWeeklyOt.weeks.map((week, i) => {
-                                        const isUnlimited = week.is_unlimited;
-                                        const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                                        const pct = Math.min(100, Math.round(ratio * 100));
-                                        const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
-                                        const textColor = isUnlimited ? 'text-slate-500' : (ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600');
-                                        const ws = new Date(week.window_start + 'T00:00:00');
-                                        const we = new Date(week.window_end + 'T00:00:00');
-                                        const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                                        const fmtD = (d) => `${d.getDate()} ${mNames[d.getMonth()]}`;
-                                        return (
-                                            <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
-                                                onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
-                                                title="Detay için tıklayın"
-                                            >
-                                                <div className="text-[10px] text-slate-400 font-semibold w-28 shrink-0">{fmtD(ws)} – {fmtD(we)}</div>
-                                                {isUnlimited ? (
-                                                    <div className="flex-1 text-xs text-slate-400 italic">Sınırsız</div>
-                                                ) : (
-                                                    <div className="flex-1">
-                                                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                                                            <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <div className={`text-xs font-bold tabular-nums ${textColor} w-20 text-right`}>
-                                                    {isUnlimited ? `${week.used_hours} sa` : `${week.used_hours}/${week.limit_hours} sa`}
-                                                </div>
-                                                {!isUnlimited && <div className="text-[10px] text-slate-400 w-10 text-right tabular-nums">{pct}%</div>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
                         <WeeklyOtDetailDrawer open={weeklyOtDrawerOpen} onClose={() => setWeeklyOtDrawerOpen(false)} referenceDate={weeklyOtDrawerRefDate} />
 
                         {/* 3. Charts Row */}
