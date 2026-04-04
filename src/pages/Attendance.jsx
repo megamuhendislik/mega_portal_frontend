@@ -392,27 +392,31 @@ const Attendance = () => {
                                 const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
                                 const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
                                 return (
-                                    <div className="flex items-center gap-1 px-4 py-2 border-t border-slate-100 overflow-x-auto">
-                                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Haftalık OT</span>
-                                        {monthlyWeeklyOt.weeks.map((week, i) => {
-                                            const isUnlimited = week.is_unlimited;
-                                            const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                                            const pct = Math.min(100, Math.round(ratio * 100));
-                                            const dotColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
-                                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-slate-500';
-                                            return (
-                                                <div key={i}
-                                                    className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors"
-                                                    onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
-                                                    title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
-                                                >
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
-                                                    <span className={`text-[10px] font-semibold tabular-nums ${textColor} whitespace-nowrap`}>
-                                                        {isUnlimited ? `${week.used_hours}` : `${week.used_hours}/${week.limit_hours}`}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-100 overflow-x-auto">
+                                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Haftalık OT</span>
+                                        <div className="flex items-center gap-4 flex-1 justify-end">
+                                            {monthlyWeeklyOt.weeks.map((week, i) => {
+                                                const isUnlimited = week.is_unlimited;
+                                                const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
+                                                const dotColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                                                const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-slate-500';
+                                                return (
+                                                    <div key={i}
+                                                        className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                                                        onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                                        title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
+                                                    >
+                                                        <span className="text-[8px] text-slate-400 whitespace-nowrap">{fmtShort(week.window_start)}–{fmtShort(week.window_end)}</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                                            <span className={`text-[10px] font-bold tabular-nums ${textColor}`}>
+                                                                {isUnlimited ? `${week.used_hours}` : `${week.used_hours}/${week.limit_hours}`}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 );
                             })()}
