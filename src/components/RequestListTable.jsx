@@ -341,8 +341,7 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                         <span className={`px-2 py-0.5 text-xs font-bold rounded ${isExternalDuty ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
                                                             {isPartial
                                                                 ? calculateDuration(st, et)
-                                                                : `${req.total_days || 1} gün`}
-                                                            {!isPartial && <span className={`font-normal ${isExternalDuty ? 'text-purple-400' : 'text-blue-400'}`}> (Tam gün)</span>}
+                                                                : `${(req.total_days || 1) * 9} Saat`}
                                                         </span>
                                                         {req.leave_type_name && (
                                                             <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">

@@ -246,7 +246,15 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             const dur = mm > 0 ? `${hh}s ${mm}dk` : `${hh} Saat`;
                             return <span className="font-medium">{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` - ${formatDate(request.end_date)}` : ''} <span className="text-slate-400 mx-1">•</span> {formatTime(st)} - {formatTime(et)} <span className="text-slate-400 font-normal">({dur})</span></span>;
                         }
-                        return <span className="font-medium">{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` - ${formatDate(request.end_date)}` : ''} <span className="text-slate-400 font-normal">({request.total_days || 1} gün - Tam gün)</span></span>;
+                        const fDays = request.total_days || 1;
+                        const fSegs = request.date_segments || request.duty_work_info?.date_segments;
+                        const segTimesStr = Array.isArray(fSegs) && fSegs.length > 0 && fSegs.some(s => s.start_time && s.end_time)
+                            ? (() => {
+                                const items = fSegs.filter(s => s.start_time && s.end_time).map(s => `${s.start_time.slice(0,5)}-${s.end_time.slice(0,5)}`);
+                                return items.length > 2 ? `${items[0]}, ${items[1]}…` : items.join(', ');
+                            })()
+                            : null;
+                        return <span className="font-medium">{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` - ${formatDate(request.end_date)}` : ''} <span className="text-slate-400 mx-1">•</span> {segTimesStr ? <span className="text-slate-500 font-normal">{segTimesStr}</span> : <span className="text-slate-400 font-normal">({fDays * 9} Saat)</span>}</span>;
                     })()}
                     {type === 'OVERTIME' && (
                         <span className="font-medium">{formatDate(request.date)} <span className="text-slate-400 mx-1">•</span> {formatTime(request.start_time)} - {formatTime(request.end_time)}</span>

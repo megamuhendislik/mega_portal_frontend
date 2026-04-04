@@ -253,7 +253,7 @@ const TimeRange = ({ req }) => {
         const totalH = days * 9;
         return (
             <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                {totalH} saat <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` × ${days}` : ''})</span>
+                {totalH} Saat{days > 1 && <span className="text-blue-400 font-normal"> (Tam gün × {days})</span>}
             </span>
         );
     }
