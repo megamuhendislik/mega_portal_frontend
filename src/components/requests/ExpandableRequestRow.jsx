@@ -288,14 +288,11 @@ const TimeRange = ({ req }) => {
             );
         }
         const days = req.total_days || 1;
-        if (days > 1) {
-            return (
-                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                    Tam gün × {days}
-                </span>
-            );
-        }
-        return <span className="text-xs text-slate-400">Saat bilgisi yok</span>;
+        return (
+            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                Tam gün{days > 1 ? ` × ${days}` : ''}
+            </span>
+        );
     }
     if (req.type === 'SPECIAL_LEAVE') {
         const days = req.total_days || 1;
@@ -576,43 +573,20 @@ const ExpandableRequestRow = ({
                 {/* Islemler */}
                 <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                        {/* View Details */}
+                        {/* İncele butonu — detay modalı açar */}
                         {onViewDetails && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onViewDetails(req, req._type || req.type); }}
-                                className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
-                                title="Detaylar"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors text-xs font-medium"
+                                title="Detayları İncele"
                             >
-                                <Eye size={14} />
+                                <Eye size={13} />
+                                İncele
                             </button>
                         )}
 
                         {/* Claim Potential */}
                         {claimPotentialRenderer && claimPotentialRenderer(req)}
-
-                        {/* Incoming mode: Approve / Reject (only if actionable) */}
-                        {mode === 'incoming' && isPending && onApprove && !isReadOnlyType && req.is_actionable !== false && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onApprove(req, 'Hızlı Onay'); }}
-                                className="w-7 h-7 flex items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
-                                title="Onayla"
-                            >
-                                <Check size={14} />
-                            </button>
-                        )}
-                        {mode === 'incoming' && isPending && onReject && !isReadOnlyType && req.is_actionable !== false && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Expand row to show reject reason input
-                                    if (!isExpanded && onToggle) onToggle();
-                                }}
-                                className="w-7 h-7 flex items-center justify-center bg-red-50 border border-red-200 rounded-lg text-red-600 hover:bg-red-100 transition-colors shadow-sm"
-                                title="Reddet"
-                            >
-                                <X size={14} />
-                            </button>
-                        )}
 
                         {/* Sağlık raporu / yemek / özel izin: bilgi badge */}
                         {mode === 'incoming' && isReadOnlyType && (
@@ -677,8 +651,6 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={isReadOnlyType || req.is_actionable === false ? null : onApprove}
-                                onReject={isReadOnlyType || req.is_actionable === false ? null : onReject}
                             />
                         </div>
                     </td>
