@@ -915,7 +915,14 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   <div className="bg-white rounded-xl p-3 border border-slate-200">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Toplam Süre</span>
                     <span className="text-sm font-black text-amber-600">
-                      {request.total_hours != null ? `${request.total_hours} saat` : `${request.duration_minutes || Math.round((request.duration_seconds || 0) / 60)} dk`}
+                      {(() => {
+                        const m = request.duration_minutes || (request.total_hours != null ? Math.round(request.total_hours * 60) : Math.round((request.duration_seconds || 0) / 60));
+                        const h = Math.floor(m / 60);
+                        const mins = m % 60;
+                        if (h === 0) return `${mins} dakika`;
+                        if (mins === 0) return `${h} saat`;
+                        return `${h} saat ${mins} dakika`;
+                      })()}
                     </span>
                   </div>
                   <div className="bg-white rounded-xl p-3 border border-slate-200">

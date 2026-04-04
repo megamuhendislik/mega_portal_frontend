@@ -58,6 +58,14 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
         return `${hours}s ${mins}dk`;
     };
 
+    const formatNetMinutes = (m) => {
+        const h = Math.floor(m / 60);
+        const mins = m % 60;
+        if (h === 0) return `${mins} dk`;
+        if (mins === 0) return `${h} saat`;
+        return `${h} saat ${mins} dk`;
+    };
+
     const getTypeIcon = (type) => {
         switch (type) {
             case 'LEAVE': return <FileText size={16} className="text-blue-600" />;
@@ -353,16 +361,24 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                 })()}
                                                 {req.type === 'OVERTIME' && (
                                                     <>
-                                                        {req.total_hours != null && (
-                                                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
-                                                                {req.total_hours} Saat
-                                                            </span>
-                                                        )}
-                                                        {!req.total_hours && req.start_time && req.end_time && (
-                                                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
-                                                                {calculateDuration(req.start_time, req.end_time)}
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            const netMin = req.duration_minutes || (req.total_hours != null ? Math.round(req.total_hours * 60) : 0);
+                                                            if (netMin > 0) {
+                                                                return (
+                                                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
+                                                                        {formatNetMinutes(netMin)}
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            if (req.start_time && req.end_time) {
+                                                                return (
+                                                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-bold rounded">
+                                                                        {calculateDuration(req.start_time, req.end_time)}
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
                                                         {req.source_type === 'INTENDED' && (
                                                             <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded">
                                                                 Planlı

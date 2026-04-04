@@ -321,8 +321,10 @@ const DurationCell = ({ req }) => {
     const effectiveType = req._type || req.type;
 
     if (req.type === 'OVERTIME') {
-        if (req.total_hours != null) {
-            return <span className="text-xs font-bold text-amber-700">{req.total_hours} Saat</span>;
+        // Net süre: duration_minutes veya total_hours (backend hesaplı, gap'ler çıkarılmış)
+        const netMinutes = req.duration_minutes || (req.total_hours != null ? Math.round(req.total_hours * 60) : null);
+        if (netMinutes != null && netMinutes > 0) {
+            return <span className="text-xs font-bold text-amber-700">{formatMinutesLabel(netMinutes)}</span>;
         }
         if (req.start_time && req.end_time) {
             return <span className="text-xs font-bold text-amber-700">{calculateDuration(req.start_time, req.end_time)}</span>;
