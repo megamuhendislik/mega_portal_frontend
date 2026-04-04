@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     Search, Users, Shield, UserCheck, UserCog, Clock, FileText, Info,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, History, Loader2
 } from 'lucide-react';
-import { Tooltip, Modal, message } from 'antd';
+import { Tooltip, Modal, Select, message } from 'antd';
 import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
+import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
@@ -19,6 +20,11 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState(null);
     const [allTeamData, setAllTeamData] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // "Load older data" state
+    const [daysBack, setDaysBack] = useState(90);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    const [lastFetchedAt, setLastFetchedAt] = useState(null);
 
     // Sub-tab: 'primary_team' | 'secondary_team'
     const [activeSubTab, setActiveSubTab] = useState('primary_team');
@@ -136,10 +142,19 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     }, [parentProvidesSubs]);
 
     // --- Data Fetching --- consolidated endpoint with legacy fallback
-    const fetchAllData = useCallback(async () => {
-        setLoading(true);
+    const fetchAllData = useCallback(async (overrideDaysBack) => {
+        const effectiveDays = overrideDaysBack !== undefined ? overrideDaysBack : daysBack;
+        const isOlderLoad = effectiveDays !== 90;
+
+        if (isOlderLoad) {
+            setLoadingOlder(true);
+        } else {
+            setLoading(true);
+        }
         try {
-            const res = await api.get('/requests-init/incoming-requests-init/');
+            const params = {};
+            if (effectiveDays !== 90) params.days_back = effectiveDays;
+            const res = await api.get('/requests-init/incoming-requests-init/', { params });
             applyInitData(res.data);
         } catch (e) {
             console.warn('IncomingRequestsTab: consolidated init failed, falling back to legacy calls', e);
@@ -150,8 +165,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
         } finally {
             setLoading(false);
+            setLoadingOlder(false);
+            setLastFetchedAt(new Date());
         }
-    }, [applyInitData, fetchAllDataLegacy]);
+    }, [daysBack, applyInitData, fetchAllDataLegacy]);
 
     useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
@@ -666,6 +683,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         else handleReject(r, reason);
     };
 
+    // --- Load older data handler ---
+    const handleDaysBackChange = (newDaysBack) => {
+        setDaysBack(newDaysBack);
+        fetchAllData(newDaysBack);
+    };
+
+
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
     const authorities = substituteData?.authorities || [];
@@ -673,6 +697,21 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     return (
         <div className="space-y-6">
+            {/* Data freshness indicator */}
+            {lastFetchedAt && !loading && (
+                <div className="flex items-center justify-end gap-3 px-1">
+                    <span className="text-[11px] text-slate-400">
+                        Veriler güncellendi: {format(lastFetchedAt, 'HH:mm:ss')}
+                    </span>
+                    <button
+                        onClick={fetchAllData}
+                        className="text-[11px] text-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                        ↻ Yenile
+                    </button>
+                </div>
+            )}
+
             {/* Active substitute authorities banner */}
             {authorities.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
@@ -976,6 +1015,34 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     )}
                 </div>
             )}
+
+            {/* Load older data bar */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <History size={14} className="text-slate-400" />
+                    <span className="font-medium">
+                        {daysBack === 90 ? 'Son 90 gün gösteriliyor.' : daysBack === 180 ? 'Son 6 ay gösteriliyor.' : daysBack === 365 ? 'Son 1 yıl gösteriliyor.' : 'Tüm veriler gösteriliyor.'}
+                    </span>
+                    {loadingOlder && <Loader2 size={14} className="animate-spin text-blue-500" />}
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Zaman aralığı:</span>
+                    <Select
+                        size="small"
+                        value={daysBack}
+                        onChange={handleDaysBackChange}
+                        loading={loadingOlder}
+                        disabled={loadingOlder}
+                        style={{ width: 140 }}
+                        options={[
+                            { value: 90, label: 'Son 90 gün' },
+                            { value: 180, label: 'Son 6 ay' },
+                            { value: 365, label: 'Son 1 yıl' },
+                            { value: 0, label: 'Tümü (yavaş)' },
+                        ]}
+                    />
+                </div>
+            </div>
 
             {/* Detail Modal */}
             <RequestDetailModal

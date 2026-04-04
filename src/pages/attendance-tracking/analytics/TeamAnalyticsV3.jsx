@@ -4,6 +4,7 @@ import { BulkAnalyticsProvider, useBulkAnalytics } from './BulkAnalyticsContext'
 import GlobalFilterBar from './GlobalFilterBar';
 import CollapsibleSection from './shared/CollapsibleSection';
 import { Target, Clock, CalendarCheck, Users, AlarmClock, Coffee, Building2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 const KPISummary = lazy(() => import('./sections/KPISummary'));
 const EfficiencySection = lazy(() => import('./sections/EfficiencySection'));
@@ -36,10 +37,27 @@ function TeamAnalyticsV3Inner() {
     // otherwise fall back to their own individual fetch
     const bulkData = bulk?.data || {};
     const bulkLoading = bulk?.loading ?? false;
+    const lastFetchedAt = bulk?.lastFetchedAt;
+    const refetch = bulk?.refetch;
 
     return (
         <div className="space-y-4">
             <GlobalFilterBar />
+
+            {/* Data freshness indicator */}
+            <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50 rounded text-xs text-slate-500">
+                <span>
+                    {bulkLoading ? 'Veriler yükleniyor...' :
+                     lastFetchedAt ? `Son güncelleme: ${format(lastFetchedAt, 'HH:mm:ss')}` : ''}
+                </span>
+                <button
+                    onClick={refetch}
+                    disabled={bulkLoading}
+                    className="text-blue-500 hover:text-blue-700 disabled:text-slate-300 text-xs transition-colors"
+                >
+                    ↻ Yenile
+                </button>
+            </div>
 
             <Suspense fallback={<SectionLoader />}>
                 <KPISummary

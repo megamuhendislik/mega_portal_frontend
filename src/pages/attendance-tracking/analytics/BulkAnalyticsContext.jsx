@@ -11,7 +11,9 @@ export function BulkAnalyticsProvider({ children }) {
     const [data, setData] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [lastFetchedAt, setLastFetchedAt] = useState(null);
     const abortRef = useRef(null);
+    const fetchCountRef = useRef(0);
 
     const fetchBulk = useCallback(async () => {
         // Abort previous in-flight request
@@ -30,6 +32,7 @@ export function BulkAnalyticsProvider({ children }) {
             });
             if (!controller.signal.aborted) {
                 setData(res.data || {});
+                setLastFetchedAt(new Date());
             }
         } catch (err) {
             if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
@@ -44,6 +47,12 @@ export function BulkAnalyticsProvider({ children }) {
         }
     }, [queryParams]);
 
+    // Force refetch that bypasses React state equality check
+    const refetch = useCallback(() => {
+        fetchCountRef.current += 1;
+        fetchBulk();
+    }, [fetchBulk]);
+
     useEffect(() => {
         fetchBulk();
         return () => {
@@ -51,7 +60,7 @@ export function BulkAnalyticsProvider({ children }) {
         };
     }, [fetchBulk]);
 
-    const value = { data, loading, error, refetch: fetchBulk };
+    const value = { data, loading, error, lastFetchedAt, refetch };
 
     return (
         <BulkAnalyticsContext.Provider value={value}>
@@ -62,7 +71,7 @@ export function BulkAnalyticsProvider({ children }) {
 
 /**
  * Hook to consume bulk analytics data.
- * Returns { data, loading, error, refetch } where data is the full bulk response object.
+ * Returns { data, loading, error, lastFetchedAt, refetch } where data is the full bulk response object.
  * Individual sections can access their data via data.team_overview, data.work_hours, etc.
  *
  * Returns null if used outside provider (signals: use individual fetch fallback).

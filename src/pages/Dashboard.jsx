@@ -195,6 +195,9 @@ const Dashboard = () => {
         return !dismissed;
     });
 
+    // Freshness tracking
+    const [lastFetchedAt, setLastFetchedAt] = useState(null);
+
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
@@ -259,6 +262,7 @@ const Dashboard = () => {
             setCalendarEvents(agendaItems);
         }
         if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+        setLastFetchedAt(new Date());
     };
 
     const fetchDashboardData = async () => {
@@ -307,6 +311,8 @@ const Dashboard = () => {
             }
 
             if (data.birthday_balance) setBirthdayBalance(data.birthday_balance);
+
+            setLastFetchedAt(new Date());
 
         } catch (error) {
             // Fallback to legacy 7-call pattern (backwards compatibility during deployment)
@@ -432,6 +438,21 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Data freshness indicator */}
+            {lastFetchedAt && (
+                <div className="flex items-center justify-end gap-3 -mt-4 mb-0">
+                    <span className="text-[11px] text-slate-400">
+                        Son güncelleme: {format(lastFetchedAt, 'HH:mm')}
+                    </span>
+                    <button
+                        onClick={fetchDashboardData}
+                        className="text-[11px] text-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                        ↻ Yenile
+                    </button>
+                </div>
+            )}
 
             {/* Birthday Banner — Hatırlatma (ay boyunca) veya Kutlama (doğum günü) */}
             {birthdayBalance?.is_birthday_month && birthdayBannerVisible && (
