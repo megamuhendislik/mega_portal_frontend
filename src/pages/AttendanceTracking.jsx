@@ -53,6 +53,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (propMonth != null) setMonth(propMonth + 1);
     }, [propYear, propMonth]);
 
+    // Fetch monthly weekly OT for week selector
+    const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
+    useEffect(() => {
+        api.get('/overtime-requests/weekly-ot-status/', {
+            params: { month_view: true, year, month }
+        }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
+    }, [year, month]);
 
     const [selectedDept, setSelectedDept] = useState('');
     const [stats, setStats] = useState([]);
@@ -732,83 +739,113 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
-            {/* Ekip Haftalık OT Dağılımı */}
+            {/* Ekip Haftalık OT Dağılım Grafiği */}
             {(() => {
                 const withLimit = stats.filter(s => s.weekly_ot_limit_hours > 0);
                 if (!withLimit.length) return null;
 
-                const buckets = [
-                    { key: 'safe', label: 'Güvenli', range: '0–70%', color: 'bg-emerald-500', border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-700', members: [] },
-                    { key: 'warn', label: 'Dikkat', range: '70–90%', color: 'bg-amber-400', border: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-700', members: [] },
-                    { key: 'critical', label: 'Kritik', range: '90%+', color: 'bg-red-500', border: 'border-red-200', bg: 'bg-red-50', text: 'text-red-700', members: [] },
-                ];
+                // Dağılım bucket'ları: %0-10, %10-20, ..., %90-100+
+                const distBuckets = Array.from({ length: 10 }, (_, i) => ({
+                    min: i * 10, max: i === 9 ? Infinity : (i + 1) * 10,
+                    label: i === 9 ? '90%+' : `${i * 10}–${(i + 1) * 10}%`,
+                    members: [],
+                }));
 
                 withLimit.forEach(s => {
                     const used = (s.weekly_ot_used_seconds || 0) / 3600;
                     const limit = s.weekly_ot_limit_hours;
-                    const ratio = used / (limit || 1);
-                    const person = { name: s.employee_name, id: s.employee_id, used: Math.round(used * 10) / 10, limit, ratio: Math.round(ratio * 100) };
-                    if (ratio >= 0.9) buckets[2].members.push(person);
-                    else if (ratio >= 0.7) buckets[1].members.push(person);
-                    else buckets[0].members.push(person);
+                    const pct = Math.round((used / (limit || 1)) * 100);
+                    const idx = Math.min(9, Math.floor(pct / 10));
+                    distBuckets[idx].members.push({ name: s.employee_name, id: s.employee_id, used: Math.round(used * 10) / 10, limit, pct });
                 });
 
+                const maxCount = Math.max(1, ...distBuckets.map(b => b.members.length));
                 const total = withLimit.length;
+                const activeCount = withLimit.filter(s => (s.weekly_ot_used_seconds || 0) > 0).length;
+
+                // Hafta seçici verisi
+                const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                const fmtD = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
+                const todayTs = new Date().setHours(0, 0, 0, 0);
 
                 return (
                     <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                <Clock size={14} className="text-amber-500" />
+                                <BarChart3 size={14} className="text-amber-500" />
                                 Ekip Haftalık OT Dağılımı
                             </h3>
-                            <span className="text-[10px] text-slate-400">{total} kişi</span>
+                            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                <span>{activeCount}/{total} kişi aktif</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> &lt;70%</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 70–90%</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> 90%+</span>
+                            </div>
                         </div>
 
-                        {/* Stacked bar */}
-                        <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 mb-3">
-                            {buckets.map(b => {
-                                const w = total > 0 ? (b.members.length / total) * 100 : 0;
-                                if (w === 0) return null;
-                                return <div key={b.key} className={`${b.color} transition-all duration-500`} style={{ width: `${w}%` }} title={`${b.label}: ${b.members.length} kişi`} />;
+                        {/* Bar chart — dikey barlar */}
+                        <div className="flex items-end gap-1 h-24 mb-1">
+                            {distBuckets.map((b, i) => {
+                                const h = maxCount > 0 ? (b.members.length / maxCount) * 100 : 0;
+                                const barColor = i >= 9 ? 'bg-red-500' : i >= 7 ? 'bg-amber-400' : 'bg-emerald-500';
+                                const hoverColor = i >= 9 ? 'hover:bg-red-600' : i >= 7 ? 'hover:bg-amber-500' : 'hover:bg-emerald-600';
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                                        {b.members.length > 0 && (
+                                            <span className="text-[9px] font-bold text-slate-500 mb-0.5 tabular-nums">{b.members.length}</span>
+                                        )}
+                                        <div
+                                            className={`w-full rounded-t-md ${barColor} ${hoverColor} cursor-pointer transition-all duration-300`}
+                                            style={{ height: `${Math.max(h > 0 ? 4 : 0, h)}%` }}
+                                            onClick={() => {
+                                                if (b.members.length === 1) {
+                                                    setWeeklyOtDrawerEmployeeId(b.members[0].id);
+                                                    setWeeklyOtDrawerEmployeeName(b.members[0].name);
+                                                    setWeeklyOtDrawerRefDate(null);
+                                                    setWeeklyOtDrawerOpen(true);
+                                                }
+                                            }}
+                                            title={b.members.length > 0 ? b.members.map(m => `${m.name} (${m.used}/${m.limit}sa)`).join('\n') : 'Kimse yok'}
+                                        />
+                                        {h === 0 && <div className="w-full h-px bg-slate-200 rounded" />}
+                                    </div>
+                                );
                             })}
                         </div>
-
-                        {/* Segment cards */}
-                        <div className="grid grid-cols-3 gap-2">
-                            {buckets.map(b => (
-                                <details key={b.key} className={`rounded-xl border ${b.border} ${b.bg} overflow-hidden group`}>
-                                    <summary className="flex items-center justify-between px-3 py-2 cursor-pointer list-none">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2.5 h-2.5 rounded-full ${b.color}`} />
-                                            <span className={`text-[11px] font-bold ${b.text}`}>{b.label}</span>
-                                        </div>
-                                        <span className={`text-sm font-black ${b.text}`}>{b.members.length}</span>
-                                    </summary>
-                                    {b.members.length > 0 && (
-                                        <div className="px-3 pb-2 space-y-1">
-                                            {b.members.sort((a, c) => c.ratio - a.ratio).map(m => (
-                                                <div key={m.id}
-                                                    className="flex items-center justify-between py-1 px-2 rounded-lg bg-white/60 hover:bg-white cursor-pointer transition-colors"
-                                                    onClick={() => { setWeeklyOtDrawerRefDate(null); setWeeklyOtDrawerOpen(true); setWeeklyOtDrawerEmployeeId(m.id); setWeeklyOtDrawerEmployeeName(m.name); }}
-                                                >
-                                                    <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[100px]">{m.name}</span>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <div className="w-12 h-1 bg-slate-200 rounded-full overflow-hidden">
-                                                            <div className={`h-full ${b.color} rounded-full`} style={{ width: `${Math.min(100, m.ratio)}%` }} />
-                                                        </div>
-                                                        <span className="text-[9px] font-bold text-slate-500 tabular-nums w-14 text-right">{m.used}/{m.limit}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {b.members.length === 0 && (
-                                        <div className="px-3 pb-2 text-[10px] text-slate-400 italic">Kimse yok</div>
-                                    )}
-                                </details>
+                        {/* X axis labels */}
+                        <div className="flex gap-1 mb-3">
+                            {distBuckets.map((b, i) => (
+                                <div key={i} className="flex-1 text-center text-[7px] text-slate-400 font-medium">{b.label}</div>
                             ))}
                         </div>
+
+                        {/* Hafta seçici */}
+                        {monthlyWeeklyOt?.weeks?.length > 0 && (
+                            <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
+                                <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Hafta</span>
+                                {monthlyWeeklyOt.weeks.map((week, i) => {
+                                    const wsDate = new Date(week.window_start + 'T00:00:00');
+                                    const weDate = new Date(week.window_end + 'T23:59:59');
+                                    const isCurrent = wsDate.getTime() <= todayTs && weDate.getTime() >= todayTs;
+                                    const isPast = weDate.getTime() < todayTs;
+                                    const cls = isCurrent
+                                        ? 'bg-indigo-100 border-indigo-300 text-indigo-700 font-bold'
+                                        : isPast
+                                            ? 'bg-slate-50 border-slate-200 text-slate-500'
+                                            : 'bg-white border-dashed border-slate-200 text-slate-400';
+                                    return (
+                                        <button key={i}
+                                            className={`flex-1 py-1 rounded-md border text-[8px] transition-colors hover:bg-indigo-50 ${cls}`}
+                                            onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                            title={`${fmtD(week.window_start)} – ${fmtD(week.window_end)}`}
+                                        >
+                                            {fmtD(week.window_start)}
+                                            {isCurrent && <span className="block text-[6px] text-indigo-500">Bu Hafta</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 );
             })()}
