@@ -351,6 +351,199 @@ const SectionHeader = ({ icon, title, count, countColor, action, children }) => 
 );
 
 // ═══════════════════════════════════════════════════════════
+// CLAIMABLE DAY CARD (unified accordion for INTENDED + POTENTIAL)
+// ═══════════════════════════════════════════════════════════
+
+const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onReasonChange, error, onSubmit, loading, weeklyOt }) => {
+    const { type, intended, potentials } = day;
+    const sel = selections || { entryIds: [], potentialIds: [] };
+    const otEntries = (intended?.entries || []).filter(e => (e.overtime_seconds || 0) > 0);
+
+    const selectedEntrySeconds = otEntries.filter(e => sel.entryIds.includes(e.attendance_id)).reduce((sum, e) => sum + (e.overtime_seconds || 0), 0);
+    const selectedPotentialSeconds = potentials.filter(p => sel.potentialIds.includes(p.overtime_request_id)).reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
+    const totalSelectedSeconds = selectedEntrySeconds + selectedPotentialSeconds;
+    const selectedCount = sel.entryIds.length + sel.potentialIds.length;
+    const isAboveThreshold = totalSelectedSeconds >= 1800;
+
+    const toggleEntry = (id) => {
+        const next = sel.entryIds.includes(id) ? sel.entryIds.filter(x => x !== id) : [...sel.entryIds, id];
+        onSelectionChange({ ...sel, entryIds: next });
+    };
+    const togglePotential = (id) => {
+        const next = sel.potentialIds.includes(id) ? sel.potentialIds.filter(x => x !== id) : [...sel.potentialIds, id];
+        onSelectionChange({ ...sel, potentialIds: next });
+    };
+
+    return (
+        <div className="border-t border-slate-100 px-4 pb-4">
+            {error && (
+                <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium">{error}</div>
+            )}
+            {/* INTENDED kayıtları */}
+            {otEntries.length > 0 && (
+                <div className="mt-3">
+                    <p className="text-[11px] font-bold text-slate-500 mb-2 flex items-center gap-1"><ClipboardList size={12} /> Kayıtlar</p>
+                    <div className="space-y-1.5">
+                        {otEntries.map((entry) => {
+                            const checked = sel.entryIds.includes(entry.attendance_id);
+                            return (
+                                <label key={entry.attendance_id}
+                                    className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${checked ? 'bg-blue-50/70 border border-blue-200' : 'bg-slate-50/50 border border-transparent hover:bg-slate-100/70'}`}>
+                                    <input type="checkbox" checked={checked} onChange={() => toggleEntry(entry.attendance_id)}
+                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <LogIn size={11} className="text-emerald-500" />
+                                            <span className="text-sm font-semibold text-slate-700">{entry.check_in || '—'}</span>
+                                            <span className="text-slate-300">→</span>
+                                            <LogOut size={11} className="text-red-400" />
+                                            <span className="text-sm font-semibold text-slate-700">{entry.check_out || '—'}</span>
+                                            <span className="text-xs text-slate-500">(OT: {formatDuration(entry.overtime_seconds)})</span>
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">Toplam çalışma: {formatDuration(entry.total_seconds)}</div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+            {/* POTENTIAL segmentler */}
+            {potentials.length > 0 && (
+                <div className="mt-3">
+                    <p className="text-[11px] font-bold text-purple-500 mb-2 flex items-center gap-1">
+                        <Zap size={12} /> {type === 'mixed' ? 'Algılanan Segmentler' : 'Segmentler'}
+                    </p>
+                    <div className="space-y-1.5">
+                        {potentials.map((item) => {
+                            const checked = sel.potentialIds.includes(item.overtime_request_id);
+                            const otTypeLabel = item.ot_type === 'PRE_SHIFT' ? 'Vardiya Öncesi' : item.ot_type === 'POST_SHIFT' ? 'Vardiya Sonrası' : item.ot_type === 'OFF_DAY' ? 'Tatil Günü' : 'Karma';
+                            const otTypeColor = item.ot_type === 'PRE_SHIFT' ? 'text-blue-700 bg-blue-50' : item.ot_type === 'POST_SHIFT' ? 'text-purple-700 bg-purple-50' : item.ot_type === 'OFF_DAY' ? 'text-amber-700 bg-amber-50' : 'text-slate-700 bg-slate-50';
+                            return (
+                                <label key={item.overtime_request_id}
+                                    className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${checked ? 'bg-purple-50/70 border border-purple-200' : 'bg-slate-50/50 border border-transparent hover:bg-slate-100/70'}`}>
+                                    <input type="checkbox" checked={checked} onChange={() => togglePotential(item.overtime_request_id)}
+                                        className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <Clock size={12} className="text-slate-400" />
+                                            <span className="text-sm font-semibold text-slate-700">{item.start_time} – {item.end_time}</span>
+                                            <span className="text-xs text-slate-500">({formatDuration(item.actual_overtime_seconds)})</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${otTypeColor}`}>{otTypeLabel}</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+            {/* Sebep */}
+            <div className="mt-3">
+                <input type="text" value={reason || ''} onChange={(e) => onReasonChange(e.target.value)}
+                    placeholder="Ek mesai sebebi..."
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            {/* Footer */}
+            <div className="mt-3 flex items-center justify-between pt-3 border-t border-slate-100">
+                <div>
+                    <span className="text-xs text-slate-500">
+                        Seçilen: <strong className="text-slate-700">{formatDuration(totalSelectedSeconds)}</strong>
+                        {selectedCount > 0 && ` (${selectedCount} kayıt)`}
+                    </span>
+                    {weeklyOt && (
+                        <div className="text-[10px] text-slate-400 mt-0.5">Haftalık: {weeklyOt.used_hours} / {weeklyOt.limit_hours} sa</div>
+                    )}
+                </div>
+                <button onClick={onSubmit}
+                    disabled={selectedCount === 0 || !isAboveThreshold || loading}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        selectedCount > 0 && isAboveThreshold ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}>
+                    {loading ? <Loader2 size={12} className="animate-spin" /> : <Send size={11} />}
+                    Gönder
+                </button>
+            </div>
+            {selectedCount > 0 && !isAboveThreshold && (
+                <p className="text-[10px] text-amber-600 mt-1.5 flex items-center gap-1"><AlertTriangle size={10} /> Toplam min. 30 dk olmalı.</p>
+            )}
+        </div>
+    );
+};
+
+const ClaimableDayCard = ({ day, expanded, onToggle, selections, onSelectionChange, reason, onReasonChange, error, onSubmit, loading, weeklyOt }) => {
+    const { date, type, intended, potentials } = day;
+    const _p = toIstanbulParts(date + 'T00:00:00');
+    const dayName = _p ? DAY_NAMES[_p.dayOfWeek] : '';
+    const dayNum = _p ? String(_p.day).padStart(2, '0') : '';
+    const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
+    const year = _p ? _p.year : '';
+
+    const totalOtSeconds = intended ? (intended.actual_overtime_seconds || 0) : potentials.reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
+    const entryCount = intended ? (intended.entries?.length || 0) : potentials.length;
+    const hasOt = totalOtSeconds > 0;
+    const isPast = isDatePast(date);
+    const hasCheckOut = intended ? !!intended.check_out_time : true;
+    const canExpand = hasOt && (hasCheckOut || isPast);
+
+    const typeBadgeClass = type === 'intended' ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : type === 'potential' ? 'bg-purple-50 text-purple-700 border-purple-200'
+        : 'bg-gradient-to-r from-blue-50 to-purple-50 text-slate-700 border-slate-200';
+    const typeLabel = type === 'intended' ? 'Planlı' : type === 'potential' ? 'Planlanmamış' : 'Karma';
+
+    return (
+        <div className={`rounded-xl border transition-all ${expanded ? 'border-blue-300 shadow-md bg-white' : 'border-slate-100 bg-white hover:border-blue-200'}`}>
+            <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 text-center">
+                            <span className="text-2xl font-black text-slate-800 leading-none">{dayNum}</span>
+                            <div className="text-[10px] font-bold text-slate-400">{monthName}</div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold text-slate-700">{dayName}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${typeBadgeClass}`}>{typeLabel}</span>
+                            </div>
+                            {intended && (
+                                <div className="mt-1 space-y-0.5">
+                                    <div className="text-xs text-slate-500">Yönetici: <strong>{intended.manager_name}</strong> · Maks: {intended.max_duration_hours} sa</div>
+                                    {intended.task_description && <div className="text-xs text-slate-500">Görev: {intended.task_description}</div>}
+                                </div>
+                            )}
+                            <div className="mt-1 text-xs text-slate-500">
+                                {hasOt ? (<>Gerçekleşen: <strong className="text-slate-700">{formatDuration(totalOtSeconds)}</strong> · {entryCount} kayıt</>) : (<span className="text-slate-400">Henüz gerçekleşen mesai yok</span>)}
+                            </div>
+                            {type === 'mixed' && potentials.length > 0 && (
+                                <div className="mt-0.5 text-[11px] text-purple-500">+ {potentials.length} algılanan segment</div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                        {canExpand ? (
+                            <button onClick={onToggle}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                    expanded ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                                }`}>
+                                {expanded ? <><ChevronDown size={12} className="rotate-180" /> Kapat</> : <><Send size={11} /> Talep Et</>}
+                            </button>
+                        ) : !hasOt ? (
+                            <span className="text-[11px] text-slate-400 font-medium">Mesai yok</span>
+                        ) : !hasCheckOut && !isPast ? (
+                            <span className="text-[11px] text-amber-500 font-medium">Çıkış bekleniyor</span>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+            {expanded && (
+                <ClaimableDayExpanded day={day} selections={selections} onSelectionChange={onSelectionChange}
+                    reason={reason} onReasonChange={onReasonChange} error={error} onSubmit={onSubmit} loading={loading} weeklyOt={weeklyOt} />
+            )}
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
 // TEAM GROUP ACCORDION
 // ═══════════════════════════════════════════════════════════
 
@@ -645,7 +838,7 @@ const AssignedOvertimeTab = () => {
     const [managers, setManagers] = useState([]);
 
     // ── UI ──
-    const [claimModal, setClaimModal] = useState({ open: false, type: null, target: null, title: '', subtitle: '' });
+    // claimModal removed — replaced by inline accordion
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [editModal, setEditModal] = useState({ open: false, assignment: null });
     const [actionLoading, setActionLoading] = useState(false);
@@ -659,10 +852,11 @@ const AssignedOvertimeTab = () => {
     const [manualSubmitting, setManualSubmitting] = useState(false);
     const [selectedManualManagerId, setSelectedManualManagerId] = useState(null);
 
-    // ── Task 11: Segment selection for POTENTIAL claims ──
-    const [selectedSegments, setSelectedSegments] = useState({});
-    // ── Task 13: INTENDED + POTENTIAL segment selection ──
-    const [selectedIntendedPotentials, setSelectedIntendedPotentials] = useState({});
+    // ── Unified accordion state ──
+    const [expandedDay, setExpandedDay] = useState(null);
+    const [daySelections, setDaySelections] = useState({});
+    const [dayReasons, setDayReasons] = useState({});
+    const [dayErrors, setDayErrors] = useState({});
 
     useEffect(() => {
         if (!manualForm.date) {
@@ -743,35 +937,7 @@ const AssignedOvertimeTab = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // ── Handlers ──
-    const handleClaim = async (reason, selectedManagerId) => {
-        setActionLoading(true);
-        try {
-            const { type, target, claimMode } = claimModal;
-            if (type === 'INTENDED') {
-                const intendedPayload = { reason: reason || undefined };
-                if (selectedManagerId) intendedPayload.target_approver_id = selectedManagerId;
-                if (claimMode) intendedPayload.claim_mode = claimMode;
-                // Task 13: Include selected potential segment IDs
-                const potentialIds = selectedIntendedPotentials[target.assignment_id] || [];
-                if (potentialIds.length > 0) {
-                    intendedPayload.potential_ids = potentialIds;
-                }
-                await api.post(`/overtime-assignments/${target.assignment_id}/claim/`, intendedPayload);
-            }
-            else if (type === 'POTENTIAL') {
-                const payload = {
-                    ...(target.overtime_request_id ? { overtime_request_id: target.overtime_request_id } : { attendance_id: target.attendance_id }),
-                    reason: reason || undefined,
-                };
-                if (selectedManagerId) payload.target_approver_id = selectedManagerId;
-                await api.post('/overtime-requests/claim-potential/', payload);
-            }
-            setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' });
-            fetchData();
-        } catch (err) { alert(err.response?.data?.error || 'Talep sırasında hata oluştu.'); }
-        setActionLoading(false);
-    };
+    // handleClaim removed — replaced by inline accordion (handleDaySubmit)
 
     // handleCancel (OT request) kaldırıldı — kullanıcı iptal yapamaz
 
@@ -809,24 +975,50 @@ const AssignedOvertimeTab = () => {
         setManualSubmitting(false);
     };
 
-    // ── Task 11: Claim grouped POTENTIAL segments ──
-    const handleClaimPotentialGroup = async (groupKey, selectedIds) => {
-        if (!selectedIds.length) return;
+    // ── Unified accordion handlers ──
+    const handleExpandDay = useCallback((day) => {
+        const date = day.date;
+        if (expandedDay === date) { setExpandedDay(null); return; }
+        setExpandedDay(date);
+        const entryIds = (day.intended?.entries || []).filter(e => (e.overtime_seconds || 0) > 0).map(e => e.attendance_id);
+        const potentialIds = day.potentials.map(p => p.overtime_request_id);
+        setDaySelections(prev => ({ ...prev, [date]: { entryIds, potentialIds } }));
+        if (!dayReasons[date]) {
+            setDayReasons(prev => ({ ...prev, [date]: day.intended?.task_description || '' }));
+        }
+        setDayErrors(prev => ({ ...prev, [date]: '' }));
+    }, [expandedDay, dayReasons]);
+
+    const handleDaySubmit = useCallback(async (day) => {
+        const date = day.date;
+        const sel = daySelections[date] || { entryIds: [], potentialIds: [] };
+        const reason = dayReasons[date] || '';
+        if (sel.entryIds.length === 0 && sel.potentialIds.length === 0) return;
         setActionLoading(true);
+        setDayErrors(prev => ({ ...prev, [date]: '' }));
         try {
-            const payload = {
-                overtime_request_ids: selectedIds,
-                reason: 'Ek mesai talebi',
-            };
-            await api.post('/overtime-requests/claim-potential/', payload);
+            const autoApprover = (() => {
+                if (managers.length === 1) return managers[0].id;
+                if (managers.length > 1) { const p = managers.find(m => m.relationship_type === 'PRIMARY'); return p ? p.id : managers[0]?.id; }
+                return undefined;
+            })();
+            if (day.intended && sel.entryIds.length > 0) {
+                const payload = { reason: reason || undefined, potential_ids: sel.potentialIds.length > 0 ? sel.potentialIds : undefined };
+                if (autoApprover) payload.target_approver_id = autoApprover;
+                await api.post(`/overtime-assignments/${day.intended.assignment_id}/claim/`, payload);
+            } else if (sel.potentialIds.length > 0) {
+                const payload = { overtime_request_ids: sel.potentialIds, reason: reason || 'Ek mesai talebi' };
+                if (autoApprover) payload.target_approver_id = autoApprover;
+                await api.post('/overtime-requests/claim-potential/', payload);
+            }
+            setExpandedDay(null);
             fetchData();
         } catch (err) {
-            const errMsg = err.response?.data?.error || 'Talep oluşturulamadı';
-            alert(errMsg);
+            setDayErrors(prev => ({ ...prev, [date]: err.response?.data?.error || 'Talep oluşturulamadı.' }));
         } finally {
             setActionLoading(false);
         }
-    };
+    }, [daySelections, dayReasons, managers, fetchData]);
 
     const handleCancelAssignment = async (a) => {
         if (!window.confirm(`${a.employee_name} - ${formatDateTurkish(a.date)} atamasını iptal etmek istiyor musunuz?`)) return;
@@ -838,39 +1030,29 @@ const AssignedOvertimeTab = () => {
         setEditModal({ open: true, assignment });
     };
 
-    // ── Computed ──
-    // Tüm atanmış intended'ları göster (mesai henüz yapılmamış olsa bile atama görünmeli)
-    const visibleIntended = useMemo(() => {
-        return claimableData.intended;
-    }, [claimableData.intended]);
-
-    // ── Task 11: Group potentials by group_key ──
-    const potentialGroups = useMemo(() => {
-        const groups = {};
+    // ── Computed: Birleşik gün bazlı gruplama ──
+    const claimableDays = useMemo(() => {
+        const dayMap = {};
+        for (const item of claimableData.intended || []) {
+            if (!dayMap[item.date]) dayMap[item.date] = { date: item.date, type: 'intended', intended: null, potentials: [] };
+            dayMap[item.date].intended = item;
+            if (dayMap[item.date].type === 'potential') dayMap[item.date].type = 'mixed';
+        }
         for (const item of claimableData.potential || []) {
-            const key = item.group_key || `standalone_${item.overtime_request_id}`;
-            if (!groups[key]) {
-                groups[key] = {
-                    group_key: key,
-                    date: item.date,
-                    items: [],
-                    totalSeconds: 0,
-                };
-            }
-            groups[key].items.push(item);
-            groups[key].totalSeconds += item.actual_overtime_seconds || 0;
+            if (!dayMap[item.date]) dayMap[item.date] = { date: item.date, type: 'potential', intended: null, potentials: [] };
+            dayMap[item.date].potentials.push(item);
+            if (dayMap[item.date].type === 'intended') dayMap[item.date].type = 'mixed';
         }
-        return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
-    }, [claimableData.potential]);
-
-    // Initialize selectedSegments when potentialGroups changes
-    useEffect(() => {
-        const initial = {};
-        for (const group of potentialGroups) {
-            initial[group.group_key] = group.items.map(i => i.overtime_request_id);
-        }
-        setSelectedSegments(initial);
-    }, [potentialGroups]);
+        const today = getIstanbulToday();
+        return Object.values(dayMap).sort((a, b) => {
+            if (a.date === today) return -1;
+            if (b.date === today) return 1;
+            const fa = a.date >= today ? 0 : 1;
+            const fb = b.date >= today ? 0 : 1;
+            if (fa !== fb) return fa - fb;
+            return Math.abs(new Date(a.date) - new Date(today)) - Math.abs(new Date(b.date) - new Date(today));
+        });
+    }, [claimableData.intended, claimableData.potential]);
 
     const pendingCount = myRequests.filter(r => r.status === 'PENDING').length;
     const approvedHours = Math.round(myRequests.filter(r => r.status === 'APPROVED').reduce((s, r) => s + (r.duration_seconds || 0), 0) / 3600 * 10) / 10;
@@ -1032,201 +1214,32 @@ const AssignedOvertimeTab = () => {
                         </div>
                     </div>
 
-                    {/* ─── Benden İstenen Planlı Mesailer (Task 13: INTENDED + POTENTIAL segment selection) ─── */}
+                    {/* ─── Talep Edilebilir Ek Mesailer (Birleşik Accordion) ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<CalendarCheck size={16} />} title="Benden İstenen Planlı Mesailer" count={visibleIntended.length} countColor="blue" />
-                        {visibleIntended.length === 0
-                            ? <EmptyState text="Atanmış planlı ek mesai bulunmuyor." />
+                        <SectionHeader icon={<CalendarCheck size={16} />} title="Talep Edilebilir Ek Mesailer" count={claimableDays.length} countColor="blue" />
+                        {claimableDays.length === 0
+                            ? <EmptyState text="Talep edilebilir ek mesai bulunmuyor." />
                             : (
-                                <div className="space-y-2">
-                                    {visibleIntended.map((item, i) => {
-                                        const sameDatePotentials = (claimableData.potential || []).filter(
-                                            p => p.date === item.date
-                                        );
-                                        const assignId = item.assignment_id;
-                                        return (
-                                            <div key={i}>
-                                                <OvertimeDetailCard
-                                                    item={item}
-                                                    type="intended"
-                                                    claimed={item.already_claimed}
-                                                    onClaim={() => setClaimModal({
-                                                        open: true, type: 'INTENDED', target: item,
-                                                        claimMode: 'full',
-                                                        title: 'Planlı Mesai Talep Et (Tamamı)',
-                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.actual_overtime_hours} saat`,
-                                                    })}
-                                                    onClaimMaxAllowed={() => setClaimModal({
-                                                        open: true, type: 'INTENDED', target: item,
-                                                        claimMode: 'max_allowed',
-                                                        title: 'Planlı Mesai Talep Et (İzin Verilen)',
-                                                        subtitle: `${formatDateTurkish(item.date)} — ${item.max_duration_hours} saat (max)`,
-                                                    })}
-                                                />
-                                                {sameDatePotentials.length > 0 && !item.already_claimed && !item.claim_status && (
-                                                    <div className="ml-[72px] mr-3 -mt-1 mb-1 border border-dashed border-purple-200 rounded-b-lg bg-purple-50/30 p-2.5">
-                                                        <p className="text-[10px] font-bold text-purple-500 mb-1.5">Algılanan segmentleri dahil et:</p>
-                                                        {sameDatePotentials.map(p => (
-                                                            <label key={p.overtime_request_id} className="flex items-center gap-2 text-xs text-slate-600 py-0.5 cursor-pointer">
-                                                                <input type="checkbox"
-                                                                    checked={(selectedIntendedPotentials[assignId] || []).includes(p.overtime_request_id)}
-                                                                    onChange={(e) => {
-                                                                        setSelectedIntendedPotentials(prev => {
-                                                                            const current = prev[assignId] || [];
-                                                                            if (e.target.checked) {
-                                                                                return { ...prev, [assignId]: [...current, p.overtime_request_id] };
-                                                                            }
-                                                                            return { ...prev, [assignId]: current.filter(id => id !== p.overtime_request_id) };
-                                                                        });
-                                                                    }}
-                                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-purple-600"
-                                                                />
-                                                                <Clock size={10} className="text-purple-400" />
-                                                                <span className="font-medium">{p.start_time} – {p.end_time}</span>
-                                                                <span className="text-slate-400">({formatDuration(p.actual_overtime_seconds)})</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                <div className="space-y-3">
+                                    {claimableDays.map((day) => (
+                                        <ClaimableDayCard
+                                            key={day.date}
+                                            day={day}
+                                            expanded={expandedDay === day.date}
+                                            onToggle={() => handleExpandDay(day)}
+                                            selections={daySelections[day.date]}
+                                            onSelectionChange={(sel) => setDaySelections(prev => ({ ...prev, [day.date]: sel }))}
+                                            reason={dayReasons[day.date]}
+                                            onReasonChange={(val) => setDayReasons(prev => ({ ...prev, [day.date]: val }))}
+                                            error={dayErrors[day.date]}
+                                            onSubmit={() => handleDaySubmit(day)}
+                                            loading={actionLoading}
+                                            weeklyOt={claimableData.weekly_ot_status}
+                                        />
+                                    ))}
                                 </div>
                             )
                         }
-                    </div>
-
-                    {/* ─── Algılanan Plansız Mesailer (Task 11: Checkbox Segment Selection) ─── */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<Zap size={16} />} title="Algılanan Plansız Mesailer" count={(claimableData.potential || []).length} countColor="blue" />
-                        {potentialGroups.length === 0
-                            ? <EmptyState text="Algılanan ek mesai segmenti yok" />
-                            : potentialGroups.map((group) => {
-                                const selected = selectedSegments[group.group_key] || [];
-                                const selectedDuration = group.items
-                                    .filter(i => selected.includes(i.overtime_request_id))
-                                    .reduce((sum, i) => sum + (i.actual_overtime_seconds || 0), 0);
-                                const isAboveThreshold = selectedDuration >= 1800;
-
-                                const _gp = toIstanbulParts(group.date + 'T00:00:00');
-                                const dayName = _gp ? DAY_NAMES[_gp.dayOfWeek] : '';
-                                const dayNum = _gp ? String(_gp.day).padStart(2, '0') : '';
-                                const monthName = _gp ? MONTH_NAMES[_gp.month - 1] : '';
-                                const year = _gp ? _gp.year : '';
-
-                                return (
-                                    <div key={group.group_key} className="rounded-xl border border-slate-100 bg-white p-4 mb-3 hover:border-blue-200 transition-all">
-                                        {/* Date header */}
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-lg font-black text-slate-800">{dayNum}</span>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-500">{monthName} {year}</span>
-                                                    <span className="text-[10px] font-bold text-slate-400">{dayName}</span>
-                                                </div>
-                                            </div>
-                                            {group.items[0]?.daily_total_ot_seconds > 0 && (
-                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100">
-                                                    <TrendingUp size={12} className="text-emerald-600" />
-                                                    <span className="text-xs font-bold text-emerald-700">
-                                                        Günlük Toplam: {formatDuration(group.items[0].daily_total_ot_seconds)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Segment checkboxes */}
-                                        <div className="space-y-2 mb-3">
-                                            {group.items.map((item) => {
-                                                const checked = selected.includes(item.overtime_request_id);
-                                                const otTypeLabel = item.ot_type === 'PRE_SHIFT' ? 'Vardiya Öncesi'
-                                                    : item.ot_type === 'POST_SHIFT' ? 'Vardiya Sonrası'
-                                                    : item.ot_type === 'OFF_DAY' ? 'Tatil Günü'
-                                                    : 'Karma';
-                                                const otTypeColor = item.ot_type === 'PRE_SHIFT' ? 'text-blue-700 bg-blue-50'
-                                                    : item.ot_type === 'POST_SHIFT' ? 'text-purple-700 bg-purple-50'
-                                                    : item.ot_type === 'OFF_DAY' ? 'text-amber-700 bg-amber-50'
-                                                    : 'text-slate-700 bg-slate-50';
-
-                                                const subSegments = item.segments || [];
-
-                                                return (
-                                                    <label key={item.overtime_request_id}
-                                                        className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
-                                                            checked ? 'bg-blue-50/70 border border-blue-200' : 'bg-slate-50/50 border border-transparent hover:bg-slate-100/70'
-                                                        }`}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={checked}
-                                                            onChange={(e) => {
-                                                                setSelectedSegments(prev => {
-                                                                    const current = prev[group.group_key] || [];
-                                                                    if (e.target.checked) {
-                                                                        return { ...prev, [group.group_key]: [...current, item.overtime_request_id] };
-                                                                    } else {
-                                                                        return { ...prev, [group.group_key]: current.filter(id => id !== item.overtime_request_id) };
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
-                                                        />
-                                                        <div className="flex-1">
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <Clock size={12} className="text-slate-400 flex-shrink-0" />
-                                                                <span className="text-sm font-semibold text-slate-700">
-                                                                    {item.start_time} – {item.end_time}
-                                                                </span>
-                                                                <span className="text-xs text-slate-500">
-                                                                    ({formatDuration(item.actual_overtime_seconds)})
-                                                                </span>
-                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${otTypeColor}`}>
-                                                                    {otTypeLabel}
-                                                                </span>
-                                                            </div>
-                                                            {/* Alt segmentler (birden fazla giriş/çıkış) */}
-                                                            {subSegments.length > 1 && (
-                                                                <div className="mt-1.5 ml-4 space-y-0.5">
-                                                                    {subSegments.map((seg, idx) => (
-                                                                        <div key={idx} className="text-[11px] text-slate-400 flex items-center gap-1">
-                                                                            <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                                                            {seg.start} – {seg.end}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Total + claim button */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                                            <span className="text-xs text-slate-500">
-                                                Seçilen: <strong className="text-slate-700">{formatDuration(selectedDuration)}</strong>
-                                                {selected.length > 0 && ` (${selected.length} segment)`}
-                                            </span>
-                                            <button
-                                                disabled={selected.length === 0 || !isAboveThreshold || actionLoading}
-                                                onClick={() => handleClaimPotentialGroup(group.group_key, selected)}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                                    selected.length > 0 && isAboveThreshold
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                }`}
-                                            >
-                                                Talep Et {selected.length > 0 ? `(${selected.length})` : ''}
-                                            </button>
-                                        </div>
-                                        {selected.length > 0 && !isAboveThreshold && (
-                                            <p className="text-[10px] text-amber-600 mt-1.5 flex items-center gap-1">
-                                                <AlertTriangle size={10} />
-                                                Toplam min. 30 dk olmali.
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
                     </div>
 
                     {/* ─── Manuel Ek Mesai ─── */}
@@ -1466,10 +1479,6 @@ const AssignedOvertimeTab = () => {
             )}
 
             {/* ═══ MODALS ═══ */}
-            <ClaimModal isOpen={claimModal.open} title={claimModal.title} subtitle={claimModal.subtitle}
-                onClose={() => setClaimModal({ open: false, type: null, target: null, title: '', subtitle: '' })}
-                onSubmit={handleClaim} loading={actionLoading}
-                managers={managers} claimType={claimModal.type} />
             {isManager && (
                 <CreateAssignmentModal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)}
                     onSuccess={fetchData} teamMembers={teamMembers} />
