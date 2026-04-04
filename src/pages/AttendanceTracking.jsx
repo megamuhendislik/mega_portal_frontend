@@ -754,21 +754,16 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     return { name: s.employee_name, id: s.employee_id, used, limit, pct };
                 });
 
-                // Saat buckets: 0, 1-5, 5-10, 10-15, 15-20, 20-25, 25-30, 30+
-                const hourBuckets = [
-                    { label: '0', min: 0, max: 0.01 },
-                    { label: '1–5', min: 0.01, max: 5 },
-                    { label: '5–10', min: 5, max: 10 },
-                    { label: '10–15', min: 10, max: 15 },
-                    { label: '15–20', min: 15, max: 20 },
-                    { label: '20–25', min: 20, max: 25 },
-                    { label: '25–30', min: 25, max: 30 },
-                    { label: '30+', min: 30, max: Infinity },
-                ].map(b => ({ ...b, members: people.filter(p => p.used >= b.min && p.used < b.max) }));
+                // Saat buckets: 0, 0-2.5, 2.5-5, 5-7.5, ..., 27.5-30, 30+
+                const hourSteps = [];
+                for (let h = 0; h < 30; h += 2.5) hourSteps.push({ label: h === 0 ? '0' : `${h}`, min: h === 0 ? 0 : h, max: h + 2.5 });
+                hourSteps[0].min = 0; hourSteps[0].max = 2.5; hourSteps[0].label = '0–2.5';
+                hourSteps.push({ label: '30+', min: 30, max: Infinity });
+                const hourBuckets = hourSteps.map(b => ({ ...b, members: people.filter(p => p.used >= b.min && p.used < b.max) }));
 
-                // Yüzde buckets: 0-10, 10-20, ..., 90+
-                const pctBuckets = Array.from({ length: 10 }, (_, i) => ({
-                    label: i === 9 ? '90%+' : `${i * 10}–${(i + 1) * 10}%`,
+                // Yüzde buckets: 0-5, 5-10, ..., 95-100+
+                const pctBuckets = Array.from({ length: 20 }, (_, i) => ({
+                    label: i === 19 ? '95%+' : `${i * 5}–${(i + 1) * 5}%`,
                     members: people.filter(p => {
                         const idx = Math.min(9, Math.floor(p.pct / 10));
                         return idx === i;
