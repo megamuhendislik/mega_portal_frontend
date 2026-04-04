@@ -74,9 +74,106 @@ const EmployeeDetail = () => {
         fetchInitialData();
     }, [id]);
 
+    const populateState = (emp, managers, departments, jobPositions, allEmployees, workSchedules, permissions, roles) => {
+        // Admin koruma: hedef çalışan admin mi?
+        setTargetIsAdmin(!!emp.is_admin);
+
+        setDepartments(departments);
+        setJobPositions(jobPositions);
+        setAllEmployees(allEmployees);
+        setWorkSchedules(workSchedules);
+        setAllPermissions(permissions);
+        setAllRoles(roles);
+
+        // Populate Form Data
+        setFormData({
+            first_name: emp.first_name || '',
+            last_name: emp.last_name || '',
+            email: emp.email || '',
+            phone: emp.phone || '',
+            tc_no: emp.tc_no || '',
+            birth_date: emp.birth_date || '',
+            address: emp.address || '',
+            emergency_contact_name: emp.emergency_contact_name || '',
+            emergency_contact_phone: emp.emergency_contact_phone || '',
+
+            department: emp.department || '',
+            job_position: emp.job_position || '',
+            hired_date: emp.hired_date || '',
+            employee_code: emp.employee_code || '',
+            is_active: emp.is_active,
+            is_frozen: emp.is_frozen || false,
+            is_profile_editable: emp.is_profile_editable || false,
+
+            // Map managers to structured format
+            primary_managers: (managers.primary_managers || []).map(m => ({
+                manager_id: m.id,
+                department_id: m.department_id || '',
+                job_position_id: m.job_position_id || ''
+            })),
+            secondary_managers: (managers.secondary_managers || []).map(m => ({
+                manager_id: m.id,
+                department_id: m.department_id || '',
+                job_position_id: m.job_position_id || ''
+            })),
+
+            // DepartmentAssignment (secondary assignments)
+            assignments: (emp.assignments || []).filter(a => !a.is_primary).map(a => ({
+                department_id: a.department?.id || a.department || '',
+                job_position_id: a.job_position?.id || a.job_position || '',
+                manager_id: a.manager?.id || a.manager || '',
+            })),
+
+            work_schedule: emp.work_schedule?.id || '',
+            daily_break_allowance: emp.daily_break_allowance || 0,
+            shift_start: emp.shift_start || '',
+            shift_end: emp.shift_end || '',
+            lunch_start: emp.lunch_start || '12:30',
+            lunch_end: emp.lunch_end || '13:30',
+            uses_service: emp.uses_service || false,
+            service_tolerance_minutes: emp.service_tolerance_minutes || 0,
+            weekly_ot_limit_hours: emp.weekly_ot_limit_hours ?? 30,
+            weekly_schedule: emp.weekly_schedule || {},
+
+            roles: emp.roles.map(r => r.id),
+            direct_permissions: emp.direct_permissions.map(p => p.id),
+
+            new_password: '', // Reset
+        });
+
+        // If no work schedule is assigned, assume custom mode
+        setCustomScheduleMode(!emp.work_schedule);
+    };
+
     const fetchInitialData = async () => {
         try {
             setLoading(true);
+
+            // Try consolidated endpoint first (single request)
+            try {
+                const { data } = await api.get(`/employees/${id}/detail-init/`);
+                const emp = data.employee;
+                const managers = data.managers || { primary_managers: [], secondary_managers: [] };
+
+                populateState(
+                    emp,
+                    managers,
+                    data.departments || [],
+                    data.job_positions || [],
+                    data.all_employees || [],
+                    data.work_schedules || [],
+                    data.permissions || [],
+                    data.roles || []
+                );
+                return;
+            } catch (initErr) {
+                // Consolidated endpoint not available — fall back to legacy parallel calls
+                if (initErr.response?.status !== 404) {
+                    console.warn('detail-init failed, falling back to legacy calls:', initErr.message);
+                }
+            }
+
+            // Legacy fallback: 8 parallel calls
             const [empRes, deptRes, posRes, allEmpRes, schedRes, permsRes, rolesRes, managersRes] = await Promise.all([
                 api.get(`/employees/${id}/`),
                 api.get('/departments/'),
@@ -90,75 +187,24 @@ const EmployeeDetail = () => {
 
             const emp = empRes.data;
             const managers = managersRes.data;
+            // Legacy managers endpoint returns flat list — convert to grouped format
+            const groupedManagers = Array.isArray(managers)
+                ? {
+                    primary_managers: managers.filter(m => m.is_primary || m.relationship_type === 'PRIMARY'),
+                    secondary_managers: managers.filter(m => !m.is_primary && m.relationship_type !== 'PRIMARY'),
+                }
+                : managers;
 
-            // Admin koruma: hedef çalışan admin mi?
-            setTargetIsAdmin(!!emp.is_admin);
-
-            setDepartments(deptRes.data.results || deptRes.data);
-            setJobPositions(posRes.data.results || posRes.data);
-            setAllEmployees(allEmpRes.data.results || allEmpRes.data);
-            setWorkSchedules(schedRes.data.results || schedRes.data);
-            setAllPermissions(permsRes.data.results || permsRes.data);
-            setAllRoles(rolesRes.data.results || rolesRes.data);
-
-            // Populate Form Data
-            setFormData({
-                first_name: emp.first_name || '',
-                last_name: emp.last_name || '',
-                email: emp.email || '',
-                phone: emp.phone || '',
-                tc_no: emp.tc_no || '',
-                birth_date: emp.birth_date || '',
-                address: emp.address || '',
-                emergency_contact_name: emp.emergency_contact_name || '',
-                emergency_contact_phone: emp.emergency_contact_phone || '',
-
-                department: emp.department || '',
-                job_position: emp.job_position || '',
-                hired_date: emp.hired_date || '',
-                employee_code: emp.employee_code || '',
-                is_active: emp.is_active,
-                is_frozen: emp.is_frozen || false,
-                is_profile_editable: emp.is_profile_editable || false,
-
-                // Map managers to structured format
-                primary_managers: (managers.primary_managers || []).map(m => ({
-                    manager_id: m.id,
-                    department_id: m.department_id || '',
-                    job_position_id: m.job_position_id || ''
-                })),
-                secondary_managers: (managers.secondary_managers || []).map(m => ({
-                    manager_id: m.id,
-                    department_id: m.department_id || '',
-                    job_position_id: m.job_position_id || ''
-                })),
-
-                // DepartmentAssignment (secondary assignments)
-                assignments: (emp.assignments || []).filter(a => !a.is_primary).map(a => ({
-                    department_id: a.department?.id || a.department || '',
-                    job_position_id: a.job_position?.id || a.job_position || '',
-                    manager_id: a.manager?.id || a.manager || '',
-                })),
-
-                work_schedule: emp.work_schedule?.id || '',
-                daily_break_allowance: emp.daily_break_allowance || 0,
-                shift_start: emp.shift_start || '',
-                shift_end: emp.shift_end || '',
-                lunch_start: emp.lunch_start || '12:30',
-                lunch_end: emp.lunch_end || '13:30',
-                uses_service: emp.uses_service || false,
-                service_tolerance_minutes: emp.service_tolerance_minutes || 0,
-                weekly_ot_limit_hours: emp.weekly_ot_limit_hours ?? 30,
-                weekly_schedule: emp.weekly_schedule || {},
-
-                roles: emp.roles.map(r => r.id),
-                direct_permissions: emp.direct_permissions.map(p => p.id),
-
-                new_password: '', // Reset
-            });
-
-            // If no work schedule is assigned, assume custom mode
-            setCustomScheduleMode(!emp.work_schedule);
+            populateState(
+                emp,
+                groupedManagers,
+                deptRes.data.results || deptRes.data,
+                posRes.data.results || posRes.data,
+                allEmpRes.data.results || allEmpRes.data,
+                schedRes.data.results || schedRes.data,
+                permsRes.data.results || permsRes.data,
+                rolesRes.data.results || rolesRes.data
+            );
 
         } catch (error) {
             console.error('Error fetching employee details:', error);

@@ -107,18 +107,27 @@ const EditDepartmentModal = ({ mode, node, onClose, onSave }) => {
 
 // Simple Modal Component for Employee Details
 // Live Employee Detail Modal
-const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) => {
+const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam, prefetchedStatus }) => {
     const navigate = useNavigate();
     const [liveData, setLiveData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!employee) return;
+        if (!canViewProfile) {
+            setLoading(false);
+            return;
+        }
+
+        // Use prefetched batch data if available
+        if (prefetchedStatus) {
+            setLiveData(prefetchedStatus);
+            setLoading(false);
+            return;
+        }
+
+        // Fallback to individual call if batch data not available
         const fetchStatus = async () => {
-            if (!employee) return;
-            if (!canViewProfile) {
-                setLoading(false);
-                return;
-            }
             try {
                 const res = await api.get(`/attendance/live-status/${employee.id}/status/`);
                 setLiveData(res.data);
@@ -129,7 +138,7 @@ const EmployeeDetailModal = ({ employee, onClose, canViewProfile, isInTeam }) =>
             }
         };
         fetchStatus();
-    }, [employee, canViewProfile]);
+    }, [employee, canViewProfile, prefetchedStatus]);
 
     if (!employee) return null;
 
@@ -757,6 +766,7 @@ const OrganizationChart = () => {
     const [showSecondaryManagers, setShowSecondaryManagers] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [batchStatusMap, setBatchStatusMap] = useState({});
     const [isEditMode, setIsEditMode] = useState(false);
     const [modalConfig, setModalConfig] = useState(null); // { mode: 'create'|'edit', node: ... }
     const [managerEditTarget, setManagerEditTarget] = useState(null); // { id, name } for ManagerEditModal
@@ -950,6 +960,45 @@ const OrganizationChart = () => {
         }
     };
 
+    // Collect all employee IDs from tree structure for batch status fetch
+    const collectEmployeeIds = useCallback((nodes) => {
+        const ids = [];
+        const walk = (n) => {
+            if (n.id && typeof n.id === 'number') ids.push(n.id);
+            if (n.employees) n.employees.forEach(walk);
+            if (n.children) n.children.forEach(walk);
+        };
+        nodes.forEach(walk);
+        return [...new Set(ids)];
+    }, []);
+
+    // Batch fetch live statuses for all employees in the tree
+    const fetchBatchStatus = useCallback(async (tree) => {
+        const ids = collectEmployeeIds(tree);
+        if (ids.length === 0) return;
+
+        // Split into chunks of 100 (API limit)
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 100) {
+            chunks.push(ids.slice(i, i + 100));
+        }
+
+        try {
+            const results = await Promise.all(
+                chunks.map(chunk =>
+                    api.get(`/attendance/live-status/batch-status/?employee_ids=${chunk.join(',')}`)
+                        .then(res => res.data)
+                        .catch(() => ({}))
+                )
+            );
+            const merged = {};
+            results.forEach(r => Object.assign(merged, r));
+            setBatchStatusMap(merged);
+        } catch {
+            // Batch failed entirely — modal will fallback to individual calls
+        }
+    }, [collectEmployeeIds]);
+
     useEffect(() => {
         fetchHierarchy();
         // Fetch subordinate IDs for profile button visibility
@@ -958,6 +1007,13 @@ const OrganizationChart = () => {
             setSubordinateIds(new Set(data.map(e => e.id)));
         }).catch(() => {});
     }, []);
+
+    // Fetch batch statuses after tree data loads
+    useEffect(() => {
+        if (treeData.length > 0) {
+            fetchBatchStatus(treeData);
+        }
+    }, [treeData, fetchBatchStatus]);
 
     // Fit-to-screen: measure content via scrollWidth/scrollHeight (unaffected by CSS transforms)
     const fitToScreen = useCallback(() => {
@@ -1151,6 +1207,7 @@ const OrganizationChart = () => {
                     isInTeam={
                         selectedEmployee && subordinateIds.has(selectedEmployee.id)
                     }
+                    prefetchedStatus={batchStatusMap[String(selectedEmployee?.id)] || null}
                 />
             )}
 

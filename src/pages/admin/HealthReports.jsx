@@ -105,17 +105,26 @@ const HealthReports = () => {
             if (dateTo) params.append('date_to', dateTo);
             params.append('page', page);
 
-            const [listRes, summaryRes] = await Promise.allSettled([
-                api.get(`/health-reports/?${params.toString()}`),
-                api.get(`/health-reports/summary/?report_type=${activeTab}`)
-            ]);
+            try {
+                // Combined endpoint — single request
+                const res = await api.get(`/health-reports/list-with-summary/?${params.toString()}`);
+                setReports(res.data.results || []);
+                setTotalCount(res.data.count || 0);
+                if (res.data.summary) setSummary(res.data.summary);
+            } catch {
+                // Legacy fallback — two separate requests
+                const [listRes, summaryRes] = await Promise.allSettled([
+                    api.get(`/health-reports/?${params.toString()}`),
+                    api.get(`/health-reports/summary/?report_type=${activeTab}`)
+                ]);
 
-            if (listRes.status === 'fulfilled') {
-                setReports(listRes.value.data.results || listRes.value.data);
-                setTotalCount(listRes.value.data.count || (listRes.value.data.results || listRes.value.data).length);
-            }
-            if (summaryRes.status === 'fulfilled') {
-                setSummary(summaryRes.value.data);
+                if (listRes.status === 'fulfilled') {
+                    setReports(listRes.value.data.results || listRes.value.data);
+                    setTotalCount(listRes.value.data.count || (listRes.value.data.results || listRes.value.data).length);
+                }
+                if (summaryRes.status === 'fulfilled') {
+                    setSummary(summaryRes.value.data);
+                }
             }
         } catch (error) {
             toast.error('Veriler yüklenirken hata oluştu.');

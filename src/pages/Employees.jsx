@@ -1182,26 +1182,43 @@ const Employees = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes, hierRes] = await Promise.all([
-                api.get('/employees/', { params: showInactive ? { include_inactive: 'true' } : {} }),
-                api.get('/departments/'),
-                api.get('/job-positions/'),
-                api.get('/permissions/'),
-                api.get('/attendance/fiscal-calendars/'),
-                api.get('/roles/'),
-                api.get('/employee-tags/'),
-                api.get('/departments/hierarchy/', { params: showInactive ? { include_inactive: 'true' } : {} }).catch(() => ({ data: [] }))
-            ]);
-            setEmployees(empRes.data.results || empRes.data);
-            setDepartments(deptRes.data.results || deptRes.data);
-            setJobPositions(posRes.data.results || posRes.data);
-            setPermissions(permRes.data.results || permRes.data);
-            setWorkSchedules(schedRes.data.results || schedRes.data);
-            setRoles(roleRes.data.results || roleRes.data);
-            setAvailableTags(tagsRes.data.results || tagsRes.data);
-            setHierarchyData(hierRes.data || []);
+            // Consolidated init endpoint — single request for all 8 data sources
+            const params = showInactive ? { include_inactive: 'true' } : {};
+            const res = await api.get('/employees/init-data/', { params });
+            const d = res.data;
+            setEmployees(d.employees || []);
+            setDepartments(d.departments || []);
+            setJobPositions(d.job_positions || []);
+            setPermissions(d.permissions || []);
+            setWorkSchedules(d.fiscal_calendars || []);
+            setRoles(d.roles || []);
+            setAvailableTags(d.employee_tags || []);
+            setHierarchyData(d.department_hierarchy || []);
         } catch (error) {
-            console.error("Data fetch error:", error);
+            console.warn("init-data failed, falling back to legacy parallel calls:", error?.message);
+            // Legacy fallback — 8 parallel calls
+            try {
+                const [empRes, deptRes, posRes, permRes, schedRes, roleRes, tagsRes, hierRes] = await Promise.all([
+                    api.get('/employees/', { params: showInactive ? { include_inactive: 'true' } : {} }),
+                    api.get('/departments/'),
+                    api.get('/job-positions/'),
+                    api.get('/permissions/'),
+                    api.get('/attendance/fiscal-calendars/'),
+                    api.get('/roles/'),
+                    api.get('/employee-tags/'),
+                    api.get('/departments/hierarchy/', { params: showInactive ? { include_inactive: 'true' } : {} }).catch(() => ({ data: [] }))
+                ]);
+                setEmployees(empRes.data.results || empRes.data);
+                setDepartments(deptRes.data.results || deptRes.data);
+                setJobPositions(posRes.data.results || posRes.data);
+                setPermissions(permRes.data.results || permRes.data);
+                setWorkSchedules(schedRes.data.results || schedRes.data);
+                setRoles(roleRes.data.results || roleRes.data);
+                setAvailableTags(tagsRes.data.results || tagsRes.data);
+                setHierarchyData(hierRes.data || []);
+            } catch (fallbackError) {
+                console.error("Legacy fallback also failed:", fallbackError);
+            }
         } finally {
             setLoading(false);
         }

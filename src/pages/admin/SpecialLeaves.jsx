@@ -121,20 +121,29 @@ const SpecialLeaves = () => {
             if (dateTo) params.append('date_to', dateTo);
             params.append('page', page);
 
-            const summaryParams = new URLSearchParams();
-            if (activeTab !== 'ALL') summaryParams.append('leave_type', activeTab);
+            try {
+                // Combined endpoint — single request
+                const res = await api.get(`/special-leaves/list-with-summary/?${params.toString()}`);
+                setLeaves(res.data.results || []);
+                setTotalCount(res.data.count || 0);
+                if (res.data.summary) setSummary(res.data.summary);
+            } catch {
+                // Legacy fallback — two separate requests
+                const summaryParams = new URLSearchParams();
+                if (activeTab !== 'ALL') summaryParams.append('leave_type', activeTab);
 
-            const [listRes, summaryRes] = await Promise.allSettled([
-                api.get(`/special-leaves/?${params.toString()}`),
-                api.get(`/special-leaves/summary/?${summaryParams.toString()}`)
-            ]);
+                const [listRes, summaryRes] = await Promise.allSettled([
+                    api.get(`/special-leaves/?${params.toString()}`),
+                    api.get(`/special-leaves/summary/?${summaryParams.toString()}`)
+                ]);
 
-            if (listRes.status === 'fulfilled') {
-                setLeaves(listRes.value.data.results || listRes.value.data);
-                setTotalCount(listRes.value.data.count || (listRes.value.data.results || listRes.value.data).length);
-            }
-            if (summaryRes.status === 'fulfilled') {
-                setSummary(summaryRes.value.data);
+                if (listRes.status === 'fulfilled') {
+                    setLeaves(listRes.value.data.results || listRes.value.data);
+                    setTotalCount(listRes.value.data.count || (listRes.value.data.results || listRes.value.data).length);
+                }
+                if (summaryRes.status === 'fulfilled') {
+                    setSummary(summaryRes.value.data);
+                }
             }
         } catch {
             toast.error('Veriler yüklenirken hata oluştu.');

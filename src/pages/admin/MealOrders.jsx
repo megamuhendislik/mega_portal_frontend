@@ -214,12 +214,20 @@ const MealOrders = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [listRes, summaryRes] = await Promise.all([
-                api.get(`/meal-orders/?date=${date}`),
-                api.get(`/meal-orders/summary/?date=${date}`)
-            ]);
-            setData(listRes.data.results || listRes.data);
-            setSummary(summaryRes.data);
+            try {
+                // Combined endpoint — single request
+                const res = await api.get(`/meal-orders/list-with-summary/?date=${date}`);
+                setData(res.data.results || []);
+                if (res.data.summary) setSummary(res.data.summary);
+            } catch {
+                // Legacy fallback — two separate requests
+                const [listRes, summaryRes] = await Promise.all([
+                    api.get(`/meal-orders/?date=${date}`),
+                    api.get(`/meal-orders/summary/?date=${date}`)
+                ]);
+                setData(listRes.data.results || listRes.data);
+                setSummary(summaryRes.data);
+            }
         } catch {
             toast.error("Veriler yüklenirken hata oluştu.");
         } finally {
