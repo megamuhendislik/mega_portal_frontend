@@ -765,7 +765,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 const pctBuckets = Array.from({ length: 20 }, (_, i) => ({
                     label: i === 19 ? '95%+' : `${i * 5}–${(i + 1) * 5}%`,
                     members: people.filter(p => {
-                        const idx = Math.min(9, Math.floor(p.pct / 10));
+                        const idx = Math.min(19, Math.floor(p.pct / 5));
                         return idx === i;
                     }),
                 }));
@@ -810,8 +810,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             {activeBuckets.map((b, i) => {
                                 const h = maxCount > 0 ? (b.members.length / maxCount) * 100 : 0;
                                 const barColor = otDistMode === 'pct'
-                                    ? (i >= 9 ? 'bg-red-500' : i >= 7 ? 'bg-amber-400' : 'bg-emerald-500')
-                                    : (i >= 7 ? 'bg-red-500' : i >= 5 ? 'bg-amber-400' : i >= 1 ? 'bg-emerald-500' : 'bg-slate-300');
+                                    ? (i >= 18 ? 'bg-red-500' : i >= 14 ? 'bg-amber-400' : 'bg-emerald-500')
+                                    : (i >= 10 ? 'bg-red-500' : i >= 8 ? 'bg-amber-400' : i >= 1 ? 'bg-emerald-500' : 'bg-slate-300');
                                 return (
                                     <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                                         {b.members.length > 0 && (
