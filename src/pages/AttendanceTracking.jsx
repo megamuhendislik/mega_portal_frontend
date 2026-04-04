@@ -738,7 +738,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             </div>
 
             {/* Haftalık Ek Mesai Limitleri */}
-            {monthlyWeeklyOt?.weeks?.length > 0 && scope !== 'DAILY' && (
+            {monthlyWeeklyOt?.weeks?.length > 0 && (
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <Clock size={14} className="text-amber-500" />
