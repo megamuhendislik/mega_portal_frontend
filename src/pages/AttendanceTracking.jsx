@@ -17,6 +17,7 @@ import {
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
 import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
+import { Drawer } from 'antd';
 import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 
 const TeamAnalyticsV3 = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalyticsV3'));
@@ -79,6 +80,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [weeklyOtDrawerRefDate, setWeeklyOtDrawerRefDate] = useState(null);
     const [weeklyOtDrawerEmployeeId, setWeeklyOtDrawerEmployeeId] = useState(null);
     const [weeklyOtDrawerEmployeeName, setWeeklyOtDrawerEmployeeName] = useState(null);
+    const [otDistMode, setOtDistMode] = useState('hours'); // 'hours' | 'pct'
+    const [otDistDrawerOpen, setOtDistDrawerOpen] = useState(false);
+    const [otDistDrawerData, setOtDistDrawerData] = useState(null);
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -103,13 +107,12 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [initialLoad, setInitialLoad] = useState(true);
     const [fetchError, setFetchError] = useState(null);
     const [fiscalPeriod, setFiscalPeriod] = useState({ start: null, end: null });
+    const needsDepartments = React.useRef(true);
 
     useEffect(() => {
-        fetchAllData(true);
-    }, []);
-
-    useEffect(() => {
-        fetchAllData(false);
+        const includeDepts = needsDepartments.current;
+        needsDepartments.current = false;
+        fetchAllData(includeDepts);
     }, [year, month, selectedDept]);
 
     // Manual refresh handler (called by refresh button)
@@ -744,29 +747,51 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 const withLimit = stats.filter(s => s.weekly_ot_limit_hours > 0);
                 if (!withLimit.length) return null;
 
-                // Dağılım bucket'ları: %0-10, %10-20, ..., %90-100+
-                const distBuckets = Array.from({ length: 10 }, (_, i) => ({
-                    min: i * 10, max: i === 9 ? Infinity : (i + 1) * 10,
-                    label: i === 9 ? '90%+' : `${i * 10}–${(i + 1) * 10}%`,
-                    members: [],
-                }));
-
-                withLimit.forEach(s => {
-                    const used = (s.weekly_ot_used_seconds || 0) / 3600;
+                const people = withLimit.map(s => {
+                    const used = Math.round(((s.weekly_ot_used_seconds || 0) / 3600) * 10) / 10;
                     const limit = s.weekly_ot_limit_hours;
                     const pct = Math.round((used / (limit || 1)) * 100);
-                    const idx = Math.min(9, Math.floor(pct / 10));
-                    distBuckets[idx].members.push({ name: s.employee_name, id: s.employee_id, used: Math.round(used * 10) / 10, limit, pct });
+                    return { name: s.employee_name, id: s.employee_id, used, limit, pct };
                 });
 
-                const maxCount = Math.max(1, ...distBuckets.map(b => b.members.length));
-                const total = withLimit.length;
-                const activeCount = withLimit.filter(s => (s.weekly_ot_used_seconds || 0) > 0).length;
+                // Saat buckets: 0, 1-5, 5-10, 10-15, 15-20, 20-25, 25-30, 30+
+                const hourBuckets = [
+                    { label: '0', min: 0, max: 0.01 },
+                    { label: '1–5', min: 0.01, max: 5 },
+                    { label: '5–10', min: 5, max: 10 },
+                    { label: '10–15', min: 10, max: 15 },
+                    { label: '15–20', min: 15, max: 20 },
+                    { label: '20–25', min: 20, max: 25 },
+                    { label: '25–30', min: 25, max: 30 },
+                    { label: '30+', min: 30, max: Infinity },
+                ].map(b => ({ ...b, members: people.filter(p => p.used >= b.min && p.used < b.max) }));
 
-                // Hafta seçici verisi
+                // Yüzde buckets: 0-10, 10-20, ..., 90+
+                const pctBuckets = Array.from({ length: 10 }, (_, i) => ({
+                    label: i === 9 ? '90%+' : `${i * 10}–${(i + 1) * 10}%`,
+                    members: people.filter(p => {
+                        const idx = Math.min(9, Math.floor(p.pct / 10));
+                        return idx === i;
+                    }),
+                }));
+
+                const total = people.length;
+                const activeCount = people.filter(p => p.used > 0).length;
+                const avgUsed = total > 0 ? Math.round(people.reduce((s, p) => s + p.used, 0) / total * 10) / 10 : 0;
+                const avgLimit = total > 0 ? Math.round(people.reduce((s, p) => s + p.limit, 0) / total * 10) / 10 : 0;
+
                 const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
                 const fmtD = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
                 const todayTs = new Date().setHours(0, 0, 0, 0);
+
+                const activeBuckets = otDistMode === 'hours' ? hourBuckets : pctBuckets;
+                const maxCount = Math.max(1, ...activeBuckets.map(b => b.members.length));
+
+                const openBucketDrawer = (bucket) => {
+                    if (!bucket.members.length) return;
+                    setOtDistDrawerData({ label: bucket.label, members: bucket.members.sort((a, b) => b.used - a.used), avgUsed, avgLimit, total, activeCount });
+                    setOtDistDrawerOpen(true);
+                };
 
                 return (
                     <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
@@ -775,46 +800,41 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                 <BarChart3 size={14} className="text-amber-500" />
                                 Ekip Haftalık OT Dağılımı
                             </h3>
-                            <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                                <span>{activeCount}/{total} kişi aktif</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> &lt;70%</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 70–90%</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> 90%+</span>
+                            <div className="flex items-center gap-3">
+                                {/* Saat / Yüzde toggle */}
+                                <div className="flex items-center bg-slate-100 rounded-md p-0.5">
+                                    <button onClick={() => setOtDistMode('hours')} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${otDistMode === 'hours' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}>Saat</button>
+                                    <button onClick={() => setOtDistMode('pct')} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${otDistMode === 'pct' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}>%</button>
+                                </div>
+                                <span className="text-[10px] text-slate-400">{activeCount}/{total} aktif · ort {avgUsed}/{avgLimit}sa</span>
                             </div>
                         </div>
 
-                        {/* Bar chart — dikey barlar */}
-                        <div className="flex items-end gap-1 h-24 mb-1">
-                            {distBuckets.map((b, i) => {
+                        {/* Bar chart */}
+                        <div className="flex items-end gap-1 h-28 mb-1">
+                            {activeBuckets.map((b, i) => {
                                 const h = maxCount > 0 ? (b.members.length / maxCount) * 100 : 0;
-                                const barColor = i >= 9 ? 'bg-red-500' : i >= 7 ? 'bg-amber-400' : 'bg-emerald-500';
-                                const hoverColor = i >= 9 ? 'hover:bg-red-600' : i >= 7 ? 'hover:bg-amber-500' : 'hover:bg-emerald-600';
+                                const barColor = otDistMode === 'pct'
+                                    ? (i >= 9 ? 'bg-red-500' : i >= 7 ? 'bg-amber-400' : 'bg-emerald-500')
+                                    : (i >= 7 ? 'bg-red-500' : i >= 5 ? 'bg-amber-400' : i >= 1 ? 'bg-emerald-500' : 'bg-slate-300');
                                 return (
-                                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                                         {b.members.length > 0 && (
                                             <span className="text-[9px] font-bold text-slate-500 mb-0.5 tabular-nums">{b.members.length}</span>
                                         )}
                                         <div
-                                            className={`w-full rounded-t-md ${barColor} ${hoverColor} cursor-pointer transition-all duration-300`}
+                                            className={`w-full rounded-t-md ${barColor} cursor-pointer transition-all duration-300 hover:opacity-80`}
                                             style={{ height: `${Math.max(h > 0 ? 4 : 0, h)}%` }}
-                                            onClick={() => {
-                                                if (b.members.length === 1) {
-                                                    setWeeklyOtDrawerEmployeeId(b.members[0].id);
-                                                    setWeeklyOtDrawerEmployeeName(b.members[0].name);
-                                                    setWeeklyOtDrawerRefDate(null);
-                                                    setWeeklyOtDrawerOpen(true);
-                                                }
-                                            }}
-                                            title={b.members.length > 0 ? b.members.map(m => `${m.name} (${m.used}/${m.limit}sa)`).join('\n') : 'Kimse yok'}
+                                            onClick={() => openBucketDrawer(b)}
+                                            title={b.members.length > 0 ? `${b.label}: ${b.members.length} kişi\nTıkla → detay` : 'Kimse yok'}
                                         />
                                         {h === 0 && <div className="w-full h-px bg-slate-200 rounded" />}
                                     </div>
                                 );
                             })}
                         </div>
-                        {/* X axis labels */}
                         <div className="flex gap-1 mb-3">
-                            {distBuckets.map((b, i) => (
+                            {activeBuckets.map((b, i) => (
                                 <div key={i} className="flex-1 text-center text-[7px] text-slate-400 font-medium">{b.label}</div>
                             ))}
                         </div>
@@ -823,20 +843,27 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         {monthlyWeeklyOt?.weeks?.length > 0 && (
                             <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                                 <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Hafta</span>
-                                {monthlyWeeklyOt.weeks.map((week, i) => {
+                                {monthlyWeeklyOt.weeks.map((week, wi) => {
                                     const wsDate = new Date(week.window_start + 'T00:00:00');
                                     const weDate = new Date(week.window_end + 'T23:59:59');
                                     const isCurrent = wsDate.getTime() <= todayTs && weDate.getTime() >= todayTs;
                                     const isPast = weDate.getTime() < todayTs;
                                     const cls = isCurrent
                                         ? 'bg-indigo-100 border-indigo-300 text-indigo-700 font-bold'
-                                        : isPast
-                                            ? 'bg-slate-50 border-slate-200 text-slate-500'
-                                            : 'bg-white border-dashed border-slate-200 text-slate-400';
+                                        : isPast ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-white border-dashed border-slate-200 text-slate-400';
                                     return (
-                                        <button key={i}
+                                        <button key={wi}
                                             className={`flex-1 py-1 rounded-md border text-[8px] transition-colors hover:bg-indigo-50 ${cls}`}
-                                            onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                            onClick={() => {
+                                                setOtDistDrawerData({
+                                                    label: `${fmtD(week.window_start)} – ${fmtD(week.window_end)}${isCurrent ? ' (Bu Hafta)' : ''}`,
+                                                    members: people.sort((a, b) => b.used - a.used),
+                                                    avgUsed, avgLimit, total, activeCount,
+                                                    isWeekView: true,
+                                                    weekData: week,
+                                                });
+                                                setOtDistDrawerOpen(true);
+                                            }}
                                             title={`${fmtD(week.window_start)} – ${fmtD(week.window_end)}`}
                                         >
                                             {fmtD(week.window_start)}
@@ -849,6 +876,72 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </div>
                 );
             })()}
+
+            {/* OT Dağılım Detay Drawer */}
+            <Drawer
+                title={otDistDrawerData ? (
+                    <div className="flex items-center gap-2">
+                        <BarChart3 size={16} className="text-amber-500" />
+                        <span className="text-sm font-semibold">OT Dağılımı: {otDistDrawerData.label}</span>
+                    </div>
+                ) : 'OT Dağılımı'}
+                open={otDistDrawerOpen}
+                onClose={() => setOtDistDrawerOpen(false)}
+                width={480}
+                destroyOnClose
+            >
+                {otDistDrawerData && (
+                    <div className="space-y-4">
+                        {/* Ekip özeti */}
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
+                                <div className="text-[10px] text-slate-400 font-semibold uppercase">Ekip Ort.</div>
+                                <div className="text-lg font-black text-slate-700 tabular-nums">{otDistDrawerData.avgUsed}<span className="text-xs font-medium text-slate-400">sa</span></div>
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
+                                <div className="text-[10px] text-slate-400 font-semibold uppercase">Ort. Limit</div>
+                                <div className="text-lg font-black text-slate-700 tabular-nums">{otDistDrawerData.avgLimit}<span className="text-xs font-medium text-slate-400">sa</span></div>
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
+                                <div className="text-[10px] text-slate-400 font-semibold uppercase">Aktif</div>
+                                <div className="text-lg font-black text-slate-700 tabular-nums">{otDistDrawerData.activeCount}<span className="text-xs font-medium text-slate-400">/{otDistDrawerData.total}</span></div>
+                            </div>
+                        </div>
+
+                        {/* Kişi listesi — collapsable */}
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{otDistDrawerData.members.length} Kişi</div>
+                        <div className="space-y-1 max-h-[calc(100vh-280px)] overflow-y-auto">
+                            {otDistDrawerData.members.map(m => {
+                                const ratio = m.used / (m.limit || 1);
+                                const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                                const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+                                return (
+                                    <details key={m.id} className="rounded-lg border border-slate-100 overflow-hidden group">
+                                        <summary className="flex items-center justify-between px-3 py-2 cursor-pointer list-none hover:bg-slate-50 transition-colors">
+                                            <span className="text-xs font-semibold text-slate-700 truncate max-w-[180px]">{m.name}</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${barColor} rounded-full`} style={{ width: `${Math.min(100, m.pct)}%` }} />
+                                                </div>
+                                                <span className={`text-[11px] font-bold tabular-nums ${textColor} w-16 text-right`}>{m.used}/{m.limit}</span>
+                                                <span className="text-[9px] text-slate-400 w-8 text-right tabular-nums">{m.pct}%</span>
+                                            </div>
+                                        </summary>
+                                        <div className="px-3 pb-2 pt-1 border-t border-slate-50 bg-slate-50/50">
+                                            <button
+                                                className="text-[10px] text-indigo-600 font-semibold hover:underline"
+                                                onClick={() => { setWeeklyOtDrawerEmployeeId(m.id); setWeeklyOtDrawerEmployeeName(m.name); setWeeklyOtDrawerRefDate(null); setOtDistDrawerOpen(false); setWeeklyOtDrawerOpen(true); }}
+                                            >
+                                                Haftalık OT Detayını Görüntüle →
+                                            </button>
+                                        </div>
+                                    </details>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </Drawer>
 
             <WeeklyOtDetailDrawer
                 open={weeklyOtDrawerOpen}
