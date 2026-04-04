@@ -14,6 +14,7 @@ import {
     DocumentMagnifyingGlassIcon,
     XMarkIcon,
     QueueListIcon,
+    ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -33,6 +34,7 @@ const CATEGORY_LABELS = {
     notification_gap: 'Eksik Bildirim',
     ot_card_verification: 'OT-Kart Doğrulama',
     leave_credit_mismatch: 'İzin Kredi Uyumsuzluğu',
+    excuse_leave_integrity: 'Mazeret İzni Bütünlüğü',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -707,6 +709,35 @@ export default function DataIntegrityAuditTab() {
         setBulkLogs(null);
     }, []);
 
+    const [exporting, setExporting] = useState(false);
+    const downloadTxtReport = useCallback(async () => {
+        setExporting(true);
+        try {
+            const params = new URLSearchParams();
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
+            if (employeeId) params.set('employee_id', employeeId);
+            const res = await api.get(`/system/health-check/data-integrity-audit-export/?${params.toString()}`, {
+                responseType: 'blob',
+            });
+            const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            a.download = `Veri_Butunlugu_Raporu_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setError(err.response?.data?.error || 'TXT rapor indirilemedi');
+        } finally {
+            setExporting(false);
+        }
+    }, [dateFrom, dateTo, employeeId]);
+
     const totalFixed = results
         ? Object.values(results.categories || {}).reduce((sum, cat) => sum + (cat.fixed || 0), 0)
         : 0;
@@ -793,6 +824,18 @@ export default function DataIntegrityAuditTab() {
                                 <WrenchScrewdriverIcon className="w-4 h-4" />
                             )}
                             Düzelt
+                        </button>
+                        <button
+                            onClick={downloadTxtReport}
+                            disabled={exporting}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors"
+                        >
+                            {exporting ? (
+                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <ArrowDownTrayIcon className="w-4 h-4" />
+                            )}
+                            {exporting ? 'İndiriliyor...' : 'TXT İndir'}
                         </button>
                     </div>
                 </div>
