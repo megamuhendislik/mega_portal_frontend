@@ -479,8 +479,9 @@ const ClaimableDayCard = ({ day, expanded, onToggle, selections, onSelectionChan
     const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
     const year = _p ? _p.year : '';
 
-    const totalOtSeconds = intended ? (intended.actual_overtime_seconds || 0) : potentials.reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
-    const entryCount = intended ? (intended.entries?.length || 0) : potentials.length;
+    const totalOtSeconds = (intended ? (intended.actual_overtime_seconds || 0) : 0)
+        + potentials.reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
+    const entryCount = (intended ? (intended.entries?.length || 0) : 0) + potentials.length;
     const hasOt = totalOtSeconds > 0;
     const isPast = isDatePast(date);
     const hasCheckOut = intended ? !!intended.check_out_time : true;
@@ -1002,7 +1003,7 @@ const AssignedOvertimeTab = () => {
                 if (managers.length > 1) { const p = managers.find(m => m.relationship_type === 'PRIMARY'); return p ? p.id : managers[0]?.id; }
                 return undefined;
             })();
-            if (day.intended && sel.entryIds.length > 0) {
+            if (day.intended) {
                 const payload = { reason: reason || undefined, potential_ids: sel.potentialIds.length > 0 ? sel.potentialIds : undefined };
                 if (autoApprover) payload.target_approver_id = autoApprover;
                 await api.post(`/overtime-assignments/${day.intended.assignment_id}/claim/`, payload);
@@ -1013,6 +1014,9 @@ const AssignedOvertimeTab = () => {
             }
             setExpandedDay(null);
             fetchData();
+            setDaySelections(prev => { const next = { ...prev }; delete next[date]; return next; });
+            setDayReasons(prev => { const next = { ...prev }; delete next[date]; return next; });
+            setDayErrors(prev => { const next = { ...prev }; delete next[date]; return next; });
         } catch (err) {
             setDayErrors(prev => ({ ...prev, [date]: err.response?.data?.error || 'Talep oluşturulamadı.' }));
         } finally {
