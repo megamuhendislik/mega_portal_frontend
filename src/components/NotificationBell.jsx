@@ -38,7 +38,7 @@ const NotificationBell = () => {
         }
     };
 
-    useSmartPolling(fetchUnreadCount, 15000); // Poll count every 15s
+    useSmartPolling(fetchUnreadCount, 30000); // Poll count every 30s
 
     // 2. Heavy Fetch for List (Only when open or initial)
     const fetchNotifications = async () => {

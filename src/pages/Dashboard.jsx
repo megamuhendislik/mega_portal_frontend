@@ -221,65 +221,99 @@ const Dashboard = () => {
     // Period dates state (updated from backend response)
     const [periodDates, setPeriodDates] = useState(null);
 
-    const fetchDashboardData = async () => {
-        // Align with Attendance.jsx: use user.employee.id if available
-        const employeeId = user?.employee?.id || user?.id;
+    // Fallback: old 7-call pattern (used if consolidated endpoint is unavailable)
+    const fetchDashboardDataLegacy = async (employeeId, startStr, endStr) => {
+        const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes, birthdayRes] = await Promise.allSettled([
+            api.get('/attendance/today_summary/'),
+            api.get(`/attendance/monthly_summary/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`),
+            api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`),
+            api.get('/leave-requests/'),
+            api.get('/leave-requests/pending_approvals/'),
+            api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${getIstanbulDateOffset(14)}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true&include_cardless=true`),
+            api.get('/leave-requests/birthday-balance/')
+        ]);
 
+        if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
+        if (monthRes.status === 'fulfilled') {
+            setMonthlySummary(monthRes.value.data);
+            if (monthRes.value.data.period_start && monthRes.value.data.period_end) {
+                setPeriodDates({
+                    startStr: monthRes.value.data.period_start,
+                    endStr: monthRes.value.data.period_end
+                });
+            }
+        }
+        if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data);
+        if (reqRes.status === 'fulfilled' && reqRes.value.data.results) {
+            setMyRequests(reqRes.value.data.results.slice(0, 5));
+        }
+        if (incReqRes.status === 'fulfilled' && incReqRes.value.data.results) {
+            setIncomingRequests(incReqRes.value.data.results.slice(0, 5));
+        }
+        if (eventsRes.status === 'fulfilled') {
+            const results = eventsRes.value.data.results || eventsRes.value.data || [];
+            const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'OVERTIME_ASSIGNMENT', 'OVERTIME_REQUEST', 'LEAVE_REQUEST', 'HEALTH_REPORT', 'EXTERNAL_DUTY', 'CARDLESS_ENTRY'].includes(e.type));
+            agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+            setCalendarEvents(agendaItems);
+        }
+        if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+    };
+
+    const fetchDashboardData = async () => {
+        const employeeId = user?.employee?.id || user?.id;
         if (!employeeId) { setLoading(false); return; }
 
+        const { startStr, endStr } = getFiscalPeriodDates(selectedFiscal.year, selectedFiscal.month);
+        const calendarStart = getIstanbulToday();
+        const calendarEnd = getIstanbulDateOffset(14);
+
         try {
-            // NOTE: For Smart Polling, we might want to skip setting 'loading' to true on subsequent fetches?
-            // Currently fetchDashboardData sets loading=false at end, but doesn't set it to true at start (except initial state).
-            // So it's safe for background polling (won't flash skeleton).
+            // Try consolidated endpoint first (single API call)
+            const res = await api.get(
+                `/attendance/dashboard-consolidated/?employee_id=${employeeId}` +
+                `&start_date=${startStr}&end_date=${endStr}` +
+                `&calendar_start=${calendarStart}&calendar_end=${calendarEnd}`
+            );
+            const data = res.data;
 
-            const { startStr, endStr } = getFiscalPeriodDates(selectedFiscal.year, selectedFiscal.month);
-
-            const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes, birthdayRes] = await Promise.allSettled([
-                api.get('/attendance/today_summary/'),
-                api.get(`/attendance/monthly_summary/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`),
-                api.get(`/attendance/my_attendance/?start_date=${startStr}&end_date=${endStr}`), // Need logs for charts
-                api.get('/leave-requests/'), // Simplified: just getting my leaves for now
-                api.get('/leave-requests/pending_approvals/'),
-                api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${getIstanbulDateOffset(14)}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true&include_cardless=true`),
-                api.get('/leave-requests/birthday-balance/')
-            ]);
-
-            if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
-            if (monthRes.status === 'fulfilled') {
-                setMonthlySummary(monthRes.value.data);
-                // Store period dates from backend for other uses
-                if (monthRes.value.data.period_start && monthRes.value.data.period_end) {
+            if (data.today_summary) setTodaySummary(data.today_summary);
+            if (data.monthly_summary) {
+                setMonthlySummary(data.monthly_summary);
+                if (data.monthly_summary.period_start && data.monthly_summary.period_end) {
                     setPeriodDates({
-                        startStr: monthRes.value.data.period_start,
-                        endStr: monthRes.value.data.period_end
+                        startStr: data.monthly_summary.period_start,
+                        endStr: data.monthly_summary.period_end
                     });
                 }
             }
-            if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data);
+            if (data.attendance_logs) setLogs(data.attendance_logs);
 
-            // Requests
-            if (reqRes.status === 'fulfilled' && reqRes.value.data.results) {
-                setMyRequests(reqRes.value.data.results.slice(0, 5));
+            // my_requests: consolidated returns flat array (no pagination wrapper)
+            if (data.my_requests) {
+                setMyRequests(Array.isArray(data.my_requests) ? data.my_requests.slice(0, 5) : []);
             }
-            if (incReqRes.status === 'fulfilled' && incReqRes.value.data.results) {
-                setIncomingRequests(incReqRes.value.data.results.slice(0, 5));
+            // pending_approvals: consolidated returns flat array
+            if (data.pending_approvals) {
+                setIncomingRequests(Array.isArray(data.pending_approvals) ? data.pending_approvals.slice(0, 5) : []);
             }
 
-            if (eventsRes.status === 'fulfilled') {
-                const results = eventsRes.value.data.results || eventsRes.value.data || [];
-                // Show all upcoming event types: personal events, holidays, OT, leaves, health reports
+            if (data.calendar_events) {
+                const results = Array.isArray(data.calendar_events) ? data.calendar_events : [];
                 const agendaItems = results.filter(e => ['PERSONAL', 'HOLIDAY', 'OVERTIME_ASSIGNMENT', 'OVERTIME_REQUEST', 'LEAVE_REQUEST', 'HEALTH_REPORT', 'EXTERNAL_DUTY', 'CARDLESS_ENTRY'].includes(e.type));
-
-                // Sort by start date
                 agendaItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-
                 setCalendarEvents(agendaItems);
             }
 
-            if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+            if (data.birthday_balance) setBirthdayBalance(data.birthday_balance);
 
         } catch (error) {
-            console.error("Dashboard Load Error", error);
+            // Fallback to legacy 7-call pattern (backwards compatibility during deployment)
+            console.warn("Consolidated dashboard endpoint failed, falling back to legacy calls", error?.response?.status);
+            try {
+                await fetchDashboardDataLegacy(employeeId, startStr, endStr);
+            } catch (legacyError) {
+                console.error("Dashboard Load Error (legacy fallback)", legacyError);
+            }
         } finally {
             setLoading(false);
         }
