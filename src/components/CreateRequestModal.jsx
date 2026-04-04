@@ -819,6 +819,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         // Mazeret izni bakiye kontrolü (öğle arası düşülerek)
         const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
         if (isExcuseLeave && excuseBalance) {
+            // Çalışma günü değilse gönderme
+            if (excuseBalance.schedule_info?.is_off_day) return true;
             if (excuseBalance.hours_remaining <= 0) return true;
             if (leaveForm.start_time && leaveForm.end_time) {
                 const [sh, sm] = leaveForm.start_time.split(':').map(Number);

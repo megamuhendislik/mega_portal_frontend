@@ -541,6 +541,21 @@ export const LeaveRequestForm = ({
                             );
                         })()}
                     </div>
+                    {/* İzin günü uyarısı */}
+                    {excuseBalance?.schedule_info?.is_off_day && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                            <p className="text-sm font-bold text-red-700">Bu tarih çalışma günü değil.</p>
+                            <p className="text-xs text-red-500 mt-0.5">Mazeret izni sadece normal çalışma günlerinde oluşturulabilir.</p>
+                        </div>
+                    )}
+
+                    {/* Vardiya bilgisi */}
+                    {excuseBalance?.schedule_info && !excuseBalance.schedule_info.is_off_day && excuseBalance.schedule_info.shift_start && (
+                        <div className="p-2 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p className="text-xs text-blue-700">Vardiya: <strong>{excuseBalance.schedule_info.shift_start} - {excuseBalance.schedule_info.shift_end}</strong> — Saat seçimi bu aralıkta olmalıdır.</p>
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Saat Aralığı <span className="text-red-500">*</span></label>
                         <div className="grid grid-cols-2 gap-3">
@@ -549,9 +564,12 @@ export const LeaveRequestForm = ({
                                 <input
                                     type="time"
                                     value={leaveForm.start_time || ''}
+                                    min={excuseBalance?.schedule_info?.shift_start || undefined}
+                                    max={excuseBalance?.schedule_info?.shift_end || undefined}
                                     onChange={e => setLeaveForm({ ...leaveForm, start_time: e.target.value })}
                                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
                                     required
+                                    disabled={excuseBalance?.schedule_info?.is_off_day}
                                 />
                             </div>
                             <div>
@@ -559,9 +577,12 @@ export const LeaveRequestForm = ({
                                 <input
                                     type="time"
                                     value={leaveForm.end_time || ''}
+                                    min={excuseBalance?.schedule_info?.shift_start || undefined}
+                                    max={excuseBalance?.schedule_info?.shift_end || undefined}
                                     onChange={e => setLeaveForm({ ...leaveForm, end_time: e.target.value })}
                                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none"
                                     required
+                                    disabled={excuseBalance?.schedule_info?.is_off_day}
                                 />
                             </div>
                         </div>
@@ -570,6 +591,20 @@ export const LeaveRequestForm = ({
                             const [eh, em] = leaveForm.end_time.split(':').map(Number);
                             const rawMinutes = (eh * 60 + em) - (sh * 60 + sm);
                             if (rawMinutes <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
+
+                            // Vardiya dışı kontrolü
+                            const si2 = excuseBalance?.schedule_info;
+                            if (si2?.shift_start && si2?.shift_end) {
+                                const [ssH, ssM] = si2.shift_start.split(':').map(Number);
+                                const [seH, seM] = si2.shift_end.split(':').map(Number);
+                                const shiftStartMin = ssH * 60 + ssM;
+                                const shiftEndMin = seH * 60 + seM;
+                                const startMin = sh * 60 + sm;
+                                const endMin = eh * 60 + em;
+                                if (endMin <= shiftStartMin || startMin >= shiftEndMin) {
+                                    return <p className="text-xs text-red-600 font-bold mt-2">Seçilen saatler vardiya ({si2.shift_start}-{si2.shift_end}) dışında. Mazeret izni vardiya saatleri içinde olmalıdır.</p>;
+                                }
+                            }
 
                             // Öğle arası düşümü (takvimden gelen lunch_start/lunch_end)
                             let lunchDeductMinutes = 0;
@@ -1527,7 +1562,7 @@ export const ExternalDutyForm = ({
                     <AlertCircle className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Mesai Hesaplama</h4>
-                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Günlük mesai hedefine kadar <strong>normal mesai</strong>, hedefi aşan kısım <strong>ek mesai (fazla mesai)</strong> olarak değerlendirilecektir.</p>
+                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Vardiya saatleri içindeki süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>ek mesai</strong> olarak değerlendirilir. Tatil/hafta sonu günlerinde tüm süre ek mesai sayılır.</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-5">
@@ -1700,10 +1735,9 @@ export const ExternalDutyForm = ({
                                             <p className="font-bold">Hesaplama Kuralları</p>
                                             <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
                                                 <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
-                                                {shiftTargetMin > 0 && (
-                                                    <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
-                                                )}
-                                                <li>Hedefi aşan süre <strong>ek mesai</strong> olarak otomatik onaylanır</li>
+                                                <li>Vardiya saatleri içindeki görev süresi <strong>normal mesai</strong> olarak yazılır</li>
+                                                <li>Vardiya saatleri dışındaki görev süresi <strong>ek mesai</strong> olarak değerlendirilir</li>
+                                                <li>Ek mesai, haftalık limit dahilinde otomatik onaylanır</li>
                                                 {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>ek mesai</strong> sayılır</li>}
                                                 <li>Aynı gün kart verisi varsa birleştirilir</li>
                                             </ul>
