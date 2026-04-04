@@ -272,17 +272,18 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     {formatTime(req.start_time)} - {formatTime(req.end_time)}
                                                 </span>
                                             )}
-                                            {/* External Duty (Dış Görev) saat bilgisi */}
-                                            {req.type === 'LEAVE' && req.request_type_detail?.category === 'EXTERNAL_DUTY' && (() => {
+                                            {/* LEAVE / External Duty saat bilgisi */}
+                                            {(req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') && (() => {
                                                 const segs = req.date_segments || [];
                                                 const st = req.start_time || (segs.length > 0 ? segs[0]?.start_time : null);
                                                 const et = req.end_time || (segs.length > 0 ? segs[segs.length - 1]?.end_time : null);
                                                 if (!st || !et) return null;
+                                                const isExtDuty = req.type === 'EXTERNAL_DUTY' || req.request_type_detail?.category === 'EXTERNAL_DUTY';
                                                 return (
-                                                    <span className="text-xs font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5">
+                                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit mt-0.5 ${isExtDuty ? 'text-purple-700 bg-purple-50' : 'text-blue-700 bg-blue-50'}`}>
                                                         <Clock size={10} />
                                                         {formatTime(st)} - {formatTime(et)}
-                                                        {segs.length > 1 && <span className="text-purple-400 font-normal ml-0.5">({segs.length} gün)</span>}
+                                                        {segs.length > 1 && <span className={`font-normal ml-0.5 ${isExtDuty ? 'text-purple-400' : 'text-blue-400'}`}>({segs.length} gün)</span>}
                                                     </span>
                                                 );
                                             })()}
@@ -306,8 +307,8 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                         <div className="max-w-[280px] space-y-1">
                                             {/* Type-specific badges */}
                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                {req.type === 'LEAVE' && (() => {
-                                                    const isExternalDuty = req.request_type_detail?.category === 'EXTERNAL_DUTY';
+                                                {(req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') && (() => {
+                                                    const isExternalDuty = req.type === 'EXTERNAL_DUTY' || req.request_type_detail?.category === 'EXTERNAL_DUTY';
                                                     const segs = req.date_segments || req.duty_work_info?.date_segments;
                                                     const hasTimes = req.start_time && req.end_time;
                                                     const segSingle = !hasTimes && Array.isArray(segs) && segs.length === 1 && segs[0]?.start_time && segs[0]?.end_time;

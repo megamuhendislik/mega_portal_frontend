@@ -504,6 +504,10 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             {isPendingDuty && segments.length === 0 && req.start_time && req.end_time && (
                                 <InfoRow label="Çalışma Saatleri" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} />
                             )}
+                            {/* Pending: global times always shown as summary when available */}
+                            {isPendingDuty && segments.length > 0 && req.start_time && req.end_time && (
+                                <InfoRow label="Saat Aralığı" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} highlight />
+                            )}
                         </Section>
                         <div className="md:col-span-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                             <p className="font-bold mb-1">Onay Bilgilendirme</p>

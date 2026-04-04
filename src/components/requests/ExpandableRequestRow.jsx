@@ -186,13 +186,25 @@ const TimeRange = ({ req }) => {
             );
         }
         if (segTimes?.segmentCount > 1) {
+            // Multi-day: show first segment's time range
+            const segs = req.date_segments || req.duty_work_info?.date_segments || [];
+            const firstSeg = segs.find(s => s.start_time && s.end_time);
+            if (firstSeg) {
+                return (
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                        <Clock size={10} />
+                        {formatTime(firstSeg.start_time)} - {formatTime(firstSeg.end_time)}
+                        <span className="text-indigo-400 font-normal ml-0.5">({segTimes.segmentCount} gün)</span>
+                    </span>
+                );
+            }
             return (
                 <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
                     {segTimes.segmentCount} gün <span className="text-indigo-400 font-normal">(parçalı)</span>
                 </span>
             );
         }
-        return <span className="text-xs text-indigo-400">Tam gün</span>;
+        return <span className="text-xs text-indigo-400">Saat bilgisi yok</span>;
     }
 
     if (req.type === 'OVERTIME' && req.start_time && req.end_time) {
@@ -228,21 +240,34 @@ const TimeRange = ({ req }) => {
     if (req.type === 'LEAVE') {
         if (req.start_time && req.end_time) {
             return (
-                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
                     {formatTime(req.start_time)} - {formatTime(req.end_time)}
                 </span>
             );
         }
-        // Fallback: check date_segments for External Duty partial-day entries
+        // Fallback: check date_segments for partial-day entries
         const segTimes = getSegmentTimes(req);
         if (segTimes?.start && segTimes?.end) {
             return (
-                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
                     {formatTime(segTimes.start)} - {formatTime(segTimes.end)}
                 </span>
             );
         }
         if (segTimes?.segmentCount > 1) {
+            const segs = req.date_segments || [];
+            const firstSeg = segs.find(s => s.start_time && s.end_time);
+            if (firstSeg) {
+                return (
+                    <span className="text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                        <Clock size={10} />
+                        {formatTime(firstSeg.start_time)} - {formatTime(firstSeg.end_time)}
+                        <span className="text-blue-400 font-normal ml-0.5">({segTimes.segmentCount} gün)</span>
+                    </span>
+                );
+            }
             return (
                 <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                     {segTimes.segmentCount} gün <span className="text-blue-400 font-normal">(parçalı)</span>
@@ -250,12 +275,14 @@ const TimeRange = ({ req }) => {
             );
         }
         const days = req.total_days || 1;
-        const totalH = days * 9;
-        return (
-            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                {totalH} Saat{days > 1 && <span className="text-blue-400 font-normal"> (Tam gün × {days})</span>}
-            </span>
-        );
+        if (days > 1) {
+            return (
+                <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                    Tam gün × {days}
+                </span>
+            );
+        }
+        return <span className="text-xs text-slate-400">Saat bilgisi yok</span>;
     }
     if (req.type === 'SPECIAL_LEAVE') {
         const days = req.total_days || 1;
@@ -344,8 +371,10 @@ const DurationCell = ({ req }) => {
         const h = Math.floor(hours);
         const m = Math.round((hours - h) * 60);
         const label = m > 0 ? `${h}s ${m}dk` : `${h} Saat`;
-        const isFullDay = days >= 1;
-        return <span className="text-xs font-bold text-blue-700">{label} {isFullDay && <span className="text-blue-400 font-normal">(Tam gün{days > 1 ? ` x ${days}` : ''})</span>}</span>;
+        if (days > 1) {
+            return <span className="text-xs font-bold text-blue-700">{label} <span className="text-blue-400 font-normal">({days} gün)</span></span>;
+        }
+        return <span className="text-xs font-bold text-blue-700">{label}</span>;
     }
     if (req.type === 'CARDLESS_ENTRY' && req.check_in_time && req.check_out_time) {
         return <span className="text-xs font-bold text-purple-700">{calculateDuration(req.check_in_time, req.check_out_time)}</span>;
