@@ -12,6 +12,7 @@ import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
 import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
+import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
@@ -48,6 +49,9 @@ const Attendance = () => {
     const [viewYear, setViewYear] = useState(initialYear);
     const [viewMonth, setViewMonth] = useState(safeInitialMonth); // 0-based index
     const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
+    const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
+    const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
+    const [weeklyOtDrawerRefDate, setWeeklyOtDrawerRefDate] = useState(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -57,6 +61,14 @@ const Attendance = () => {
         'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
     ];
     const years = [2024, 2025, 2026, 2027];
+
+    // --- EFFECT: Fetch monthly weekly OT ---
+    useEffect(() => {
+        const apiMonth = viewMonth + 1; // 0-based → 1-based
+        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+            params: { month_view: true, year: viewYear, month: apiMonth }
+        }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
+    }, [viewYear, viewMonth]);
 
     // --- EFFECT: Init ---
     useEffect(() => {
@@ -372,6 +384,51 @@ const Attendance = () => {
                             <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} onMonthSelect={(year, month) => { setViewYear(year); setViewMonth(month - 1); }} />
                             <MonthlyBalanceCarousel periodSummary={periodSummary} />
                         </div>
+
+                        {/* 2.5. Haftalık Ek Mesai Limitleri */}
+                        {monthlyWeeklyOt?.weeks?.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Clock size={14} className="text-amber-500" />
+                                    Haftalık Ek Mesai Limitleri
+                                </h3>
+                                <div className="space-y-2">
+                                    {monthlyWeeklyOt.weeks.map((week, i) => {
+                                        const isUnlimited = week.is_unlimited;
+                                        const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
+                                        const pct = Math.min(100, Math.round(ratio * 100));
+                                        const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                                        const textColor = isUnlimited ? 'text-slate-500' : (ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600');
+                                        const ws = new Date(week.window_start + 'T00:00:00');
+                                        const we = new Date(week.window_end + 'T00:00:00');
+                                        const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                                        const fmtD = (d) => `${d.getDate()} ${mNames[d.getMonth()]}`;
+                                        return (
+                                            <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
+                                                onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                                title="Detay için tıklayın"
+                                            >
+                                                <div className="text-[10px] text-slate-400 font-semibold w-28 shrink-0">{fmtD(ws)} – {fmtD(we)}</div>
+                                                {isUnlimited ? (
+                                                    <div className="flex-1 text-xs text-slate-400 italic">Sınırsız</div>
+                                                ) : (
+                                                    <div className="flex-1">
+                                                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className={`text-xs font-bold tabular-nums ${textColor} w-20 text-right`}>
+                                                    {isUnlimited ? `${week.used_hours} sa` : `${week.used_hours}/${week.limit_hours} sa`}
+                                                </div>
+                                                {!isUnlimited && <div className="text-[10px] text-slate-400 w-10 text-right tabular-nums">{pct}%</div>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        <WeeklyOtDetailDrawer open={weeklyOtDrawerOpen} onClose={() => setWeeklyOtDrawerOpen(false)} referenceDate={weeklyOtDrawerRefDate} />
 
                         {/* 3. Charts Row */}
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[500px]">

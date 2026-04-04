@@ -302,6 +302,30 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Haftalık OT Limit Barı */}
+                        {safeSummary.weekly_ot_limit_hours > 0 && (() => {
+                            const used = safeSummary.weekly_ot_used_hours || 0;
+                            const limit = safeSummary.weekly_ot_limit_hours;
+                            const ratio = used / (limit || 1);
+                            const pct = Math.min(100, Math.round(ratio * 100));
+                            const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+                            return (
+                                <div className="mt-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100/50">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Haftalık Limit</span>
+                                        <span className={`text-[10px] font-black tabular-nums ${textColor}`}>{used}/{limit} sa</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                                    </div>
+                                    {safeSummary.weekly_ot_remaining_hours != null && (
+                                        <div className="text-[8px] text-slate-400 mt-1 text-right">Kalan: {safeSummary.weekly_ot_remaining_hours} sa</div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
