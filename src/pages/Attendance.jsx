@@ -63,12 +63,14 @@ const Attendance = () => {
     const years = [2024, 2025, 2026, 2027];
 
     // --- EFFECT: Fetch monthly weekly OT ---
+    const weeklyOtEmployeeId = selectedEmployeeId || user?.employee?.id || user?.id;
     useEffect(() => {
         const apiMonth = viewMonth + 1; // 0-based → 1-based
-        api.get('/overtime-requests/weekly-ot-status/', {
-            params: { month_view: true, year: viewYear, month: apiMonth }
-        }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
-    }, [viewYear, viewMonth]);
+        const params = { month_view: true, year: viewYear, month: apiMonth };
+        if (weeklyOtEmployeeId) params.employee_id = weeklyOtEmployeeId;
+        api.get('/overtime-requests/weekly-ot-status/', { params })
+            .then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
+    }, [viewYear, viewMonth, weeklyOtEmployeeId]);
 
     // --- EFFECT: Init ---
     useEffect(() => {
@@ -423,7 +425,7 @@ const Attendance = () => {
                             })()}
                         </div>
 
-                        <WeeklyOtDetailDrawer open={weeklyOtDrawerOpen} onClose={() => setWeeklyOtDrawerOpen(false)} referenceDate={weeklyOtDrawerRefDate} />
+                        <WeeklyOtDetailDrawer open={weeklyOtDrawerOpen} onClose={() => setWeeklyOtDrawerOpen(false)} referenceDate={weeklyOtDrawerRefDate} employeeId={weeklyOtEmployeeId} />
 
                         {/* 3. Charts Row */}
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[500px]">
