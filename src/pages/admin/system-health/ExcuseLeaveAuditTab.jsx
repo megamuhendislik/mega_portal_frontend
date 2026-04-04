@@ -27,6 +27,37 @@ export default function ExcuseLeaveAuditTab() {
     const [dateTo, setDateTo] = useState(() => getIstanbulToday());
     const [employeeId, setEmployeeId] = useState('');
 
+    const downloadTxt = useCallback(async () => {
+        setExporting(true);
+        setError(null);
+        try {
+            const params = new URLSearchParams();
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
+            if (employeeId) params.set('employee_id', employeeId);
+            const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+            const token = localStorage.getItem('access_token');
+            const resp = await fetch(`${baseURL}/system/health-check/data-integrity-audit-export/?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            a.download = `Mazeret_Izni_Denetim_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+        } catch (err) {
+            setError(`TXT rapor indirilemedi: ${err.message || err}`);
+        } finally {
+            setExporting(false);
+        }
+    }, [dateFrom, dateTo, employeeId]);
+
     const runAudit = useCallback(async (mode = 'scan') => {
         if (mode === 'fix') {
             const fixableCount = results?.issues?.filter(i => i.fixable).length || 0;
@@ -61,37 +92,6 @@ export default function ExcuseLeaveAuditTab() {
             setFixing(false);
         }
     }, [dateFrom, dateTo, employeeId, results, downloadTxt]);
-
-    const downloadTxt = useCallback(async () => {
-        setExporting(true);
-        setError(null);
-        try {
-            const params = new URLSearchParams();
-            if (dateFrom) params.set('date_from', dateFrom);
-            if (dateTo) params.set('date_to', dateTo);
-            if (employeeId) params.set('employee_id', employeeId);
-            const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-            const token = localStorage.getItem('access_token');
-            const resp = await fetch(`${baseURL}/system/health-check/data-integrity-audit-export/?${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            a.download = `Mazeret_Izni_Denetim_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-        } catch (err) {
-            setError(`TXT rapor indirilemedi: ${err.message || err}`);
-        } finally {
-            setExporting(false);
-        }
-    }, [dateFrom, dateTo, employeeId]);
 
     const issuesByType = results ? {
         daily_limit: results.issues?.filter(i => i.description?.includes('4.5 saat') && !i.description?.includes('Kümülatif')) || [],
