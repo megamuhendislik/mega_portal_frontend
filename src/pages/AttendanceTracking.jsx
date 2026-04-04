@@ -17,6 +17,7 @@ import {
     EmployeeDetailModal,
 } from './attendance-tracking/AttendanceComponents';
 import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
+import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 
 const TeamAnalyticsV3 = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalyticsV3'));
 
@@ -52,6 +53,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (propMonth != null) setMonth(propMonth + 1);
     }, [propYear, propMonth]);
 
+    // Fetch monthly weekly OT limit data
+    useEffect(() => {
+        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+            params: { month_view: true, year, month }
+        }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
+    }, [year, month]);
+
     const [selectedDept, setSelectedDept] = useState('');
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -64,6 +72,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
     const [teamTab, setTeamTab] = useState('primary'); // 'primary' | 'secondary'
+
+    // Weekly OT limit panel state
+    const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
+    const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
+    const [weeklyOtDrawerRefDate, setWeeklyOtDrawerRefDate] = useState(null);
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -723,6 +736,65 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     </>
                 )}
             </div>
+
+            {/* Haftalık Ek Mesai Limitleri */}
+            {monthlyWeeklyOt?.weeks?.length > 0 && !monthlyWeeklyOt.weeks[0]?.is_unlimited && scope !== 'DAILY' && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Clock size={14} className="text-amber-500" />
+                        Haftalık Ek Mesai Limitleri
+                    </h3>
+                    <div className="space-y-2">
+                        {monthlyWeeklyOt.weeks.map((week, i) => {
+                            const ratio = week.used_hours / (week.limit_hours || 1);
+                            const pct = Math.min(100, Math.round(ratio * 100));
+                            const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+
+                            const ws = new Date(week.window_start + 'T00:00:00');
+                            const we = new Date(week.window_end + 'T00:00:00');
+                            const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                            const fmtD = (d) => `${d.getDate()} ${monthNames[d.getMonth()]}`;
+
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
+                                    onClick={() => {
+                                        setWeeklyOtDrawerRefDate(week.window_start);
+                                        setWeeklyOtDrawerOpen(true);
+                                    }}
+                                    title="Detay için tıklayın"
+                                >
+                                    <div className="text-[10px] text-slate-400 font-semibold w-28 shrink-0">
+                                        {fmtD(ws)} – {fmtD(we)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full ${barColor} rounded-full transition-all duration-700`}
+                                                style={{ width: `${pct}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={`text-xs font-bold tabular-nums ${textColor} w-20 text-right`}>
+                                        {week.used_hours}/{week.limit_hours} sa
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 w-10 text-right tabular-nums">
+                                        {pct}%
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            <WeeklyOtDetailDrawer
+                open={weeklyOtDrawerOpen}
+                onClose={() => setWeeklyOtDrawerOpen(false)}
+                referenceDate={weeklyOtDrawerRefDate}
+            />
 
             {/* Ana Tab'lar — show when secondary exists OR both exist */}
             {secondaryTeam.length > 0 && (
