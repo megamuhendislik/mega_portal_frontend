@@ -410,17 +410,18 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.start_date, leaveForm.end_date, leaveForm.request_type, requestTypes]);
 
-    // Fetch excuse leave balance when EXCUSE_LEAVE is selected
+    // Fetch excuse leave balance when EXCUSE_LEAVE is selected (with date for lunch info)
     useEffect(() => {
         const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
         if (selectedTypeObj?.code === 'EXCUSE_LEAVE') {
-            api.get('/leave/requests/excuse-balance/')
+            const dateParam = leaveForm.start_date ? `?date=${leaveForm.start_date}` : '';
+            api.get(`/leave/requests/excuse-balance/${dateParam}`)
                 .then(res => setExcuseBalance(res.data))
                 .catch(() => setExcuseBalance(null));
         } else {
             setExcuseBalance(null);
         }
-    }, [leaveForm.request_type, requestTypes]);
+    }, [leaveForm.request_type, leaveForm.start_date, requestTypes]);
 
     // Fetch birthday leave balance when BIRTHDAY_LEAVE is selected or LEAVE type opens
     useEffect(() => {
@@ -815,14 +816,23 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const isAnnualLeave = selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
         if (isAnnualLeave && balance && duration > 0 && (duration > balance.available)) return true;
 
-        // Mazeret izni bakiye kontrolü
+        // Mazeret izni bakiye kontrolü (öğle arası düşülerek)
         const isExcuseLeave = selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
         if (isExcuseLeave && excuseBalance) {
             if (excuseBalance.hours_remaining <= 0) return true;
             if (leaveForm.start_time && leaveForm.end_time) {
                 const [sh, sm] = leaveForm.start_time.split(':').map(Number);
                 const [eh, em] = leaveForm.end_time.split(':').map(Number);
-                const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+                let rawMin = (eh * 60 + em) - (sh * 60 + sm);
+                const si = excuseBalance?.schedule_info;
+                if (si?.lunch_start && si?.lunch_end) {
+                    const [ls, lm] = si.lunch_start.split(':').map(Number);
+                    const [le, lem] = si.lunch_end.split(':').map(Number);
+                    const oS = Math.max(sh * 60 + sm, ls * 60 + lm);
+                    const oE = Math.min(eh * 60 + em, le * 60 + lem);
+                    if (oE > oS) rawMin -= (oE - oS);
+                }
+                const hours = rawMin / 60;
                 if (hours > 0 && hours > excuseBalance.hours_remaining) return true;
             }
         }

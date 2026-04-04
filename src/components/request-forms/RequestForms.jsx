@@ -568,8 +568,28 @@ export const LeaveRequestForm = ({
                         {leaveForm.start_time && leaveForm.end_time && (() => {
                             const [sh, sm] = leaveForm.start_time.split(':').map(Number);
                             const [eh, em] = leaveForm.end_time.split(':').map(Number);
-                            const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-                            if (hours <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
+                            const rawMinutes = (eh * 60 + em) - (sh * 60 + sm);
+                            if (rawMinutes <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Bitiş saati başlangıçtan sonra olmalı.</p>;
+
+                            // Öğle arası düşümü (takvimden gelen lunch_start/lunch_end)
+                            let lunchDeductMinutes = 0;
+                            const si = excuseBalance?.schedule_info;
+                            if (si?.lunch_start && si?.lunch_end) {
+                                const [ls, lm] = si.lunch_start.split(':').map(Number);
+                                const [le, lem] = si.lunch_end.split(':').map(Number);
+                                const lunchStartMin = ls * 60 + lm;
+                                const lunchEndMin = le * 60 + lem;
+                                const startMin = sh * 60 + sm;
+                                const endMin = eh * 60 + em;
+                                const overlapStart = Math.max(startMin, lunchStartMin);
+                                const overlapEnd = Math.min(endMin, lunchEndMin);
+                                if (overlapEnd > overlapStart) {
+                                    lunchDeductMinutes = overlapEnd - overlapStart;
+                                }
+                            }
+
+                            const hours = (rawMinutes - lunchDeductMinutes) / 60;
+                            if (hours <= 0) return <p className="text-xs text-red-600 font-bold mt-2">Seçilen aralık tamamen öğle arası içinde.</p>;
                             const fmtHM = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return `${h}:${String(m).padStart(2, '0')}`; };
                             if (hours > 4.5) return <p className="text-xs text-red-600 font-bold mt-2">Günlük mazeret izni en fazla 4 saat 30 dakika olabilir. ({fmtHM(hours)})</p>;
                             const remaining = excuseBalance ? (excuseBalance.hours_remaining - hours) : null;
@@ -579,6 +599,12 @@ export const LeaveRequestForm = ({
                                         <Clock size={14} className="text-orange-600" />
                                         <span className="text-sm font-bold text-orange-700">{fmtHM(hours)} mazeret izni</span>
                                     </div>
+                                    {lunchDeductMinutes > 0 && (
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                            <span>Öğle arası düşüldü: {si.lunch_start}–{si.lunch_end}</span>
+                                            <span className="font-bold text-slate-600">(-{Math.floor(lunchDeductMinutes / 60) > 0 ? `${Math.floor(lunchDeductMinutes / 60)}sa ` : ''}{lunchDeductMinutes % 60 > 0 ? `${lunchDeductMinutes % 60}dk` : ''})</span>
+                                        </div>
+                                    )}
                                     {excuseBalance && (
                                         <div className="flex items-center justify-between text-xs bg-white/60 p-1.5 rounded">
                                             <span className="text-slate-500">Bu taleple kalacak:</span>
