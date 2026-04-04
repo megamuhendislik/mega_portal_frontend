@@ -371,44 +371,6 @@ const Attendance = () => {
                 ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
 
-                        {/* 1. Haftalık OT Limitleri — kompakt yatay, her zaman görünür */}
-                        {monthlyWeeklyOt?.weeks?.length > 0 && (() => {
-                            const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                            const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
-                            return (
-                                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <Clock size={12} className="text-amber-500" />
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Haftalık OT</span>
-                                    </div>
-                                    {monthlyWeeklyOt.weeks.map((week, i) => {
-                                        const isUnlimited = week.is_unlimited;
-                                        const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                                        const pct = Math.min(100, Math.round(ratio * 100));
-                                        const ringColor = ratio >= 0.9 ? 'border-red-400 bg-red-50' : ratio >= 0.7 ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50';
-                                        const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
-                                        return (
-                                            <div key={i}
-                                                className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-xl border ${ringColor} cursor-pointer hover:shadow-md transition-all`}
-                                                onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
-                                                title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
-                                            >
-                                                <div className="text-[8px] text-slate-400 font-semibold whitespace-nowrap">{fmtShort(week.window_start)}–{fmtShort(week.window_end)}</div>
-                                                <div className={`text-[11px] font-black tabular-nums ${textColor}`}>
-                                                    {isUnlimited ? `${week.used_hours}sa` : `${week.used_hours}/${week.limit_hours}`}
-                                                </div>
-                                                {!isUnlimited && (
-                                                    <div className="w-full h-1 bg-slate-200 rounded-full mt-0.5 overflow-hidden">
-                                                        <div className={`h-full rounded-full ${ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${pct}%` }} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })()}
-
                         {/* 1.5. Hero Daily Summary (Today) - ONLY IF DAILY SCOPE */}
                         {viewScope === 'DAILY' && (
                             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
@@ -421,6 +383,44 @@ const Attendance = () => {
                         <div id="attendance-content-start" className="bg-white p-1 rounded-3xl scroll-mt-24">
                             <MonthlyPerformanceSummary logs={logs} periodSummary={periodSummary} onMonthSelect={(year, month) => { setViewYear(year); setViewMonth(month - 1); }} />
                             <MonthlyBalanceCarousel periodSummary={periodSummary} />
+
+                            {/* Haftalık OT Limitleri — kompakt yatay chip'ler */}
+                            {monthlyWeeklyOt?.weeks?.length > 0 && (() => {
+                                const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                                const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
+                                return (
+                                    <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-t border-slate-100">
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <Clock size={12} className="text-amber-500" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Haftalık OT</span>
+                                        </div>
+                                        {monthlyWeeklyOt.weeks.map((week, i) => {
+                                            const isUnlimited = week.is_unlimited;
+                                            const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
+                                            const pct = Math.min(100, Math.round(ratio * 100));
+                                            const ringColor = ratio >= 0.9 ? 'border-red-400 bg-red-50' : ratio >= 0.7 ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50';
+                                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+                                            return (
+                                                <div key={i}
+                                                    className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-xl border ${ringColor} cursor-pointer hover:shadow-md transition-all`}
+                                                    onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
+                                                    title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\nDetay için tıklayın`}
+                                                >
+                                                    <div className="text-[8px] text-slate-400 font-semibold whitespace-nowrap">{fmtShort(week.window_start)}–{fmtShort(week.window_end)}</div>
+                                                    <div className={`text-[11px] font-black tabular-nums ${textColor}`}>
+                                                        {isUnlimited ? `${week.used_hours}sa` : `${week.used_hours}/${week.limit_hours}`}
+                                                    </div>
+                                                    {!isUnlimited && (
+                                                        <div className="w-full h-1 bg-slate-200 rounded-full mt-0.5 overflow-hidden">
+                                                            <div className={`h-full rounded-full ${ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <WeeklyOtDetailDrawer open={weeklyOtDrawerOpen} onClose={() => setWeeklyOtDrawerOpen(false)} referenceDate={weeklyOtDrawerRefDate} />
