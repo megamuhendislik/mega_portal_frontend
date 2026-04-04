@@ -1,24 +1,24 @@
 import React, { useState, useCallback } from 'react';
 import { Drawer, Progress, Table, Tag, Spin, Empty } from 'antd';
-import { Clock, AlertCircle, XCircle, Lightbulb } from 'lucide-react';
+import { Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
 const STATUS_CONFIG = {
-  APPROVED:  { label: 'Onayl\u0131',     color: 'green' },
+  APPROVED:  { label: 'Onaylı',     color: 'green' },
   PENDING:   { label: 'Bekleyen',   color: 'orange' },
   REJECTED:  { label: 'Reddedilen', color: 'red' },
   POTENTIAL: { label: 'Potansiyel', color: 'blue' },
 };
 
 const SOURCE_LABELS = {
-  INTENDED:  'Planl\u0131',
-  POTENTIAL: 'Alg\u0131lanan',
+  INTENDED:  'Planlı',
+  POTENTIAL: 'Algılanan',
   MANUAL:    'Manuel',
   AUTO:      'Otomatik',
 };
 
-const DAY_NAMES = ['Paz', 'Pzt', 'Sal', '\u00c7ar', 'Per', 'Cum', 'Cmt'];
-const MONTH_NAMES = ['Oca', '\u015eub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'A\u011fu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const DAY_NAMES = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const MONTH_NAMES = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
 function formatDate(dateStr) {
   const dt = new Date(dateStr + 'T00:00:00');
@@ -65,11 +65,11 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
         if (!r.start_time || !r.end_time) return <span className="text-gray-400">-</span>;
         const st = r.start_time.length > 5 ? r.start_time.slice(0, 5) : r.start_time;
         const et = r.end_time.length > 5 ? r.end_time.slice(0, 5) : r.end_time;
-        return <span className="text-xs font-mono">{st}\u2013{et}</span>;
+        return <span className="text-xs font-mono">{st}–{et}</span>;
       },
     },
     {
-      title: 'S\u00fcre',
+      title: 'Süre',
       dataIndex: 'hours',
       key: 'hours',
       width: 70,
@@ -106,7 +106,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       title={
         <div className="flex items-center gap-2">
           <Clock size={18} className="text-blue-500" />
-          <span className="text-sm font-semibold">Haftal\u0131k Ek Mesai Detay\u0131</span>
+          <span className="text-sm font-semibold">Haftalık Ek Mesai Detayı</span>
           {employeeName && <Tag color="blue" className="text-[10px] ml-1">{employeeName}</Tag>}
         </div>
       }
@@ -119,19 +119,19 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       {loading ? (
         <div className="flex justify-center py-12"><Spin size="large" /></div>
       ) : !data ? (
-        <Empty description="Veri y\u00fcklenemedi" />
+        <Empty description="Veri yüklenemedi" />
       ) : (
         <div className="space-y-4">
           {/* Hafta bilgisi */}
           <div className="text-xs text-gray-400 text-center">
-            {formatWindowDate(data.window_start)} \u2014 {formatWindowDate(data.window_end)}
+            {formatWindowDate(data.window_start)} — {formatWindowDate(data.window_end)}
           </div>
 
           {/* Progress */}
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold text-gray-700">
-                {data.is_unlimited ? 'S\u0131n\u0131rs\u0131z' : `${data.used_hours} / ${data.limit_hours} saat`}
+                {data.is_unlimited ? 'Sınırsız' : `${data.used_hours} / ${data.limit_hours} saat`}
               </span>
               {!data.is_unlimited && (
                 <span className="text-xs text-gray-500">
@@ -150,12 +150,12 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
             {data.is_over_limit && (
               <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
                 <AlertCircle size={12} />
-                Haftal\u0131k limit a\u015f\u0131ld\u0131!
+                Haftalık limit aşıldı!
               </div>
             )}
           </div>
 
-          {/* Durum \u00f6zeti */}
+          {/* Durum özeti */}
           {summaryItems.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
               {summaryItems.map(item => {
@@ -178,7 +178,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
             pagination={false}
             size="small"
             scroll={{ y: 340 }}
-            locale={{ emptyText: 'Bu hafta OT kayd\u0131 yok' }}
+            locale={{ emptyText: 'Bu hafta OT kaydı yok' }}
             className="mt-2"
           />
         </div>
