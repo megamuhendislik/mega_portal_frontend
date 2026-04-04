@@ -266,6 +266,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setSpecialLeaveType('');
             setSpecialLeaveForm({ start_date: '', end_date: '', description: '' });
             setSpecialLeaveFiles([]);
+            setWeeklyOtForDuty(null);
             // Reset forms
             setOvertimeForm({
                 date: getIstanbulToday(),

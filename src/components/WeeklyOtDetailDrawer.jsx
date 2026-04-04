@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Drawer, Progress, Table, Tag, Spin, Empty } from 'antd';
-import { Clock, CheckCircle, AlertCircle, XCircle, Lightbulb } from 'lucide-react';
+import { Clock, AlertCircle, XCircle, Lightbulb } from 'lucide-react';
 import api from '../services/api';
 
 const STATUS_CONFIG = {
-  APPROVED:  { label: 'Onayl\u0131',     color: 'green',  icon: CheckCircle },
-  PENDING:   { label: 'Bekleyen',   color: 'orange', icon: Clock },
-  REJECTED:  { label: 'Reddedilen', color: 'red',    icon: XCircle },
-  POTENTIAL: { label: 'Potansiyel', color: 'blue',   icon: Lightbulb },
+  APPROVED:  { label: 'Onayl\u0131',     color: 'green' },
+  PENDING:   { label: 'Bekleyen',   color: 'orange' },
+  REJECTED:  { label: 'Reddedilen', color: 'red' },
+  POTENTIAL: { label: 'Potansiyel', color: 'blue' },
 };
 
 const SOURCE_LABELS = {
@@ -33,13 +33,8 @@ function formatWindowDate(dateStr) {
 export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employeeName, referenceDate }) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
-  const lastFetchKey = useRef(null);
 
   const fetchData = useCallback(() => {
-    const fetchKey = `${employeeId}-${referenceDate}`;
-    if (lastFetchKey.current === fetchKey && data) return;
-    lastFetchKey.current = fetchKey;
-
     setLoading(true);
     const params = { include_all: true };
     if (employeeId) params.employee_id = employeeId;
@@ -49,7 +44,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       .then(res => setData(res.data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [employeeId, referenceDate, data]);
+  }, [employeeId, referenceDate]);
 
   const ratio = data ? (data.used_hours / (data.limit_hours || 1)) : 0;
   const progressColor = ratio >= 0.9 ? '#ef4444' : ratio >= 0.7 ? '#f59e0b' : '#22c55e';
@@ -136,18 +131,22 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold text-gray-700">
-                {data.used_hours} / {data.limit_hours} saat
+                {data.is_unlimited ? 'S\u0131n\u0131rs\u0131z' : `${data.used_hours} / ${data.limit_hours} saat`}
               </span>
-              <span className="text-xs text-gray-500">
-                Kalan: <span className="font-semibold">{data.remaining_hours}</span> saat
-              </span>
+              {!data.is_unlimited && (
+                <span className="text-xs text-gray-500">
+                  Kalan: <span className="font-semibold">{data.remaining_hours}</span> saat
+                </span>
+              )}
             </div>
-            <Progress
-              percent={Math.min(100, Math.round(ratio * 100))}
-              strokeColor={progressColor}
-              showInfo={false}
-              size="small"
-            />
+            {!data.is_unlimited && (
+              <Progress
+                percent={Math.min(100, Math.round(ratio * 100))}
+                strokeColor={progressColor}
+                showInfo={false}
+                size="small"
+              />
+            )}
             {data.is_over_limit && (
               <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
                 <AlertCircle size={12} />

@@ -838,6 +838,7 @@ const Dashboard = () => {
         <WeeklyOtDetailDrawer
             open={weeklyOtDrawerOpen}
             onClose={() => setWeeklyOtDrawerOpen(false)}
+            employeeName={user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : undefined}
         />
         </>
     );
