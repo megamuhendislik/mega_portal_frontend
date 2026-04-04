@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2, Download } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2, Download, Check } from 'lucide-react';
 import { Modal, message } from 'antd';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +9,7 @@ import ModalOverlay from './ui/ModalOverlay';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 
-const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate }) => {
+const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate, onApprove, onReject, mode = 'personal' }) => {
   // EXTERNAL_DUTY uses LEAVE endpoints/logic — normalize for all internal checks
   const requestType = rawRequestType === 'EXTERNAL_DUTY' ? 'LEAVE' : rawRequestType;
   const { user } = useAuth();
@@ -32,6 +32,46 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   const [editForm, setEditForm] = useState({});
   const [editLoading, setEditLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+
+  // Approve/Reject from modal (incoming mode)
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [rejectLoading, setRejectLoading] = useState(false);
+
+  // Reset reject mode when request changes
+  useEffect(() => {
+    setRejectMode(false);
+    setRejectReason('');
+  }, [request?.id]);
+
+  const handleModalApprove = async () => {
+    if (!onApprove) return;
+    setApproveLoading(true);
+    try {
+      await onApprove(request, 'Onaylandı');
+      onClose();
+    } catch (err) {
+      // Error handled by parent
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  const handleModalReject = async () => {
+    if (!onReject || !rejectReason.trim()) return;
+    setRejectLoading(true);
+    try {
+      await onReject(request, rejectReason.trim());
+      setRejectMode(false);
+      setRejectReason('');
+      onClose();
+    } catch (err) {
+      // Error handled by parent
+    } finally {
+      setRejectLoading(false);
+    }
+  };
 
   const toggleSection = (key) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -1299,6 +1339,56 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Incoming mode: Approve/Reject buttons */}
+            {mode === 'incoming' && request?.status === 'PENDING' && request?.is_actionable !== false && onApprove && !rejectMode && !isEditing && (
+              <>
+                <button
+                  onClick={handleModalApprove}
+                  disabled={approveLoading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  <Check size={16} />
+                  {approveLoading ? 'Onaylanıyor...' : 'Onayla'}
+                </button>
+                <button
+                  onClick={() => setRejectMode(true)}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold rounded-xl transition-colors"
+                >
+                  <X size={16} />
+                  Reddet
+                </button>
+              </>
+            )}
+            {/* Reject reason input */}
+            {mode === 'incoming' && rejectMode && !isEditing && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && rejectReason.trim()) handleModalReject();
+                    if (e.key === 'Escape') { setRejectMode(false); setRejectReason(''); }
+                  }}
+                  placeholder="Reddetme sebebi..."
+                  className="w-64 px-4 py-2.5 border border-red-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-white"
+                />
+                <button
+                  onClick={handleModalReject}
+                  disabled={!rejectReason.trim() || rejectLoading}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {rejectLoading ? 'Reddediliyor...' : 'Gönder'}
+                </button>
+                <button
+                  onClick={() => { setRejectMode(false); setRejectReason(''); }}
+                  className="px-3 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-bold rounded-xl transition-colors"
+                >
+                  Vazgeç
+                </button>
+              </div>
+            )}
             {canEditOrCancel && !isEditing && (
               <>
                 <button

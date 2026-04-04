@@ -200,6 +200,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 return;
             }
             console.log('[handleApprove] Başarılı, veri yenileniyor...');
+            // Optimistic: hemen local state'den kaldır
+            setIncomingRequests(prev => prev.filter(r => !(r.id === req.id && (r._type || r.type) === (req._type || req.type))));
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'APPROVED' } : r));
             message.success('Talep onaylandı');
             await fetchAllData();
             onDataChange?.();
@@ -225,6 +228,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 console.warn('[handleReject] Bilinmeyen talep tipi:', req.type);
                 return;
             }
+            // Optimistic: hemen local state'den kaldır
+            setIncomingRequests(prev => prev.filter(r => !(r.id === req.id && (r._type || r.type) === (req._type || req.type))));
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'REJECTED' } : r));
             message.success('Talep reddedildi');
             await fetchAllData();
             onDataChange?.();
@@ -667,28 +673,33 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             ];
 
     // Approve/reject handler wrapper
-    const wrapApprove = (r, notes) => {
+    const wrapApprove = async (r, notes) => {
         // 23:59 OT uyarı kontrolü
         if ((r.type === 'OVERTIME' || r._type === 'OVERTIME') && isMidnightBoundary(r.end_time)) {
-            Modal.confirm({
-                title: '⚠ Kartsız Çıkış İhtimali',
-                content: 'Bu talep 23:59\'da sonlanan bir kayda dayanmaktadır. Çalışanın çıkış kartı basmamış olma ihtimali bulunmaktadır. Gerçek çalışma saatlerini doğruladığınızdan emin olunuz.',
-                okText: 'Onayla',
-                cancelText: 'İptal',
-                okButtonProps: { danger: false },
-                onOk: () => {
-                    if (r._isSubstitute) handleSubstituteApprove(r);
-                    else handleApprove(r, notes);
-                },
+            return new Promise((resolve, reject) => {
+                Modal.confirm({
+                    title: '⚠ Kartsız Çıkış İhtimali',
+                    content: 'Bu talep 23:59\'da sonlanan bir kayda dayanmaktadır. Çalışanın çıkış kartı basmamış olma ihtimali bulunmaktadır. Gerçek çalışma saatlerini doğruladığınızdan emin olunuz.',
+                    okText: 'Onayla',
+                    cancelText: 'İptal',
+                    okButtonProps: { danger: false },
+                    onOk: async () => {
+                        try {
+                            if (r._isSubstitute) await handleSubstituteApprove(r);
+                            else await handleApprove(r, notes);
+                            resolve();
+                        } catch (e) { reject(e); }
+                    },
+                    onCancel: () => reject(new Error('cancelled')),
+                });
             });
-            return;
         }
-        if (r._isSubstitute) handleSubstituteApprove(r);
-        else handleApprove(r, notes);
+        if (r._isSubstitute) return handleSubstituteApprove(r);
+        else return handleApprove(r, notes);
     };
-    const wrapReject = (r, reason) => {
-        if (r._isSubstitute) handleSubstituteReject(r, reason);
-        else handleReject(r, reason);
+    const wrapReject = async (r, reason) => {
+        if (r._isSubstitute) return handleSubstituteReject(r, reason);
+        else return handleReject(r, reason);
     };
 
     // --- Load older data handler ---
@@ -1074,6 +1085,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 request={selectedRequest}
                 requestType={selectedRequestType}
                 onUpdate={() => { fetchAllData(); onDataChange?.(); }}
+                mode="incoming"
+                onApprove={wrapApprove}
+                onReject={wrapReject}
             />
         </div>
     );
