@@ -651,6 +651,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
+                                onApprove={isReadOnlyType || req.is_actionable === false ? null : onApprove}
+                                onReject={isReadOnlyType || req.is_actionable === false ? null : onReject}
                             />
                         </div>
                     </td>

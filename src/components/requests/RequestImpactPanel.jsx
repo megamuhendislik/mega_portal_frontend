@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Clock, Calendar, FileText, Utensils, CreditCard,
-    ArrowRight, LogIn, LogOut,
+    ArrowRight, LogIn, LogOut, Check, X,
     Info, AlertTriangle, Shield
 } from 'lucide-react';
 
@@ -396,8 +396,19 @@ const MealPanel = ({ req, mode }) => (
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────
-const RequestImpactPanel = ({ req, mode = 'incoming' }) => {
+const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => {
+    const [rejectMode, setRejectMode] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+
     if (!req) return null;
+
+    const handleRejectSubmit = () => {
+        if (rejectReason.trim() && onReject) {
+            onReject(req, rejectReason.trim());
+            setRejectMode(false);
+            setRejectReason('');
+        }
+    };
 
     const renderTypePanel = () => {
         switch (req._type || req.type) {
@@ -510,9 +521,63 @@ const RequestImpactPanel = ({ req, mode = 'incoming' }) => {
         }
     };
 
+    const isPending = req.status === 'PENDING';
+    const showActions = mode === 'incoming' && isPending && (onApprove || onReject);
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4" onClick={(e) => e.stopPropagation()}>
             {renderTypePanel()}
+
+            {showActions && (
+                <div className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-3 border-t border-slate-100">
+                    {!rejectMode ? (
+                        <>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); if (onApprove) onApprove(req, 'Onaylandı'); }}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
+                            >
+                                <Check size={16} />
+                                Onayla
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setRejectMode(true); }}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold rounded-xl transition-colors"
+                            >
+                                <X size={16} />
+                                Reddet
+                            </button>
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="text"
+                                autoFocus
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleRejectSubmit(); }
+                                    if (e.key === 'Escape') { setRejectMode(false); setRejectReason(''); }
+                                }}
+                                placeholder="Reddetme sebebi..."
+                                className="flex-1 px-4 py-2.5 border border-red-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-white"
+                            />
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleRejectSubmit(); }}
+                                disabled={!rejectReason.trim()}
+                                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Gönder
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setRejectMode(false); setRejectReason(''); }}
+                                className="px-3 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-bold rounded-xl transition-colors"
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

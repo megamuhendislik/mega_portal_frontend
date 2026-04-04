@@ -1317,7 +1317,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {(requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && requestType !== 'EXTERNAL_DUTY' && !isEditing && (
+            {mode !== 'incoming' && (requestType === 'LEAVE' || request.leave_type_name || request.request_type_detail) && requestType !== 'EXTERNAL_DUTY' && !isEditing && (
               <button
                 onClick={() => handleDownloadDocx(request.id)}
                 disabled={downloadLoading}
@@ -1327,7 +1327,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 {downloadLoading ? 'İndiriliyor...' : 'Resmi Form İndir (DOCX)'}
               </button>
             )}
-            {requestType === 'LEAVE' && request.request_type_detail?.code === 'ANNUAL_LEAVE' && !isEditing && (
+            {mode !== 'incoming' && requestType === 'LEAVE' && request.request_type_detail?.code === 'ANNUAL_LEAVE' && !isEditing && (
               <button
                 onClick={() => handleDownloadPetition(request.id)}
                 disabled={petitionLoading}
@@ -1424,14 +1424,6 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   {editLoading ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
               </>
-            )}
-            {!isEditing && (
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium"
-              >
-                Kapat
-              </button>
             )}
           </div>
         </div>
