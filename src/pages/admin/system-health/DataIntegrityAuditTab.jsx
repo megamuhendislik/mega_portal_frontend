@@ -712,15 +712,19 @@ export default function DataIntegrityAuditTab() {
     const [exporting, setExporting] = useState(false);
     const downloadTxtReport = useCallback(async () => {
         setExporting(true);
+        setError(null);
         try {
             const params = new URLSearchParams();
             if (dateFrom) params.set('date_from', dateFrom);
             if (dateTo) params.set('date_to', dateTo);
             if (employeeId) params.set('employee_id', employeeId);
-            const res = await api.get(`/system/health-check/data-integrity-audit-export/?${params.toString()}`, {
-                responseType: 'blob',
+            const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+            const token = localStorage.getItem('access_token');
+            const resp = await fetch(`${baseURL}/system/health-check/data-integrity-audit-export/?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
             });
-            const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -729,10 +733,9 @@ export default function DataIntegrityAuditTab() {
             a.download = `Veri_Butunlugu_Raporu_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
             document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         } catch (err) {
-            setError(err.response?.data?.error || 'TXT rapor indirilemedi');
+            setError(`TXT rapor indirilemedi: ${err.message || err}`);
         } finally {
             setExporting(false);
         }
