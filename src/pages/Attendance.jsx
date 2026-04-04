@@ -371,6 +371,38 @@ const Attendance = () => {
                 ) : (activeTab === 'my_attendance' || activeTab === 'team_detail') ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
 
+                        {/* 1. Haftalık OT Limit Barı — her zaman görünür */}
+                        {todaySummary?.weekly_ot_limit_hours > 0 && (() => {
+                            const used = todaySummary.weekly_ot_used_hours || 0;
+                            const limit = todaySummary.weekly_ot_limit_hours;
+                            const remaining = todaySummary.weekly_ot_remaining_hours ?? Math.max(0, limit - used);
+                            const ratio = used / (limit || 1);
+                            const pct = Math.min(100, Math.round(ratio * 100));
+                            const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
+                            const textColor = ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600';
+                            const borderColor = ratio >= 0.9 ? 'border-red-200' : ratio >= 0.7 ? 'border-amber-200' : 'border-slate-200';
+                            return (
+                                <div className={`bg-white rounded-2xl border ${borderColor} p-4 cursor-pointer hover:shadow-md transition-shadow`}
+                                    onClick={() => { setWeeklyOtDrawerRefDate(null); setWeeklyOtDrawerOpen(true); }}
+                                    title="Detay için tıklayın"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Clock size={14} className="text-amber-500" />
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Haftalık Ek Mesai</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`text-sm font-black tabular-nums ${textColor}`}>{used}/{limit} sa</span>
+                                            <span className="text-[10px] text-slate-400 tabular-nums">Kalan: {remaining} sa</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         {/* 1.5. Hero Daily Summary (Today) - ONLY IF DAILY SCOPE */}
                         {viewScope === 'DAILY' && (
                             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
