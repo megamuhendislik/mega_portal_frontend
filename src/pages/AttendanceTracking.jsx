@@ -53,12 +53,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (propMonth != null) setMonth(propMonth + 1);
     }, [propYear, propMonth]);
 
-    // Fetch monthly weekly OT limit data
-    useEffect(() => {
-        api.get('/overtime-requests/weekly-ot-status/', {
-            params: { month_view: true, year, month }
-        }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
-    }, [year, month]);
 
     const [selectedDept, setSelectedDept] = useState('');
     const [stats, setStats] = useState([]);
@@ -74,9 +68,10 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [teamTab, setTeamTab] = useState('primary'); // 'primary' | 'secondary'
 
     // Weekly OT limit panel state
-    const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
     const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
     const [weeklyOtDrawerRefDate, setWeeklyOtDrawerRefDate] = useState(null);
+    const [weeklyOtDrawerEmployeeId, setWeeklyOtDrawerEmployeeId] = useState(null);
+    const [weeklyOtDrawerEmployeeName, setWeeklyOtDrawerEmployeeName] = useState(null);
 
     // Summary State
     const [summary, setSummary] = useState({
@@ -737,70 +732,93 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 )}
             </div>
 
-            {/* Haftalık Ek Mesai Limitleri */}
-            {monthlyWeeklyOt?.weeks?.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <Clock size={14} className="text-amber-500" />
-                        Haftalık Ek Mesai Limitleri
-                    </h3>
-                    <div className="space-y-2">
-                        {monthlyWeeklyOt.weeks.map((week, i) => {
-                            const isUnlimited = week.is_unlimited;
-                            const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                            const pct = Math.min(100, Math.round(ratio * 100));
-                            const barColor = ratio >= 0.9 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-400' : 'bg-emerald-500';
-                            const textColor = isUnlimited ? 'text-slate-500' : (ratio >= 0.9 ? 'text-red-600' : ratio >= 0.7 ? 'text-amber-600' : 'text-emerald-600');
+            {/* Ekip Haftalık OT Dağılımı */}
+            {(() => {
+                const withLimit = stats.filter(s => s.weekly_ot_limit_hours > 0);
+                if (!withLimit.length) return null;
 
-                            const ws = new Date(week.window_start + 'T00:00:00');
-                            const we = new Date(week.window_end + 'T00:00:00');
-                            const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                            const fmtD = (d) => `${d.getDate()} ${monthNames[d.getMonth()]}`;
+                const buckets = [
+                    { key: 'safe', label: 'Güvenli', range: '0–70%', color: 'bg-emerald-500', border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-700', members: [] },
+                    { key: 'warn', label: 'Dikkat', range: '70–90%', color: 'bg-amber-400', border: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-700', members: [] },
+                    { key: 'critical', label: 'Kritik', range: '90%+', color: 'bg-red-500', border: 'border-red-200', bg: 'bg-red-50', text: 'text-red-700', members: [] },
+                ];
 
-                            return (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
-                                    onClick={() => {
-                                        setWeeklyOtDrawerRefDate(week.window_start);
-                                        setWeeklyOtDrawerOpen(true);
-                                    }}
-                                    title="Detay için tıklayın"
-                                >
-                                    <div className="text-[10px] text-slate-400 font-semibold w-28 shrink-0">
-                                        {fmtD(ws)} – {fmtD(we)}
-                                    </div>
-                                    {isUnlimited ? (
-                                        <div className="flex-1 text-xs text-slate-400 italic">Sınırsız</div>
-                                    ) : (
-                                        <div className="flex-1">
-                                            <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${barColor} rounded-full transition-all duration-700`}
-                                                    style={{ width: `${pct}%` }}
-                                                />
-                                            </div>
+                withLimit.forEach(s => {
+                    const used = (s.weekly_ot_used_seconds || 0) / 3600;
+                    const limit = s.weekly_ot_limit_hours;
+                    const ratio = used / (limit || 1);
+                    const person = { name: s.employee_name, id: s.employee_id, used: Math.round(used * 10) / 10, limit, ratio: Math.round(ratio * 100) };
+                    if (ratio >= 0.9) buckets[2].members.push(person);
+                    else if (ratio >= 0.7) buckets[1].members.push(person);
+                    else buckets[0].members.push(person);
+                });
+
+                const total = withLimit.length;
+
+                return (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <Clock size={14} className="text-amber-500" />
+                                Ekip Haftalık OT Dağılımı
+                            </h3>
+                            <span className="text-[10px] text-slate-400">{total} kişi</span>
+                        </div>
+
+                        {/* Stacked bar */}
+                        <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 mb-3">
+                            {buckets.map(b => {
+                                const w = total > 0 ? (b.members.length / total) * 100 : 0;
+                                if (w === 0) return null;
+                                return <div key={b.key} className={`${b.color} transition-all duration-500`} style={{ width: `${w}%` }} title={`${b.label}: ${b.members.length} kişi`} />;
+                            })}
+                        </div>
+
+                        {/* Segment cards */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {buckets.map(b => (
+                                <details key={b.key} className={`rounded-xl border ${b.border} ${b.bg} overflow-hidden group`}>
+                                    <summary className="flex items-center justify-between px-3 py-2 cursor-pointer list-none">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2.5 h-2.5 rounded-full ${b.color}`} />
+                                            <span className={`text-[11px] font-bold ${b.text}`}>{b.label}</span>
+                                        </div>
+                                        <span className={`text-sm font-black ${b.text}`}>{b.members.length}</span>
+                                    </summary>
+                                    {b.members.length > 0 && (
+                                        <div className="px-3 pb-2 space-y-1">
+                                            {b.members.sort((a, c) => c.ratio - a.ratio).map(m => (
+                                                <div key={m.id}
+                                                    className="flex items-center justify-between py-1 px-2 rounded-lg bg-white/60 hover:bg-white cursor-pointer transition-colors"
+                                                    onClick={() => { setWeeklyOtDrawerRefDate(null); setWeeklyOtDrawerOpen(true); setWeeklyOtDrawerEmployeeId(m.id); setWeeklyOtDrawerEmployeeName(m.name); }}
+                                                >
+                                                    <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[100px]">{m.name}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-12 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${b.color} rounded-full`} style={{ width: `${Math.min(100, m.ratio)}%` }} />
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-slate-500 tabular-nums w-14 text-right">{m.used}/{m.limit}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
-                                    <div className={`text-xs font-bold tabular-nums ${textColor} w-20 text-right`}>
-                                        {isUnlimited ? `${week.used_hours} sa` : `${week.used_hours}/${week.limit_hours} sa`}
-                                    </div>
-                                    {!isUnlimited && (
-                                        <div className="text-[10px] text-slate-400 w-10 text-right tabular-nums">
-                                            {pct}%
-                                        </div>
+                                    {b.members.length === 0 && (
+                                        <div className="px-3 pb-2 text-[10px] text-slate-400 italic">Kimse yok</div>
                                     )}
-                                </div>
-                            );
-                        })}
+                                </details>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             <WeeklyOtDetailDrawer
                 open={weeklyOtDrawerOpen}
                 onClose={() => setWeeklyOtDrawerOpen(false)}
                 referenceDate={weeklyOtDrawerRefDate}
+                employeeId={weeklyOtDrawerEmployeeId}
+                employeeName={weeklyOtDrawerEmployeeName}
             />
 
             {/* Ana Tab'lar — show when secondary exists OR both exist */}
