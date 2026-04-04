@@ -147,25 +147,28 @@ function getEfficiencyColor(pct) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function DepartmentRoleSection({ onPersonClick: _onPersonClick }) {
+export default function DepartmentRoleSection({ onPersonClick: _onPersonClick, bulkTeamOverview, bulkWorkHours, bulkLoading }) {
     const { queryParams, compareDepartments, selectedRoles, setSelectedDepartments } = useAnalyticsFilter();
     void _onPersonClick; // reserved for future per-employee click from table expansion
-    const [teamOverview, setTeamOverview] = useState(null);
-    const [workHoursData, setWorkHoursData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedTeamOverview, setFetchedTeamOverview] = useState(null);
+    const [fetchedWorkHoursData, setFetchedWorkHoursData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const hasBulk = bulkTeamOverview != null || bulkWorkHours != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const [to, wh] = await Promise.allSettled([
                 api.get('/attendance-analytics/team-overview/', { params: queryParams }),
                 api.get('/attendance-analytics/work-hours/', { params: queryParams }),
             ]);
-            if (to.status === 'fulfilled') setTeamOverview(to.value.data);
+            if (to.status === 'fulfilled') setFetchedTeamOverview(to.value.data);
             else console.error('team-overview fetch error:', to.reason);
-            if (wh.status === 'fulfilled') setWorkHoursData(wh.value.data);
+            if (wh.status === 'fulfilled') setFetchedWorkHoursData(wh.value.data);
             else console.error('work-hours fetch error:', wh.reason);
             if (to.status === 'rejected' && wh.status === 'rejected') {
                 setError('Departman & Rol verileri yüklenemedi.');
@@ -174,11 +177,15 @@ export default function DepartmentRoleSection({ onPersonClick: _onPersonClick })
             console.error('DepartmentRoleSection fetch error:', err);
             setError('Departman & Rol verileri yüklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const teamOverview = hasBulk ? (bulkTeamOverview && !bulkTeamOverview.error ? bulkTeamOverview : fetchedTeamOverview) : fetchedTeamOverview;
+    const workHoursData = hasBulk ? (bulkWorkHours && !bulkWorkHours.error ? bulkWorkHours : fetchedWorkHoursData) : fetchedWorkHoursData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     // ─── Department Stats (from efficiency_ranking) ───
     const departmentStats = useMemo(() => {

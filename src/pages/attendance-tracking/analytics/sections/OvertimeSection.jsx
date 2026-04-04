@@ -500,27 +500,33 @@ function OTEfficiencyInsight({ employeeRanking, onPersonClick }) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function OvertimeSection({ onPersonClick }) {
+export default function OvertimeSection({ onPersonClick, bulkOvertime, bulkLoading }) {
     const { queryParams, selectedEmployees } = useAnalyticsFilter();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedData, setFetchedData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const hasBulk = bulkOvertime != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const res = await api.get('/attendance-analytics/overtime/', { params: queryParams });
-            setData(res.data);
+            setFetchedData(res.data);
         } catch (err) {
             console.error('OvertimeSection fetch error:', err);
             setError('Ek mesai verileri y\u00fcklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const data = hasBulk ? (bulkOvertime && !bulkOvertime.error ? bulkOvertime : fetchedData) : fetchedData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     /* ─── Loading skeleton ─── */
     if (loading) {

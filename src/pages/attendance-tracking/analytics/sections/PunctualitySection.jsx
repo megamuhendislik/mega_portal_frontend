@@ -126,27 +126,33 @@ function PunctualityBarTooltip({ active, payload }) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function PunctualitySection({ onPersonClick }) {
+export default function PunctualitySection({ onPersonClick, bulkEntryExit, bulkLoading }) {
     const { queryParams, selectedEmployees } = useAnalyticsFilter();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedData, setFetchedData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const hasBulk = bulkEntryExit != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const res = await api.get('/attendance-analytics/entry-exit/', { params: queryParams });
-            setData(res.data);
+            setFetchedData(res.data);
         } catch (err) {
             console.error('PunctualitySection fetch error:', err);
             setError('Dakiklik verileri yüklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const data = hasBulk ? (bulkEntryExit && !bulkEntryExit.error ? bulkEntryExit : fetchedData) : fetchedData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     // ─── Chart 1: Histogram data (merged entry + exit buckets) ───
     const histogramData = useMemo(() => {

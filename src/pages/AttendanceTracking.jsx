@@ -90,19 +90,99 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [fiscalPeriod, setFiscalPeriod] = useState({ start: null, end: null });
 
     useEffect(() => {
-        fetchDepartments();
+        fetchAllData(true);
     }, []);
 
     useEffect(() => {
-        fetchAllData();
+        fetchAllData(false);
     }, [year, month, selectedDept]);
 
     // Manual refresh handler (called by refresh button)
     const handleRefresh = () => {
-        fetchAllData();
+        fetchAllData(false);
     };
 
-    const fetchAllData = async () => {
+    /**
+     * Process raw response sections and distribute to state.
+     * Shared by both consolidated and legacy fetch paths.
+     */
+    const processResponseData = (statsRaw, hierarchyRaw, secondaryRaw, substituteRaw, deptRaw, isFirstLoad) => {
+        // Process departments (only if provided)
+        if (deptRaw !== undefined) {
+            setDepartments(Array.isArray(deptRaw) ? deptRaw : []);
+        }
+
+        // Process stats — response is { results: [...], fiscal_period_start, fiscal_period_end }
+        let data;
+        if (statsRaw && !Array.isArray(statsRaw) && Array.isArray(statsRaw.results)) {
+            data = statsRaw.results;
+            setFiscalPeriod({
+                start: statsRaw.fiscal_period_start || null,
+                end: statsRaw.fiscal_period_end || null,
+            });
+        } else {
+            data = Array.isArray(statsRaw) ? statsRaw : [];
+        }
+        setStats(data);
+
+        // Summary: only count PRIMARY employees (exclude SECONDARY-only)
+        const primaryData = data.filter(d => d.relationship_type !== 'SECONDARY');
+        const worked = primaryData.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
+        const overtime = primaryData.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
+        const missing = primaryData.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
+        const balance = primaryData.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
+        const online = primaryData.filter(d => d.is_online).length;
+
+        setSummary({
+            totalWorked: worked,
+            totalOvertime: overtime,
+            totalMissing: missing,
+            netBalance: balance,
+            activeCount: primaryData.length,
+            onlineCount: online
+        });
+
+        // Process hierarchy
+        const hData = Array.isArray(hierarchyRaw) ? hierarchyRaw : [];
+        setHierarchyData(hData);
+
+        // Process secondary team
+        const secData = Array.isArray(secondaryRaw) ? secondaryRaw : [];
+        setSecondaryTeam(secData);
+
+        // Auto-switch to secondary tab if no primary subordinates but secondary exists
+        const hasPrimarySubordinates = hData.length > 0;
+        if (!hasPrimarySubordinates && secData.length > 0) {
+            setTeamTab('secondary');
+            setViewMode('overtime');
+        } else if (hasPrimarySubordinates && teamTab === 'secondary' && secData.length === 0) {
+            setTeamTab('primary');
+        }
+
+        // Process substitute team
+        if (substituteRaw?.teams && Object.keys(substituteRaw.teams).length > 0) {
+            setSubstituteTeams(substituteRaw);
+        } else {
+            setSubstituteTeams(null);
+        }
+
+        // Expand hierarchy on initial load
+        if (isFirstLoad && hData.length) {
+            const initialExpanded = {};
+            const expandAll = (nodes) => {
+                nodes.forEach(n => {
+                    if (n.children?.length > 0) {
+                        initialExpanded[n.id] = true;
+                        expandAll(n.children);
+                    }
+                });
+            };
+            expandAll(hData);
+            setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
+        }
+    };
+
+    const fetchAllData = async (includeDepartments = false) => {
         // Only show loading spinner on first load
         if (initialLoad) setLoading(true);
         setFetchError(null);
@@ -111,104 +191,52 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             if (selectedDept) params.department_id = selectedDept;
             params.include_inactive = 'true';
 
-            const [statsRes, hierarchyRes, secondaryRes, substituteRes] = await Promise.allSettled([
+            // Try consolidated endpoint first
+            try {
+                const res = await api.get('/dashboard/attendance-tracking-init/', { params, timeout: 90000 });
+                const d = res.data;
+                processResponseData(
+                    d.stats,
+                    d.team_hierarchy,
+                    d.secondary_subordinates,
+                    d.substitute_team,
+                    includeDepartments ? d.departments : undefined,
+                    initialLoad
+                );
+                return; // Success — skip legacy path
+            } catch (consolidatedErr) {
+                console.warn('Consolidated endpoint failed, falling back to legacy calls:', consolidatedErr.message);
+            }
+
+            // FALLBACK: Legacy 4+1 parallel calls
+            const calls = [
                 api.get('/dashboard/stats/', { params, timeout: 60000 }),
                 api.get('/dashboard/team_hierarchy/', { timeout: 60000 }),
                 api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' }, timeout: 30000 }),
                 api.get('/dashboard/substitute_team/', { timeout: 30000 })
-            ]);
-
-            // Process stats — response is { results: [...], fiscal_period_start, fiscal_period_end }
-            const statsRaw = statsRes.status === 'fulfilled' ? statsRes.value.data : [];
-            let data;
-            if (statsRaw && !Array.isArray(statsRaw) && Array.isArray(statsRaw.results)) {
-                data = statsRaw.results;
-                setFiscalPeriod({
-                    start: statsRaw.fiscal_period_start || null,
-                    end: statsRaw.fiscal_period_end || null,
-                });
-            } else {
-                data = Array.isArray(statsRaw) ? statsRaw : [];
-            }
-            setStats(data);
-
-            // Summary: only count PRIMARY employees (exclude SECONDARY-only)
-            const primaryData = data.filter(d => d.relationship_type !== 'SECONDARY');
-            const worked = primaryData.reduce((acc, curr) => acc + (curr.total_worked || 0), 0);
-            const overtime = primaryData.reduce((acc, curr) => acc + (curr.total_overtime || 0), 0);
-            const missing = primaryData.reduce((acc, curr) => acc + (curr.total_missing || 0), 0);
-            const balance = primaryData.reduce((acc, curr) => acc + (curr.monthly_net_balance || 0), 0);
-            const online = primaryData.filter(d => d.is_online).length;
-
-            setSummary({
-                totalWorked: worked,
-                totalOvertime: overtime,
-                totalMissing: missing,
-                netBalance: balance,
-                activeCount: primaryData.length,
-                onlineCount: online
-            });
-
-            // Process hierarchy
-            const hierarchyData_raw = hierarchyRes.status === 'fulfilled' ? hierarchyRes.value.data : [];
-            const hData = Array.isArray(hierarchyData_raw) ? hierarchyData_raw : [];
-            setHierarchyData(hData);
-
-            // Process secondary team
-            let secData = [];
-            if (secondaryRes.status === 'fulfilled') {
-                secData = Array.isArray(secondaryRes.value.data) ? secondaryRes.value.data : [];
-                setSecondaryTeam(secData);
+            ];
+            if (includeDepartments) {
+                calls.push(api.get('/departments/', { timeout: 15000 }));
             }
 
-            // Auto-switch to secondary tab if no primary subordinates but secondary exists
-            // hData (hierarchy) only contains PRIMARY subordinates — use it instead of
-            // stats-based check which always includes self as PRIMARY
-            const hasPrimarySubordinates = hData.length > 0;
-            if (!hasPrimarySubordinates && secData.length > 0) {
-                setTeamTab('secondary');
-                setViewMode('overtime');
-            } else if (hasPrimarySubordinates && teamTab === 'secondary' && secData.length === 0) {
-                setTeamTab('primary');
-            }
+            const results = await Promise.allSettled(calls);
+            const [statsRes, hierarchyRes, secondaryRes, substituteRes] = results;
+            const deptRes = includeDepartments ? results[4] : null;
 
-            // Process substitute team
-            if (substituteRes.status === 'fulfilled') {
-                const subData = substituteRes.value.data;
-                if (subData?.teams && Object.keys(subData.teams).length > 0) {
-                    setSubstituteTeams(subData);
-                } else {
-                    setSubstituteTeams(null);
-                }
-            }
-            if (initialLoad && hData.length) {
-                const initialExpanded = {};
-                const expandAll = (nodes) => {
-                    nodes.forEach(n => {
-                        if (n.children?.length > 0) {
-                            initialExpanded[n.id] = true;
-                            expandAll(n.children);
-                        }
-                    });
-                };
-                expandAll(hData);
-                setExpandedDepts(prev => ({ ...prev, ...initialExpanded }));
-            }
+            processResponseData(
+                statsRes.status === 'fulfilled' ? statsRes.value.data : [],
+                hierarchyRes.status === 'fulfilled' ? hierarchyRes.value.data : [],
+                secondaryRes.status === 'fulfilled' ? secondaryRes.value.data : [],
+                substituteRes.status === 'fulfilled' ? substituteRes.value.data : { authorities: [], teams: {} },
+                includeDepartments && deptRes?.status === 'fulfilled' ? deptRes.value.data : (includeDepartments ? [] : undefined),
+                initialLoad
+            );
         } catch (error) {
             console.error('Error fetching data:', error);
             setFetchError(error.code === 'ECONNABORTED' ? 'Zaman aşımı: Veri yüklenemedi. Tekrar deneyin.' : 'Ekip verisi yüklenirken hata oluştu.');
         } finally {
             setLoading(false);
             setInitialLoad(false);
-        }
-    };
-
-    const fetchDepartments = async () => {
-        try {
-            const res = await api.get('/departments/');
-            setDepartments(Array.isArray(res.data) ? res.data : []);
-        } catch (error) {
-            console.error('Error fetching departments:', error);
         }
     };
 

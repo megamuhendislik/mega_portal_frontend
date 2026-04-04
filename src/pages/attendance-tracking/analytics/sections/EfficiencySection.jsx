@@ -181,25 +181,28 @@ function getBarColor(pct) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function EfficiencySection({ onPersonClick }) {
+export default function EfficiencySection({ onPersonClick, bulkWorkHours, bulkTeamOverview, bulkLoading }) {
     const { queryParams, selectedEmployees, showTeamAvg } = useAnalyticsFilter();
-    const [workHours, setWorkHours] = useState(null);
-    const [teamOverview, setTeamOverview] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedWorkHours, setFetchedWorkHours] = useState(null);
+    const [fetchedTeamOverview, setFetchedTeamOverview] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedTier, setSelectedTier] = useState(null);
 
+    const hasBulk = bulkWorkHours != null || bulkTeamOverview != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const [wh, to] = await Promise.allSettled([
                 api.get('/attendance-analytics/work-hours/', { params: queryParams }),
                 api.get('/attendance-analytics/team-overview/', { params: queryParams }),
             ]);
-            if (wh.status === 'fulfilled') setWorkHours(wh.value.data);
+            if (wh.status === 'fulfilled') setFetchedWorkHours(wh.value.data);
             else console.error('work-hours fetch error:', wh.reason);
-            if (to.status === 'fulfilled') setTeamOverview(to.value.data);
+            if (to.status === 'fulfilled') setFetchedTeamOverview(to.value.data);
             else console.error('team-overview fetch error:', to.reason);
             if (wh.status === 'rejected' && to.status === 'rejected') {
                 setError('Verimlilik verileri yüklenemedi.');
@@ -208,11 +211,16 @@ export default function EfficiencySection({ onPersonClick }) {
             console.error('EfficiencySection fetch error:', err);
             setError('Verimlilik verileri yüklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Resolve: prefer bulk, fallback to individual
+    const workHours = hasBulk ? (bulkWorkHours && !bulkWorkHours.error ? bulkWorkHours : fetchedWorkHours) : fetchedWorkHours;
+    const teamOverview = hasBulk ? (bulkTeamOverview && !bulkTeamOverview.error ? bulkTeamOverview : fetchedTeamOverview) : fetchedTeamOverview;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     // ─── Chart 1: Daily efficiency trend data ───
     const hasSelectedEmployees = selectedEmployees?.length > 0;

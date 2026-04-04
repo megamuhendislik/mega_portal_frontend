@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Clock, CalendarPlus, ArrowDownLeft, BarChart3, Info } from 'lucide-react';
 import { Tooltip } from 'antd';
 import api from '../../services/api';
@@ -27,7 +27,7 @@ const SubTabButton = ({ active, onClick, children, icon, badge }) => (
   </button>
 );
 
-export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false, searchText = '' }) {
+export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, primaryCount = 0, secondaryCount = 0, teamCountsLoading = false, searchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) {
   const [activeSubTab, setActiveSubTab] = useState('my_requests');
   const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
   // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz
@@ -36,12 +36,30 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
   // Lazy mount: component mounts on first visit, stays alive after (display:none hides it)
   const [mounted, setMounted] = useState({ my_requests: true });
 
-  // ── Shared team data: fetch ONCE here, pass to children ──
-  const needsTeamFetch = hasAnyTeam;
-  const [sharedTeamData, setSharedTeamData] = useState({ primary: [], secondary: [], loading: needsTeamFetch });
+  // ── Shared team data: derive from parent props or self-fetch as fallback ──
+  const parentProvided = sharedPrimarySubordinates !== undefined;
+
+  // Helper: convert raw subordinate API data to simplified {id, name, department}
+  const toSimplifiedList = useCallback((raw) => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(s => ({
+      id: s.id,
+      name: s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.full_name || s.name || `Çalışan #${s.id}`,
+      department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
+    }));
+  }, []);
+
+  // When parent provides raw data, derive simplified lists synchronously
+  const parentTeamData = useMemo(() => {
+    if (!parentProvided) return null;
+    return { primary: toSimplifiedList(sharedPrimarySubordinates), secondary: toSimplifiedList(sharedSecondarySubordinates), loading: false };
+  }, [parentProvided, sharedPrimarySubordinates, sharedSecondarySubordinates, toSimplifiedList]);
+
+  // Fallback state for self-fetch (only used when parent doesn't provide data)
+  const [fallbackTeamData, setFallbackTeamData] = useState({ primary: [], secondary: [], loading: hasAnyTeam });
 
   useEffect(() => {
-    if (!needsTeamFetch) return;
+    if (parentProvided || !hasAnyTeam) return;
     let cancelled = false;
     const fetchTeams = async () => {
       try {
@@ -59,14 +77,16 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
             department: typeof s.department === 'object' ? s.department?.name : (s.department || ''),
           }));
         };
-        setSharedTeamData({ primary: toList(priRes), secondary: toList(secRes), loading: false });
+        setFallbackTeamData({ primary: toList(priRes), secondary: toList(secRes), loading: false });
       } catch {
-        if (!cancelled) setSharedTeamData(prev => ({ ...prev, loading: false }));
+        if (!cancelled) setFallbackTeamData(prev => ({ ...prev, loading: false }));
       }
     };
     fetchTeams();
     return () => { cancelled = true; };
-  }, [needsTeamFetch]);
+  }, [parentProvided, hasAnyTeam]);
+
+  const sharedTeamData = parentTeamData || fallbackTeamData;
 
   const switchTab = useCallback((tab) => {
     setActiveSubTab(tab);
@@ -168,6 +188,8 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
               filterType="overtime"
               refreshTrigger={refreshTrigger}
               parentSearchText={searchText}
+              sharedPrimarySubordinates={sharedPrimarySubordinates}
+              sharedSecondarySubordinates={sharedSecondarySubordinates}
             />
           )}
         </div>

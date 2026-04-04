@@ -9,7 +9,7 @@ import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
-const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '' }) => {
+const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -64,57 +64,94 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         );
     }, [subordinates, currentUserEmployeeId]);
 
-    // --- Data Fetching ---
+    // Use shared subordinate data from parent if available
+    const parentProvidesSubs = sharedPrimarySubordinates !== undefined;
+
+    useEffect(() => {
+        if (!parentProvidesSubs) return;
+        setSubordinates(sharedPrimarySubordinates || []);
+        setSecondarySubIds(new Set((sharedSecondarySubordinates || []).map(s => s.id)));
+    }, [parentProvidesSubs, sharedPrimarySubordinates, sharedSecondarySubordinates]);
+
+    // Distribute consolidated init response to state
+    const applyInitData = useCallback((d) => {
+        if (d.employee) setCurrentUserEmployeeId(d.employee.id);
+        if (!parentProvidesSubs) {
+            if (d.primary_subordinates) setSubordinates(d.primary_subordinates || []);
+            if (d.secondary_subordinates) setSecondarySubIds(new Set((d.secondary_subordinates || []).map(s => s.id)));
+        }
+        if (d.team_requests) setIncomingRequests(d.team_requests || []);
+        if (d.team_history) {
+            const hData = d.team_history;
+            setTeamHistoryRequests(hData?.results || hData || []);
+        }
+        if (d.substitute_requests !== undefined) setSubstituteData(d.substitute_requests);
+        if (d.all_team_requests) {
+            const atData = d.all_team_requests || [];
+            console.log('[fetchAllData] all_team toplam:', atData.length,
+                'EXTERNAL_DUTY:', atData.filter(r => r.type === 'EXTERNAL_DUTY').length,
+                'APPROVED ED:', atData.filter(r => r.type === 'EXTERNAL_DUTY' && r.status === 'APPROVED').map(r => ({ id: r.request_id, status: r.status, can_override: r.can_override }))
+            );
+            setAllTeamData(atData);
+        }
+    }, [parentProvidesSubs]);
+
+    // Legacy fallback: original 7 parallel calls
+    const fetchAllDataLegacy = useCallback(async () => {
+        const requests = [
+            api.get('/employees/me/'),
+            parentProvidesSubs ? Promise.resolve({ _skipped: true }) : api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
+            api.get('/team-requests/'),
+            api.get('/leave/requests/team_history/'),
+            api.get('/substitute-authority/pending_requests/'),
+            parentProvidesSubs ? Promise.resolve({ _skipped: true }) : api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
+            api.get('/team-requests/all_team/'),
+        ];
+        const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes, allTeamRes] = await Promise.allSettled(requests);
+
+        if (meRes.status === 'fulfilled') setCurrentUserEmployeeId(meRes.value.data.id);
+        if (!parentProvidesSubs) {
+            if (subsRes.status === 'fulfilled' && !subsRes.value._skipped) {
+                setSubordinates(subsRes.value.data || []);
+                if (secSubRes.status === 'fulfilled' && !secSubRes.value._skipped) {
+                    setSecondarySubIds(new Set((secSubRes.value.data || []).map(s => s.id)));
+                }
+            }
+        }
+        if (teamRes.status === 'fulfilled') setIncomingRequests(teamRes.value.data || []);
+        if (histRes.status === 'fulfilled') {
+            const hData = histRes.value.data;
+            setTeamHistoryRequests(hData?.results || hData || []);
+        }
+        if (subAuthRes.status === 'fulfilled') setSubstituteData(subAuthRes.value.data);
+        else setSubstituteData(null);
+        if (allTeamRes.status === 'fulfilled') {
+            const atData = allTeamRes.value.data || [];
+            console.log('[fetchAllData] all_team toplam:', atData.length,
+                'EXTERNAL_DUTY:', atData.filter(r => r.type === 'EXTERNAL_DUTY').length,
+                'APPROVED ED:', atData.filter(r => r.type === 'EXTERNAL_DUTY' && r.status === 'APPROVED').map(r => ({ id: r.request_id, status: r.status, can_override: r.can_override }))
+            );
+            setAllTeamData(atData);
+        }
+    }, [parentProvidesSubs]);
+
+    // --- Data Fetching --- consolidated endpoint with legacy fallback
     const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const [meRes, subsRes, teamRes, histRes, subAuthRes, secSubRes, allTeamRes] = await Promise.allSettled([
-                api.get('/employees/me/'),
-                api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
-                api.get('/team-requests/'),
-                api.get('/leave/requests/team_history/'),
-                api.get('/substitute-authority/pending_requests/'),
-                api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
-                api.get('/team-requests/all_team/'),
-            ]);
-
-            if (meRes.status === 'fulfilled') {
-                setCurrentUserEmployeeId(meRes.value.data.id);
-            }
-            if (subsRes.status === 'fulfilled') {
-                const allSubs = subsRes.value.data || [];
-                setSubordinates(allSubs);
-                if (secSubRes.status === 'fulfilled') {
-                    const secSubs = secSubRes.value.data || [];
-                    setSecondarySubIds(new Set(secSubs.map(s => s.id)));
-                }
-            }
-            if (teamRes.status === 'fulfilled') {
-                setIncomingRequests(teamRes.value.data || []);
-            }
-            if (histRes.status === 'fulfilled') {
-                const hData = histRes.value.data;
-                setTeamHistoryRequests(hData?.results || hData || []);
-            }
-            if (subAuthRes.status === 'fulfilled') {
-                setSubstituteData(subAuthRes.value.data);
-            } else {
-                setSubstituteData(null);
-            }
-            if (allTeamRes.status === 'fulfilled') {
-                const atData = allTeamRes.value.data || [];
-                console.log('[fetchAllData] all_team toplam:', atData.length,
-                    'EXTERNAL_DUTY:', atData.filter(r => r.type === 'EXTERNAL_DUTY').length,
-                    'APPROVED ED:', atData.filter(r => r.type === 'EXTERNAL_DUTY' && r.status === 'APPROVED').map(r => ({ id: r.request_id, status: r.status, can_override: r.can_override }))
-                );
-                setAllTeamData(atData);
-            }
+            const res = await api.get('/requests-init/incoming-requests-init/');
+            applyInitData(res.data);
         } catch (e) {
-            console.error('IncomingRequestsTab fetchAllData error:', e);
+            console.warn('IncomingRequestsTab: consolidated init failed, falling back to legacy calls', e);
+            try {
+                await fetchAllDataLegacy();
+            } catch (e2) {
+                console.error('IncomingRequestsTab fetchAllData legacy error:', e2);
+            }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [applyInitData, fetchAllDataLegacy]);
 
     useEffect(() => { fetchAllData(); }, [fetchAllData]);
 

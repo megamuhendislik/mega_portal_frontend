@@ -299,15 +299,18 @@ function SkeletonCard({ height = 'h-[280px]' }) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function AttendanceLeaveSection({ onPersonClick }) {
+export default function AttendanceLeaveSection({ onPersonClick, bulkAbsenceLeave, bulkWorkHours, bulkLoading }) {
     const { queryParams } = useAnalyticsFilter();
-    const [absenceData, setAbsenceData] = useState(null);
-    const [workHoursData, setWorkHoursData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedAbsenceData, setFetchedAbsenceData] = useState(null);
+    const [fetchedWorkHoursData, setFetchedWorkHoursData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const hasBulk = bulkAbsenceLeave != null || bulkWorkHours != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const [absRes, whRes] = await Promise.allSettled([
@@ -315,10 +318,10 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
                 api.get('/attendance-analytics/work-hours/', { params: queryParams }),
             ]);
 
-            if (absRes.status === 'fulfilled') setAbsenceData(absRes.value.data);
+            if (absRes.status === 'fulfilled') setFetchedAbsenceData(absRes.value.data);
             else console.error('absence-leave fetch error:', absRes.reason);
 
-            if (whRes.status === 'fulfilled') setWorkHoursData(whRes.value.data);
+            if (whRes.status === 'fulfilled') setFetchedWorkHoursData(whRes.value.data);
             else console.error('work-hours fetch error:', whRes.reason);
 
             if (absRes.status === 'rejected' && whRes.status === 'rejected') {
@@ -328,11 +331,15 @@ export default function AttendanceLeaveSection({ onPersonClick }) {
             console.error('AttendanceLeaveSection fetch error:', err);
             setError('Devamsızlık/izin verileri yüklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const absenceData = hasBulk ? (bulkAbsenceLeave && !bulkAbsenceLeave.error ? bulkAbsenceLeave : fetchedAbsenceData) : fetchedAbsenceData;
+    const workHoursData = hasBulk ? (bulkWorkHours && !bulkWorkHours.error ? bulkWorkHours : fetchedWorkHoursData) : fetchedWorkHoursData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     // ─── Derived: Daily data for calendar heatmap ───
     // Uses work-hours daily_team_avg for avg hours coloring

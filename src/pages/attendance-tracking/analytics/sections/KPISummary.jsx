@@ -489,16 +489,19 @@ function SkeletonCard() {
 /* ===================================================================
    MAIN COMPONENT
    =================================================================== */
-export default function KPISummary() {
+export default function KPISummary({ bulkTeamOverview, bulkEntryExit, bulkWorkHours, bulkBreakMeal, bulkLoading }) {
     const { queryParams } = useAnalyticsFilter();
-    const [data, setData] = useState(null);
-    const [entryExitData, setEntryExitData] = useState(null);
-    const [workHoursData, setWorkHoursData] = useState(null);
-    const [breakMealData, setBreakMealData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedData, setFetchedData] = useState(null);
+    const [fetchedEntryExitData, setFetchedEntryExitData] = useState(null);
+    const [fetchedWorkHoursData, setFetchedWorkHoursData] = useState(null);
+    const [fetchedBreakMealData, setFetchedBreakMealData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
+
+    const hasBulk = bulkTeamOverview != null || bulkEntryExit != null || bulkWorkHours != null || bulkBreakMeal != null;
 
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         try {
             const [teamRes, eeRes, whRes, bmRes] = await Promise.allSettled([
                 api.get('/attendance-analytics/team-overview/', { params: queryParams }),
@@ -506,18 +509,25 @@ export default function KPISummary() {
                 api.get('/attendance-analytics/work-hours/', { params: queryParams }),
                 api.get('/attendance-analytics/break-meal/', { params: queryParams }),
             ]);
-            if (teamRes.status === 'fulfilled') setData(teamRes.value.data);
-            if (eeRes.status === 'fulfilled') setEntryExitData(eeRes.value.data);
-            if (whRes.status === 'fulfilled') setWorkHoursData(whRes.value.data);
-            if (bmRes.status === 'fulfilled') setBreakMealData(bmRes.value.data);
+            if (teamRes.status === 'fulfilled') setFetchedData(teamRes.value.data);
+            if (eeRes.status === 'fulfilled') setFetchedEntryExitData(eeRes.value.data);
+            if (whRes.status === 'fulfilled') setFetchedWorkHoursData(whRes.value.data);
+            if (bmRes.status === 'fulfilled') setFetchedBreakMealData(bmRes.value.data);
         } catch (err) {
             console.error('KPISummary fetch error:', err);
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Resolve: prefer bulk data, fallback to individually fetched data
+    const data = hasBulk ? (bulkTeamOverview && !bulkTeamOverview.error ? bulkTeamOverview : fetchedData) : fetchedData;
+    const entryExitData = hasBulk ? (bulkEntryExit && !bulkEntryExit.error ? bulkEntryExit : fetchedEntryExitData) : fetchedEntryExitData;
+    const workHoursData = hasBulk ? (bulkWorkHours && !bulkWorkHours.error ? bulkWorkHours : fetchedWorkHoursData) : fetchedWorkHoursData;
+    const breakMealData = hasBulk ? (bulkBreakMeal && !bulkBreakMeal.error ? bulkBreakMeal : fetchedBreakMealData) : fetchedBreakMealData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     const kpi = data?.kpi;
     const employeeCount = data?.employee_count || 0;

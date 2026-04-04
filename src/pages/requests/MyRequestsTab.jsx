@@ -109,61 +109,79 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     const PAGE_SIZE = 50;
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Fetch all data
+    // Distribute consolidated init response to state
+    const applyInitData = useCallback((d) => {
+        if (d.employee) {
+            const me = d.employee;
+            setCurrentUserEmployeeId(me.id);
+            setCurrentUserInfo({
+                name: me.full_name || `${me.first_name || ''} ${me.last_name || ''}`.trim(),
+                department: me.department_name || me.department?.name || '',
+            });
+        }
+        if (d.leave_requests) setRequests(d.leave_requests.results || d.leave_requests);
+        if (d.leave_types) setRequestTypes(d.leave_types.results || d.leave_types);
+        if (d.overtime_requests) setOvertimeRequests(d.overtime_requests.results || d.overtime_requests);
+        if (d.meal_requests) setMealRequests(d.meal_requests.results || d.meal_requests);
+        if (d.cardless_entries) setCardlessEntryRequests(d.cardless_entries.results || d.cardless_entries);
+        if (d.health_reports) setHealthReports(d.health_reports.results || d.health_reports);
+        if (d.birthday_balance !== undefined) setBirthdayBalance(d.birthday_balance);
+        if (d.special_leaves) setSpecialLeaves(d.special_leaves.results || d.special_leaves);
+        if (d.available_approvers) setClaimManagers(d.available_approvers);
+    }, []);
+
+    // Legacy fallback: original 10 parallel calls
+    const fetchDataLegacy = useCallback(async () => {
+        const results = await Promise.allSettled([
+            api.get('/employees/me/'),
+            api.get('/leave/requests/'),
+            api.get('/leave/types/'),
+            api.get('/overtime-requests/'),
+            api.get('/meal-requests/'),
+            api.get('/cardless-entry-requests/'),
+            api.get('/health-reports/'),
+            api.get('/leave-requests/birthday-balance/'),
+            api.get('/special-leaves/'),
+            api.get('/available-approvers/?type=OVERTIME'),
+        ]);
+
+        const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes, birthdayRes, specialLeavesRes, approversRes] = results;
+
+        if (meRes.status === 'fulfilled') {
+            const me = meRes.value.data;
+            setCurrentUserEmployeeId(me.id);
+            setCurrentUserInfo({
+                name: me.full_name || `${me.first_name || ''} ${me.last_name || ''}`.trim(),
+                department: me.department_name || me.department?.name || '',
+            });
+        }
+        if (leaveRes.status === 'fulfilled') setRequests(leaveRes.value.data.results || leaveRes.value.data);
+        if (typesRes.status === 'fulfilled') setRequestTypes(typesRes.value.data.results || typesRes.value.data);
+        if (otRes.status === 'fulfilled') setOvertimeRequests(otRes.value.data.results || otRes.value.data);
+        if (mealRes.status === 'fulfilled') setMealRequests(mealRes.value.data.results || mealRes.value.data);
+        if (cardlessRes.status === 'fulfilled') setCardlessEntryRequests(cardlessRes.value.data.results || cardlessRes.value.data);
+        if (healthRes.status === 'fulfilled') setHealthReports(healthRes.value.data.results || healthRes.value.data);
+        if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+        if (specialLeavesRes.status === 'fulfilled') setSpecialLeaves(specialLeavesRes.value.data.results || specialLeavesRes.value.data);
+        if (approversRes.status === 'fulfilled') setClaimManagers(approversRes.value.data || []);
+    }, []);
+
+    // Fetch all data — consolidated endpoint with legacy fallback
     const fetchData = useCallback(async () => {
         try {
-            const results = await Promise.allSettled([
-                api.get('/employees/me/'),
-                api.get('/leave/requests/'),
-                api.get('/leave/types/'),
-                api.get('/overtime-requests/'),
-                api.get('/meal-requests/'),
-                api.get('/cardless-entry-requests/'),
-                api.get('/health-reports/'),
-                api.get('/leave-requests/birthday-balance/'),
-                api.get('/special-leaves/'),
-            ]);
-
-            const [meRes, leaveRes, typesRes, otRes, mealRes, cardlessRes, healthRes, birthdayRes, specialLeavesRes] = results;
-
-            if (meRes.status === 'fulfilled') {
-                const me = meRes.value.data;
-                setCurrentUserEmployeeId(me.id);
-                setCurrentUserInfo({
-                    name: me.full_name || `${me.first_name || ''} ${me.last_name || ''}`.trim(),
-                    department: me.department_name || me.department?.name || '',
-                });
-            }
-            if (leaveRes.status === 'fulfilled') {
-                setRequests(leaveRes.value.data.results || leaveRes.value.data);
-            }
-            if (typesRes.status === 'fulfilled') {
-                setRequestTypes(typesRes.value.data.results || typesRes.value.data);
-            }
-            if (otRes.status === 'fulfilled') {
-                setOvertimeRequests(otRes.value.data.results || otRes.value.data);
-            }
-            if (mealRes.status === 'fulfilled') {
-                setMealRequests(mealRes.value.data.results || mealRes.value.data);
-            }
-            if (cardlessRes.status === 'fulfilled') {
-                setCardlessEntryRequests(cardlessRes.value.data.results || cardlessRes.value.data);
-            }
-            if (healthRes.status === 'fulfilled') {
-                setHealthReports(healthRes.value.data.results || healthRes.value.data);
-            }
-            if (birthdayRes.status === 'fulfilled') {
-                setBirthdayBalance(birthdayRes.value.data);
-            }
-            if (specialLeavesRes.status === 'fulfilled') {
-                setSpecialLeaves(specialLeavesRes.value.data.results || specialLeavesRes.value.data);
-            }
+            const res = await api.get('/requests-init/my-requests-init/');
+            applyInitData(res.data);
         } catch (e) {
-            console.error('MyRequestsTab fetchData error:', e);
+            console.warn('MyRequestsTab: consolidated init failed, falling back to legacy calls', e);
+            try {
+                await fetchDataLegacy();
+            } catch (e2) {
+                console.error('MyRequestsTab fetchData legacy error:', e2);
+            }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [applyInitData, fetchDataLegacy]);
 
     // Initial fetch
     useEffect(() => {
@@ -176,13 +194,6 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             fetchData();
         }
     }, [refreshTrigger, fetchData]);
-
-    // Fetch available OT managers for claim modal
-    useEffect(() => {
-        api.get('/available-approvers/?type=OVERTIME')
-            .then(res => setClaimManagers(res.data || []))
-            .catch(() => setClaimManagers([]));
-    }, []);
 
     // Notify parent when data changes
     const notifyParent = useCallback(() => {

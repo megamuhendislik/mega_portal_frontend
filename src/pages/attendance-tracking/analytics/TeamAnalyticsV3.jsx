@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useState, useCallback } from 'react';
 import { AnalyticsFilterProvider, useAnalyticsFilter } from './AnalyticsFilterContext';
+import { BulkAnalyticsProvider, useBulkAnalytics } from './BulkAnalyticsContext';
 import GlobalFilterBar from './GlobalFilterBar';
 import CollapsibleSection from './shared/CollapsibleSection';
 import { Target, Clock, CalendarCheck, Users, AlarmClock, Coffee, Building2 } from 'lucide-react';
@@ -24,18 +25,30 @@ function SectionLoader() {
 
 function TeamAnalyticsV3Inner() {
     const { queryParams } = useAnalyticsFilter();
+    const bulk = useBulkAnalytics();
     const [drawerEmployee, setDrawerEmployee] = useState(null);
 
     const handlePersonClick = useCallback((employeeId) => {
         setDrawerEmployee(employeeId);
     }, []);
 
+    // Extract bulk data slices — sections will use these if available,
+    // otherwise fall back to their own individual fetch
+    const bulkData = bulk?.data || {};
+    const bulkLoading = bulk?.loading ?? false;
+
     return (
         <div className="space-y-4">
             <GlobalFilterBar />
 
             <Suspense fallback={<SectionLoader />}>
-                <KPISummary />
+                <KPISummary
+                    bulkTeamOverview={bulkData.team_overview}
+                    bulkEntryExit={bulkData.entry_exit}
+                    bulkWorkHours={bulkData.work_hours}
+                    bulkBreakMeal={bulkData.break_meal}
+                    bulkLoading={bulkLoading}
+                />
             </Suspense>
 
             <CollapsibleSection
@@ -46,7 +59,12 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <EfficiencySection onPersonClick={handlePersonClick} />
+                    <EfficiencySection
+                        onPersonClick={handlePersonClick}
+                        bulkWorkHours={bulkData.work_hours}
+                        bulkTeamOverview={bulkData.team_overview}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -58,7 +76,11 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <OvertimeSection onPersonClick={handlePersonClick} />
+                    <OvertimeSection
+                        onPersonClick={handlePersonClick}
+                        bulkOvertime={bulkData.overtime}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -70,7 +92,11 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <PunctualitySection onPersonClick={handlePersonClick} />
+                    <PunctualitySection
+                        onPersonClick={handlePersonClick}
+                        bulkEntryExit={bulkData.entry_exit}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -82,7 +108,11 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <BreakMealSection onPersonClick={handlePersonClick} />
+                    <BreakMealSection
+                        onPersonClick={handlePersonClick}
+                        bulkBreakMeal={bulkData.break_meal}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -94,7 +124,12 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <AttendanceLeaveSection onPersonClick={handlePersonClick} />
+                    <AttendanceLeaveSection
+                        onPersonClick={handlePersonClick}
+                        bulkAbsenceLeave={bulkData.absence_leave}
+                        bulkWorkHours={bulkData.work_hours}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -106,7 +141,12 @@ function TeamAnalyticsV3Inner() {
                 defaultOpen={true}
             >
                 <Suspense fallback={<SectionLoader />}>
-                    <DepartmentRoleSection onPersonClick={handlePersonClick} />
+                    <DepartmentRoleSection
+                        onPersonClick={handlePersonClick}
+                        bulkTeamOverview={bulkData.team_overview}
+                        bulkWorkHours={bulkData.work_hours}
+                        bulkLoading={bulkLoading}
+                    />
                 </Suspense>
             </CollapsibleSection>
 
@@ -139,7 +179,9 @@ function TeamAnalyticsV3Inner() {
 export default function TeamAnalyticsV3() {
     return (
         <AnalyticsFilterProvider>
-            <TeamAnalyticsV3Inner />
+            <BulkAnalyticsProvider>
+                <TeamAnalyticsV3Inner />
+            </BulkAnalyticsProvider>
         </AnalyticsFilterProvider>
     );
 }

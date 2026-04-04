@@ -52,10 +52,12 @@ const Requests = () => {
     // Global search — shared across all tabs
     const [searchText, setSearchText] = useState('');
 
-    // Manager detection — PRIMARY / SECONDARY counts
-    const [primaryCount, setPrimaryCount] = useState(0);
-    const [secondaryCount, setSecondaryCount] = useState(0);
+    // Manager detection — full subordinate lists (fetched ONCE, shared with all tabs)
+    const [primarySubordinates, setPrimarySubordinates] = useState([]);
+    const [secondarySubordinates, setSecondarySubordinates] = useState([]);
     const [teamCountsLoading, setTeamCountsLoading] = useState(true);
+    const primaryCount = primarySubordinates.length;
+    const secondaryCount = secondarySubordinates.length;
     const hasAnyTeam = primaryCount > 0 || secondaryCount > 0;
     // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz;
     // gerçek yönetici = subordinate'i olan kişi
@@ -65,24 +67,23 @@ const Requests = () => {
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);
 
     useEffect(() => {
-        const fetchTeamCounts = async () => {
+        const fetchSubordinates = async () => {
             try {
                 const [priRes, secRes] = await Promise.allSettled([
-                    api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY', count_only: 'true' } }),
-                    api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY', count_only: 'true' } }),
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY' } }),
+                    api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' } }),
                 ]);
-                if (priRes.status === 'fulfilled') {
-                    const d = priRes.value.data;
-                    setPrimaryCount(d.count != null ? d.count : (Array.isArray(d) ? d : d.results || []).length);
-                }
-                if (secRes.status === 'fulfilled') {
-                    const d = secRes.value.data;
-                    setSecondaryCount(d.count != null ? d.count : (Array.isArray(d) ? d : d.results || []).length);
-                }
+                const toList = (res) => {
+                    if (res.status !== 'fulfilled') return [];
+                    const d = res.value.data;
+                    return Array.isArray(d) ? d : d.results || [];
+                };
+                setPrimarySubordinates(toList(priRes));
+                setSecondarySubordinates(toList(secRes));
             } catch { /* not manager */ }
             setTeamCountsLoading(false);
         };
-        fetchTeamCounts();
+        fetchSubordinates();
     }, []);
 
     // Sync tab changes to URL
@@ -199,6 +200,8 @@ const Requests = () => {
                                 primaryCount={primaryCount}
                                 secondaryCount={secondaryCount}
                                 parentSearchText={searchText}
+                                sharedPrimarySubordinates={primarySubordinates}
+                                sharedSecondarySubordinates={secondarySubordinates}
                             />
                         )}
                     </div>
@@ -213,6 +216,8 @@ const Requests = () => {
                             secondaryCount={secondaryCount}
                             teamCountsLoading={teamCountsLoading}
                             searchText={searchText}
+                            sharedPrimarySubordinates={primarySubordinates}
+                            sharedSecondarySubordinates={secondarySubordinates}
                         />
                     )}
                 </div>

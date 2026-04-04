@@ -138,27 +138,33 @@ function MealTrendTooltip({ active, payload, label }) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-export default function BreakMealSection({ onPersonClick }) {
+export default function BreakMealSection({ onPersonClick, bulkBreakMeal, bulkLoading }) {
     const { queryParams } = useAnalyticsFilter();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedData, setFetchedData] = useState(null);
+    const [fetchedLoading, setFetchedLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const hasBulk = bulkBreakMeal != null;
+
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (hasBulk) { setFetchedLoading(false); return; }
+        setFetchedLoading(true);
         setError(null);
         try {
             const res = await api.get('/attendance-analytics/break-meal/', { params: queryParams });
-            setData(res.data);
+            setFetchedData(res.data);
         } catch (err) {
             console.error('BreakMealSection fetch error:', err);
             setError('Mola ve yemek verileri yüklenemedi.');
         } finally {
-            setLoading(false);
+            setFetchedLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, hasBulk]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const data = hasBulk ? (bulkBreakMeal && !bulkBreakMeal.error ? bulkBreakMeal : fetchedData) : fetchedData;
+    const loading = hasBulk ? (bulkLoading ?? false) : fetchedLoading;
 
     /* ─── KPI values ─── */
     const kpi = data?.kpi;
