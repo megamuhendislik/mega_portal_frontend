@@ -208,6 +208,19 @@ const TimeRange = ({ req }) => {
     }
 
     if (req.type === 'OVERTIME' && req.start_time && req.end_time) {
+        const otSegs = req.segments;
+        if (Array.isArray(otSegs) && otSegs.length > 1) {
+            return (
+                <div className="flex flex-col gap-0.5">
+                    {otSegs.map((seg, i) => (
+                        <span key={i} className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                            <Clock size={10} />
+                            {formatTime(seg.start)} - {formatTime(seg.end)}
+                        </span>
+                    ))}
+                </div>
+            );
+        }
         return (
             <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
                 <Clock size={10} />

@@ -877,10 +877,22 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   </div>
                   <div className="bg-white rounded-xl p-3 border border-slate-200">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Saat Aralığı</span>
-                    <span className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
-                      <Clock size={14} className="text-amber-500" />
-                      {request.start_time?.substring(0, 5)} → {request.end_time?.substring(0, 5)}
-                    </span>
+                    {Array.isArray(request.segments) && request.segments.length > 1 ? (
+                      <div className="flex flex-col gap-1">
+                        {request.segments.map((seg, i) => (
+                          <span key={i} className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
+                            <Clock size={12} className="text-amber-500" />
+                            {(seg.start || '').substring(0, 5)} → {(seg.end || '').substring(0, 5)}
+                          </span>
+                        ))}
+                        <span className="text-[10px] text-slate-400 mt-0.5">{request.segments.length} segment birleştirildi</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
+                        <Clock size={14} className="text-amber-500" />
+                        {request.start_time?.substring(0, 5)} → {request.end_time?.substring(0, 5)}
+                      </span>
+                    )}
                   </div>
                   <div className="bg-white rounded-xl p-3 border border-slate-200">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Toplam Süre</span>
