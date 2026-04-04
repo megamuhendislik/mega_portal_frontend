@@ -7,6 +7,7 @@ import {
 import { format, startOfDay, addHours } from 'date-fns';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
+import WeeklyOtDetailDrawer from '../../components/WeeklyOtDetailDrawer';
 import { getIstanbulNow, formatIstanbulTime } from '../../utils/dateUtils';
 
 export const formatMinutes = (minutes) => {
@@ -389,6 +390,7 @@ export const HierarchyGroupRow = ({
    ───────────────────────────────────────────── */
 export const EmployeeDetailModal = ({ employee, onClose }) => {
     const [weeklyOtData, setWeeklyOtData] = useState(null);
+    const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
 
     useEffect(() => {
         if (employee?.employee_id) {
@@ -403,6 +405,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
     if (!employee) return null;
 
     return (
+        <>
         <ModalOverlay open={!!employee} onClose={onClose}>
             <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
@@ -469,7 +472,12 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
 
                     {/* Weekly OT Limit */}
                     {weeklyOtData && !weeklyOtData.is_unlimited && (
-                        <div className="p-3 rounded-xl border border-slate-100 bg-slate-50">
+                        <div
+                            className="p-3 rounded-xl border border-slate-100 bg-slate-50"
+                            onClick={() => setWeeklyOtDrawerOpen(true)}
+                            style={{ cursor: 'pointer' }}
+                            title="Detay için tıklayın"
+                        >
                             <div className="flex justify-between items-center mb-1.5">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Ek Mesai (Pzt-Paz)</span>
                                 <span className={`text-[10px] font-bold ${
@@ -569,5 +577,13 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                 </div>
             </div>
         </ModalOverlay>
+
+        <WeeklyOtDetailDrawer
+            open={weeklyOtDrawerOpen}
+            onClose={() => setWeeklyOtDrawerOpen(false)}
+            employeeId={employee?.employee_id}
+            employeeName={employee?.employee_name}
+        />
+        </>
     );
 };

@@ -1295,6 +1295,7 @@ export const ExternalDutyForm = ({
     dutyHoursPreview,
     dutyHoursLoading,
     fetchDutyHoursPreview,
+    weeklyOtForDuty,
 }) => {
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -2053,6 +2054,34 @@ export const ExternalDutyForm = ({
                         <div className="animate-pulse text-sm text-slate-400">Mesai hesaplanıyor...</div>
                     </div>
                 ) : null}
+                {dutyHoursPreview?.totals?.total_overtime_minutes > 0 && (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={externalDutyForm.include_overtime}
+                                onChange={(e) => setExternalDutyForm(prev => ({ ...prev, include_overtime: e.target.checked }))}
+                                className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                            />
+                            <span className="text-sm font-medium text-amber-800">Ek mesai saatlerini talep et</span>
+                        </label>
+                        <div className="text-xs text-amber-600 mt-1 ml-6">
+                            Toplam OT: {Math.round(dutyHoursPreview.totals.total_overtime_minutes / 60 * 10) / 10} saat
+                        </div>
+                        {weeklyOtForDuty && !weeklyOtForDuty.is_unlimited && (
+                            <div className="text-xs mt-1 ml-6">
+                                <span className={weeklyOtForDuty.is_over_limit ? 'text-red-600' : 'text-amber-600'}>
+                                    Haftalık: {weeklyOtForDuty.used_hours}/{weeklyOtForDuty.limit_hours} sa — Kalan: {weeklyOtForDuty.remaining_hours} sa
+                                </span>
+                                {weeklyOtForDuty.remaining_hours < dutyHoursPreview.totals.total_overtime_minutes / 60 && (
+                                    <div className="text-red-600 font-medium mt-0.5">
+                                        Haftalık limit aşılacak — OT kısmı potansiyel olarak kalacak
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
                 {dutyHoursPreview && (() => {
                     const firstWorkingDay = dutyHoursPreview.days?.find(d => !d.is_off_day);
                     const shiftTargetMin = firstWorkingDay?.shift_target_minutes;

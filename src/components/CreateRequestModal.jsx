@@ -113,11 +113,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         send_to_substitute: false,
         contact_phone: '',
         date_segments: [],  // [{date, start_time, end_time}]
+        include_overtime: true,
     });
 
     // External duty hours preview
     const [dutyHoursPreview, setDutyHoursPreview] = useState(null);
     const [dutyHoursLoading, setDutyHoursLoading] = useState(false);
+
+    // Weekly OT status for external duty OT checkbox
+    const [weeklyOtForDuty, setWeeklyOtForDuty] = useState(null);
 
     const [cardlessEntryForm, setCardlessEntryForm] = useState({
         date: getIstanbulToday(),
@@ -227,6 +231,21 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             }
         }
     }, [externalDutyForm.start_date, externalDutyForm.end_date, selectedType]);
+
+    // Fetch weekly OT status when duty preview has overtime
+    const dutyOtMinutes = dutyHoursPreview?.totals?.total_overtime_minutes || 0;
+    const dutyStartDate = externalDutyForm.start_date;
+    useEffect(() => {
+        if (selectedType !== 'EXTERNAL_DUTY') return;
+        if (!dutyOtMinutes) {
+            setWeeklyOtForDuty(null);
+            return;
+        }
+        if (!dutyStartDate) return;
+        api.get('/attendance/overtime-requests/weekly-ot-status/', {
+            params: { reference_date: dutyStartDate }
+        }).then(res => setWeeklyOtForDuty(res.data)).catch(() => setWeeklyOtForDuty(null));
+    }, [dutyOtMinutes, selectedType, dutyStartDate]);
 
     useEffect(() => {
         if (isOpen) {
@@ -657,6 +676,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     duty_company: externalDutyForm.duty_company,
                     duty_description: externalDutyForm.duty_description,
                     send_to_substitute: externalDutyForm.send_to_substitute,
+                    include_overtime: externalDutyForm.include_overtime,
                     ...approverPayload,
                 });
             } else if (selectedType === 'CARDLESS_ENTRY') {
@@ -1186,6 +1206,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     dutyHoursPreview={dutyHoursPreview}
                                     dutyHoursLoading={dutyHoursLoading}
                                     fetchDutyHoursPreview={fetchDutyHoursPreview}
+                                    weeklyOtForDuty={weeklyOtForDuty}
                                 />
                             )}
                             {selectedType === 'CARDLESS_ENTRY' && (

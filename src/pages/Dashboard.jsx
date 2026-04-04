@@ -9,6 +9,7 @@ import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import StatCard from '../components/StatCard';
 import Skeleton from '../components/Skeleton';
 import { Clock, Briefcase, Timer, FileText, CheckCircle2, ChefHat, Calendar as CalendarIcon, Zap, Coffee, Scale, User, ArrowUpRight, AlertTriangle, AlertCircle, XCircle, Cake, ChevronLeft, ChevronRight } from 'lucide-react';
+import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -199,6 +200,7 @@ const Dashboard = () => {
 
     // Fiscal month navigation
     const [selectedFiscal, setSelectedFiscal] = useState(getCurrentFiscal);
+    const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
     const currentFiscal = useMemo(getCurrentFiscal, []);
     const isCurrentMonth = selectedFiscal.year === currentFiscal.year && selectedFiscal.month === currentFiscal.month;
 
@@ -378,6 +380,7 @@ const Dashboard = () => {
     }
 
     return (
+        <>
         <div className="max-w-[1700px] mx-auto space-y-8 pb-10 px-4 md:px-8 pt-6">
 
             {/* Header */}
@@ -541,7 +544,12 @@ const Dashboard = () => {
                         }
 
                         return (
-                            <div className={`pt-2 border-t ${ratio >= 0.7 ? `${bgClass} ${borderClass} px-2 py-1.5 -mx-2 rounded-lg border mt-2` : 'border-slate-50'}`}>
+                            <div
+                                className={`pt-2 border-t ${ratio >= 0.7 ? `${bgClass} ${borderClass} px-2 py-1.5 -mx-2 rounded-lg border mt-2` : 'border-slate-50'}`}
+                                onClick={() => setWeeklyOtDrawerOpen(true)}
+                                style={{ cursor: 'pointer' }}
+                                title="Detay için tıklayın"
+                            >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1">
                                         {icon}
@@ -826,6 +834,12 @@ const Dashboard = () => {
 
 
         </div>
+
+        <WeeklyOtDetailDrawer
+            open={weeklyOtDrawerOpen}
+            onClose={() => setWeeklyOtDrawerOpen(false)}
+        />
+        </>
     );
 };
 
