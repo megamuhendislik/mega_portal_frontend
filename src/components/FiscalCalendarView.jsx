@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
-import moment from 'moment';
+import { format, addDays, endOfMonth, isBefore, isAfter, isEqual, parseISO } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Pencil, Trash2 } from 'lucide-react';
 import DailyConfigModal from './DailyConfigModal';
 import TemplatePicker from './TemplatePicker';
@@ -83,8 +84,8 @@ const FiscalCalendarView = ({
                 const { selectedBrushId: brushId, eraserActive: eraser, onBulkPaint: bulkFn } = paintStateRef.current;
 
                 if (months.length > 0) {
-                    const startDate = moment([year, months[0], 1]).format('YYYY-MM-DD');
-                    const endDate = moment([year, months[months.length - 1], 1]).endOf('month').format('YYYY-MM-DD');
+                    const startDate = format(new Date(year, months[0], 1), 'yyyy-MM-dd');
+                    const endDate = format(endOfMonth(new Date(year, months[months.length - 1], 1)), 'yyyy-MM-dd');
                     if (eraser) bulkFn?.(startDate, endDate, null);
                     else if (brushId) bulkFn?.(startDate, endDate, brushId);
                 }
@@ -114,13 +115,13 @@ const FiscalCalendarView = ({
     // Day drag handlers — fill contiguous range between start day and current day
     const fillDayRange = useCallback((startStr, endStr) => {
         const filled = new Set();
-        const a = moment(startStr);
-        const b = moment(endStr);
-        const from = a.isBefore(b) ? a.clone() : b.clone();
-        const to = a.isBefore(b) ? b.clone() : a.clone();
-        while (from.isSameOrBefore(to)) {
-            filled.add(from.format('YYYY-MM-DD'));
-            from.add(1, 'day');
+        const a = new Date(startStr + 'T00:00:00');
+        const b = new Date(endStr + 'T00:00:00');
+        let from = isBefore(a, b) ? new Date(a) : new Date(b);
+        const to = isBefore(a, b) ? new Date(b) : new Date(a);
+        while (isBefore(from, to) || isEqual(from, to)) {
+            filled.add(format(from, 'yyyy-MM-dd'));
+            from = addDays(from, 1);
         }
         return filled;
     }, []);
@@ -197,7 +198,7 @@ const FiscalCalendarView = ({
             const hSet = new Set();
             const eventsData = responses[0].data.results || responses[0].data;
             (Array.isArray(eventsData) ? eventsData : []).filter(e => e.status === 'HOLIDAY').forEach(e => {
-                hSet.add(moment(e.start).format('YYYY-MM-DD'));
+                hSet.add(format(new Date(e.start), 'yyyy-MM-dd'));
             });
             setHolidays(hSet);
 
@@ -216,16 +217,16 @@ const FiscalCalendarView = ({
     const getMonths = () => {
         return Array.from({ length: 12 }, (_, i) => ({
             month: i + 1,
-            name: moment().month(i).format('MMMM'),
-            start: moment([year, i, 1]),
-            end: moment([year, i, 1]).endOf('month')
+            name: format(new Date(year, i, 1), 'MMMM', { locale: tr }),
+            start: new Date(year, i, 1),
+            end: endOfMonth(new Date(year, i, 1))
         }));
     };
 
     const getDaysArray = (start, end) => {
         const arr = [];
-        const dt = start.clone();
-        while (dt <= end) { arr.push(dt.clone()); dt.add(1, 'd'); }
+        let dt = new Date(start);
+        while (dt <= end) { arr.push(new Date(dt)); dt = addDays(dt, 1); }
         return arr;
     };
 
@@ -237,7 +238,7 @@ const FiscalCalendarView = ({
                 onPaintDay && onPaintDay(dateStr, selectedBrushId);
             }
         } else {
-            setSelectedDate(moment(dateStr).toDate());
+            setSelectedDate(new Date(dateStr + 'T00:00:00'));
             setShowConfigModal(true);
         }
     };
@@ -248,7 +249,7 @@ const FiscalCalendarView = ({
     };
 
     const handleDeleteOverride = async (override) => {
-        if (!window.confirm(`${moment(override.date).format('DD MMMM YYYY')} tarihindeki özel ayar silinecek. Emin misiniz?`)) return;
+        if (!window.confirm(`${format(new Date(override.date + 'T00:00:00'), 'dd MMMM yyyy', { locale: tr })} tarihindeki özel ayar silinecek. Emin misiniz?`)) return;
         try {
             await api.delete(`/attendance/daily-overrides/${override.id}/`);
             await fetchData();
@@ -272,8 +273,8 @@ const FiscalCalendarView = ({
 
     const handleMonthPaint = (monthIndex) => {
         // monthIndex is 0-based (0=Jan, 11=Dec)
-        const start = moment([year, monthIndex, 1]).format('YYYY-MM-DD');
-        const end = moment([year, monthIndex, 1]).endOf('month').format('YYYY-MM-DD');
+        const start = format(new Date(year, monthIndex, 1), 'yyyy-MM-dd');
+        const end = format(endOfMonth(new Date(year, monthIndex, 1)), 'yyyy-MM-dd');
         if (eraserActive) {
             onBulkPaint && onBulkPaint(start, end, null);
         } else if (selectedBrushId) {
@@ -285,7 +286,8 @@ const FiscalCalendarView = ({
 
     const renderMonth = (monthData) => {
         const days = getDaysArray(monthData.start, monthData.end);
-        const firstDayOfWeek = monthData.start.isoWeekday();
+        const dow = monthData.start.getDay();
+        const firstDayOfWeek = dow === 0 ? 7 : dow; // isoWeekday: Mon=1..Sun=7
         const emptySlots = firstDayOfWeek - 1;
 
         const monthIdx = monthData.month - 1;
@@ -328,9 +330,9 @@ const FiscalCalendarView = ({
                     ))}
 
                     {days.map(day => {
-                        const dStr = day.format('YYYY-MM-DD');
+                        const dStr = format(day, 'yyyy-MM-dd');
                         const isPublicHoliday = holidays.has(dStr);
-                        const isWeekend = day.day() === 0 || day.day() === 6;
+                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                         if (paintMode) {
                             const assignment = dayAssignments[dStr];
@@ -377,7 +379,7 @@ const FiscalCalendarView = ({
                                     style={{ ...bgStyle, ...borderStyle }}
                                     title={tooltipText}
                                 >
-                                    <span>{day.date()}</span>
+                                    <span>{day.getDate()}</span>
                                     {hasAssignment && !isInDrag && (
                                         <span className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: templateColor }} />
                                     )}
@@ -424,7 +426,7 @@ const FiscalCalendarView = ({
                                     className={`${bgClass} border ${borderClass} rounded-md p-0.5 text-center text-[11px] cursor-pointer transition-all flex flex-col items-center justify-center h-8 relative group`}
                                     title={tooltipText}
                                 >
-                                    <span>{day.date()}</span>
+                                    <span>{day.getDate()}</span>
                                     {override && !override.is_off && (
                                         <Clock size={6} className="absolute bottom-0 right-0.5 text-emerald-600" />
                                     )}
@@ -482,8 +484,8 @@ const FiscalCalendarView = ({
                                         disabled={!selectedBrushId && !eraserActive}
                                         className={`px-1.5 py-0.5 text-[10px] font-bold rounded border transition-all disabled:opacity-30 ${isHighlighted ? 'scale-110 shadow-md text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'}`}
                                         style={isHighlighted ? { backgroundColor: bColor, borderColor: bColor } : {}}
-                                        title={`${moment().month(i).format('MMMM')} ${year} — sürükle → çoklu ay`}>
-                                        {moment().month(i).format('MMM')}
+                                        title={`${format(new Date(year, i, 1), 'MMMM', { locale: tr })} ${year} — sürükle → çoklu ay`}>
+                                        {format(new Date(year, i, 1), 'MMM', { locale: tr })}
                                     </button>
                                 );
                             })}
@@ -593,7 +595,7 @@ const FiscalCalendarView = ({
                                     {overrideList.map(ov => (
                                         <tr key={ov.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-2.5 font-medium text-slate-800">
-                                                {moment(ov.date).format('DD MMM YYYY, ddd')}
+                                                {format(new Date(ov.date + 'T00:00:00'), 'dd MMM yyyy, EEE', { locale: tr })}
                                             </td>
                                             <td className="px-4 py-2.5">
                                                 {ov.is_off ? (
@@ -655,8 +657,8 @@ const FiscalCalendarView = ({
                 <DailyConfigModal
                     date={selectedDate}
                     calendarId={calendarId}
-                    initialOverride={selectedDate ? overrides[moment(selectedDate).format('YYYY-MM-DD')] : null}
-                    isHoliday={selectedDate ? holidays.has(moment(selectedDate).format('YYYY-MM-DD')) : false}
+                    initialOverride={selectedDate ? overrides[format(selectedDate, 'yyyy-MM-dd')] : null}
+                    isHoliday={selectedDate ? holidays.has(format(selectedDate, 'yyyy-MM-dd')) : false}
                     onClose={() => setShowConfigModal(false)}
                     onSuccess={() => {
                         setShowConfigModal(false);

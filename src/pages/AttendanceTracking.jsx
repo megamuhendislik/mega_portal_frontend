@@ -7,7 +7,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import moment from 'moment';
+import { differenceInDays, addDays, isBefore, min as dateMin, format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import { getIstanbulToday, getIstanbulTodayDate } from '../utils/dateUtils';
 import {
     formatMinutes,
@@ -319,24 +320,24 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const elapsedWeeks = useMemo(() => {
         let fiscalStart, fiscalEnd;
         if (fiscalPeriod.start && fiscalPeriod.end) {
-            fiscalStart = moment(fiscalPeriod.start);
-            fiscalEnd = moment(fiscalPeriod.end);
+            fiscalStart = new Date(fiscalPeriod.start + 'T00:00:00');
+            fiscalEnd = new Date(fiscalPeriod.end + 'T00:00:00');
         } else {
-            // Fallback until backend responds
-            fiscalStart = moment([year, month - 2, 26]);
-            fiscalEnd = moment([year, month - 1, 25]);
+            // Fallback until backend responds (month is 1-based from API)
+            fiscalStart = new Date(year, month - 2, 26);
+            fiscalEnd = new Date(year, month - 1, 25);
         }
-        const today = moment(getIstanbulTodayDate());
-        const effectiveEnd = moment.min(today, fiscalEnd);
+        const today = getIstanbulTodayDate();
+        const effectiveEnd = dateMin([today, fiscalEnd]);
 
-        if (effectiveEnd.isBefore(fiscalStart)) return 1;
+        if (isBefore(effectiveEnd, fiscalStart)) return 1;
 
         // Find first Monday on or after fiscal start
-        const firstMonday = fiscalStart.clone();
-        while (firstMonday.day() !== 1) firstMonday.add(1, 'day');
+        let firstMonday = new Date(fiscalStart);
+        while (firstMonday.getDay() !== 1) firstMonday = addDays(firstMonday, 1);
 
         // Days from first Monday to effective end
-        const daysFromFirstMonday = effectiveEnd.diff(firstMonday, 'days');
+        const daysFromFirstMonday = differenceInDays(effectiveEnd, firstMonday);
         if (daysFromFirstMonday < 0) return 1;
 
         return Math.floor(daysFromFirstMonday / 7) + 1;
@@ -568,7 +569,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             onChange={(e) => setMonth(parseInt(e.target.value))}
                             className="bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 py-1.5 pl-2.5 pr-7 cursor-pointer hover:border-indigo-300 transition-colors"
                         >
-                            {moment.months().map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                            {Array.from({ length: 12 }, (_, i) => format(new Date(2026, i, 1), 'MMMM', { locale: tr })).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                         </select>
                         <select
                             value={selectedDept}

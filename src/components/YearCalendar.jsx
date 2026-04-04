@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import moment from 'moment';
+import { format, isBefore, isSameDay, subDays, addDays, getDaysInMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import 'moment/locale/tr';
 import { getIstanbulYear, getIstanbulTodayDate } from '../utils/dateUtils';
-
-moment.locale('tr');
 
 const YearCalendar = ({
     year,
@@ -54,8 +51,8 @@ const YearCalendar = ({
         setIsDragging(false);
         if (onRangeSelect && dragStart && dragEnd) {
             // Ensure chronological order
-            const start = moment(dragStart).isBefore(moment(dragEnd)) ? dragStart : dragEnd;
-            const end = moment(dragStart).isBefore(moment(dragEnd)) ? dragEnd : dragStart;
+            const start = isBefore(new Date(dragStart + 'T00:00:00'), new Date(dragEnd + 'T00:00:00')) ? dragStart : dragEnd;
+            const end = isBefore(new Date(dragStart + 'T00:00:00'), new Date(dragEnd + 'T00:00:00')) ? dragEnd : dragStart;
             onRangeSelect(start, end);
         }
         setDragStart(null);
@@ -94,9 +91,9 @@ const YearCalendar = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {months.map((monthName, index) => {
-                    const monthDate = moment().year(currentYear).month(index);
-                    const daysInMonth = monthDate.daysInMonth();
-                    const startDay = monthDate.startOf('month').day(); // 0=Sun
+                    const monthDate = new Date(currentYear, index, 1);
+                    const daysInMonth = getDaysInMonth(monthDate);
+                    const startDay = monthDate.getDay(); // 0=Sun
                     // Adjust for Monday start (Turkey)
                     const adjustedStartDay = startDay === 0 ? 6 : startDay - 1;
 
@@ -107,7 +104,7 @@ const YearCalendar = ({
                     return (
                         <div
                             key={monthName}
-                            onClick={() => onMonthClick && onMonthClick(monthDate.toDate())}
+                            onClick={() => onMonthClick && onMonthClick(monthDate)}
                             className={`rounded-xl p-4 transition-all border border-transparent ${onMonthClick ? 'cursor-pointer hover:bg-slate-50 hover:border-indigo-100 hover:shadow-sm' : ''}`}
                         >
                             <h3 className={`font-bold text-base text-slate-800 mb-3 ${onMonthClick ? 'group-hover:text-indigo-600' : ''}`}>{monthName}</h3>
@@ -118,20 +115,23 @@ const YearCalendar = ({
                                 {days.map((d, i) => {
                                     if (!d) return <div key={i}></div>;
 
-                                    const currentDayDate = moment([currentYear, index, d]);
-                                    const dateStr = currentDayDate.format('YYYY-MM-DD');
+                                    const currentDayDate = new Date(currentYear, index, d);
+                                    const dateStr = format(currentDayDate, 'yyyy-MM-dd');
 
                                     // Optimization: Calculate props efficiently
-                                    const isToday = currentDayDate.isSame(moment(getIstanbulTodayDate()), 'day');
+                                    const isToday = isSameDay(currentDayDate, getIstanbulTodayDate());
                                     const isHoliday = holidays.has(dateStr);
                                     const isSelected = selectedDates.has(dateStr);
-                                    const isWeekend = currentDayDate.day() === 0 || currentDayDate.day() === 6;
+                                    const isWeekend = currentDayDate.getDay() === 0 || currentDayDate.getDay() === 6;
 
                                     let isInDragRange = false;
                                     if (isDragging && dragStart && dragEnd) {
-                                        const s = moment(dragStart).isBefore(moment(dragEnd)) ? dragStart : dragEnd;
-                                        const e = moment(dragStart).isBefore(moment(dragEnd)) ? dragEnd : dragStart;
-                                        isInDragRange = currentDayDate.isBetween(moment(s).subtract(1, 'day'), moment(e).add(1, 'day'));
+                                        const sDate = new Date(dragStart + 'T00:00:00');
+                                        const eDate = new Date(dragEnd + 'T00:00:00');
+                                        const s = isBefore(sDate, eDate) ? dragStart : dragEnd;
+                                        const e = isBefore(sDate, eDate) ? dragEnd : dragStart;
+                                        // isBetween exclusive: day > (s-1) && day < (e+1) → day >= s && day <= e
+                                        isInDragRange = !isBefore(currentDayDate, new Date(s + 'T00:00:00')) && !isBefore(new Date(e + 'T00:00:00'), currentDayDate);
                                     }
 
                                     return (

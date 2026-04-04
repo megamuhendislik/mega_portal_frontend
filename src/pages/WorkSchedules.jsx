@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import moment from 'moment';
+import { format, addDays, isBefore, isEqual } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import {
     Calendar, Users, Clock, Save, Plus, Trash2, CheckCircle,
@@ -1032,7 +1033,7 @@ const HolidaysList = ({ publicHolidayIds }) => {
                         {activeHolidays.map(h => (
                             <tr key={h.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                 <td className="px-4 py-2.5 font-mono text-slate-700">
-                                    {moment(h.date).format('DD MMM YYYY, ddd')}
+                                    {format(new Date(h.date + 'T00:00:00'), 'dd MMM yyyy, EEE', { locale: tr })}
                                 </td>
                                 <td className="px-4 py-2.5 font-medium text-slate-800">{h.name}</td>
                                 <td className="px-4 py-2.5">
@@ -1078,11 +1079,11 @@ const HolidayDetailModal = ({ range, onClose, onSave }) => {
 
     const dates = useMemo(() => {
         const list = [];
-        let current = moment(range.start);
-        const end = moment(range.end);
-        while (current.isSameOrBefore(end)) {
-            list.push(current.format('YYYY-MM-DD'));
-            current.add(1, 'day');
+        let current = new Date(range.start + 'T00:00:00');
+        const end = new Date(range.end + 'T00:00:00');
+        while (isBefore(current, end) || isEqual(current, end)) {
+            list.push(format(current, 'yyyy-MM-dd'));
+            current = addDays(current, 1);
         }
         return list;
     }, [range]);

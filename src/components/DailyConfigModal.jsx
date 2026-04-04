@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, Coffee, Trash2, Save } from 'lucide-react';
 import api from '../services/api';
-import moment from 'moment';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import ModalOverlay from './ui/ModalOverlay';
 
 const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initialHolidayData, onClose, onSuccess }) => {
     // date can be null → "new override" mode with date picker
-    const [selectedDateStr, setSelectedDateStr] = useState(date ? moment(date).format('YYYY-MM-DD') : '');
+    const [selectedDateStr, setSelectedDateStr] = useState(date ? format(new Date(date), 'yyyy-MM-dd') : '');
     const [activeTab, setActiveTab] = useState(initialOverride ? (initialOverride.is_off ? 'HOLIDAY' : 'CUSTOM') : isHoliday ? 'HOLIDAY' : 'STANDARD');
     const [loading, setLoading] = useState(false);
 
@@ -57,7 +58,7 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
         }
     };
 
-    const displayDate = selectedDateStr ? moment(selectedDateStr).format('DD MMMM YYYY') : null;
+    const displayDate = selectedDateStr ? format(new Date(selectedDateStr + 'T00:00:00'), 'dd MMMM yyyy', { locale: tr }) : null;
 
     return (
         <ModalOverlay open={true} onClose={onClose}>

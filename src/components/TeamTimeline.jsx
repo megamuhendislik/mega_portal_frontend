@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import moment from 'moment';
+import { format, addDays, isBefore, isEqual, isSameDay } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import { Filter, Users } from 'lucide-react';
 import { getIstanbulTodayDate } from '../utils/dateUtils';
@@ -49,18 +50,20 @@ const TeamTimeline = ({ startDate, endDate }) => {
     // Generate days array for the month
     const days = useMemo(() => {
         const result = [];
-        const start = moment(startDate);
-        const end = moment(endDate);
-        let current = start.clone();
-        while (current.isSameOrBefore(end, 'day')) {
+        const start = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T00:00:00');
+        const todayDate = getIstanbulTodayDate();
+        let current = new Date(start);
+        while (isBefore(current, end) || isEqual(current, end)) {
+            const dow = current.getDay();
             result.push({
-                date: current.format('YYYY-MM-DD'),
-                day: current.date(),
-                dayName: current.format('dd'),
-                isWeekend: current.day() === 0 || current.day() === 6,
-                isToday: current.isSame(moment(getIstanbulTodayDate()), 'day'),
+                date: format(current, 'yyyy-MM-dd'),
+                day: current.getDate(),
+                dayName: format(current, 'EEEEEE', { locale: tr }),
+                isWeekend: dow === 0 || dow === 6,
+                isToday: isSameDay(current, todayDate),
             });
-            current.add(1, 'day');
+            current = addDays(current, 1);
         }
         return result;
     }, [startDate, endDate]);
@@ -92,7 +95,7 @@ const TeamTimeline = ({ startDate, endDate }) => {
     const fetchTimeline = async () => {
         setLoading(true);
         try {
-            let url = `/calendar-events/team-timeline/?start=${moment(startDate).format('YYYY-MM-DD')}&end=${moment(endDate).format('YYYY-MM-DD')}`;
+            let url = `/calendar-events/team-timeline/?start=${format(new Date(startDate + 'T00:00:00'), 'yyyy-MM-dd')}&end=${format(new Date(endDate + 'T00:00:00'), 'yyyy-MM-dd')}`;
             if (filters.leaves) url += '&include_leaves=true';
             if (filters.overtime) url += '&include_overtime=true';
             if (filters.healthReports) url += '&include_health_reports=true';
@@ -322,8 +325,8 @@ const TeamTimeline = ({ startDate, endDate }) => {
                     <div className="font-bold">{hoveredEvent.title}</div>
                     <div className="text-slate-300 mt-0.5">
                         {hoveredEvent.start === hoveredEvent.end
-                            ? moment(hoveredEvent.start).format('D MMMM')
-                            : `${moment(hoveredEvent.start).format('D MMM')} - ${moment(hoveredEvent.end).format('D MMM')}`
+                            ? format(new Date(hoveredEvent.start + 'T00:00:00'), 'd MMMM', { locale: tr })
+                            : `${format(new Date(hoveredEvent.start + 'T00:00:00'), 'd MMM', { locale: tr })} - ${format(new Date(hoveredEvent.end + 'T00:00:00'), 'd MMM', { locale: tr })}`
                         }
                     </div>
                     {hoveredEvent.duration_hours > 0 && (

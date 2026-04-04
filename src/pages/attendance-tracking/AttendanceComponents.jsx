@@ -4,7 +4,7 @@ import {
     ChevronDown, ChevronRight as ChevronRightIcon,
     CalendarCheck, AlertTriangle, Palmtree, HeartPulse, Hospital, Briefcase
 } from 'lucide-react';
-import moment from 'moment';
+import { format, startOfDay, addHours } from 'date-fns';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulNow, formatIstanbulTime } from '../../utils/dateUtils';
@@ -505,8 +505,8 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                 const totalRange = 900;
                                 const getMin = (iso) => {
                                     if (!iso) return null;
-                                    const d = moment(iso);
-                                    return d.hours() * 60 + d.minutes();
+                                    const d = new Date(iso);
+                                    return d.getHours() * 60 + d.getMinutes();
                                 };
                                 const inMin = getMin(employee.today_check_in);
                                 const outMin = getMin(employee.today_check_out) || (employee.is_online ? (() => { const _n = getIstanbulNow(); return _n.getHours() * 60 + _n.getMinutes(); })() : inMin + 60);
@@ -518,7 +518,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                                         {[0, 25, 50, 75, 100].map(p => (
                                             <div key={p} className="absolute top-0 bottom-0 border-l border-slate-200/60" style={{ left: `${p}%` }}>
                                                 <span className="absolute top-0.5 left-1 text-[9px] text-slate-400 tabular-nums">
-                                                    {moment().startOf('day').add(7 + (p / 100) * 15, 'hours').format('HH:mm')}
+                                                    {format(addHours(startOfDay(new Date()), 7 + (p / 100) * 15), 'HH:mm')}
                                                 </span>
                                             </div>
                                         ))}

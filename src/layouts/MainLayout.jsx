@@ -36,9 +36,14 @@ import clsx from 'clsx';
 
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling';
+
 import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 import ModalOverlay from '../components/ui/ModalOverlay';
+
+// Module-level cache for today_summary to avoid duplicate calls (MainLayout + Dashboard)
+let _breakSummaryCache = { data: null, fetchedAt: 0 };
+const BREAK_SUMMARY_MIN_INTERVAL = 20000; // 20 seconds
 
 const MainLayout = () => {
     const { user, logout, hasPermission } = useAuth();
@@ -100,9 +105,16 @@ const MainLayout = () => {
     }, [location.pathname, isMobile]);
 
     // Poll today_summary for break indicator (same API as Dashboard KALAN MOLA)
+    // Uses module-level cache to skip call if fetched <20s ago (avoids overlap with Dashboard polling)
     const fetchBreakSummary = useCallback(async () => {
         try {
+            const now = Date.now();
+            if (_breakSummaryCache.data && (now - _breakSummaryCache.fetchedAt) < BREAK_SUMMARY_MIN_INTERVAL) {
+                setBreakSummary(_breakSummaryCache.data);
+                return;
+            }
             const res = await api.get('/attendance/today_summary/');
+            _breakSummaryCache = { data: res.data, fetchedAt: Date.now() };
             setBreakSummary(res.data);
         } catch (e) {
             // Silently ignore - non-critical UI feature

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import moment from 'moment';
-import 'moment/locale/tr';
+import { format, startOfMonth, endOfMonth, startOfISOWeek, endOfISOWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, subDays, isBefore, isAfter, isSameDay, startOfDay, differenceInDays } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AgendaEventModal from '../components/AgendaEventModal';
@@ -13,8 +13,6 @@ import {
     CreditCard, MapPin, Building2, Trash2, Edit3, Clock, Star,
     UsersRound, X as XIcon, Download, Search, Repeat, LayoutGrid, Columns3, GripVertical
 } from 'lucide-react';
-
-moment.locale('tr');
 
 // ─── Color config for event types ───
 const EVENT_COLORS = {
@@ -43,19 +41,19 @@ const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
 // ─── Month Grid Component ───
 const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDate, onSelectDate, onQuickAdd, onDragStart, onDrop }) => {
-    const startOfMonth = moment(currentMonth).startOf('month');
-    const endOfMonth = moment(currentMonth).endOf('month');
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
 
     // Build 6-week grid starting from Monday
-    const startDay = startOfMonth.clone().startOf('isoWeek');
-    const endDay = endOfMonth.clone().endOf('isoWeek');
+    const gridStart = startOfISOWeek(monthStart);
+    const gridEnd = endOfISOWeek(monthEnd);
     const weeks = [];
-    let day = startDay.clone();
-    while (day.isSameOrBefore(endDay, 'day')) {
+    let day = new Date(gridStart);
+    while (!isAfter(day, gridEnd)) {
         const week = [];
         for (let i = 0; i < 7; i++) {
-            week.push(day.clone());
-            day.add(1, 'day');
+            week.push(new Date(day));
+            day = addDays(day, 1);
         }
         weeks.push(week);
     }
@@ -64,22 +62,21 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
     const eventsByDate = useMemo(() => {
         const map = {};
         events.forEach(evt => {
-            const start = moment(evt.start);
-            const end = moment(evt.end);
-            let d = start.clone().startOf('day');
-            const lastDay = end.clone().startOf('day');
-            while (d.isSameOrBefore(lastDay, 'day')) {
-                const key = d.format('YYYY-MM-DD');
+            const start = startOfDay(new Date(evt.start));
+            const end = startOfDay(new Date(evt.end));
+            let d = new Date(start);
+            while (!isAfter(d, end)) {
+                const key = format(d, 'yyyy-MM-dd');
                 if (!map[key]) map[key] = [];
                 map[key].push(evt);
-                d.add(1, 'day');
+                d = addDays(d, 1);
             }
         });
         return map;
     }, [events]);
 
     const today = getIstanbulToday();
-    const selectedStr = selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : null;
+    const selectedStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
 
     const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
     const handleDrop = (e, dateStr) => {
@@ -103,14 +100,15 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                 {weeks.map((week, wi) => (
                     <div key={wi} className="grid grid-cols-7 gap-px">
                         {week.map(d => {
-                            const dateStr = d.format('YYYY-MM-DD');
-                            const isCurrentMonth = d.isSame(currentMonth, 'month');
+                            const dateStr = format(d, 'yyyy-MM-dd');
+                            const isCurrentMonth = d.getMonth() === currentMonth.getMonth() && d.getFullYear() === currentMonth.getFullYear();
                             const isToday = dateStr === today;
                             const isSelected = dateStr === selectedStr;
-                            const isWeekend = d.isoWeekday() >= 6;
+                            const isoWd = d.getDay() === 0 ? 7 : d.getDay();
+                            const isWeekend = isoWd >= 6;
                             const isHoliday = holidays.has(dateStr);
                             const isHalfDay = halfDayHolidays.has(dateStr);
-                            const isPast = d.isBefore(moment(getIstanbulTodayDate()), 'day');
+                            const isPast = isBefore(d, getIstanbulTodayDate());
                             const dayEvents = eventsByDate[dateStr] || [];
 
                             // Unique event type dots (max 4)
@@ -133,8 +131,8 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                             return (
                                 <div
                                     key={dateStr}
-                                    onClick={() => onSelectDate(d.toDate())}
-                                    onDoubleClick={() => onQuickAdd && onQuickAdd(d.toDate())}
+                                    onClick={() => onSelectDate(d)}
+                                    onDoubleClick={() => onQuickAdd && onQuickAdd(d)}
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, dateStr)}
                                     className={`
@@ -148,7 +146,7 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
                                         text-xs font-bold leading-none
                                         ${isSelected ? 'text-white' : isHoliday ? 'text-red-600' : isWeekend ? 'text-amber-700' : !isCurrentMonth ? 'text-slate-300' : 'text-slate-700'}
                                     `}>
-                                        {d.date()}
+                                        {d.getDate()}
                                     </span>
 
                                     {/* Event dots */}
@@ -203,25 +201,26 @@ const MonthGrid = ({ currentMonth, events, holidays, halfDayHolidays, selectedDa
 
 // ─── Week Grid Component ───
 const WeekGrid = ({ currentDate, events, holidays, onSelectDate, onQuickAdd, onEdit, onDelete }) => {
-    const weekStart = moment(currentDate).startOf('isoWeek');
-    const days = Array.from({ length: 7 }, (_, i) => weekStart.clone().add(i, 'days'));
+    const weekStart = startOfISOWeek(currentDate);
+    const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
     const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00-20:00
     const today = getIstanbulToday();
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
     // Group events by date
     const eventsByDate = useMemo(() => {
         const map = {};
         days.forEach(d => {
-            const dateStr = d.format('YYYY-MM-DD');
+            const dateStr = format(d, 'yyyy-MM-dd');
             map[dateStr] = events.filter(evt => {
-                const evtStart = moment(evt.start).format('YYYY-MM-DD');
-                const evtEnd = moment(evt.end).format('YYYY-MM-DD');
+                const evtStart = format(new Date(evt.start), 'yyyy-MM-dd');
+                const evtEnd = format(new Date(evt.end), 'yyyy-MM-dd');
                 return dateStr >= evtStart && dateStr <= evtEnd;
             });
         });
         return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [events, weekStart.format('YYYY-MM-DD')]);
+    }, [events, weekStartStr]);
 
     return (
         <div className="overflow-x-auto">
@@ -229,17 +228,17 @@ const WeekGrid = ({ currentDate, events, holidays, onSelectDate, onQuickAdd, onE
             <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200">
                 <div className="p-2" />
                 {days.map(d => {
-                    const dateStr = d.format('YYYY-MM-DD');
+                    const dateStr = format(d, 'yyyy-MM-dd');
                     const isToday = dateStr === today;
                     const isHoliday = holidays.has(dateStr);
                     return (
                         <div
                             key={dateStr}
                             className={`p-2 text-center border-l border-slate-200 cursor-pointer hover:bg-violet-50/50 ${isToday ? 'bg-violet-50' : ''} ${isHoliday ? 'bg-red-50' : ''}`}
-                            onClick={() => onSelectDate(d.toDate())}
+                            onClick={() => onSelectDate(d)}
                         >
-                            <p className={`text-[10px] font-bold uppercase ${isToday ? 'text-violet-600' : 'text-slate-400'}`}>{d.format('ddd')}</p>
-                            <p className={`text-lg font-black ${isToday ? 'text-violet-700' : isHoliday ? 'text-red-600' : 'text-slate-800'}`}>{d.date()}</p>
+                            <p className={`text-[10px] font-bold uppercase ${isToday ? 'text-violet-600' : 'text-slate-400'}`}>{format(d, 'EEE', { locale: tr })}</p>
+                            <p className={`text-lg font-black ${isToday ? 'text-violet-700' : isHoliday ? 'text-red-600' : 'text-slate-800'}`}>{d.getDate()}</p>
                         </div>
                     );
                 })}
@@ -252,13 +251,13 @@ const WeekGrid = ({ currentDate, events, holidays, onSelectDate, onQuickAdd, onE
                             {String(h).padStart(2, '0')}:00
                         </div>
                         {days.map(d => {
-                            const dateStr = d.format('YYYY-MM-DD');
+                            const dateStr = format(d, 'yyyy-MM-dd');
                             return (
                                 <div
                                     key={`${dateStr}-${h}`}
                                     className="border-l border-slate-100 relative hover:bg-violet-50/30 cursor-pointer"
                                     style={{ minHeight: 48 }}
-                                    onClick={() => onQuickAdd(d.toDate(), h)}
+                                    onClick={() => onQuickAdd(d, h)}
                                 />
                             );
                         })}
@@ -266,13 +265,13 @@ const WeekGrid = ({ currentDate, events, holidays, onSelectDate, onQuickAdd, onE
                 ))}
                 {/* Overlay events as absolute positioned blocks */}
                 {days.map((d, dayIdx) => {
-                    const dateStr = d.format('YYYY-MM-DD');
+                    const dateStr = format(d, 'yyyy-MM-dd');
                     const dayEvents = (eventsByDate[dateStr] || []).filter(evt => !evt.allDay);
                     return dayEvents.map(evt => {
-                        const startMom = moment(evt.start);
-                        const endMom = moment(evt.end);
-                        const startHour = startMom.hour() + startMom.minute() / 60;
-                        const endHour = endMom.hour() + endMom.minute() / 60;
+                        const evtStartDate = new Date(evt.start);
+                        const evtEndDate = new Date(evt.end);
+                        const startHour = evtStartDate.getHours() + evtStartDate.getMinutes() / 60;
+                        const endHour = evtEndDate.getHours() + evtEndDate.getMinutes() / 60;
                         const clampedStart = Math.max(startHour, 7);
                         const clampedEnd = Math.min(endHour, 21);
                         if (clampedEnd <= clampedStart) return null;
@@ -320,16 +319,16 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
         );
     }
 
-    const dateStr = moment(date).format('YYYY-MM-DD');
-    const dayName = moment(date).locale('tr').format('dddd');
-    const formattedDate = moment(date).locale('tr').format('D MMMM YYYY');
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayName = format(date, 'EEEE', { locale: tr });
+    const formattedDate = format(date, 'd MMMM yyyy', { locale: tr });
 
     // Filter events for this date
     const dayEvents = events.filter(evt => {
-        const start = moment(evt.start).startOf('day');
-        const end = moment(evt.end).startOf('day');
-        const d = moment(date).startOf('day');
-        return d.isSameOrAfter(start) && d.isSameOrBefore(end);
+        const start = startOfDay(new Date(evt.start));
+        const end = startOfDay(new Date(evt.end));
+        const d = startOfDay(date);
+        return !isBefore(d, start) && !isAfter(d, end);
     });
 
     // Group by type
@@ -343,7 +342,7 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
     // Team members with events on this date
     const teamForDay = (teamEvents || []).filter(te =>
         te.events?.some(ev => {
-            const evDate = moment(ev.date || ev.start).format('YYYY-MM-DD');
+            const evDate = format(new Date(ev.date || ev.start), 'yyyy-MM-dd');
             return evDate === dateStr;
         })
     );
@@ -438,7 +437,7 @@ const DayDetailPanel = ({ date, events, onEdit, onDelete, onAdd, teamEvents, isM
                         </p>
                         <div className="space-y-1">
                             {teamForDay.map(member => {
-                                const memberEvents = member.events?.filter(ev => moment(ev.date || ev.start).format('YYYY-MM-DD') === dateStr) || [];
+                                const memberEvents = member.events?.filter(ev => format(new Date(ev.date || ev.start), 'yyyy-MM-dd') === dateStr) || [];
                                 return (
                                     <div key={member.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50">
                                         <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
@@ -589,14 +588,13 @@ const CalendarPage = () => {
     const fetchCalendarData = useCallback(async () => {
         setLoading(true);
         try {
-            const mDate = moment(currentDate);
             let start, end;
             if (viewMode === 'week') {
-                start = mDate.clone().startOf('isoWeek').subtract(1, 'days').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('isoWeek').add(1, 'days').format('YYYY-MM-DD');
+                start = format(subDays(startOfISOWeek(currentDate), 1), 'yyyy-MM-dd');
+                end = format(addDays(endOfISOWeek(currentDate), 1), 'yyyy-MM-dd');
             } else {
-                start = mDate.clone().startOf('month').subtract(7, 'days').format('YYYY-MM-DD');
-                end = mDate.clone().endOf('month').add(7, 'days').format('YYYY-MM-DD');
+                start = format(subDays(startOfMonth(currentDate), 7), 'yyyy-MM-dd');
+                end = format(addDays(endOfMonth(currentDate), 7), 'yyyy-MM-dd');
             }
 
             let url = `/calendar-events/?start=${start}&end=${end}`;
@@ -622,7 +620,7 @@ const CalendarPage = () => {
                 const eventEnd = new Date(evt.end);
 
                 if (evt.type === 'HOLIDAY') {
-                    const dateStr = moment(eventStart).format('YYYY-MM-DD');
+                    const dateStr = format(eventStart, 'yyyy-MM-dd');
                     newHolidays.add(dateStr);
                     if (evt.is_half_day) newHalfDays.add(dateStr);
                 }
@@ -650,8 +648,8 @@ const CalendarPage = () => {
     // Fetch team timeline (managers only)
     useEffect(() => {
         if (!showTeamView || !isManager) { setTeamData([]); return; }
-        const start = moment(currentDate).startOf('month').format('YYYY-MM-DD');
-        const end = moment(currentDate).endOf('month').format('YYYY-MM-DD');
+        const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+        const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
         api.get(`/calendar-events/team-timeline/?start=${start}&end=${end}&include_leaves=true&include_overtime=true&include_health_reports=true&include_cardless=true`)
             .then(res => setTeamData(res.data?.employees || []))
             .catch(() => setTeamData([]));
@@ -671,25 +669,25 @@ const CalendarPage = () => {
     // Navigation
     const goToPrev = () => {
         if (viewMode === 'week') {
-            setCurrentDate(moment(currentDate).subtract(1, 'week').toDate());
+            setCurrentDate(subWeeks(currentDate, 1));
         } else {
-            setCurrentDate(moment(currentDate).subtract(1, 'month').toDate());
+            setCurrentDate(subMonths(currentDate, 1));
         }
     };
     const goToNext = () => {
         if (viewMode === 'week') {
-            setCurrentDate(moment(currentDate).add(1, 'week').toDate());
+            setCurrentDate(addWeeks(currentDate, 1));
         } else {
-            setCurrentDate(moment(currentDate).add(1, 'month').toDate());
+            setCurrentDate(addMonths(currentDate, 1));
         }
     };
     const goToToday = () => { setCurrentDate(getIstanbulTodayDate()); setSelectedDate(getIstanbulTodayDate()); };
 
     const navTitle = useMemo(() => {
         if (viewMode === 'week') {
-            const ws = moment(currentDate).startOf('isoWeek');
-            const we = moment(currentDate).endOf('isoWeek');
-            return `${ws.format('D MMM')} - ${we.format('D MMM YYYY')}`;
+            const ws = startOfISOWeek(currentDate);
+            const we = endOfISOWeek(currentDate);
+            return `${format(ws, 'd MMM', { locale: tr })} - ${format(we, 'd MMM yyyy', { locale: tr })}`;
         }
         return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(currentDate);
     }, [currentDate, viewMode]);
@@ -751,12 +749,12 @@ const CalendarPage = () => {
 
     const handleDrop = async (targetDateStr) => {
         if (!dragEvent || !dragEvent.db_id) { setDragEvent(null); return; }
-        const sourceDateStr = moment(dragEvent.start).format('YYYY-MM-DD');
+        const sourceDateStr = format(new Date(dragEvent.start), 'yyyy-MM-dd');
         if (sourceDateStr === targetDateStr) { setDragEvent(null); return; }
         try {
-            const dayDiff = moment(targetDateStr).diff(moment(sourceDateStr), 'days');
-            const newStart = moment(dragEvent.start).add(dayDiff, 'days').toISOString();
-            const newEnd = moment(dragEvent.end).add(dayDiff, 'days').toISOString();
+            const dayDiff = differenceInDays(new Date(targetDateStr + 'T00:00:00'), new Date(sourceDateStr + 'T00:00:00'));
+            const newStart = addDays(new Date(dragEvent.start), dayDiff).toISOString();
+            const newEnd = addDays(new Date(dragEvent.end), dayDiff).toISOString();
             await api.patch(`/personal-events/${dragEvent.db_id}/`, {
                 start_time: newStart,
                 end_time: newEnd,

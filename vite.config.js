@@ -27,7 +27,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-antd': ['antd'],
           'vendor-charts': ['recharts'],
-          'vendor-date': ['date-fns', 'moment'],
+          'vendor-date': ['date-fns'],
           'vendor-icons': ['lucide-react', '@heroicons/react'],
         },
       },

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         };
     }, []);
 
-    const login = async (username, password, remember = false) => {
+    const login = useCallback(async (username, password, remember = false) => {
         // Önceki kullanıcının tüm verilerini temizle (LAN proxy cache bypass)
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -93,18 +93,18 @@ export const AuthProvider = ({ children }) => {
         }
 
         return response.data;
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('refresh_token');
         setUser(null);
         window.location.href = '/login';
-    };
+    }, []);
 
-    const hasPermission = (permissionCode) => {
+    const hasPermission = useCallback((permissionCode) => {
         if (!user) return false;
 
         // Superuser Bypass (Check user.user.is_superuser because 'user' here is the Employee profile)
@@ -117,10 +117,14 @@ export const AuthProvider = ({ children }) => {
 
         // Direct permission check - no mapping (new minimal permission system)
         return user.all_permissions.includes(permissionCode);
-    };
+    }, [user]);
+
+    const value = useMemo(() => ({
+        user, login, logout, loading, hasPermission
+    }), [user, loading, login, logout, hasPermission]);
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, hasPermission }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );

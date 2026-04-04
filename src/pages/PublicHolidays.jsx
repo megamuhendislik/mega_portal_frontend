@@ -1,6 +1,7 @@
 import { Plus, Edit, Trash2, Save, X, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
-import moment from 'moment';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import YearCalendar from '../components/YearCalendar';
 import ModalOverlay from '../components/ui/ModalOverlay';
 import { getIstanbulYear } from '../utils/dateUtils';
@@ -148,7 +149,7 @@ const PublicHolidays = () => {
                                     <td className="p-4 text-slate-600 font-medium">
                                         <div className="flex items-center gap-2">
                                             <CalendarIcon size={16} className="text-slate-400" />
-                                            {moment(holiday.date).format('D MMMM YYYY, dddd')}
+                                            {format(new Date(holiday.date + 'T00:00:00'), 'd MMMM yyyy, EEEE', { locale: tr })}
                                         </div>
                                     </td>
                                     <td className="p-4 text-slate-800 font-semibold">{holiday.name}</td>

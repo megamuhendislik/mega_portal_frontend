@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, AlignLeft, Users, Building, Building2, Bell, Check, Lock, Globe, Search, Plus, Trash2, ChevronRight, MapPin, Repeat } from 'lucide-react';
 import api from '../services/api';
-import moment from 'moment';
+import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
 import ModalOverlay from './ui/ModalOverlay';
 import { toIstanbulParts, formatIstanbulTime } from '../utils/dateUtils';
@@ -29,9 +29,9 @@ const AgendaEventModal = ({ onClose, onSuccess, onDelete, initialDate, initialDa
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         description: initialData?.description || '',
-        start_date: initialData ? (() => { const p = toIstanbulParts(initialData.start_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
+        start_date: initialData ? (() => { const p = toIstanbulParts(initialData.start_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? format(new Date(initialDate), 'yyyy-MM-dd') : ''),
         start_time: initialData ? formatIstanbulTime(initialData.start_time) || '09:00' : '09:00',
-        end_date: initialData ? (() => { const p = toIstanbulParts(initialData.end_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? moment(initialDate).format('YYYY-MM-DD') : ''),
+        end_date: initialData ? (() => { const p = toIstanbulParts(initialData.end_time); return p ? `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}` : ''; })() : (initialDate ? format(new Date(initialDate), 'yyyy-MM-dd') : ''),
         end_time: initialData ? formatIstanbulTime(initialData.end_time) || '10:00' : '10:00',
         color: initialData?.color || '#3b82f6',
         is_all_day: initialData?.is_all_day || false,
