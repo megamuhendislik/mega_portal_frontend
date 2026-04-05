@@ -8,6 +8,7 @@ import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
+const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
 
 const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate, onApprove, onReject, mode = 'personal' }) => {
   // EXTERNAL_DUTY uses LEAVE endpoints/logic — normalize for all internal checks
@@ -640,71 +641,65 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   <Clock size={16} className="text-orange-600" />
                   <h4 className="text-sm font-bold text-orange-700">Mazeret İzni Bakiyesi ({request.employee_annual_leave_balance.year})</h4>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Hak</span>
-                    <span className="block font-black text-orange-700 text-lg">{request.employee_annual_leave_balance.hours_entitled} sa</span>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanılan</span>
-                    <span className="block font-black text-amber-600 text-lg">{request.employee_annual_leave_balance.hours_used} sa</span>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kalan</span>
-                    <span className={`block font-black text-lg ${
-                      request.employee_annual_leave_balance.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-600'
-                    }`}>{request.employee_annual_leave_balance.hours_remaining} sa</span>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="bg-white/60 p-2 rounded-lg">
-                  <div className="w-full bg-orange-100 rounded-full h-2">
-                    <div
-                      className="bg-orange-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (request.employee_annual_leave_balance.hours_used / request.employee_annual_leave_balance.hours_entitled) * 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs mt-1.5">
-                    <span className="text-slate-500">Bu talep: <span className="font-bold text-orange-700">{request.employee_annual_leave_balance.request_hours} sa</span></span>
-                    <span className="text-slate-500">Günlük max: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.max_daily_hours} sa</span></span>
-                  </div>
-                </div>
-                {/* Gerçekleşmiş Özet — durum bazlı */}
-                {request.status && request.status !== 'PENDING' && (
-                  <div className={`mt-3 p-2.5 rounded-lg border text-xs ${
-                    request.status === 'APPROVED' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {request.status === 'APPROVED' ? <CheckCircle size={13} className="text-green-600" /> : <XCircle size={13} className="text-slate-500" />}
-                      <span className={`font-bold ${request.status === 'APPROVED' ? 'text-green-700' : 'text-slate-600'}`}>
-                        {request.status === 'APPROVED' ? 'Onaylandı — Bakiyeden Düşüldü' : request.status === 'REJECTED' ? 'Reddedildi — Bakiye Etkilenmedi' : 'İptal — Bakiye Etkilenmedi'}
-                      </span>
+                {(() => {
+                  const bal = request.employee_annual_leave_balance;
+                  const afterApproval = Math.max(0, bal.hours_remaining - bal.request_hours);
+                  return (
+                  <>
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                    <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Hak</span>
+                      <span className="block font-black text-orange-700 text-lg">{fmtHours(bal.hours_entitled)}</span>
                     </div>
-                    {request.status === 'APPROVED' && (
-                      <span className="text-slate-600">
-                        Bu talep ile <span className="font-bold text-orange-700">{request.employee_annual_leave_balance.request_hours} sa</span> düşüldü.
-                        Güncel kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.hours_remaining} sa</span>
-                      </span>
-                    )}
-                    {(request.status === 'REJECTED' || request.status === 'CANCELLED') && (
-                      <span className="text-slate-600">
-                        Bakiye değişmedi. Kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.hours_remaining} sa</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-                {/* PENDING ise tahmini sonuç */}
-                {request.status === 'PENDING' && (
-                  <div className="mt-3 p-2.5 rounded-lg border bg-amber-50 border-amber-200 text-xs">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <AlertCircle size={13} className="text-amber-600" />
-                      <span className="font-bold text-amber-700">Onay Bekliyor</span>
+                    <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanılan</span>
+                      <span className="block font-black text-amber-600 text-lg">{fmtHours(bal.hours_used)}</span>
                     </div>
-                    <span className="text-slate-600">
-                      Onaylanırsa kalan: <span className="font-bold text-amber-700">{Math.max(0, request.employee_annual_leave_balance.hours_remaining - request.employee_annual_leave_balance.request_hours)} sa</span>
-                    </span>
+                    <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Kalan</span>
+                      <span className={`block font-black text-lg ${bal.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-600'}`}>{fmtHours(bal.hours_remaining)}</span>
+                    </div>
                   </div>
-                )}
+                  {/* Progress bar */}
+                  <div className="bg-white/60 p-2 rounded-lg">
+                    <div className="w-full bg-orange-100 rounded-full h-2">
+                      <div className="bg-orange-500 h-2 rounded-full transition-all" style={{ width: `${Math.min(100, (bal.hours_used / bal.hours_entitled) * 100)}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs mt-1.5">
+                      <span className="text-slate-500">Bu talep: <span className="font-bold text-orange-700">{fmtHours(bal.request_hours)}</span></span>
+                      <span className="text-slate-500">Günlük max: <span className="font-bold text-slate-700">{fmtHours(bal.max_daily_hours)}</span></span>
+                    </div>
+                  </div>
+                  {/* Gerçekleşmiş Özet — durum bazlı */}
+                  {request.status && request.status !== 'PENDING' && (
+                    <div className={`mt-3 p-2.5 rounded-lg border text-xs ${request.status === 'APPROVED' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {request.status === 'APPROVED' ? <CheckCircle size={13} className="text-green-600" /> : <XCircle size={13} className="text-slate-500" />}
+                        <span className={`font-bold ${request.status === 'APPROVED' ? 'text-green-700' : 'text-slate-600'}`}>
+                          {request.status === 'APPROVED' ? 'Onaylandı — Bakiyeden Düşüldü' : request.status === 'REJECTED' ? 'Reddedildi — Bakiye Etkilenmedi' : 'İptal — Bakiye Etkilenmedi'}
+                        </span>
+                      </div>
+                      {request.status === 'APPROVED' && (
+                        <span className="text-slate-600">Bu talep ile <span className="font-bold text-orange-700">{fmtHours(bal.request_hours)}</span> düşüldü. Güncel kalan: <span className="font-bold text-emerald-700">{fmtHours(bal.hours_remaining)}</span></span>
+                      )}
+                      {(request.status === 'REJECTED' || request.status === 'CANCELLED') && (
+                        <span className="text-slate-600">Bakiye değişmedi. Kalan: <span className="font-bold text-emerald-700">{fmtHours(bal.hours_remaining)}</span></span>
+                      )}
+                    </div>
+                  )}
+                  {/* PENDING ise tahmini sonuç */}
+                  {request.status === 'PENDING' && (
+                    <div className="mt-3 p-2.5 rounded-lg border bg-amber-50 border-amber-200 text-xs">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <AlertCircle size={13} className="text-amber-600" />
+                        <span className="font-bold text-amber-700">Onay Bekliyor</span>
+                      </div>
+                      <span className="text-slate-600">Onaylanırsa kalan: <span className="font-bold text-amber-700">{fmtHours(afterApproval)}</span></span>
+                    </div>
+                  )}
+                  </>
+                  );
+                })()}
               </div>
               ) : (
               /* Yıllık İzin — gün bazlı bakiye */
