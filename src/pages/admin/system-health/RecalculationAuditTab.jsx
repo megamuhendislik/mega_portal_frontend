@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
 import {
     ArrowPathIcon,
@@ -67,6 +67,46 @@ export default function RecalculationAuditTab() {
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
     const [showAllDays, setShowAllDays] = useState(false);
+
+    // Sayfa açıldığında son task durumunu kontrol et
+    useEffect(() => {
+        let cancelled = false;
+        const checkLatest = async () => {
+            try {
+                const res = await api.get('/system/health-check/full-recalculation-status/');
+                if (cancelled) return;
+                const st = res.data;
+                if (st.status === 'COMPLETED' && st.has_result) {
+                    // Son tamamlanan hesaplamanın önizlemesini göster
+                    setFrcResult({ text_log: st.result_preview, _fromCache: true, _taskId: st.task_id });
+                } else if (st.status === 'RUNNING') {
+                    // Devam eden hesaplama var — polling başlat
+                    setFrcLoading(true);
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const pollRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}`);
+                            if (cancelled) { clearInterval(pollInterval); return; }
+                            if (pollRes.data.status === 'COMPLETED') {
+                                clearInterval(pollInterval);
+                                const fullRes = await api.get(
+                                    `/system/health-check/full-recalculation-status/?task_id=${st.task_id}&download=true`,
+                                    { responseType: 'text' }
+                                );
+                                setFrcResult({ text_log: typeof fullRes.data === 'string' ? fullRes.data : JSON.stringify(fullRes.data) });
+                                setFrcLoading(false);
+                            } else if (pollRes.data.status === 'FAILED') {
+                                clearInterval(pollInterval);
+                                setFrcError(pollRes.data.error || 'Hesaplama başarısız');
+                                setFrcLoading(false);
+                            }
+                        } catch { /* ignore poll errors */ }
+                    }, 5000);
+                }
+            } catch { /* no previous task */ }
+        };
+        checkLatest();
+        return () => { cancelled = true; };
+    }, []);
 
     const fetchUnifiedLogText = async () => {
         if (uniLogText) { setShowUniLog(!showUniLog); return; }
@@ -1001,9 +1041,11 @@ export default function RecalculationAuditTab() {
                     <div className="flex flex-col items-center gap-3">
                         <ArrowPathIcon className="w-8 h-8 text-violet-500 animate-spin" />
                         <p className="text-sm text-gray-500 font-medium">
-                            Tam yeniden hesaplama yapiliyor (split + normal + OT + aylik)...
+                            Tam yeniden hesaplama arka planda calisiyor...
                         </p>
-                        <p className="text-xs text-gray-400">Bu islem birkac dakika surebilir.</p>
+                        <p className="text-xs text-gray-400">
+                            Celery task olarak calisir, 8-10 dakika surebilir. Sayfa acik kalsin.
+                        </p>
                     </div>
                 </div>
             )}
