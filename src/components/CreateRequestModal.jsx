@@ -5,6 +5,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
 import useCalendarData from '../hooks/useCalendarData';
+import SmartDatePicker from './common/SmartDatePicker';
 import ModalOverlay from './ui/ModalOverlay';
 import {
     LeaveRequestForm,
@@ -1250,22 +1251,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             )}
                             {selectedType === 'HEALTH_REPORT' && (
                                 <div className="space-y-3 sm:space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Tarihi *</label>
-                                            <input type="date" required value={healthReportForm.start_date}
-                                                onChange={e => setHealthReportForm(p => ({...p, start_date: e.target.value}))}
-                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş Tarihi *</label>
-                                            <input type="date" required value={healthReportForm.end_date}
-                                                onChange={e => setHealthReportForm(p => ({...p, end_date: e.target.value}))}
-                                                min={healthReportForm.start_date}
-                                                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tarih Aralığı *</label>
+                                        <SmartDatePicker
+                                            mode="range"
+                                            value={healthReportForm.start_date && healthReportForm.end_date
+                                                ? [healthReportForm.start_date, healthReportForm.end_date]
+                                                : null}
+                                            onChange={([start, end]) => {
+                                                setHealthReportForm(p => ({ ...p, start_date: start || '', end_date: end || '' }));
+                                            }}
+                                            holidays={holidays}
+                                            leaveHistory={calendarLeaveHistory}
+                                            accentColor="pink"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
@@ -1302,9 +1301,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Tarih *</label>
-                                        <input type="date" required value={hospitalVisitForm.date}
-                                            onChange={e => setHospitalVisitForm(p => ({...p, date: e.target.value}))}
-                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm"
+                                        <SmartDatePicker
+                                            mode="single"
+                                            value={hospitalVisitForm.date}
+                                            onChange={(dateStr) => setHospitalVisitForm(p => ({...p, date: dateStr}))}
+                                            holidays={holidays}
+                                            leaveHistory={calendarLeaveHistory}
+                                            accentColor="pink"
                                         />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
