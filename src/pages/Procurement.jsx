@@ -178,7 +178,8 @@ const Procurement = () => {
       createForm.resetFields();
       fetchRequests();
     } catch (err) {
-      const detail = err?.response?.data?.detail || err?.response?.data?.title?.[0] || 'Talep oluşturulurken hata oluştu';
+      const titleErr = err?.response?.data?.title;
+      const detail = err?.response?.data?.detail || (Array.isArray(titleErr) ? titleErr[0] : titleErr) || 'Talep oluşturulurken hata oluştu';
       message.error(typeof detail === 'string' ? detail : 'Talep oluşturulurken hata oluştu');
     } finally {
       setSubmitLoading(false);

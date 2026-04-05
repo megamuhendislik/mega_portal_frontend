@@ -52,7 +52,8 @@ const DailyConfigModal = ({ date, calendarId, initialOverride, isHoliday, initia
 
             onSuccess();
         } catch (error) {
-            alert('Hata: ' + (error.response?.data?.detail || error.response?.data?.non_field_errors?.[0] || error.message));
+            const nfe = error.response?.data?.non_field_errors;
+            alert('Hata: ' + (error.response?.data?.detail || (Array.isArray(nfe) ? nfe[0] : nfe) || error.message));
         } finally {
             setLoading(false);
         }
