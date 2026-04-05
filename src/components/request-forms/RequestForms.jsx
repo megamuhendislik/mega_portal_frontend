@@ -1254,9 +1254,8 @@ export const MealRequestForm = ({ mealForm, setMealForm, holidays, calendarLeave
                     minDate={minStr}
                     maxDate={maxStr}
                     onChange={(dateStr) => setMealForm({ ...mealForm, date: dateStr })}
-                    holidays={holidays}
-                    leaveHistory={calendarLeaveHistory}
                     accentColor="emerald"
+                    showLegend={false}
                 />
                 <p className="text-xs text-slate-400 mt-1">Varsayılan bugün. Geçmişe yönelik düzeltme için farklı tarih seçebilirsiniz.</p>
             </div>
