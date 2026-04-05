@@ -123,8 +123,46 @@ export default function RecalculationAuditTab() {
         try {
             const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/full-recalculation/', body, { timeout: 1800000 });
-            setFrcResult(res.data);
+
+            // Async endpoint — Celery task başlat
+            const startRes = await api.post('/system/health-check/full-recalculation-async/', body);
+            const taskId = startRes.data.task_id;
+            if (!taskId) throw new Error('Task ID alınamadı');
+
+            // Poll task status
+            let attempts = 0;
+            const maxAttempts = 240; // 20dk max (5sn * 240)
+            while (attempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, 5000)); // 5sn bekle
+                attempts++;
+                try {
+                    const statusRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${taskId}`);
+                    const st = statusRes.data;
+
+                    if (st.status === 'COMPLETED') {
+                        // Tam sonucu download endpoint'inden al
+                        const fullRes = await api.get(
+                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&download=true`,
+                            { responseType: 'text' }
+                        );
+                        // text_log olarak set et (mevcut UI ile uyumlu)
+                        setFrcResult({
+                            ...st,
+                            text_log: typeof fullRes.data === 'string' ? fullRes.data : JSON.stringify(fullRes.data),
+                        });
+                        break;
+                    } else if (st.status === 'FAILED') {
+                        throw new Error(st.error || 'Hesaplama başarısız');
+                    }
+                    // RUNNING — devam et
+                } catch (pollErr) {
+                    // Network error during poll — devam et
+                    if (attempts >= maxAttempts) throw pollErr;
+                }
+            }
+            if (attempts >= maxAttempts) {
+                throw new Error('Hesaplama zaman aşımına uğradı (20dk)');
+            }
         } catch (e) {
             setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
         } finally {
