@@ -632,7 +632,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
 
             {/* Calisan Izin Bakiye Bilgisi - Yonetici Gorunumu (EXTERNAL_DUTY hariç) */}
             {requestType === 'LEAVE' && request.employee_annual_leave_balance &&
-             request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
+             (request.request_type_detail?.category || request.request_type_category) !== 'EXTERNAL_DUTY' && (
               request.employee_annual_leave_balance.type === 'EXCUSE_LEAVE' ? (
               /* Mazeret İzni — saat bazlı bakiye */
               <div className="bg-orange-50/80 rounded-xl p-4 border border-orange-200">
