@@ -633,6 +633,45 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
             {/* Calisan Izin Bakiye Bilgisi - Yonetici Gorunumu (EXTERNAL_DUTY hariç) */}
             {requestType === 'LEAVE' && request.employee_annual_leave_balance &&
              request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
+              request.employee_annual_leave_balance.type === 'EXCUSE_LEAVE' ? (
+              /* Mazeret İzni — saat bazlı bakiye */
+              <div className="bg-orange-50/80 rounded-xl p-4 border border-orange-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock size={16} className="text-orange-600" />
+                  <h4 className="text-sm font-bold text-orange-700">Mazeret İzni Bakiyesi ({request.employee_annual_leave_balance.year})</h4>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Toplam Hak</span>
+                    <span className="block font-black text-orange-700 text-lg">{request.employee_annual_leave_balance.hours_entitled} sa</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kullanılan</span>
+                    <span className="block font-black text-amber-600 text-lg">{request.employee_annual_leave_balance.hours_used} sa</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Kalan</span>
+                    <span className={`block font-black text-lg ${
+                      request.employee_annual_leave_balance.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-600'
+                    }`}>{request.employee_annual_leave_balance.hours_remaining} sa</span>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div className="bg-white/60 p-2 rounded-lg">
+                  <div className="w-full bg-orange-100 rounded-full h-2">
+                    <div
+                      className="bg-orange-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (request.employee_annual_leave_balance.hours_used / request.employee_annual_leave_balance.hours_entitled) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1.5">
+                    <span className="text-slate-500">Bu talep: <span className="font-bold text-orange-700">{request.employee_annual_leave_balance.request_hours} sa</span></span>
+                    <span className="text-slate-500">Günlük max: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.max_daily_hours} sa</span></span>
+                  </div>
+                </div>
+              </div>
+              ) : (
+              /* Yıllık İzin — gün bazlı bakiye */
               <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Briefcase size={16} className="text-blue-600" />
@@ -673,6 +712,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   )}
                 </div>
               </div>
+              )
             )}
 
             {/* Görev Mesai Bilgisi — External Duty */}

@@ -99,9 +99,35 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                         </div>
                     )}
 
-                    {/* Annual Leave Balance Info (Only for Incoming Leave Requests, EXTERNAL_DUTY hariç) */}
+                    {/* Leave Balance Info (Only for Incoming Leave Requests, EXTERNAL_DUTY hariç) */}
                     {isIncoming && type === 'LEAVE' && request.employee_annual_leave_balance &&
                      request.request_type_detail?.category !== 'EXTERNAL_DUTY' && (
+                        request.employee_annual_leave_balance.type === 'EXCUSE_LEAVE' ? (
+                        /* Mazeret İzni — saat bazlı */
+                        <div className="bg-orange-50/50 rounded-xl p-2.5 border border-orange-100 text-xs text-slate-600">
+                            <h5 className="font-bold text-orange-700 mb-1.5 flex items-center gap-1.5">
+                                <FileText size={12} />
+                                Mazeret İzni Bakiyesi
+                            </h5>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Toplam</span>
+                                    <span className="font-black text-orange-700 text-sm">{request.employee_annual_leave_balance.hours_entitled} sa</span>
+                                </div>
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Kullanılan</span>
+                                    <span className="font-black text-amber-600 text-sm">{request.employee_annual_leave_balance.hours_used} sa</span>
+                                </div>
+                                <div className="bg-white/60 p-1 rounded">
+                                    <span className="block text-[10px] text-slate-400 font-bold">Kalan</span>
+                                    <span className={`font-black text-sm ${request.employee_annual_leave_balance.hours_remaining <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {request.employee_annual_leave_balance.hours_remaining} sa
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        ) : (
+                        /* Yıllık İzin — gün bazlı */
                         <div className="bg-blue-50/50 rounded-xl p-2.5 border border-blue-100 text-xs text-slate-600">
                             <h5 className="font-bold text-blue-700 mb-1.5 flex items-center gap-1.5">
                                 <FileText size={12} />
@@ -144,6 +170,7 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                                 </div>
                             )}
                         </div>
+                        )
                     )}
 
                     {/* Monthly Work Stats (For Incoming Overtime Requests) */}
