@@ -669,6 +669,42 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     <span className="text-slate-500">Günlük max: <span className="font-bold text-slate-700">{request.employee_annual_leave_balance.max_daily_hours} sa</span></span>
                   </div>
                 </div>
+                {/* Gerçekleşmiş Özet — durum bazlı */}
+                {request.status && request.status !== 'PENDING' && (
+                  <div className={`mt-3 p-2.5 rounded-lg border text-xs ${
+                    request.status === 'APPROVED' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {request.status === 'APPROVED' ? <CheckCircle size={13} className="text-green-600" /> : <XCircle size={13} className="text-slate-500" />}
+                      <span className={`font-bold ${request.status === 'APPROVED' ? 'text-green-700' : 'text-slate-600'}`}>
+                        {request.status === 'APPROVED' ? 'Onaylandı — Bakiyeden Düşüldü' : request.status === 'REJECTED' ? 'Reddedildi — Bakiye Etkilenmedi' : 'İptal — Bakiye Etkilenmedi'}
+                      </span>
+                    </div>
+                    {request.status === 'APPROVED' && (
+                      <span className="text-slate-600">
+                        Bu talep ile <span className="font-bold text-orange-700">{request.employee_annual_leave_balance.request_hours} sa</span> düşüldü.
+                        Güncel kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.hours_remaining} sa</span>
+                      </span>
+                    )}
+                    {(request.status === 'REJECTED' || request.status === 'CANCELLED') && (
+                      <span className="text-slate-600">
+                        Bakiye değişmedi. Kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.hours_remaining} sa</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* PENDING ise tahmini sonuç */}
+                {request.status === 'PENDING' && (
+                  <div className="mt-3 p-2.5 rounded-lg border bg-amber-50 border-amber-200 text-xs">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <AlertCircle size={13} className="text-amber-600" />
+                      <span className="font-bold text-amber-700">Onay Bekliyor</span>
+                    </div>
+                    <span className="text-slate-600">
+                      Onaylanırsa kalan: <span className="font-bold text-amber-700">{Math.max(0, request.employee_annual_leave_balance.hours_remaining - request.employee_annual_leave_balance.request_hours)} sa</span>
+                    </span>
+                  </div>
+                )}
               </div>
               ) : (
               /* Yıllık İzin — gün bazlı bakiye */
@@ -687,10 +723,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     <span className="block font-black text-amber-600 text-lg">{request.employee_annual_leave_balance.used || 0}</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-blue-100">
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Talep Sonrası</span>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">
+                      {request.status === 'PENDING' ? 'Talep Sonrası' : request.status === 'APPROVED' ? 'Güncel Kalan' : 'Kalan'}
+                    </span>
                     <span className={`block font-black text-lg ${
-                      (request.employee_annual_leave_balance.remaining - request.total_days) < 0 ? 'text-red-600' : 'text-emerald-600'
-                    }`}>{request.employee_annual_leave_balance.remaining - request.total_days}</span>
+                      request.status === 'APPROVED'
+                        ? 'text-blue-700'
+                        : request.status === 'PENDING'
+                          ? ((request.employee_annual_leave_balance.remaining - request.total_days) < 0 ? 'text-red-600' : 'text-emerald-600')
+                          : 'text-blue-700'
+                    }`}>
+                      {request.status === 'APPROVED' || request.status === 'REJECTED' || request.status === 'CANCELLED'
+                        ? request.employee_annual_leave_balance.remaining
+                        : request.employee_annual_leave_balance.remaining - request.total_days}
+                    </span>
                   </div>
                 </div>
                 {/* Kidem ve Hakedis */}
@@ -711,6 +757,30 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     </span>
                   )}
                 </div>
+                {/* Gerçekleşmiş Özet — durum bazlı */}
+                {request.status && request.status !== 'PENDING' && (
+                  <div className={`mt-3 p-2.5 rounded-lg border text-xs ${
+                    request.status === 'APPROVED' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {request.status === 'APPROVED' ? <CheckCircle size={13} className="text-green-600" /> : <XCircle size={13} className="text-slate-500" />}
+                      <span className={`font-bold ${request.status === 'APPROVED' ? 'text-green-700' : 'text-slate-600'}`}>
+                        {request.status === 'APPROVED' ? 'Onaylandı — Bakiyeden Düşüldü' : request.status === 'REJECTED' ? 'Reddedildi — Bakiye Etkilenmedi' : 'İptal — Bakiye Etkilenmedi'}
+                      </span>
+                    </div>
+                    {request.status === 'APPROVED' && (
+                      <span className="text-slate-600">
+                        Bu talep ile <span className="font-bold text-blue-700">{request.total_days} gün</span> düşüldü.
+                        Güncel kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.remaining} gün</span>
+                      </span>
+                    )}
+                    {(request.status === 'REJECTED' || request.status === 'CANCELLED') && (
+                      <span className="text-slate-600">
+                        Bakiye değişmedi. Kalan: <span className="font-bold text-emerald-700">{request.employee_annual_leave_balance.remaining} gün</span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               )
             )}
