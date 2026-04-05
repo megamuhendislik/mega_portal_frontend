@@ -4,6 +4,7 @@ import { message } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
+import useCalendarData from '../hooks/useCalendarData';
 import ModalOverlay from './ui/ModalOverlay';
 import {
     LeaveRequestForm,
@@ -22,6 +23,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     // Birthday balance
     const [birthdayBalance, setBirthdayBalance] = useState(null);
+
+    const { holidays, leaveHistory: calendarLeaveHistory } = useCalendarData();
 
     useEffect(() => {
         if (isOpen && initialData) {
@@ -1187,6 +1190,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     fifoPreview={fifoPreview}
                                     excuseBalance={excuseBalance}
                                     birthdayBalance={birthdayBalance}
+                                    holidays={holidays}
                                 />
                             )}
                             {selectedType === 'OVERTIME' && (
@@ -1204,12 +1208,16 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     availableApprovers={availableApprovers}
                                     selectedApproverId={selectedApproverId}
                                     onApproverSelect={setSelectedApproverId}
+                                    holidays={holidays}
+                                    calendarLeaveHistory={calendarLeaveHistory}
                                 />
                             )}
                             {selectedType === 'MEAL' && (
                                 <MealRequestForm
                                     mealForm={mealForm}
                                     setMealForm={setMealForm}
+                                    holidays={holidays}
+                                    calendarLeaveHistory={calendarLeaveHistory}
                                 />
                             )}
                             {selectedType === 'EXTERNAL_DUTY' && (
@@ -1222,6 +1230,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     dutyHoursLoading={dutyHoursLoading}
                                     fetchDutyHoursPreview={fetchDutyHoursPreview}
                                     weeklyOtForDuty={weeklyOtForDuty}
+                                    holidays={holidays}
+                                    calendarLeaveHistory={calendarLeaveHistory}
                                 />
                             )}
                             {selectedType === 'CARDLESS_ENTRY' && (
@@ -1234,6 +1244,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     scheduleStart={scheduleStart}
                                     scheduleEnd={scheduleEnd}
                                     approverDropdown={approverDropdownElement}
+                                    holidays={holidays}
+                                    calendarLeaveHistory={calendarLeaveHistory}
                                 />
                             )}
                             {selectedType === 'HEALTH_REPORT' && (

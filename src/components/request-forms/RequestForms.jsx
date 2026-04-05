@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
-import { DatePicker, ConfigProvider } from 'antd';
-import dayjs from 'dayjs';
-import 'dayjs/locale/tr';
-import trTR from 'antd/locale/tr_TR';
-
-dayjs.locale('tr');
+import SmartDatePicker from '../common/SmartDatePicker';
 
 // ============================================================
 // LeaveRequestForm
@@ -28,6 +23,7 @@ export const LeaveRequestForm = ({
     fifoPreview,
     excuseBalance,
     birthdayBalance,
+    holidays,
 }) => {
     const balance = leaveBalance;
     const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
@@ -413,34 +409,37 @@ export const LeaveRequestForm = ({
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
-                        <input
-                            required
-                            type="date"
+                        <SmartDatePicker
+                            mode="single"
                             value={leaveForm.start_date}
-                            onChange={e => {
-                                const updates = { ...leaveForm, start_date: e.target.value };
+                            onChange={(dateStr) => {
+                                const updates = { ...leaveForm, start_date: dateStr };
                                 if (specialLeaveCode !== 'UNPAID') {
                                     const durationMap = { PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3 };
                                     const dur = durationMap[specialLeaveCode] || 3;
-                                    const sd = new Date(e.target.value);
+                                    const sd = new Date(dateStr);
                                     sd.setDate(sd.getDate() + dur - 1);
                                     updates.end_date = sd.toISOString().split('T')[0];
                                 }
                                 setLeaveForm(updates);
                             }}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700"
+                            holidays={holidays}
+                            leaveHistory={recentLeaveHistory}
+                            accentColor="indigo"
                         />
                     </div>
                     {specialLeaveCode === 'UNPAID' ? (
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
-                            <input
-                                required
-                                type="date"
+                            <SmartDatePicker
+                                mode="single"
                                 value={leaveForm.end_date}
-                                min={leaveForm.start_date}
-                                onChange={e => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
-                                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700"
+                                minDate={leaveForm.start_date}
+                                onChange={(dateStr) => setLeaveForm({ ...leaveForm, end_date: dateStr })}
+                                holidays={holidays}
+                                leaveHistory={recentLeaveHistory}
+                                accentColor="indigo"
+                                showLegend={false}
                             />
                         </div>
                     ) : leaveForm.start_date ? (
@@ -476,14 +475,15 @@ export const LeaveRequestForm = ({
                             const lastDay = bm ? new Date(yr, bm, 0).getDate() : 28;
                             const maxDate = bm ? `${yr}-${String(bm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` : today;
                             return (
-                                <input
-                                    required
-                                    type="date"
+                                <SmartDatePicker
+                                    mode="single"
                                     value={leaveForm.start_date}
-                                    min={minDate}
-                                    max={maxDate}
-                                    onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
-                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 outline-none transition-all font-medium text-slate-700"
+                                    minDate={minDate}
+                                    maxDate={maxDate}
+                                    onChange={(dateStr) => setLeaveForm({ ...leaveForm, start_date: dateStr, end_date: dateStr })}
+                                    holidays={holidays}
+                                    leaveHistory={recentLeaveHistory}
+                                    accentColor="pink"
                                 />
                             );
                         })()}
@@ -529,14 +529,15 @@ export const LeaveRequestForm = ({
                             // Yıl sonuna kadar
                             const maxDate = `${curYear}-12-31`;
                             return (
-                                <input
-                                    required
-                                    type="date"
+                                <SmartDatePicker
+                                    mode="single"
                                     value={leaveForm.start_date}
-                                    min={minDate}
-                                    max={maxDate}
-                                    onChange={e => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
-                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all font-medium text-slate-700"
+                                    minDate={minDate}
+                                    maxDate={maxDate}
+                                    onChange={(dateStr) => setLeaveForm({ ...leaveForm, start_date: dateStr, end_date: dateStr })}
+                                    holidays={holidays}
+                                    leaveHistory={recentLeaveHistory}
+                                    accentColor="orange"
                                 />
                             );
                         })()}
@@ -656,90 +657,20 @@ export const LeaveRequestForm = ({
             ) : (
                 <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih Aralığı <span className="text-red-500">*</span></label>
-                    <ConfigProvider locale={trTR}>
-                        <DatePicker.RangePicker
-                            getPopupContainer={(trigger) => trigger.closest('.ant-modal-body') || trigger.closest('.custom-scrollbar') || document.body}
-                            value={
-                                leaveForm.start_date && leaveForm.end_date
-                                    ? [dayjs(leaveForm.start_date), dayjs(leaveForm.end_date)]
-                                    : leaveForm.start_date
-                                        ? [dayjs(leaveForm.start_date), null]
-                                        : null
+                    <SmartDatePicker
+                        mode="range"
+                        value={leaveForm.start_date && leaveForm.end_date ? [leaveForm.start_date, leaveForm.end_date] : null}
+                        onChange={([start, end]) => {
+                            if (start && end) {
+                                setLeaveForm({ ...leaveForm, start_date: start, end_date: end });
+                            } else {
+                                setLeaveForm({ ...leaveForm, start_date: start || '', end_date: '' });
                             }
-                            onChange={(dates) => {
-                                if (dates && dates[0] && dates[1]) {
-                                    setLeaveForm({
-                                        ...leaveForm,
-                                        start_date: dates[0].format('YYYY-MM-DD'),
-                                        end_date: dates[1].format('YYYY-MM-DD'),
-                                    });
-                                } else {
-                                    setLeaveForm({ ...leaveForm, start_date: '', end_date: '' });
-                                }
-                            }}
-                            placeholder={['Başlangıç', 'Bitiş']}
-                            format="DD.MM.YYYY"
-                            size="large"
-                            style={{ width: '100%' }}
-                            className="leave-range-picker"
-                            cellRender={(current, info) => {
-                                if (info.type !== 'date') return info.originNode;
-                                const dateStr = current.format('YYYY-MM-DD');
-                                const dayOfWeek = current.day();
-                                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                                // Check if this date falls within any existing leave
-                                const matchingLeave = recentLeaveHistory?.find(h =>
-                                    ['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status) &&
-                                    h.start_date <= dateStr && h.end_date >= dateStr
-                                );
-
-                                const dotColor = matchingLeave
-                                    ? matchingLeave.status === 'APPROVED' ? '#10b981'
-                                    : matchingLeave.status === 'PENDING' ? '#f59e0b'
-                                    : '#6366f1'
-                                    : null;
-
-                                return (
-                                    <div
-                                        className="ant-picker-cell-inner"
-                                        style={{
-                                            ...(isWeekend ? { backgroundColor: '#f1f5f9', borderRadius: 4 } : {}),
-                                            position: 'relative',
-                                        }}
-                                        title={matchingLeave ? `${matchingLeave.leave_type_name || 'İzin'} (${matchingLeave.status === 'APPROVED' ? 'Onaylı' : 'Bekliyor'})` : undefined}
-                                    >
-                                        {current.date()}
-                                        {dotColor && (
-                                            <span style={{
-                                                position: 'absolute',
-                                                bottom: 2,
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                width: 5,
-                                                height: 5,
-                                                borderRadius: '50%',
-                                                backgroundColor: dotColor,
-                                            }} />
-                                        )}
-                                    </div>
-                                );
-                            }}
-                        />
-                    </ConfigProvider>
-                    {recentLeaveHistory?.length > 0 && (
-                        <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
-                            <span className="flex items-center gap-1">
-                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} /> Onaylı
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} /> Bekliyor
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#f1f5f9', display: 'inline-block', border: '1px solid #cbd5e1' }} /> Hafta sonu
-                            </span>
-                        </div>
-                    )}
+                        }}
+                        holidays={holidays}
+                        leaveHistory={recentLeaveHistory}
+                        accentColor="blue"
+                    />
                 </div>
             )}
 
@@ -887,6 +818,8 @@ export const OvertimeRequestForm = ({
     availableApprovers = [],
     selectedApproverId,
     onApproverSelect,
+    holidays,
+    calendarLeaveHistory,
 }) => {
     const [claimConfirm, setClaimConfirm] = useState(null); // { type: 'INTENDED'|'POTENTIAL', id, ... }
     const [claimReason, setClaimReason] = useState('');
@@ -1227,12 +1160,13 @@ export const OvertimeRequestForm = ({
 
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                            <input
-                                required={manualOpen}
-                                type="date"
+                            <SmartDatePicker
+                                mode="single"
                                 value={overtimeForm.date}
-                                onChange={e => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
-                                className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all font-medium text-slate-700"
+                                onChange={(dateStr) => setOvertimeForm({ ...overtimeForm, date: dateStr })}
+                                holidays={holidays}
+                                leaveHistory={calendarLeaveHistory}
+                                accentColor="blue"
                             />
                         </div>
 
@@ -1297,7 +1231,7 @@ export const OvertimeRequestForm = ({
 // Props:
 //   mealForm, setMealForm
 // ============================================================
-export const MealRequestForm = ({ mealForm, setMealForm }) => {
+export const MealRequestForm = ({ mealForm, setMealForm, holidays, calendarLeaveHistory }) => {
     // Tarih sınırları: 2 mali ay geri (~75 gün), 2 gün ileri (backend ile uyumlu)
     const minStr = getIstanbulDateOffset(-75);
     const maxStr = getIstanbulDateOffset(2);
@@ -1314,14 +1248,15 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
 
             <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                <input
-                    required
-                    type="date"
+                <SmartDatePicker
+                    mode="single"
                     value={mealForm.date}
-                    min={minStr}
-                    max={maxStr}
-                    onChange={e => setMealForm({ ...mealForm, date: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-medium text-slate-700"
+                    minDate={minStr}
+                    maxDate={maxStr}
+                    onChange={(dateStr) => setMealForm({ ...mealForm, date: dateStr })}
+                    holidays={holidays}
+                    leaveHistory={calendarLeaveHistory}
+                    accentColor="emerald"
                 />
                 <p className="text-xs text-slate-400 mt-1">Varsayılan bugün. Geçmişe yönelik düzeltme için farklı tarih seçebilirsiniz.</p>
             </div>
@@ -1357,6 +1292,8 @@ export const ExternalDutyForm = ({
     dutyHoursLoading,
     fetchDutyHoursPreview,
     weeklyOtForDuty,
+    holidays,
+    calendarLeaveHistory,
 }) => {
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -1565,19 +1502,20 @@ export const ExternalDutyForm = ({
                         <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Vardiya saatleri içindeki süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>ek mesai</strong> olarak değerlendirilir. Tatil/hafta sonu günlerinde tüm süre ek mesai sayılır.</p>
                     </div>
                 </div>
-                <div className="grid grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
-                        <input required type="date" value={externalDutyForm.start_date}
-                            onChange={e => setExternalDutyForm({ ...externalDutyForm, start_date: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
-                        <input required type="date" value={externalDutyForm.end_date} min={externalDutyForm.start_date}
-                            onChange={e => setExternalDutyForm({ ...externalDutyForm, end_date: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700" />
-                    </div>
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih Aralığı <span className="text-red-500">*</span></label>
+                    <SmartDatePicker
+                        mode="range"
+                        value={externalDutyForm.start_date && externalDutyForm.end_date
+                            ? [externalDutyForm.start_date, externalDutyForm.end_date]
+                            : null}
+                        onChange={([start, end]) => {
+                            setExternalDutyForm(prev => ({ ...prev, start_date: start || '', end_date: end || '' }));
+                        }}
+                        holidays={holidays}
+                        leaveHistory={calendarLeaveHistory}
+                        accentColor="purple"
+                    />
                 </div>
                 {externalDutyForm.start_date && externalDutyForm.end_date && (
                     <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
@@ -2301,6 +2239,8 @@ export const CardlessEntryForm = ({
     scheduleStart,
     scheduleEnd,
     approverDropdown,
+    holidays,
+    calendarLeaveHistory,
 }) => (
     <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
         <div>
@@ -2309,16 +2249,17 @@ export const CardlessEntryForm = ({
                 const maxDate = getIstanbulToday();
                 const minDate = getIstanbulDateOffset(-75);
                 return (
-                    <input
-                        required
-                        type="date"
+                    <SmartDatePicker
+                        mode="single"
                         value={cardlessEntryForm.date}
-                        min={minDate}
-                        max={maxDate}
-                        onChange={e => {
-                            setCardlessEntryForm({ ...cardlessEntryForm, date: e.target.value, check_in_time: '', check_out_time: '' });
+                        minDate={minDate}
+                        maxDate={maxDate}
+                        onChange={(dateStr) => {
+                            setCardlessEntryForm({ ...cardlessEntryForm, date: dateStr, check_in_time: '', check_out_time: '' });
                         }}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700"
+                        holidays={holidays}
+                        leaveHistory={calendarLeaveHistory}
+                        accentColor="purple"
                     />
                 );
             })()}
