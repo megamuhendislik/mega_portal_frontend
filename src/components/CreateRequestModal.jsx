@@ -741,18 +741,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 return;
             }
             // Extract error from all possible backend field names
-            const errorMsg = data?.detail || data?.error || data?.non_field_errors?.[0]
-                || data?.check_in_time?.[0] || data?.check_out_time?.[0]
-                || data?.balance?.[0] || data?.balance
-                || data?.date?.[0] || data?.date
-                || data?.start_date?.[0] || data?.start_date
-                || data?.end_date?.[0] || data?.end_date
-                || data?.request_type?.[0] || data?.request_type
-                || data?.reason?.[0] || data?.reason
-                || data?.destination?.[0]
-                || data?.start_time?.[0] || data?.end_time?.[0]
-                || data?.time?.[0] || data?.time
-                || data?.document?.[0]
+            // Helper: DRF returns arrays for field errors, but custom validators may return strings
+            const f = v => Array.isArray(v) ? v[0] : v;
+            const errorMsg = data?.detail || data?.error || f(data?.non_field_errors)
+                || f(data?.check_in_time) || f(data?.check_out_time)
+                || f(data?.balance)
+                || f(data?.date)
+                || f(data?.start_date)
+                || f(data?.end_date)
+                || f(data?.request_type)
+                || f(data?.reason)
+                || f(data?.destination)
+                || f(data?.start_time) || f(data?.end_time)
+                || f(data?.time)
+                || f(data?.document)
                 || err.message
                 || 'Talep oluşturulurken bir hata oluştu.';
             setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
