@@ -147,7 +147,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     }, [parentProvidesSubs]);
 
     // --- Data Fetching --- consolidated endpoint with legacy fallback
-    const fetchAllData = useCallback(async (overrideDaysBack) => {
+    const fetchAllData = useCallback(async (overrideDaysBack, { forceRefresh = false } = {}) => {
         const effectiveDays = overrideDaysBack !== undefined ? overrideDaysBack : daysBack;
         const isOlderLoad = effectiveDays !== 90;
 
@@ -159,6 +159,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         try {
             const params = {};
             if (effectiveDays !== 90) params.days_back = effectiveDays;
+            if (forceRefresh) params.force_refresh = '1';
             const res = await api.get('/requests-init/incoming-requests-init/', { params });
             applyInitData(res.data);
         } catch (e) {
@@ -177,9 +178,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-    // Cross-tab refresh trigger
+    // Cross-tab refresh trigger (force_refresh to bypass backend cache)
     useEffect(() => {
-        if (refreshTrigger > 0) fetchAllData();
+        if (refreshTrigger > 0) fetchAllData(undefined, { forceRefresh: true });
     }, [refreshTrigger, fetchAllData]);
 
     // --- Approval / Rejection Handlers ---
@@ -199,18 +200,18 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 message.warning('Bilinmeyen talep tipi: ' + req.type);
                 return;
             }
-            console.log('[handleApprove] Başarılı, veri yenileniyor...');
-            // Optimistic: hemen local state'den kaldır
+            console.log('[handleApprove] Başarılı, optimistic update...');
+            // Optimistic: hemen local state güncelle (full refetch yok — cache sorununu önler)
             setIncomingRequests(prev => prev.filter(r => !(r.id === req.id && (r._type || r.type) === (req._type || req.type))));
-            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'APPROVED' } : r));
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
             message.success('Talep onaylandı');
-            await fetchAllData();
             onDataChange?.();
         } catch (e) {
             console.error('[handleApprove] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
-            try { await fetchAllData(); } catch {}
+            // Hata durumunda force refresh ile güncel veri al
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
         }
     };
 
@@ -228,17 +229,16 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 console.warn('[handleReject] Bilinmeyen talep tipi:', req.type);
                 return;
             }
-            // Optimistic: hemen local state'den kaldır
+            // Optimistic: hemen local state güncelle (full refetch yok — cache sorununu önler)
             setIncomingRequests(prev => prev.filter(r => !(r.id === req.id && (r._type || r.type) === (req._type || req.type))));
-            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'REJECTED' } : r));
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'REJECTED', is_actionable: false } : r));
             message.success('Talep reddedildi');
-            await fetchAllData();
             onDataChange?.();
         } catch (e) {
             console.error('[handleReject] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
-            try { await fetchAllData(); } catch {}
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
         }
     };
 
@@ -257,10 +257,24 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     acting_as_substitute_for: req.principal_id,
                 });
             }
-            fetchAllData();
+            // Optimistic update for substitute
+            setSubstituteData(prev => {
+                if (!prev) return prev;
+                // Remove from pending lists
+                const updated = { ...prev };
+                for (const key of Object.keys(updated)) {
+                    if (Array.isArray(updated[key])) {
+                        updated[key] = updated[key].filter(r => !(r.id === req.id && r.type === req.type));
+                    }
+                }
+                return updated;
+            });
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && r.type === req.type) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
+            message.success('Talep vekil olarak onaylandı');
             onDataChange?.();
         } catch (e) {
-            alert(e.response?.data?.error || 'İşlem başarısız');
+            message.error(e.response?.data?.error || 'İşlem başarısız');
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
         }
     };
 
@@ -280,10 +294,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     reason, acting_as_substitute_for: req.principal_id,
                 });
             }
-            fetchAllData();
+            // Optimistic update for substitute reject
+            setSubstituteData(prev => {
+                if (!prev) return prev;
+                const updated = { ...prev };
+                for (const key of Object.keys(updated)) {
+                    if (Array.isArray(updated[key])) {
+                        updated[key] = updated[key].filter(r => !(r.id === req.id && r.type === req.type));
+                    }
+                }
+                return updated;
+            });
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && r.type === req.type) ? { ...r, status: 'REJECTED', is_actionable: false } : r));
+            message.success('Talep vekil olarak reddedildi');
             onDataChange?.();
         } catch (e) {
-            alert(e.response?.data?.error || 'İşlem başarısız');
+            message.error(e.response?.data?.error || 'İşlem başarısız');
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
         }
     };
 
@@ -723,7 +750,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         Veriler güncellendi: {format(lastFetchedAt, 'HH:mm:ss')}
                     </span>
                     <button
-                        onClick={fetchAllData}
+                        onClick={() => fetchAllData(undefined, { forceRefresh: true })}
                         className="text-[11px] text-blue-400 hover:text-blue-600 transition-colors"
                     >
                         ↻ Yenile
@@ -1084,7 +1111,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 onClose={() => { setShowDetailModal(false); setSelectedRequest(null); }}
                 request={selectedRequest}
                 requestType={selectedRequestType}
-                onUpdate={() => { fetchAllData(); onDataChange?.(); }}
+                onUpdate={() => { fetchAllData(undefined, { forceRefresh: true }); onDataChange?.(); }}
                 mode="incoming"
                 onApprove={wrapApprove}
                 onReject={wrapReject}
