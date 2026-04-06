@@ -33,6 +33,7 @@ import {
     ShoppingCart
 } from 'lucide-react';
 import clsx from 'clsx';
+import { message } from 'antd';
 
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling';
@@ -90,9 +91,9 @@ const MainLayout = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Check status on mount (sadece superuser)
+    // Check status on mount (CARDLESS_CLOCK yetkisi olanlar)
     useEffect(() => {
-        if (user?.user?.is_superuser) {
+        if (hasPermission('CARDLESS_CLOCK')) {
             checkShiftStatus();
         }
     }, [user]);
@@ -127,7 +128,7 @@ const MainLayout = () => {
     const checkShiftStatus = async () => {
         try {
             const response = await api.get('/attendance/current_status/');
-            setIsShiftActive(response.data.is_active);
+            setIsShiftActive(response.data.is_inside);
         } catch (error) {
             console.error('Shift status check failed:', error);
         }
@@ -136,21 +137,15 @@ const MainLayout = () => {
     const handleShiftToggle = async () => {
         setShiftLoading(true);
         try {
-            const response = await api.post('/attendance/toggle_shift/');
-
-            if (response.data.status === 'STARTED') {
-                setIsShiftActive(true);
-            } else {
-                setIsShiftActive(false);
-                // Check for overtime
-                if (response.data.overtime_detected) {
-                    setLastAttendanceData(response.data.data);
-                    setIsOvertimeModalOpen(true);
-                }
+            const response = await api.post('/attendance/cardless-clock/');
+            if (response.data.success) {
+                const isNowActive = response.data.direction === 'IN';
+                setIsShiftActive(isNowActive);
+                message.success(response.data.message);
+                checkShiftStatus();
             }
         } catch (error) {
-            console.error('Shift toggle failed:', error);
-            alert('İşlem başarısız oldu.');
+            message.error(error.response?.data?.error || 'İşlem başarısız.');
         } finally {
             setShiftLoading(false);
         }
@@ -415,8 +410,8 @@ const MainLayout = () => {
                             />
                         </div>
 
-                        {/* Shift Button — sadece superuser */}
-                        {user?.user?.is_superuser && (
+                        {/* Shift Button — CARDLESS_CLOCK yetkisi */}
+                        {hasPermission('CARDLESS_CLOCK') && (
                             <button
                                 onClick={handleShiftToggle}
                                 disabled={shiftLoading}
