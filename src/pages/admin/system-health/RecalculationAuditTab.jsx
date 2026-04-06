@@ -77,10 +77,15 @@ export default function RecalculationAuditTab() {
                 if (cancelled) return;
                 const st = res.data;
                 if (st.status === 'COMPLETED' && st.has_result) {
-                    // Son tamamlanan hesaplamanın önizlemesini göster
-                    setFrcResult({ text_log: st.result_preview, _fromCache: true, _taskId: st.task_id });
+                    // Son tamamlanan hesaplamanın tam JSON'unu yükle
+                    try {
+                        const fullRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}&full=true`);
+                        if (!cancelled) setFrcResult(fullRes.data);
+                    } catch {
+                        // JSON yoksa summary'den göster
+                        if (!cancelled) setFrcResult({ summary: st.summary, text_log: '', _fromCache: true });
+                    }
                 } else if (st.status === 'RUNNING') {
-                    // Devam eden hesaplama var — polling başlat
                     setFrcLoading(true);
                     const pollInterval = setInterval(async () => {
                         try {
@@ -88,11 +93,8 @@ export default function RecalculationAuditTab() {
                             if (cancelled) { clearInterval(pollInterval); return; }
                             if (pollRes.data.status === 'COMPLETED') {
                                 clearInterval(pollInterval);
-                                const fullRes = await api.get(
-                                    `/system/health-check/full-recalculation-status/?task_id=${st.task_id}&download=true`,
-                                    { responseType: 'text' }
-                                );
-                                setFrcResult({ text_log: typeof fullRes.data === 'string' ? fullRes.data : JSON.stringify(fullRes.data) });
+                                const fullRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}&full=true`);
+                                setFrcResult(fullRes.data);
                                 setFrcLoading(false);
                             } else if (pollRes.data.status === 'FAILED') {
                                 clearInterval(pollInterval);
@@ -180,16 +182,11 @@ export default function RecalculationAuditTab() {
                     const st = statusRes.data;
 
                     if (st.status === 'COMPLETED') {
-                        // Tam sonucu download endpoint'inden al
+                        // Tam JSON sonucu al (summary + employees + text_log)
                         const fullRes = await api.get(
-                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&download=true`,
-                            { responseType: 'text' }
+                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&full=true`
                         );
-                        // text_log olarak set et (mevcut UI ile uyumlu)
-                        setFrcResult({
-                            ...st,
-                            text_log: typeof fullRes.data === 'string' ? fullRes.data : JSON.stringify(fullRes.data),
-                        });
+                        setFrcResult(fullRes.data);
                         break;
                     } else if (st.status === 'FAILED') {
                         throw new Error(st.error || 'Hesaplama başarısız');
