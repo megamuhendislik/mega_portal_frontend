@@ -182,6 +182,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
   const [claimModal, setClaimModal] = useState({ open: false, data: null });
   const [claimReason, setClaimReason] = useState('');
   const [claimLoading, setClaimLoading] = useState(false);
+  const [selectedPotentialIds, setSelectedPotentialIds] = useState(new Set());
 
   const [manualModal, setManualModal] = useState(false);
   const [manualForm, setManualForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
@@ -426,9 +427,17 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       }
 
       if (claimModal.multi && Array.isArray(claimModal.data)) {
-        // Multi-claim: tüm POTENTIAL'leri tek seferde bundle olarak talep et
-        const ids = claimModal.data.map(p => p.overtime_request_id || p.id).filter(Boolean);
-        payload.overtime_request_ids = ids;
+        // Multi-claim: seçili POTENTIAL'leri bundle olarak talep et
+        const ids = claimModal.data
+          .filter(p => selectedPotentialIds.has(p.overtime_request_id || p.id))
+          .map(p => p.overtime_request_id || p.id)
+          .filter(Boolean);
+        if (ids.length === 0) { message.warning('En az bir segment seciniz'); setClaimLoading(false); return; }
+        if (ids.length === 1) {
+          payload.overtime_request_id = ids[0];
+        } else {
+          payload.overtime_request_ids = ids;
+        }
       } else {
         // Single claim
         if (claimModal.data.overtime_request_id) {
@@ -439,7 +448,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       }
 
       await api.post('/overtime-requests/claim-potential/', payload);
-      message.success(claimModal.multi ? `${claimModal.data.length} mesai birleştirilerek talep edildi` : 'Talep başarıyla gönderildi');
+      message.success(claimModal.multi ? `${selectedPotentialIds.size} mesai birlestirildi ve talep edildi` : 'Talep basariyla gonderildi');
       setClaimModal({ open: false, data: null });
       setClaimReason('');
       fetchCalendarData();
@@ -815,7 +824,10 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               dayData={dayDetailData}
               onClose={() => { setSelectedDay(null); setDayDetailData(null); }}
               onClaim={(pot) => setClaimModal({ open: true, data: pot })}
-              onClaimAll={(pots) => setClaimModal({ open: true, data: pots, multi: true })}
+              onClaimAll={(pots) => {
+                setSelectedPotentialIds(new Set(pots.map(p => p.overtime_request_id || p.id)));
+                setClaimModal({ open: true, data: pots, multi: true });
+              }}
               onOverride={(asgn) => setOverrideModal({ visible: true, assignment: asgn })}
               onRefresh={() => {
                 fetchCalendarData();
@@ -866,14 +878,59 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         {claimModal.data && (
           <div className="space-y-3">
             {claimModal.multi && Array.isArray(claimModal.data) ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 space-y-1.5">
-                <div className="font-bold">{claimModal.data.length} mesai birlestirilecek:</div>
-                {claimModal.data.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs">
-                    <span>{p.start_time?.slice(0, 5)} - {p.end_time?.slice(0, 5)}</span>
-                    <span className="font-bold">{p.duration_hours ? fmtH(p.duration_hours) : p.actual_overtime_seconds ? fmtSec(p.actual_overtime_seconds) : '-'}</span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-blue-800">
+                    {selectedPotentialIds.size}/{claimModal.data.length} segment secili
+                  </span>
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => {
+                      if (selectedPotentialIds.size === claimModal.data.length) {
+                        setSelectedPotentialIds(new Set());
+                      } else {
+                        setSelectedPotentialIds(new Set(claimModal.data.map(p => p.overtime_request_id || p.id)));
+                      }
+                    }}
+                    className="!text-xs !p-0"
+                  >
+                    {selectedPotentialIds.size === claimModal.data.length ? 'Hicbirini Secme' : 'Tumunu Sec'}
+                  </Button>
+                </div>
+                {claimModal.data.map((p) => {
+                  const pid = p.overtime_request_id || p.id;
+                  const checked = selectedPotentialIds.has(pid);
+                  return (
+                    <label
+                      key={pid}
+                      className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                        checked ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedPotentialIds(prev => {
+                            const next = new Set(prev);
+                            next.has(pid) ? next.delete(pid) : next.add(pid);
+                            return next;
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1 flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700">
+                          {p.start_time?.slice(0, 5)} - {p.end_time?.slice(0, 5)}
+                        </span>
+                        <span className="font-bold text-blue-700">
+                          {p.duration_hours ? fmtH(p.duration_hours) : p.actual_overtime_seconds ? fmtSec(p.actual_overtime_seconds) : '-'}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">

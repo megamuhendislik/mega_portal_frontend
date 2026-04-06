@@ -341,85 +341,80 @@ export default function OTDayDetailPanel({
         </div>
       )}
 
-      {/* Potentials Section */}
-      {potentials.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
+      {/* Potentials Section — Bundle görünüm */}
+      {potentials.length > 0 && (() => {
+        const claimable = potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status)));
+        const nonClaimable = potentials.filter(p => !claimable.includes(p));
+        const totalSec = claimable.reduce((s, p) => s + (p.actual_overtime_seconds || p.duration_seconds || 0), 0);
+        const minTime = claimable.length > 0 ? claimable.reduce((m, p) => (!m || (p.start_time && p.start_time < m)) ? p.start_time : m, null) : null;
+        const maxTime = claimable.length > 0 ? claimable.reduce((m, p) => (!m || (p.end_time && p.end_time > m)) ? p.end_time : m, null) : null;
+
+        return (
+          <div>
+            <h5 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <AlertTriangle size={12} />
-              Algılanan Mesailer ({potentials.length})
+              Algilanan Mesailer
             </h5>
-            {potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status))).length > 1 && onClaimAll && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<Send size={12} />}
-                onClick={() => onClaimAll(potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status))))}
-                className="!text-[10px] !font-bold !flex !items-center !gap-1 !bg-blue-600 hover:!bg-blue-700"
-              >
-                Tumunu Talep Et
-              </Button>
-            )}
-          </div>
-          <div className="space-y-2">
-            {potentials.map((pot) => (
-              <div
-                key={pot.id}
-                className="border border-blue-100 bg-blue-50/30 rounded-lg p-3 hover:border-blue-200 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1.5 min-w-0 flex-1">
-                    <div className="flex items-center flex-wrap gap-1.5">
-                      <Tag color="blue" className="!text-[10px] !font-bold !m-0">
-                        Algılanan
-                      </Tag>
-                      {pot.ot_type && (
-                        <Tag className="!text-[10px] !font-bold !m-0">
-                          {OT_TYPE_LABELS[pot.ot_type] || pot.ot_type}
-                        </Tag>
-                      )}
+
+            {/* Bundle kart — claimable olanlar */}
+            {claimable.length > 0 && (
+              <div className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-bold text-blue-800">
+                      {claimable.length} segment {minTime && maxTime ? `(${minTime.slice(0, 5)} - ${maxTime.slice(0, 5)})` : ''}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-600">
-                      {pot.start_time && pot.end_time && (
+                    <div className="text-lg font-black text-blue-700 mt-0.5">
+                      {totalSec >= 3600 ? `${Math.floor(totalSec / 3600)} sa ${Math.round((totalSec % 3600) / 60)} dk` : `${Math.round(totalSec / 60)} dk`}
+                    </div>
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<Send size={14} />}
+                    onClick={() => onClaimAll?.(claimable)}
+                    className="!font-bold !flex !items-center !gap-1.5 !bg-blue-600 hover:!bg-blue-700 !h-9"
+                  >
+                    Talep Et
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {claimable.map((pot) => (
+                    <div key={pot.id} className="flex items-center justify-between text-xs text-blue-700 bg-white/60 rounded px-2 py-1">
+                      <div className="flex items-center gap-2">
+                        <Tag color="blue" className="!text-[9px] !font-bold !m-0 !px-1">
+                          {OT_TYPE_LABELS[pot.ot_type] || 'Algilanan'}
+                        </Tag>
                         <span className="font-medium">
-                          {pot.start_time.slice(0, 5)} - {pot.end_time.slice(0, 5)}
+                          {pot.start_time?.slice(0, 5)} - {pot.end_time?.slice(0, 5)}
                         </span>
-                      )}
-                      <span className="font-bold text-blue-700">
-                        {pot.duration_hours ? fmtH(pot.duration_hours) : pot.actual_overtime_hours ? fmtH(pot.actual_overtime_hours) : pot.actual_overtime_seconds ? fmtSec(pot.actual_overtime_seconds) : '0 dk'}
+                      </div>
+                      <span className="font-bold">
+                        {pot.duration_hours ? fmtH(pot.duration_hours) : pot.actual_overtime_seconds ? fmtSec(pot.actual_overtime_seconds) : '-'}
                       </span>
                     </div>
-                  </div>
-
-                  {/* Claim button */}
-                  <div className="shrink-0 flex items-center gap-1">
-                    {(pot.can_claim || (pot.actual_overtime_seconds > 0 && !pot.already_claimed && !['PENDING', 'APPROVED'].includes(pot.claim_status))) && (
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<Send size={12} />}
-                        onClick={() => onClaim?.(pot)}
-                        className="!text-[10px] !font-bold !flex !items-center !gap-1"
-                      >
-                        {pot.is_rejected ? 'Tekrar Talep Et' : 'Talep Et'}
-                      </Button>
-                    )}
-                    {pot.claim_status === 'APPROVED' && (
-                      <Tag color="green" className="!text-[10px] !font-bold !m-0">Onaylı</Tag>
-                    )}
-                    {pot.claim_status === 'PENDING' && (
-                      <Tag color="orange" className="!text-[10px] !font-bold !m-0">Bekliyor</Tag>
-                    )}
-                    {pot.is_rejected && (
-                      <Tag color="red" className="!text-[10px] !font-bold !m-0">Reddedildi</Tag>
-                    )}
-                  </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Claimable olmayan potansiyeller (onaylı, bekleyen, reddedilen) */}
+            {nonClaimable.length > 0 && (
+              <div className="space-y-1.5">
+                {nonClaimable.map((pot) => (
+                  <div key={pot.id} className="flex items-center justify-between text-xs border border-slate-100 rounded-lg px-3 py-2">
+                    <span className="text-slate-600">
+                      {pot.start_time?.slice(0, 5)} - {pot.end_time?.slice(0, 5)}
+                    </span>
+                    {pot.claim_status === 'APPROVED' && <Tag color="green" className="!text-[10px] !font-bold !m-0">Onayli</Tag>}
+                    {pot.claim_status === 'PENDING' && <Tag color="orange" className="!text-[10px] !font-bold !m-0">Bekliyor</Tag>}
+                    {pot.is_rejected && <Tag color="red" className="!text-[10px] !font-bold !m-0">Reddedildi</Tag>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
