@@ -53,6 +53,7 @@ export default function OTDayDetailPanel({
   dayData,
   onClose,
   onClaim,
+  onClaimAll,
   onOverride,
   onRefresh,
   isManager = false,
@@ -343,10 +344,23 @@ export default function OTDayDetailPanel({
       {/* Potentials Section */}
       {potentials.length > 0 && (
         <div>
-          <h5 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <AlertTriangle size={12} />
-            Algılanan Mesailer ({potentials.length})
-          </h5>
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle size={12} />
+              Algılanan Mesailer ({potentials.length})
+            </h5>
+            {potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status))).length > 1 && onClaimAll && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<Send size={12} />}
+                onClick={() => onClaimAll(potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status))))}
+                className="!text-[10px] !font-bold !flex !items-center !gap-1 !bg-blue-600 hover:!bg-blue-700"
+              >
+                Tumunu Talep Et
+              </Button>
+            )}
+          </div>
           <div className="space-y-2">
             {potentials.map((pot) => (
               <div

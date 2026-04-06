@@ -415,22 +415,31 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
     }
   }, [targetEmployeeId, fiscalPeriod]);
 
-  // Claim potential OT
+  // Claim potential OT (single or multi)
   const handleClaim = async () => {
     if (!claimModal.data) return;
     setClaimLoading(true);
     try {
       const payload = { reason: claimReason || 'Talep' };
-      if (claimModal.data.overtime_request_id) {
-        payload.overtime_request_id = claimModal.data.overtime_request_id;
-      } else if (claimModal.data.id) {
-        payload.overtime_request_id = claimModal.data.id;
-      }
       if (selectedClaimManagerId) {
         payload.target_approver_id = selectedClaimManagerId;
       }
+
+      if (claimModal.multi && Array.isArray(claimModal.data)) {
+        // Multi-claim: tüm POTENTIAL'leri tek seferde bundle olarak talep et
+        const ids = claimModal.data.map(p => p.overtime_request_id || p.id).filter(Boolean);
+        payload.overtime_request_ids = ids;
+      } else {
+        // Single claim
+        if (claimModal.data.overtime_request_id) {
+          payload.overtime_request_id = claimModal.data.overtime_request_id;
+        } else if (claimModal.data.id) {
+          payload.overtime_request_id = claimModal.data.id;
+        }
+      }
+
       await api.post('/overtime-requests/claim-potential/', payload);
-      message.success('Talep başarıyla gönderildi');
+      message.success(claimModal.multi ? `${claimModal.data.length} mesai birleştirilerek talep edildi` : 'Talep başarıyla gönderildi');
       setClaimModal({ open: false, data: null });
       setClaimReason('');
       fetchCalendarData();
@@ -806,6 +815,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               dayData={dayDetailData}
               onClose={() => { setSelectedDay(null); setDayDetailData(null); }}
               onClaim={(pot) => setClaimModal({ open: true, data: pot })}
+              onClaimAll={(pots) => setClaimModal({ open: true, data: pots, multi: true })}
               onOverride={(asgn) => setOverrideModal({ visible: true, assignment: asgn })}
               onRefresh={() => {
                 fetchCalendarData();
@@ -847,24 +857,36 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         title={
           <div className="flex items-center gap-2">
             <Clock size={18} className="text-blue-500" />
-            <span>Algılanan Mesai Talep Et</span>
+            <span>{claimModal.multi ? 'Toplu Mesai Talebi' : 'Algılanan Mesai Talep Et'}</span>
           </div>
         }
-        okText="Talep Et"
+        okText={claimModal.multi ? 'Topluca Talep Et' : 'Talep Et'}
         cancelText="Vazgeç"
       >
         {claimModal.data && (
           <div className="space-y-3">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-              <div className="font-medium">
-                {claimModal.data.start_time && claimModal.data.end_time
-                  ? `${claimModal.data.start_time.slice(0, 5)} - ${claimModal.data.end_time.slice(0, 5)}`
-                  : 'Algılanan mesai'}
+            {claimModal.multi && Array.isArray(claimModal.data) ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 space-y-1.5">
+                <div className="font-bold">{claimModal.data.length} mesai birlestirilecek:</div>
+                {claimModal.data.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span>{p.start_time?.slice(0, 5)} - {p.end_time?.slice(0, 5)}</span>
+                    <span className="font-bold">{p.duration_hours ? fmtH(p.duration_hours) : p.actual_overtime_seconds ? fmtSec(p.actual_overtime_seconds) : '-'}</span>
+                  </div>
+                ))}
               </div>
-              <div className="text-xs mt-1">
-                Süre: {claimModal.data.duration_hours ? fmtH(claimModal.data.duration_hours) : claimModal.data.actual_overtime_hours ? fmtH(claimModal.data.actual_overtime_hours) : claimModal.data.actual_overtime_seconds ? fmtSec(claimModal.data.actual_overtime_seconds) : '0 dk'}
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                <div className="font-medium">
+                  {claimModal.data.start_time && claimModal.data.end_time
+                    ? `${claimModal.data.start_time.slice(0, 5)} - ${claimModal.data.end_time.slice(0, 5)}`
+                    : 'Algılanan mesai'}
+                </div>
+                <div className="text-xs mt-1">
+                  Süre: {claimModal.data.duration_hours ? fmtH(claimModal.data.duration_hours) : claimModal.data.actual_overtime_hours ? fmtH(claimModal.data.actual_overtime_hours) : claimModal.data.actual_overtime_seconds ? fmtSec(claimModal.data.actual_overtime_seconds) : '0 dk'}
+                </div>
               </div>
-            </div>
+            )}
 
             {weeklyOtStatus && !weeklyOtStatus.is_unlimited && (
               <div className={`px-3 py-2 rounded-lg text-xs font-medium border ${
