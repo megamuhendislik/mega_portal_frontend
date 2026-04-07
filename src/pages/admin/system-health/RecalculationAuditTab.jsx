@@ -190,6 +190,8 @@ export default function RecalculationAuditTab() {
                         break;
                     } else if (st.status === 'FAILED') {
                         throw new Error(st.error || 'Hesaplama başarısız');
+                    } else if (st.status === 'CANCELLED' || st.status === 'NOT_FOUND' || st.status === 'NO_TASK') {
+                        throw new Error('Hesaplama iptal edildi veya bulunamadı');
                     }
                     // RUNNING — devam et
                 } catch (pollErr) {
@@ -1043,6 +1045,19 @@ export default function RecalculationAuditTab() {
                         <p className="text-xs text-gray-400">
                             Celery task olarak calisir, 8-10 dakika surebilir. Sayfa acik kalsin.
                         </p>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await api.get('/system/health-check/full-recalculation-status/?cancel=true');
+                                    setFrcLoading(false);
+                                    setFrcResult(null);
+                                    setFrcError(null);
+                                } catch {}
+                            }}
+                            className="mt-2 px-4 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+                        >
+                            Iptal Et / Sifirla
+                        </button>
                     </div>
                 </div>
             )}
