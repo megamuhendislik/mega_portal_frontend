@@ -1106,25 +1106,35 @@ export default function RecalculationAuditTab() {
                             </button>
                         </div>
                         {frcResult.mode === 'apply' && (
-                            <div className="flex flex-col gap-1 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircleIcon className="w-5 h-5" />
-                                    Degisiklikler basariyla uygulandi!
+                            <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-1 px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-bold">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircleIcon className="w-5 h-5" />
+                                        Degisiklikler basariyla uygulandi!
+                                    </div>
+                                    {(frcResult.summary?.restored_requests || 0) > 0 && (
+                                        <div className="text-xs font-medium text-green-700 ml-7">
+                                            {frcResult.summary.restored_requests} iptal edilmiş talep kurtarıldı
+                                            {(frcResult.summary?.restored_approved || 0) > 0 && ` (${frcResult.summary.restored_approved} onaylı`}
+                                            {(frcResult.summary?.restored_pending || 0) > 0 && `, ${frcResult.summary.restored_pending} bekleyen`}
+                                            {(frcResult.summary?.restored_approved || 0) > 0 && ')'}
+                                            {' — hesaplamalar güncellendi'}
+                                        </div>
+                                    )}
+                                    {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
+                                        <div className="text-xs font-medium text-green-700 ml-7">
+                                            {frcResult.summary.dedup_manual_ot} duplikat MANUAL_OT kaydı temizlendi
+                                        </div>
+                                    )}
                                 </div>
-                                {(frcResult.summary?.restored_requests || 0) > 0 && (
-                                    <div className="text-xs font-medium text-green-700 ml-7">
-                                        {frcResult.summary.restored_requests} iptal edilmiş talep kurtarıldı
-                                        {(frcResult.summary?.restored_approved || 0) > 0 && ` (${frcResult.summary.restored_approved} onaylı`}
-                                        {(frcResult.summary?.restored_pending || 0) > 0 && `, ${frcResult.summary.restored_pending} bekleyen`}
-                                        {(frcResult.summary?.restored_approved || 0) > 0 && ')'}
-                                        {' — hesaplamalar güncellendi'}
-                                    </div>
-                                )}
-                                {(frcResult.summary?.dedup_manual_ot || 0) > 0 && (
-                                    <div className="text-xs font-medium text-green-700 ml-7">
-                                        {frcResult.summary.dedup_manual_ot} duplikat MANUAL_OT kaydı temizlendi
-                                    </div>
-                                )}
+                                <button
+                                    onClick={() => runFullRecalculation('dry_run')}
+                                    disabled={frcLoading}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-blue-700 bg-blue-50 border border-blue-300 hover:bg-blue-100 active:scale-95 transition-all"
+                                >
+                                    <MagnifyingGlassIcon className="w-4 h-4" />
+                                    Değişiklikleri Doğrula (Tekrar Kontrol)
+                                </button>
                             </div>
                         )}
                     </div>
