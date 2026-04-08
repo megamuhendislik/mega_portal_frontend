@@ -331,6 +331,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     // --- Normalize helper ---
     const normalizeRequest = (r, source, isSubstitute = false, principalName = '') => ({
         ...r,
+        id: r.request_id || r.id,
         employee_name: r.employee_name || r.employee_detail?.full_name || r.employee?.name || '',
         employee_department: r.employee_department || r.employee_detail?.department_name || r.employee?.department || '',
         employee_position: r.employee_position || '',
