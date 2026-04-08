@@ -1495,6 +1495,24 @@ export default function RecalculationAuditTab() {
                                 {otAuditFixing ? 'Düzeltiliyor...' : `Düzelt (${otAuditResult.total_issues})`}
                             </button>
                         )}
+                        {otAuditResult && (
+                            <button
+                                onClick={() => {
+                                    const log = otAuditResult.text_log || 'Rapor yok';
+                                    const blob = new Blob([log], { type: 'text/plain;charset=utf-8' });
+                                    const url = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `talep_denetim_${startDate}_${endDate}.txt`;
+                                    link.click();
+                                    window.URL.revokeObjectURL(url);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-violet-700 bg-violet-50 border border-violet-300 hover:bg-violet-100 active:scale-95 transition-all"
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                TXT İndir
+                            </button>
+                        )}
                     </div>
                 </div>
 
