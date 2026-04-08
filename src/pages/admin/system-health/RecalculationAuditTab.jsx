@@ -68,6 +68,29 @@ export default function RecalculationAuditTab() {
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
     const [showAllDays, setShowAllDays] = useState(false);
 
+    // OT Request Audit state
+    const [otAuditLoading, setOtAuditLoading] = useState(false);
+    const [otAuditResult, setOtAuditResult] = useState(null);
+    const [otAuditFixing, setOtAuditFixing] = useState(false);
+
+    const runOtAudit = async (mode = 'scan') => {
+        if (mode === 'fix' && !window.confirm(
+            'Bulunan sorunlar düzeltilecek (duplikatlar silinecek, stale potansiyeller temizlenecek). Devam?'
+        )) return;
+        mode === 'fix' ? setOtAuditFixing(true) : setOtAuditLoading(true);
+        try {
+            const res = await api.post('/system/health-check/ot-request-audit/', {
+                date_from: startDate, date_to: endDate, mode,
+            });
+            setOtAuditResult(res.data);
+        } catch (e) {
+            alert('Talep denetimi hatası: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setOtAuditLoading(false);
+            setOtAuditFixing(false);
+        }
+    };
+
     // Sayfa açıldığında son task durumunu kontrol et
     useEffect(() => {
         let cancelled = false;
@@ -1443,6 +1466,124 @@ export default function RecalculationAuditTab() {
                     )}
                 </div>
             )}
+
+            {/* ══════════ OT TALEP DENETİMİ ══════════ */}
+            <div className="border-t border-gray-200 pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800">Talep Bütünlüğü Denetimi</h3>
+                        <p className="text-xs text-gray-500">
+                            Duplikat, stale, çakışan potansiyeller ve onaylı-ama-uygulanmamış OT talepleri
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => runOtAudit('scan')}
+                            disabled={otAuditLoading || otAuditFixing}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-indigo-700 bg-indigo-50 border border-indigo-300 hover:bg-indigo-100 active:scale-95 transition-all"
+                        >
+                            <MagnifyingGlassIcon className="w-4 h-4" />
+                            {otAuditLoading ? 'Taranıyor...' : 'Tara'}
+                        </button>
+                        {otAuditResult && otAuditResult.total_issues > 0 && (
+                            <button
+                                onClick={() => runOtAudit('fix')}
+                                disabled={otAuditLoading || otAuditFixing}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all"
+                            >
+                                <WrenchScrewdriverIcon className="w-4 h-4" />
+                                {otAuditFixing ? 'Düzeltiliyor...' : `Düzelt (${otAuditResult.total_issues})`}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {otAuditResult && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-4 text-sm">
+                            <span className={`px-3 py-1 rounded-full font-bold ${
+                                otAuditResult.total_issues === 0
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                            }`}>
+                                {otAuditResult.total_issues === 0
+                                    ? '✅ Sorun Yok'
+                                    : `⚠️ ${otAuditResult.total_issues} Sorun`}
+                            </span>
+                            {otAuditResult.fixed > 0 && (
+                                <span className="px-3 py-1 rounded-full font-bold bg-green-100 text-green-800">
+                                    ✅ {otAuditResult.fixed} Düzeltildi
+                                </span>
+                            )}
+                            <span className="text-gray-500">
+                                {otAuditResult.date_range} | {otAuditResult.elapsed}s |
+                                Mod: {otAuditResult.mode === 'fix' ? 'DÜZELTME' : 'TARAMA'}
+                            </span>
+                        </div>
+
+                        {Object.keys(otAuditResult.summary || {}).length > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                {Object.entries(otAuditResult.summary).map(([type, count]) => (
+                                    <div key={type} className="px-3 py-2 bg-gray-50 border rounded-lg text-center">
+                                        <div className="text-lg font-bold text-gray-800">{count}</div>
+                                        <div className="text-xs text-gray-500">
+                                            {type === 'DUPLICATE_POTENTIAL' && 'Duplikat'}
+                                            {type === 'STALE_POTENTIAL' && 'Stale (Kart Yok)'}
+                                            {type === 'APPROVED_NO_OT' && 'Onaylı OT=0'}
+                                            {type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
+                                            {type === 'DURATION_MISMATCH' && 'Süre Tutarsız'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {(otAuditResult.issues || []).length > 0 && (
+                            <div className="max-h-96 overflow-y-auto border rounded-lg">
+                                <table className="w-full text-xs">
+                                    <thead className="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left">Tür</th>
+                                            <th className="px-3 py-2 text-left">Çalışan</th>
+                                            <th className="px-3 py-2 text-left">Tarih</th>
+                                            <th className="px-3 py-2 text-left">Detay</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {otAuditResult.issues.map((iss, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-3 py-2">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                                        iss.type === 'STALE_POTENTIAL' ? 'bg-orange-100 text-orange-700' :
+                                                        iss.type === 'DUPLICATE_POTENTIAL' ? 'bg-red-100 text-red-700' :
+                                                        iss.type === 'APPROVED_NO_OT' ? 'bg-purple-100 text-purple-700' :
+                                                        iss.type === 'OVERLAPPING_POTENTIAL' ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {iss.type === 'DUPLICATE_POTENTIAL' && 'Duplikat'}
+                                                        {iss.type === 'STALE_POTENTIAL' && 'Stale'}
+                                                        {iss.type === 'APPROVED_NO_OT' && 'OT=0'}
+                                                        {iss.type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
+                                                        {iss.type === 'DURATION_MISMATCH' && 'Süre'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2">{iss.employee_name || `ID:${iss.employee_id}`}</td>
+                                                <td className="px-3 py-2">{iss.date}</td>
+                                                <td className="px-3 py-2 text-gray-600">
+                                                    {iss.time && <span>{iss.time}</span>}
+                                                    {iss.count && <span> ({iss.count} duplikat)</span>}
+                                                    {iss.diff_seconds && <span> (fark: {Math.round(iss.diff_seconds/60)}dk)</span>}
+                                                    {iss.pot1 && <span>{iss.pot1} ↔ {iss.pot2}</span>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
