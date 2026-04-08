@@ -1548,6 +1548,7 @@ export default function RecalculationAuditTab() {
                                             {type === 'DUPLICATE_POTENTIAL' && 'Duplikat'}
                                             {type === 'STALE_POTENTIAL' && 'Stale (Kart Yok)'}
                                             {type === 'MANUAL_ONLY_POTENTIAL' && 'Kartsız Giriş'}
+                                            {type === 'REDUNDANT_POTENTIAL' && 'Gereksiz (Onaylı Var)'}
                                             {type === 'APPROVED_NO_OT' && 'Onaylı OT=0'}
                                             {type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
                                             {type === 'DURATION_MISMATCH' && 'Süre Tutarsız'}
@@ -1582,6 +1583,7 @@ export default function RecalculationAuditTab() {
                                                         {iss.type === 'DUPLICATE_POTENTIAL' && 'Duplikat'}
                                                         {iss.type === 'STALE_POTENTIAL' && 'Stale'}
                                                         {iss.type === 'MANUAL_ONLY_POTENTIAL' && 'Kartsız'}
+                                                        {iss.type === 'REDUNDANT_POTENTIAL' && 'Gereksiz'}
                                                         {iss.type === 'APPROVED_NO_OT' && 'OT=0'}
                                                         {iss.type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
                                                         {iss.type === 'DURATION_MISMATCH' && 'Süre'}
