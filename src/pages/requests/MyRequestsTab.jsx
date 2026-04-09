@@ -274,31 +274,35 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     }, []);
 
     const handleClaimPotential = useCallback((req) => {
-        setClaimModal({ open: true, target: req });
-    }, []);
+        // Aynı gündeki tüm POTENTIAL segmentlerini bul
+        const sameDayPotentials = (overtimeRequests || []).filter(
+            r => r.status === 'POTENTIAL' && r.date === req.date
+        );
+        // Hepsi varsayılan seçili
+        const selectedIds = sameDayPotentials.map(r => r.id);
+        setClaimModal({ open: true, target: req, segments: sameDayPotentials, selectedIds });
+    }, [overtimeRequests]);
 
     const handleClaimSubmit = useCallback(async (reason, selectedManagerId) => {
-        const req = claimModal.target;
-        if (!req) return;
-        setClaimModal({ open: false, target: null });
-        setClaimingId(req.id);
+        const { target, segments = [], selectedIds = [] } = claimModal;
+        if (!target || selectedIds.length === 0) return;
+        setClaimModal({ open: false, target: null, segments: [], selectedIds: [] });
+        setClaimingId(target.id);
         try {
-            // Aynı gündeki tüm POTENTIAL OT'leri bul ve birlikte claim et
-            const sameDayPotentials = (overtimeRequests || []).filter(
-                r => r.status === 'POTENTIAL' && r.date === req.date
-            );
-            const potentialIds = sameDayPotentials.length > 1
-                ? sameDayPotentials.map(r => r.id)
-                : null;
-
             const payload = {
                 reason: reason || 'Talep edildi',
             };
-            // Çoklu POTENTIAL varsa overtime_request_ids, tekil ise overtime_request_id
-            if (potentialIds && potentialIds.length > 1) {
-                payload.overtime_request_ids = potentialIds;
+            // Seçili segment'leri claim et
+            if (selectedIds.length > 1) {
+                payload.overtime_request_ids = selectedIds;
             } else {
-                payload.overtime_request_id = req.id;
+                payload.overtime_request_id = selectedIds[0];
+            }
+            // Çıkarılan segment'ler — exclude_from_merge flag'i için
+            const allIds = segments.map(s => s.id);
+            const excludedIds = allIds.filter(id => !selectedIds.includes(id));
+            if (excludedIds.length > 0) {
+                payload.excluded_ids = excludedIds;
             }
             if (selectedManagerId) {
                 payload.target_approver_id = selectedManagerId;
@@ -313,7 +317,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
         } finally {
             setClaimingId(null);
         }
-    }, [claimModal.target, claimManagers, overtimeRequests, fetchData, notifyParent]);
+    }, [claimModal, claimManagers, fetchData, notifyParent]);
 
     const handleCreateSuccess = useCallback(() => {
         fetchData();
@@ -787,7 +791,51 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                                 </p>
                             </div>
                         )}
-                        {claimModal.target && (
+                        {/* Segment listesi — checkbox ile seçim */}
+                        {claimModal.segments && claimModal.segments.length > 0 && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-500">Mesai Segmentleri</label>
+                                {claimModal.segments.map(seg => {
+                                    const isChecked = (claimModal.selectedIds || []).includes(seg.id);
+                                    const dur = seg.duration_seconds || seg.duration_minutes * 60 || 0;
+                                    const mins = Math.round(dur / 60);
+                                    const h = Math.floor(mins / 60);
+                                    const m = mins % 60;
+                                    const durStr = h > 0 ? `${h} sa ${m > 0 ? m + ' dk' : ''}` : `${m} dk`;
+                                    return (
+                                        <label key={seg.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => {
+                                                    setClaimModal(prev => ({
+                                                        ...prev,
+                                                        selectedIds: isChecked
+                                                            ? prev.selectedIds.filter(id => id !== seg.id)
+                                                            : [...(prev.selectedIds || []), seg.id]
+                                                    }));
+                                                }}
+                                                className="accent-purple-600 w-4 h-4"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-sm font-bold text-slate-700">
+                                                    {seg.start_time?.slice(0,5)} - {seg.end_time?.slice(0,5)}
+                                                </span>
+                                                <span className="text-xs text-slate-400 ml-2">({durStr})</span>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                                {claimModal.segments.length > 1 && (
+                                    <p className="text-[11px] text-slate-400 mt-1">
+                                        Seçili: {(claimModal.selectedIds || []).length}/{claimModal.segments.length} segment
+                                        {(claimModal.selectedIds || []).length < claimModal.segments.length && ' — çıkarılan segmentler ayrı tutulacak'}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {/* Tek segment ise sadece tarih/saat göster */}
+                        {(!claimModal.segments || claimModal.segments.length <= 1) && claimModal.target && (
                             <p className="text-sm text-slate-500">
                                 {claimModal.target.date} &bull; {claimModal.target.start_time?.slice(0,5)} - {claimModal.target.end_time?.slice(0,5)}
                             </p>
@@ -831,7 +879,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                                     const managerId = selectEl ? Number(selectEl.value) : (claimManagers.length === 1 ? claimManagers[0].id : null);
                                     handleClaimSubmit(reasonEl?.value || '', managerId);
                                 }}
-                                disabled={claimManagers.length === 0}
+                                disabled={claimManagers.length === 0 || (claimModal.selectedIds || []).length === 0}
                                 className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
                             >
                                 Talep Et
