@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Upload, Button, Card, Table, Collapse, Tag, Alert, Statistic, Row, Col, Popconfirm, message, Spin, Empty } from 'antd';
 import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, CopyOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
+// PDKS Raw Import v2 — simplified clean import flow
 
 const { Dragger } = Upload;
 
