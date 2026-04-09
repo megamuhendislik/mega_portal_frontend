@@ -138,7 +138,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             // İzin/Rapor günlerinde: normal → leave olarak göster, potansiyel OT sıfırla
             const isLeaveDay = dayLogs.length > 0 && dayLogs.every(l => ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT'].includes(l.source));
             const otPotential = isLeaveDay ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
-            const totalMissing = dayLogs.reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
+            const totalMissing = dayLogs.filter(l => !l.is_overtime_record).reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const dayTarget = dayLogs.length > 0
                 ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))
                 : (dailyTargets[dateStr] || 0);
