@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
@@ -840,7 +840,24 @@ export const OvertimeRequestForm = ({
         return `${minutes} dk`;
     };
 
+    // POTENTIAL'leri gün bazlı grupla
+    const potentialByDay = useMemo(() => {
+        const map = {};
+        for (const item of (potential || [])) {
+            if (!map[item.date]) map[item.date] = { date: item.date, items: [], is_today: item.is_today };
+            map[item.date].items.push(item);
+        }
+        return Object.values(map);
+    }, [potential]);
+
+    const [claimSelectedIds, setClaimSelectedIds] = useState({});
+
     const handleClaimClick = (type, item) => {
+        if (type === 'POTENTIAL' && item._dayGroup) {
+            // Gün bazlı grup — tüm segment'ler seçili olarak başla
+            const allIds = item._dayGroup.items.map(i => i.overtime_request_id || i.attendance_id);
+            setClaimSelectedIds(prev => ({ ...prev, [item.date]: allIds }));
+        }
         setClaimConfirm({ type, ...item });
         setClaimReason('');
     };
@@ -850,7 +867,12 @@ export const OvertimeRequestForm = ({
         if (claimConfirm.type === 'INTENDED') {
             onClaimIntended(claimConfirm.assignment_id, claimReason);
         } else {
-            onClaimPotential(claimConfirm.attendance_id, claimReason);
+            // Seçili ID'ler ve çıkarılanlar
+            const dayGroup = claimConfirm._dayGroup;
+            const allIds = dayGroup ? dayGroup.items.map(i => i.overtime_request_id || i.attendance_id) : [];
+            const selectedIds = claimSelectedIds[claimConfirm.date] || allIds;
+            const excludedIds = allIds.filter(id => !selectedIds.includes(id));
+            onClaimPotential(claimConfirm.attendance_id, claimReason, selectedIds, excludedIds);
         }
         setClaimConfirm(null);
         setClaimReason('');
@@ -964,67 +986,71 @@ export const OvertimeRequestForm = ({
                             </div>
                         ))}
 
-                        {/* POTENTIAL items (amber) */}
-                        {potential.map(item => (
-                            <div
-                                key={`potential-${item.attendance_id}`}
-                                className="p-4 bg-white border border-amber-200 rounded-xl hover:border-amber-400 transition-all"
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                                                Planlanmamış
-                                            </span>
-                                            <span className="text-sm font-bold text-slate-700">
-                                                {formatDate(item.date)}
-                                            </span>
-                                            {item.is_today && (
-                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">Bugün</span>
-                                            )}
-                                        </div>
-                                        <div className="space-y-1 text-xs text-slate-600">
-                                            <div className="flex items-center gap-1.5">
-                                                <Clock size={12} className="text-amber-500" />
-                                                <span>Gerçekleşen: <strong className="text-amber-700">{formatDuration(item.actual_overtime_seconds)}</strong></span>
-                                                {item.shift_end_time && item.check_out_time && (
-                                                    <span className="text-slate-400">({item.shift_end_time} - {item.check_out_time})</span>
+                        {/* POTENTIAL items — gün bazlı gruplanmış (amber) */}
+                        {potentialByDay.map(dayGroup => {
+                            const totalSeconds = dayGroup.items.reduce((s, i) => s + (i.actual_overtime_seconds || 0), 0);
+                            const firstItem = dayGroup.items[0];
+                            return (
+                                <div
+                                    key={`potential-day-${dayGroup.date}`}
+                                    className="p-4 bg-white border border-amber-200 rounded-xl hover:border-amber-400 transition-all"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                                    Planlanmamış
+                                                </span>
+                                                <span className="text-sm font-bold text-slate-700">
+                                                    {formatDate(dayGroup.date)}
+                                                </span>
+                                                {dayGroup.is_today && (
+                                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">Bugün</span>
+                                                )}
+                                                {dayGroup.items.length > 1 && (
+                                                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{dayGroup.items.length} segment</span>
                                                 )}
                                             </div>
-                                            {item.is_rejected && item.rejection_reason && (
-                                                <div className="flex items-center gap-1.5 text-red-600">
-                                                    <span className="font-semibold">Önceki red:</span> {item.rejection_reason}
+                                            <div className="space-y-1 text-xs text-slate-600">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Clock size={12} className="text-amber-500" />
+                                                    <span>Toplam: <strong className="text-amber-700">{formatDuration(totalSeconds)}</strong></span>
                                                 </div>
-                                            )}
+                                                {dayGroup.items.map(seg => (
+                                                    <div key={seg.overtime_request_id || seg.attendance_id} className="flex items-center gap-1.5 text-slate-500">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                                        <span>{seg.start_time?.slice(0,5) || '?'} - {seg.end_time?.slice(0,5) || '?'}</span>
+                                                        <span className="text-slate-400">({formatDuration(seg.actual_overtime_seconds)})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleClaimClick('POTENTIAL', item)}
-                                        disabled={claimingId === item.attendance_id}
-                                        className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                            claimingId === item.attendance_id
-                                                ? 'bg-amber-100 text-amber-600 cursor-wait'
-                                                : item.is_rejected
-                                                    ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-red-500/20'
+                                        <button
+                                            type="button"
+                                            onClick={() => handleClaimClick('POTENTIAL', { ...firstItem, _dayGroup: dayGroup })}
+                                            disabled={claimingId === firstItem.attendance_id}
+                                            className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                                claimingId === firstItem.attendance_id
+                                                    ? 'bg-amber-100 text-amber-600 cursor-wait'
                                                     : 'bg-amber-500 text-white hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] shadow-sm shadow-amber-500/20'
-                                        }`}
-                                    >
-                                        {claimingId === item.attendance_id ? (
-                                            <>
-                                                <Clock size={13} className="animate-spin" />
-                                                Gönderiliyor...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Check size={13} />
-                                                {item.is_rejected ? 'Tekrar Talep Et' : 'Talep Et'}
-                                            </>
-                                        )}
-                                    </button>
+                                            }`}
+                                        >
+                                            {claimingId === firstItem.attendance_id ? (
+                                                <>
+                                                    <Clock size={13} className="animate-spin" />
+                                                    Gönderiliyor...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Check size={13} />
+                                                    Talep Et
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -1038,10 +1064,43 @@ export const OvertimeRequestForm = ({
                             <h4 className="text-sm font-bold text-blue-800">Talep Onayı</h4>
                             <p className="text-xs text-blue-700 mt-1">
                                 <strong>{formatDate(claimConfirm.date)}</strong> tarihli ek mesaiyi talep etmek istediğinize emin misiniz?
-                                Bu gün için tekrar talep oluşturamazsınız.
                             </p>
                         </div>
                     </div>
+
+                    {/* Segment checkbox'ları (çoklu segment varsa) */}
+                    {claimConfirm._dayGroup && claimConfirm._dayGroup.items.length > 1 && (
+                        <div className="mb-3 space-y-1.5">
+                            <label className="block text-xs font-bold text-blue-700">Segmentler</label>
+                            {claimConfirm._dayGroup.items.map(seg => {
+                                const segId = seg.overtime_request_id || seg.attendance_id;
+                                const selIds = claimSelectedIds[claimConfirm.date] || [];
+                                const isChecked = selIds.includes(segId);
+                                return (
+                                    <label key={segId} className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all text-xs ${isChecked ? 'bg-white border-amber-300' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {
+                                                setClaimSelectedIds(prev => {
+                                                    const cur = prev[claimConfirm.date] || [];
+                                                    const next = isChecked ? cur.filter(id => id !== segId) : [...cur, segId];
+                                                    return { ...prev, [claimConfirm.date]: next };
+                                                });
+                                            }}
+                                            className="accent-amber-600 w-3.5 h-3.5"
+                                        />
+                                        <span className="font-bold text-slate-700">{seg.start_time?.slice(0,5)} - {seg.end_time?.slice(0,5)}</span>
+                                        <span className="text-slate-400">({formatDuration(seg.actual_overtime_seconds)})</span>
+                                    </label>
+                                );
+                            })}
+                            <p className="text-[11px] text-blue-500">
+                                {(claimSelectedIds[claimConfirm.date] || []).length}/{claimConfirm._dayGroup.items.length} seçili
+                                {(claimSelectedIds[claimConfirm.date] || []).length < claimConfirm._dayGroup.items.length && ' — çıkarılanlar ayrı tutulacak'}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Manager selector for employees with 2+ managers */}
                     {availableApprovers.length > 1 && (

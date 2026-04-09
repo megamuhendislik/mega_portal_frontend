@@ -350,13 +350,41 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                 approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
             });
         });
-        overtimeRequests.filter(isMyRequest).forEach(r => items.push({
-            ...r, ...myInfo, _type: 'OVERTIME', type: 'OVERTIME',
-            _sortDate: r.date || r.created_at,
-            onResubmit: () => handleResubmitOvertime(r),
-            target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
-            approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
-        }));
+        // OT talepler — POTENTIAL olanları gün bazlı grupla, diğerlerini olduğu gibi ekle
+        const otByDay = {};
+        overtimeRequests.filter(isMyRequest).forEach(r => {
+            if (r.status === 'POTENTIAL') {
+                const d = r.date;
+                if (!otByDay[d]) otByDay[d] = [];
+                otByDay[d].push(r);
+            } else {
+                items.push({
+                    ...r, ...myInfo, _type: 'OVERTIME', type: 'OVERTIME',
+                    _sortDate: r.date || r.created_at,
+                    onResubmit: () => handleResubmitOvertime(r),
+                    target_approver_name: r.target_approver_detail?.full_name || r.target_approver_name || null,
+                    approved_by_name: r.approved_by_detail?.full_name || r.approved_by_name || null,
+                });
+            }
+        });
+        // Gruplanmış POTENTIAL'leri ekle — gün başına tek satır
+        Object.entries(otByDay).forEach(([d, pots]) => {
+            const totalDur = pots.reduce((s, p) => s + (p.duration_seconds || 0), 0);
+            const allTimes = pots.map(p => `${p.start_time?.slice(0,5) || '?'}-${p.end_time?.slice(0,5) || '?'}`).join(', ');
+            const first = pots[0];
+            // Birleşik POTENTIAL satırı
+            items.push({
+                ...first, ...myInfo,
+                _type: 'OVERTIME', type: 'OVERTIME',
+                _sortDate: d || first.created_at,
+                duration_seconds: totalDur,
+                _mergedSegments: pots,
+                _mergedTimeRange: allTimes,
+                _mergedCount: pots.length,
+                target_approver_name: first.target_approver_detail?.full_name || first.target_approver_name || null,
+                approved_by_name: first.approved_by_detail?.full_name || first.approved_by_name || null,
+            });
+        });
         mealRequests.filter(isMyRequest).forEach(r => items.push({ ...r, ...myInfo, _type: 'MEAL', type: 'MEAL', _sortDate: r.date || r.created_at }));
         cardlessEntryRequests.filter(isMyRequest).forEach(r => items.push({
             ...r, ...myInfo, _type: 'CARDLESS_ENTRY', type: 'CARDLESS_ENTRY',

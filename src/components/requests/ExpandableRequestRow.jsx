@@ -207,26 +207,42 @@ const TimeRange = ({ req }) => {
         return <span className="text-xs text-indigo-400">Saat bilgisi yok</span>;
     }
 
-    if (req.type === 'OVERTIME' && req.start_time && req.end_time) {
-        const otSegs = req.segments;
-        if (Array.isArray(otSegs) && otSegs.length > 1) {
+    if (req.type === 'OVERTIME') {
+        // Gün bazlı gruplanmış POTENTIAL segmentleri
+        if (req._mergedSegments && req._mergedSegments.length > 1) {
             return (
                 <div className="flex flex-col gap-0.5">
-                    {otSegs.map((seg, i) => (
-                        <span key={i} className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    {req._mergedSegments.map((seg, i) => (
+                        <span key={seg.id || i} className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
                             <Clock size={10} />
-                            {formatTime(seg.start)} - {formatTime(seg.end)}
+                            {formatTime(seg.start_time)} - {formatTime(seg.end_time)}
                         </span>
                     ))}
                 </div>
             );
         }
-        return (
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
-                <Clock size={10} />
-                {formatTime(req.start_time)} - {formatTime(req.end_time)}
-            </span>
-        );
+        // Tek POTENTIAL veya normal OT — segments array
+        if (req.start_time && req.end_time) {
+            const otSegs = req.segments;
+            if (Array.isArray(otSegs) && otSegs.length > 1) {
+                return (
+                    <div className="flex flex-col gap-0.5">
+                        {otSegs.map((seg, i) => (
+                            <span key={i} className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                <Clock size={10} />
+                                {formatTime(seg.start)} - {formatTime(seg.end)}
+                            </span>
+                        ))}
+                    </div>
+                );
+            }
+            return (
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                    <Clock size={10} />
+                    {formatTime(req.start_time)} - {formatTime(req.end_time)}
+                </span>
+            );
+        }
     }
     if (req.type === 'CARDLESS_ENTRY') {
         const cin = formatTime(req.check_in_time);

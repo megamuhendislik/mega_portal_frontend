@@ -510,21 +510,37 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     };
 
     // Handler: Claim POTENTIAL overtime (from attendance)
-    const handleClaimPotential = async (attendanceId, reason) => {
+    const handleClaimPotential = async (attendanceId, reason, selectedIds, excludedIds) => {
         setClaimingId(attendanceId);
         setError(null);
         try {
-            const payload = { attendance_id: attendanceId, reason };
+            const payload = { reason };
+            // Çoklu seçim varsa overtime_request_ids kullan
+            if (selectedIds && selectedIds.length > 1) {
+                payload.overtime_request_ids = selectedIds;
+            } else if (selectedIds && selectedIds.length === 1) {
+                payload.overtime_request_id = selectedIds[0];
+            } else {
+                payload.attendance_id = attendanceId;
+            }
+            // Çıkarılan segmentler
+            if (excludedIds && excludedIds.length > 0) {
+                payload.excluded_ids = excludedIds;
+            }
             if (selectedApproverId) {
                 payload.target_approver_id = selectedApproverId;
             }
             await api.post('/overtime-requests/claim-potential/', payload);
-            // Remove the claimed item from the list
+            // Claim edilen günün tüm item'larını listeden kaldır
+            const claimedIds = new Set(selectedIds || []);
             setClaimableData(prev => ({
                 ...prev,
-                potential: (prev?.potential || []).filter(p => p.attendance_id !== attendanceId),
+                potential: (prev?.potential || []).filter(p => {
+                    const pId = p.overtime_request_id || p.attendance_id;
+                    return !claimedIds.has(pId);
+                }),
             }));
-            onSuccess(null); // Trigger parent refresh
+            onSuccess(null);
         } catch (err) {
             console.error('Error claiming potential overtime:', err);
             const data = err.response?.data;
