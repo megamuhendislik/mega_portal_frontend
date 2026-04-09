@@ -283,10 +283,23 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
         setClaimModal({ open: false, target: null });
         setClaimingId(req.id);
         try {
+            // Aynı gündeki tüm POTENTIAL OT'leri bul ve birlikte claim et
+            const sameDayPotentials = (overtimeRequests || []).filter(
+                r => r.status === 'POTENTIAL' && r.date === req.date
+            );
+            const potentialIds = sameDayPotentials.length > 1
+                ? sameDayPotentials.map(r => r.id)
+                : null;
+
             const payload = {
-                overtime_request_id: req.id,
                 reason: reason || 'Talep edildi',
             };
+            // Çoklu POTENTIAL varsa overtime_request_ids, tekil ise overtime_request_id
+            if (potentialIds && potentialIds.length > 1) {
+                payload.overtime_request_ids = potentialIds;
+            } else {
+                payload.overtime_request_id = req.id;
+            }
             if (selectedManagerId) {
                 payload.target_approver_id = selectedManagerId;
             } else if (claimManagers.length === 1) {
@@ -300,7 +313,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
         } finally {
             setClaimingId(null);
         }
-    }, [claimModal.target, claimManagers, fetchData, notifyParent]);
+    }, [claimModal.target, claimManagers, overtimeRequests, fetchData, notifyParent]);
 
     const handleCreateSuccess = useCallback(() => {
         fetchData();
