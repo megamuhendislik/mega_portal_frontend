@@ -41,7 +41,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                 dayLogs.forEach(log => {
                     normal += (log.normal_seconds || 0);
                     overtime += (log.overtime_seconds || 0);
-                    missing += (log.missing_seconds || 0);
+                    if (!log.is_overtime_record) missing += (log.missing_seconds || 0);
 
                     if (log.check_in) checkIns.push(parseISO(log.check_in));
                     if (log.check_out) checkOuts.push(parseISO(log.check_out));

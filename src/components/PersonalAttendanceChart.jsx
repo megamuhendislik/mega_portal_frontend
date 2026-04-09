@@ -16,7 +16,7 @@ const PersonalAttendanceChart = ({ logs }) => {
         const aggregated = dayLogs.reduce((acc, log) => ({
             normal: acc.normal + (log.normal_seconds || 0),
             overtime: acc.overtime + (log.overtime_seconds || 0),
-            missing: acc.missing + (log.missing_seconds || 0)
+            missing: acc.missing + (log.is_overtime_record ? 0 : (log.missing_seconds || 0))
         }), { normal: 0, overtime: 0, missing: 0 });
 
         const dateParts = toIstanbulParts(dateStr);
