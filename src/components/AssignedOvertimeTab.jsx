@@ -842,7 +842,7 @@ const AssignedOvertimeTab = () => {
     // claimModal removed — replaced by inline accordion
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [editModal, setEditModal] = useState({ open: false, assignment: null });
-    const [actionLoading, setActionLoading] = useState(false);
+    const [loadingDate, setLoadingDate] = useState(null);
     const [showManualForm, setShowManualForm] = useState(false);
     const [manualAssignment, setManualAssignment] = useState(null);
     const [manualMatchMode, setManualMatchMode] = useState('independent');
@@ -995,7 +995,7 @@ const AssignedOvertimeTab = () => {
         const sel = daySelections[date] || { entryIds: [], potentialIds: [] };
         const reason = dayReasons[date] || '';
         if (sel.entryIds.length === 0 && sel.potentialIds.length === 0) return;
-        setActionLoading(true);
+        setLoadingDate(date);
         setDayErrors(prev => ({ ...prev, [date]: '' }));
         try {
             const autoApprover = (() => {
@@ -1020,7 +1020,7 @@ const AssignedOvertimeTab = () => {
         } catch (err) {
             setDayErrors(prev => ({ ...prev, [date]: err.response?.data?.error || 'Talep oluşturulamadı.' }));
         } finally {
-            setActionLoading(false);
+            setLoadingDate(null);
         }
     }, [daySelections, dayReasons, managers, fetchData]);
 
@@ -1237,7 +1237,7 @@ const AssignedOvertimeTab = () => {
                                             onReasonChange={(val) => setDayReasons(prev => ({ ...prev, [day.date]: val }))}
                                             error={dayErrors[day.date]}
                                             onSubmit={() => handleDaySubmit(day)}
-                                            loading={actionLoading}
+                                            loading={loadingDate === day.date}
                                             weeklyOt={claimableData.weekly_ot_status}
                                         />
                                     ))}
