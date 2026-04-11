@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Gift } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Gift, ChevronUp, ChevronDown } from 'lucide-react';
 import SmartDatePicker from '../common/SmartDatePicker';
 
 const specialMaxDays = {
@@ -138,22 +138,33 @@ export default function LeaveInfoPanel({
     return null;
   };
 
+  const [calendarOpen, setCalendarOpen] = useState(true);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Bölüm A: Kompakt Takvim */}
       <div>
-        <SmartDatePicker
-          compact
-          mode={calendarMode}
-          value={calendarMode === 'single'
-            ? leaveForm.start_date
-            : [leaveForm.start_date, leaveForm.end_date]}
-          onChange={handleDateChange}
-          holidays={holidays}
-          leaveHistory={calendarLeaveHistory}
-          minDate={minDate}
-          accentColor={accentColor}
-        />
+        <button
+          onClick={() => setCalendarOpen(!calendarOpen)}
+          className="lg:hidden w-full flex items-center justify-between text-sm text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors mb-2"
+        >
+          <span className="font-medium">Takvim</span>
+          {calendarOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        <div className={`${calendarOpen ? 'block' : 'hidden'} lg:block`}>
+          <SmartDatePicker
+            compact
+            mode={calendarMode}
+            value={calendarMode === 'single'
+              ? leaveForm.start_date
+              : [leaveForm.start_date, leaveForm.end_date]}
+            onChange={handleDateChange}
+            holidays={holidays}
+            leaveHistory={calendarLeaveHistory}
+            minDate={minDate}
+            accentColor={accentColor}
+          />
+        </div>
       </div>
 
       {/* Bölüm B: Bakiye Kartı */}

@@ -1290,7 +1290,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     {step === 2 && selectedType === 'LEAVE' && (
                         <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col lg:flex-row flex-1 overflow-hidden">
                             {/* Left Panel */}
-                            <div className="w-full lg:w-2/5 border-b lg:border-b-0 lg:border-r border-slate-100 p-4 overflow-y-auto bg-slate-50/30">
+                            <div className="w-full lg:w-2/5 border-b lg:border-b-0 lg:border-r border-slate-100 p-4 overflow-y-auto bg-slate-50/30 max-h-[40vh] lg:max-h-none">
                                 <LeaveInfoPanel
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
