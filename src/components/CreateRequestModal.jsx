@@ -583,7 +583,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (type === 'LEAVE') {
             setSelectedType('LEAVE');
             setLeaveSubStep('type');
-            // step stays at 1 — show leave type cards first
+            // Prefetch balances in parallel so cards show instantly
+            Promise.allSettled([
+                api.get('/leave/requests/excuse-balance/'),
+                api.get('/leave-requests/birthday-balance/'),
+            ]).then(([excuseRes, birthdayRes]) => {
+                if (excuseRes.status === 'fulfilled') setExcuseBalance(excuseRes.value.data);
+                if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+            });
             return;
         }
         setSelectedType(type);

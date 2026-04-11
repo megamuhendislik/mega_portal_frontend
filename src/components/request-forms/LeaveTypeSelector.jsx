@@ -118,8 +118,9 @@ export default function LeaveTypeSelector({
 }) {
   const [expandedSpecial, setExpandedSpecial] = useState(false);
 
-  const showBirthday = birthdayBalance && birthdayBalance.eligible !== false;
-  const birthdayDisabled = birthdayBalance?.already_used === true;
+  const birthdayNotEligible = birthdayBalance && birthdayBalance.eligible === false;
+  const birthdayUsed = birthdayBalance?.already_used === true;
+  const birthdayDisabled = birthdayNotEligible || birthdayUsed;
 
   return (
     <div className="space-y-4">
@@ -143,17 +144,20 @@ export default function LeaveTypeSelector({
           onClick={() => onSelect('EXCUSE_LEAVE')}
         />
 
-        {/* Doğum Günü İzni */}
-        {showBirthday && (
-          <LeaveCard
-            label="Doğum Günü İzni"
-            icon={Gift}
-            color="pink"
-            balanceText={birthdayDisabled ? 'Kullanıldı' : '1 gün hakkınız var'}
-            onClick={() => !birthdayDisabled && onSelect('BIRTHDAY_LEAVE')}
-            disabled={birthdayDisabled}
-          />
-        )}
+        {/* Doğum Günü İzni — her zaman göster, eligible değilse disabled */}
+        <LeaveCard
+          label="Doğum Günü İzni"
+          icon={Gift}
+          color="pink"
+          balanceText={
+            !birthdayBalance ? 'Yükleniyor...'
+            : birthdayUsed ? 'Kullanıldı'
+            : birthdayNotEligible ? 'Hak yok'
+            : '1 gün hakkınız var'
+          }
+          onClick={() => !birthdayDisabled && onSelect('BIRTHDAY_LEAVE')}
+          disabled={birthdayDisabled || !birthdayBalance}
+        />
 
         {/* Özel İzinler */}
         <LeaveCard
