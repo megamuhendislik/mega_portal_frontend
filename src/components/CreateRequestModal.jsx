@@ -1197,7 +1197,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Shared approver dropdown element (passed as prop to form components)
     const approverDropdownElement = renderApproverDropdown();
 
-    const modalWidth = (selectedType === 'LEAVE' && step === 2) ? 'max-w-5xl' : 'max-w-2xl';
+    const modalWidth = (selectedType === 'LEAVE' && step === 2) ? 'max-w-6xl' : 'max-w-2xl';
 
     const handleBack = () => {
         if (step === 2 && selectedType === 'LEAVE') {
@@ -1319,7 +1319,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     {step === 2 && selectedType === 'LEAVE' && (
                         <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col lg:flex-row flex-1 overflow-hidden">
                             {/* Left Panel */}
-                            <div className="w-full lg:w-2/5 border-b lg:border-b-0 lg:border-r border-slate-100 p-4 overflow-y-auto bg-slate-50/30 max-h-[40vh] lg:max-h-none">
+                            <div className="w-full lg:w-[45%] border-b lg:border-b-0 lg:border-r border-slate-100 p-5 overflow-y-auto bg-slate-50/30 max-h-[40vh] lg:max-h-none">
                                 <LeaveInfoPanel
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
@@ -1335,7 +1335,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 />
                             </div>
                             {/* Right Panel */}
-                            <div className="w-full lg:w-3/5 p-6 overflow-y-auto">
+                            <div className="w-full lg:w-[55%] p-6 overflow-y-auto">
                                 <LeaveRequestForm
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}

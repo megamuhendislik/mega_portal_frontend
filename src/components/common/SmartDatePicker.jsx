@@ -68,10 +68,10 @@ export default function SmartDatePicker({
   className = '',
 }) {
   // Compact vs normal boyutlar
-  const cellSize = compact ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
+  const cellSize = compact ? 'w-9 h-9 text-xs' : 'w-10 h-10 text-sm';
   const headerSize = compact ? 'text-sm font-semibold' : 'text-base font-semibold';
-  const weekdaySize = compact ? 'text-[10px]' : 'text-xs';
-  const containerPadding = compact ? 'p-2' : 'p-4';
+  const weekdaySize = compact ? 'text-[11px]' : 'text-xs';
+  const containerPadding = compact ? 'p-3' : 'p-4';
   const dotSize = compact ? 'w-1 h-1' : 'w-1.5 h-1.5';
   const navBtnSize = compact ? 'w-7 h-7' : 'w-8 h-8';
   const initialDate = useMemo(() => {

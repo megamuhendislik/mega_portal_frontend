@@ -140,7 +140,7 @@ export default function LeaveTypeSelector({
           label="Mazeret İzni"
           icon={Clock}
           color="amber"
-          balanceText={`Kalan: ${excuseBalance?.remaining_hours || 0} saat`}
+          balanceText={`Kalan: ${excuseBalance?.hours_remaining != null ? excuseBalance.hours_remaining : (excuseBalance?.remaining_hours || 0)} saat`}
           onClick={() => onSelect('EXCUSE_LEAVE')}
         />
 

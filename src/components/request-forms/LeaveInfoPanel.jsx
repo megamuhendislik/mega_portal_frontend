@@ -133,7 +133,7 @@ export default function LeaveInfoPanel({
   const [calendarOpen, setCalendarOpen] = useState(true);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {/* Bölüm A: Kompakt Takvim */}
       <div>
         <button
