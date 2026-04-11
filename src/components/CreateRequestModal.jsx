@@ -437,22 +437,30 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         return () => clearTimeout(timer);
     }, [selectedType, leaveForm.start_date, leaveForm.end_date, leaveForm.request_type, requestTypes]);
 
-    // Fetch excuse leave balance when LEAVE type is selected (for card display) or EXCUSE_LEAVE form
+    // Fetch excuse leave balance — tarih değiştiğinde schedule_info güncellemesi dahil
+    const [excuseScheduleLoading, setExcuseScheduleLoading] = useState(false);
     useEffect(() => {
         const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
-        if (selectedTypeObj?.code === 'EXCUSE_LEAVE') {
-            // Detaylı bakiye (tarih bazlı öğle arası bilgisiyle)
-            const dateParam = leaveForm.start_date ? `?date=${leaveForm.start_date}` : '';
-            api.get(`/leave/requests/excuse-balance/${dateParam}`)
+        const isExcuse = selectedTypeObj?.code === 'EXCUSE_LEAVE' || selectedLeaveType === 'EXCUSE_LEAVE';
+        if (isExcuse && leaveForm.start_date) {
+            // Tarih seçildi — detaylı bakiye + schedule_info yükle
+            setExcuseScheduleLoading(true);
+            api.get(`/leave/requests/excuse-balance/?date=${leaveForm.start_date}`)
+                .then(res => setExcuseBalance(res.data))
+                .catch(() => setExcuseBalance(null))
+                .finally(() => setExcuseScheduleLoading(false));
+        } else if (isExcuse) {
+            // Tarih yok — genel bakiye
+            api.get('/leave/requests/excuse-balance/')
                 .then(res => setExcuseBalance(res.data))
                 .catch(() => setExcuseBalance(null));
         } else if (selectedType === 'LEAVE' && !excuseBalance) {
-            // İzin türü kartları gösterilirken bakiyeyi önceden yükle
+            // Kartlar gösterilirken bakiyeyi önceden yükle
             api.get('/leave/requests/excuse-balance/')
                 .then(res => setExcuseBalance(res.data))
                 .catch(() => setExcuseBalance(null));
         }
-    }, [leaveForm.request_type, leaveForm.start_date, requestTypes, selectedType]);
+    }, [leaveForm.request_type, leaveForm.start_date, requestTypes, selectedType, selectedLeaveType]);
 
     // Fetch birthday leave balance when BIRTHDAY_LEAVE is selected or LEAVE type opens
     useEffect(() => {
@@ -1351,6 +1359,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     recentLeaveHistory={recentLeaveHistory}
                                     fifoPreview={fifoPreview}
                                     excuseBalance={excuseBalance}
+                                    excuseScheduleLoading={excuseScheduleLoading}
                                     birthdayBalance={birthdayBalance}
                                     holidays={holidays}
                                 />

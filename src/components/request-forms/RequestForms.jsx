@@ -19,6 +19,7 @@ export const LeaveRequestForm = ({
     duration,
     recentLeaveHistory,
     excuseBalance,
+    excuseScheduleLoading,
     entitlementInfo,
     leaveBalance,
 }) => {
@@ -119,7 +120,15 @@ export const LeaveRequestForm = ({
                     )}
 
                     {/* Gün detay kartı — vardiya, öğle arası, net süre */}
-                    {excuseBalance?.schedule_info && !excuseBalance.schedule_info.is_off_day && (
+                    {excuseScheduleLoading && (
+                        <div className="bg-amber-50/60 rounded-lg p-3 space-y-2 border border-amber-100/60 min-h-[120px]">
+                            <div className="h-3 w-28 bg-amber-100 rounded animate-pulse" />
+                            <div className="h-3 w-full bg-amber-100/60 rounded animate-pulse" />
+                            <div className="h-3 w-full bg-amber-100/60 rounded animate-pulse" />
+                            <div className="h-3 w-3/4 bg-amber-100/60 rounded animate-pulse" />
+                        </div>
+                    )}
+                    {!excuseScheduleLoading && excuseBalance?.schedule_info && !excuseBalance.schedule_info.is_off_day && (
                         <div className="bg-amber-50/60 rounded-lg p-3 space-y-1.5 border border-amber-100/60">
                             <div className="flex items-center justify-between">
                                 <span className="text-[11px] font-semibold text-slate-500">Seçili Gün Bilgisi</span>
