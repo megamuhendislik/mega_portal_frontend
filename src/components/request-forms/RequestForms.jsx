@@ -40,20 +40,22 @@ export const LeaveRequestForm = ({
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
             {/* Selected Date Summary */}
             {leaveForm.start_date && (
-                <div className="bg-slate-50/80 rounded-xl p-3 flex items-center gap-3">
-                    <CalendarDays className="w-5 h-5 text-slate-500" />
-                    <div>
-                        <div className="text-sm font-medium text-slate-700">
+                <div className="bg-gradient-to-r from-slate-50 to-slate-100/60 rounded-xl p-4 flex items-center gap-4 border border-slate-200/60">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-200/60">
+                        <CalendarDays className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-800">
                             {isExcuseLeave || isBirthdayLeave
                                 ? new Date(leaveForm.start_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long', year:'numeric'})
                                 : `${new Date(leaveForm.start_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long'})} — ${leaveForm.end_date ? new Date(leaveForm.end_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long', year:'numeric'}) : '...'}`
                             }
                         </div>
                         {workingDaysInfo && (
-                            <div className="text-xs text-slate-500">
-                                {workingDaysInfo.working_days} is gunu
+                            <div className="text-xs text-slate-500 mt-0.5">
+                                {workingDaysInfo.working_days} iş günü
                                 {workingDaysInfo.total_days !== workingDaysInfo.working_days &&
-                                    ` (${workingDaysInfo.total_days} takvim gunu)`}
+                                    ` (${workingDaysInfo.total_days} takvim günü)`}
                             </div>
                         )}
                     </div>
@@ -243,59 +245,71 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
+            {/* Açıklama */}
             {!isSpecialLeave && (
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Açıklama <span className="text-red-500">*</span>
+                    </label>
                     <textarea
                         required
-                        rows="3"
+                        rows="4"
                         value={leaveForm.reason}
                         onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none font-medium text-slate-700"
-                        placeholder="İzin gerekçenizi detaylıca belirtiniz..."
-                    ></textarea>
+                        className="w-full p-4 bg-slate-50/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all resize-none text-sm text-slate-700 leading-relaxed"
+                        placeholder={
+                            isExcuseLeave ? 'Mazeret izni nedeninizi kısaca açıklayınız (örn: sağlık randevusu, resmi kurum işlemi, acil aile durumu)...'
+                            : isBirthdayLeave ? 'Doğum günü izni talebiniz...'
+                            : 'İzin talebinizin nedenini açıklayınız (örn: tatil planı, aile ziyareti, kişisel ihtiyaç)...'
+                        }
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1.5">Yöneticinize iletilecek açıklama</p>
                 </div>
             )}
 
+            {/* Gidilecek Yer & Telefon */}
             {!isSpecialLeave && !isBirthdayLeave && !isExcuseLeave && (
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Gidilecek Yer</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Gidilecek Yer</label>
                         <input
                             value={leaveForm.destination}
                             onChange={e => setLeaveForm({ ...leaveForm, destination: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                            placeholder="Opsiyonel"
+                            className="w-full p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all text-sm text-slate-700"
+                            placeholder="Opsiyonel — şehir veya adres"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">İletişim Telefonu</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">İletişim Telefonu</label>
                         <input
                             value={leaveForm.contact_phone}
                             onChange={e => setLeaveForm({ ...leaveForm, contact_phone: e.target.value })}
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                            placeholder="Opsiyonel"
+                            className="w-full p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all text-sm text-slate-700"
+                            placeholder="Opsiyonel — 05XX XXX XX XX"
                         />
                     </div>
                 </div>
             )}
 
-
+            {/* Yönetici Seçimi */}
             {!isSpecialLeave && approverDropdown}
 
-            {!isSpecialLeave && <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 transition-all hover:bg-blue-50">
-                <input
-                    type="checkbox"
-                    id="send_to_sub_leave"
-                    checked={leaveForm.send_to_substitute}
-                    onChange={e => setLeaveForm({ ...leaveForm, send_to_substitute: e.target.checked })}
-                    className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="send_to_sub_leave" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
-                    Vekil yöneticiye de gönder
-                </label>
-            </div>}
-        </div >
+            {/* Vekil Checkbox */}
+            {!isSpecialLeave && (
+                <div className="flex items-center gap-3 p-3.5 bg-blue-50/40 rounded-xl border border-blue-100/60 transition-all hover:bg-blue-50/70">
+                    <input
+                        type="checkbox"
+                        id="send_to_sub_leave"
+                        checked={leaveForm.send_to_substitute}
+                        onChange={e => setLeaveForm({ ...leaveForm, send_to_substitute: e.target.checked })}
+                        className="w-4.5 h-4.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <label htmlFor="send_to_sub_leave" className="text-sm text-slate-700 cursor-pointer select-none">
+                        Vekil yöneticiye de gönder
+                    </label>
+                </div>
+            )}
+        </div>
     );
 };
 

@@ -1248,9 +1248,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     return (
         <ModalOverlay open={isOpen} onClose={onClose}>
-            <div className={`bg-white rounded-3xl shadow-2xl w-full ${modalWidth} overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300`}>
+            <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full ${modalWidth} overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] mx-2 sm:mx-auto transition-all duration-300`}>
                 {/* Header */}
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
                         {(step === 2 || leaveSubStep === 'type') && (
                             <button
@@ -1319,7 +1319,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     {step === 2 && selectedType === 'LEAVE' && (
                         <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col lg:flex-row flex-1 overflow-hidden">
                             {/* Left Panel */}
-                            <div className="w-full lg:w-[45%] border-b lg:border-b-0 lg:border-r border-slate-100 p-5 overflow-y-auto bg-slate-50/30 max-h-[40vh] lg:max-h-none">
+                            <div className="w-full lg:w-[45%] border-b lg:border-b-0 lg:border-r border-slate-100 p-3 sm:p-5 overflow-y-auto bg-slate-50/30 max-h-[35vh] sm:max-h-[40vh] lg:max-h-none">
                                 <LeaveInfoPanel
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
@@ -1335,7 +1335,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 />
                             </div>
                             {/* Right Panel */}
-                            <div className="w-full lg:w-[55%] p-6 overflow-y-auto">
+                            <div className="w-full lg:w-[55%] p-4 sm:p-6 overflow-y-auto">
                                 <LeaveRequestForm
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
@@ -1552,7 +1552,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-all text-sm"
+                                className="px-4 sm:px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition-all text-sm"
                             >
                                 İptal
                             </button>
@@ -1560,7 +1560,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 form="requestForm"
                                 type="submit"
                                 disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
-                                className={`px-8 py-2.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
+                                className={`px-5 sm:px-8 py-2.5 rounded-xl text-white font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                     ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                         selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
                                             selectedType === 'EXTERNAL_DUTY' ? 'bg-purple-600 hover:bg-purple-700' :
