@@ -41,7 +41,7 @@ export default function ModalOverlay({
     >
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
       <div
-        className="relative modal-content-enter w-full"
+        className="relative modal-content-enter w-full flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
