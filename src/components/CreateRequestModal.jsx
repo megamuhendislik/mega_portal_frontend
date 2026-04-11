@@ -25,6 +25,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
     const [leaveSubStep, setLeaveSubStep] = useState(null); // null | 'type'
     const [selectedLeaveType, setSelectedLeaveType] = useState(null); // 'ANNUAL_LEAVE' | 'EXCUSE_LEAVE' | 'BIRTHDAY_LEAVE' | 'SPECIAL:*'
+    const [leaveCardsReady, setLeaveCardsReady] = useState(false);
 
     // Birthday balance
     const [birthdayBalance, setBirthdayBalance] = useState(null);
@@ -292,6 +293,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setWeeklyOtForDuty(null);
             setLeaveSubStep(null);
             setSelectedLeaveType(null);
+            setLeaveCardsReady(false);
             // Reset forms
             setOvertimeForm({
                 date: getIstanbulToday(),
@@ -583,13 +585,15 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (type === 'LEAVE') {
             setSelectedType('LEAVE');
             setLeaveSubStep('type');
-            // Prefetch balances in parallel so cards show instantly
+            setLeaveCardsReady(false);
+            // Fetch all balances, then show cards
             Promise.allSettled([
                 api.get('/leave/requests/excuse-balance/'),
                 api.get('/leave-requests/birthday-balance/'),
             ]).then(([excuseRes, birthdayRes]) => {
                 if (excuseRes.status === 'fulfilled') setExcuseBalance(excuseRes.value.data);
                 if (birthdayRes.status === 'fulfilled') setBirthdayBalance(birthdayRes.value.data);
+                setLeaveCardsReady(true);
             });
             return;
         }
@@ -1287,13 +1291,27 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                     {step === 1 && leaveSubStep === 'type' && (
                         <div className="p-6">
-                            <LeaveTypeSelector
-                                onSelect={handleLeaveTypeSelect}
-                                leaveBalance={getLeaveBalance()}
-                                excuseBalance={excuseBalance}
-                                birthdayBalance={birthdayBalance}
-                                requestTypes={requestTypes}
-                            />
+                            {!leaveCardsReady ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[0,1,2,3].map(i => (
+                                        <div key={i} className="flex flex-col items-center gap-3 p-5 rounded-2xl border border-slate-200/60 bg-slate-50 animate-pulse">
+                                            <div className="w-14 h-14 rounded-2xl bg-slate-200" />
+                                            <div className="space-y-1.5 w-full flex flex-col items-center">
+                                                <div className="h-4 w-20 bg-slate-200 rounded" />
+                                                <div className="h-3 w-16 bg-slate-100 rounded" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <LeaveTypeSelector
+                                    onSelect={handleLeaveTypeSelect}
+                                    leaveBalance={getLeaveBalance()}
+                                    excuseBalance={excuseBalance}
+                                    birthdayBalance={birthdayBalance}
+                                    requestTypes={requestTypes}
+                                />
+                            )}
                         </div>
                     )}
 
