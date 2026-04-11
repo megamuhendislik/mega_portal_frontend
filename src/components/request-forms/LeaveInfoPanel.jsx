@@ -140,12 +140,12 @@ export default function LeaveInfoPanel({
       <div>
         <button
           onClick={() => setCalendarOpen(!calendarOpen)}
-          className="lg:hidden w-full flex items-center justify-between text-sm text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors mb-2"
+          className="md:hidden w-full flex items-center justify-between text-sm text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors mb-2"
         >
           <span className="font-medium">Takvim</span>
           {calendarOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
-        <div className={`${calendarOpen ? 'block' : 'hidden'} lg:block`}>
+        <div className={`${calendarOpen ? 'block' : 'hidden'} md:block`}>
           <SmartDatePicker
             compact
             mode={calendarMode}

@@ -1256,7 +1256,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     return (
         <ModalOverlay open={isOpen} onClose={onClose}>
-            <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full ${modalWidth} overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] mx-2 sm:mx-auto transition-all duration-300`}>
+            <div className={`bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full ${modalWidth} overflow-hidden flex flex-col max-h-[98vh] sm:max-h-[92vh] transition-all duration-300`}>
                 {/* Header */}
                 <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
@@ -1325,9 +1325,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                     {/* Step 2: Leave — side-by-side layout */}
                     {step === 2 && selectedType === 'LEAVE' && (
-                        <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-[400px]">
-                            {/* Left Panel — sabit genişlik, min yükseklik */}
-                            <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-100 p-3 sm:p-5 overflow-y-auto bg-slate-50/30 max-h-[35vh] sm:max-h-[40vh] lg:max-h-none lg:min-h-[400px]">
+                        <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-0 md:min-h-[400px]">
+                            {/* Left Panel */}
+                            <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-slate-100 p-3 sm:p-4 overflow-y-auto bg-slate-50/30 max-h-[40vh] md:max-h-none">
                                 <LeaveInfoPanel
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
@@ -1344,7 +1344,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 />
                             </div>
                             {/* Right Panel */}
-                            <div className="w-full lg:w-1/2 p-4 sm:p-6 overflow-y-auto">
+                            <div className="w-full md:w-1/2 p-3 sm:p-5 overflow-y-auto flex-1">
                                 <LeaveRequestForm
                                     leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
@@ -1539,7 +1539,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                 {/* Footer - Show for all types except OVERTIME without manual open */}
                 {step === 2 && (selectedType !== 'OVERTIME' || showOvertimeSubmit) && (
-                    <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+                    <div className="p-3 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-2 sm:gap-3">
                         <div>
                             {selectedType === 'LEAVE' && (() => {
                                 const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
@@ -1550,7 +1550,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                         type="button"
                                         onClick={() => handleDownloadPetition()}
                                         disabled={petitionLoading}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Download size={16} />
                                         {petitionLoading ? 'Hazırlanıyor...' : 'Dilekçe İndir'}

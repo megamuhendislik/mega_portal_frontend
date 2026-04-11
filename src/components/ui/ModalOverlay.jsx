@@ -35,7 +35,7 @@ export default function ModalOverlay({
 
   return ReactDOM.createPortal(
     <div
-      className={`fixed inset-0 flex items-center justify-center p-4 modal-overlay-enter ${className}`}
+      className={`fixed inset-0 flex items-center justify-center p-2 sm:p-4 modal-overlay-enter ${className}`}
       style={{ zIndex }}
       onClick={closeOnOverlayClick ? onClose : undefined}
     >
