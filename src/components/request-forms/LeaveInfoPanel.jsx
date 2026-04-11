@@ -80,69 +80,29 @@ export default function LeaveInfoPanel({
       const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h} saat`; };
       const si = excuseBalance?.schedule_info;
       return (
-        <div className="space-y-3">
-          {/* Bakiye kartı — kompakt */}
-          <div className="bg-amber-50/80 rounded-xl p-3 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-medium text-slate-500">Mazeret İzni</span>
-              <span className="text-sm font-bold text-amber-700">{fmtH(remaining)} kalan</span>
-            </div>
-            <div className="w-full bg-amber-200/50 rounded-full h-2">
-              <div className="bg-amber-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>{fmtH(used)} kullanıldı</span>
-              <span>{fmtH(total)} toplam</span>
-            </div>
+        <div className="bg-amber-50/80 rounded-xl p-3 space-y-2">
+          {/* Bakiye — tek satır */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-slate-500">Mazeret İzni</span>
+            <span className="text-sm font-bold text-amber-700">{fmtH(remaining)} kalan</span>
           </div>
-
-          {/* Gün detayı — takvimde gün seçilince gösterilir */}
-          {leaveForm.start_date && si && !si.is_off_day && (
-            <div className="bg-white/80 rounded-xl p-3 space-y-1.5 border border-slate-200/60">
-              <span className="text-[11px] font-semibold text-slate-400">Seçili Gün</span>
-              {si.shift_start && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Vardiya</span>
-                  <span className="font-medium text-slate-700">{si.shift_start} – {si.shift_end}</span>
-                </div>
-              )}
-              {si.lunch_start && si.lunch_end && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">Öğle Arası</span>
-                  <span className="text-slate-700">{si.lunch_start} – {si.lunch_end}</span>
-                </div>
-              )}
-              {si.shift_start && si.shift_end && (
-                <div className="flex justify-between text-xs pt-1 border-t border-slate-200/40">
-                  <span className="text-slate-500">Net Çalışma</span>
-                  <span className="font-semibold text-amber-700">
-                    {(() => {
-                      const [ssH, ssM] = si.shift_start.split(':').map(Number);
-                      const [seH, seM] = si.shift_end.split(':').map(Number);
-                      let mins = (seH * 60 + seM) - (ssH * 60 + ssM);
-                      if (si.lunch_start && si.lunch_end) {
-                        const [lsH, lsM] = si.lunch_start.split(':').map(Number);
-                        const [leH, leM] = si.lunch_end.split(':').map(Number);
-                        mins -= (leH * 60 + leM) - (lsH * 60 + lsM);
-                      }
-                      const h = Math.floor(mins / 60); const m = mins % 60;
-                      return m > 0 ? `${h}sa ${m}dk` : `${h} saat`;
-                    })()}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Günlük Maks.</span>
-                <span className="text-amber-600">4sa 30dk</span>
-              </div>
+          <div className="w-full bg-amber-200/50 rounded-full h-1.5">
+            <div className="bg-amber-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex justify-between text-[11px] text-slate-400">
+            <span>{fmtH(used)} kullanıldı</span>
+            <span>{fmtH(total)} toplam</span>
+          </div>
+          {/* Gün detayı — gün seçilince inline */}
+          {leaveForm.start_date && si && !si.is_off_day && si.shift_start && (
+            <div className="pt-1.5 border-t border-amber-200/40 space-y-0.5 text-[11px]">
+              <div className="flex justify-between"><span className="text-slate-500">Vardiya</span><span className="text-slate-600">{si.shift_start}–{si.shift_end}</span></div>
+              {si.lunch_start && <div className="flex justify-between"><span className="text-slate-500">Öğle</span><span className="text-slate-600">{si.lunch_start}–{si.lunch_end}</span></div>}
+              <div className="flex justify-between"><span className="text-slate-500">Maks.</span><span className="text-amber-600 font-medium">4sa 30dk</span></div>
             </div>
           )}
-
-          {/* Tatil/izin günü uyarısı */}
           {leaveForm.start_date && si?.is_off_day && (
-            <div className="bg-red-50/80 rounded-xl p-3 text-sm text-red-700 font-medium">
-              Bu tarih çalışma günü değil
-            </div>
+            <div className="pt-1.5 border-t border-red-200/40 text-xs text-red-600 font-medium">Çalışma günü değil</div>
           )}
         </div>
       );
