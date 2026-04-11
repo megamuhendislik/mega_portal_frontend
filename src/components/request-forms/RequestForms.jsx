@@ -107,7 +107,7 @@ export const LeaveRequestForm = ({
                 );
             })()}
 
-            {/* Excuse Leave: Time Selection */}
+            {/* Excuse Leave: Schedule Info + Time Selection */}
             {isExcuseLeave ? (
                 <div className="space-y-3">
                     {/* Izin gunu uyarisi */}
@@ -118,12 +118,63 @@ export const LeaveRequestForm = ({
                         </div>
                     )}
 
+                    {/* Gün detay kartı — vardiya, öğle arası, net süre */}
+                    {excuseBalance?.schedule_info && !excuseBalance.schedule_info.is_off_day && (
+                        <div className="bg-amber-50/60 rounded-lg p-3 space-y-1.5 border border-amber-100/60">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-slate-500">Seçili Gün Bilgisi</span>
+                                {excuseBalance.schedule_info.shift_start && (
+                                    <span className="text-[10px] text-slate-400">
+                                        Kalan: {(() => {
+                                            const rem = excuseBalance?.hours_remaining ?? excuseBalance?.remaining_hours ?? 0;
+                                            const h = Math.floor(rem); const m = Math.round((rem - h) * 60);
+                                            return m > 0 ? `${h}sa ${m}dk` : `${h} saat`;
+                                        })()}
+                                    </span>
+                                )}
+                            </div>
+                            {excuseBalance.schedule_info.shift_start && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-slate-600">Vardiya</span>
+                                    <span className="font-semibold text-slate-700">{excuseBalance.schedule_info.shift_start} – {excuseBalance.schedule_info.shift_end}</span>
+                                </div>
+                            )}
+                            {excuseBalance.schedule_info.lunch_start && excuseBalance.schedule_info.lunch_end && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-slate-600">Öğle Arası</span>
+                                    <span className="text-slate-700">{excuseBalance.schedule_info.lunch_start} – {excuseBalance.schedule_info.lunch_end}</span>
+                                </div>
+                            )}
+                            {excuseBalance.schedule_info.shift_start && excuseBalance.schedule_info.shift_end && (
+                                <div className="flex justify-between text-xs pt-1 border-t border-amber-200/40">
+                                    <span className="text-slate-500">Net Çalışma Süresi</span>
+                                    <span className="font-semibold text-amber-700">
+                                        {(() => {
+                                            const si = excuseBalance.schedule_info;
+                                            const [ssH, ssM] = si.shift_start.split(':').map(Number);
+                                            const [seH, seM] = si.shift_end.split(':').map(Number);
+                                            let total = (seH * 60 + seM) - (ssH * 60 + ssM);
+                                            if (si.lunch_start && si.lunch_end) {
+                                                const [lsH, lsM] = si.lunch_start.split(':').map(Number);
+                                                const [leH, leM] = si.lunch_end.split(':').map(Number);
+                                                total -= (leH * 60 + leM) - (lsH * 60 + lsM);
+                                            }
+                                            const h = Math.floor(total / 60); const m = total % 60;
+                                            return m > 0 ? `${h}sa ${m}dk` : `${h} saat`;
+                                        })()}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-xs">
+                                <span className="text-slate-500">Günlük Maks. Mazeret</span>
+                                <span className="text-amber-600">4sa 30dk</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <label className="text-sm font-semibold text-slate-700">Saat Aralığı <span className="text-red-500">*</span></label>
-                            {excuseBalance?.schedule_info && !excuseBalance.schedule_info.is_off_day && excuseBalance.schedule_info.shift_start && (
-                                <span className="text-[11px] text-blue-600">Vardiya: {excuseBalance.schedule_info.shift_start} – {excuseBalance.schedule_info.shift_end}</span>
-                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-2.5">
                             <div>

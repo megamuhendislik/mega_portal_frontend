@@ -73,22 +73,36 @@ export default function LeaveInfoPanel({
     }
 
     if (leaveType === 'EXCUSE_LEAVE') {
-      const used = excuseBalance?.used_hours || 0;
-      const total = excuseBalance?.total_hours || 18;
+      const remaining = excuseBalance?.hours_remaining ?? excuseBalance?.remaining_hours ?? 0;
+      const used = excuseBalance?.hours_used ?? excuseBalance?.used_hours ?? 0;
+      const total = excuseBalance?.hours_entitled ?? excuseBalance?.total_hours ?? 18;
       const pct = Math.min(100, (used / total) * 100);
+      const fmtH = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h} saat`; };
       return (
-        <div className="bg-amber-50/80 rounded-xl p-3">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-medium text-slate-500">Mazeret İzni</span>
-            <span className="text-sm font-bold text-amber-700">
-              {excuseBalance?.remaining_hours || 0} / {total} saat
-            </span>
+        <div className="bg-amber-50/80 rounded-xl p-3 space-y-2">
+          {/* Kalan / Toplam */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-slate-500">Mazeret İzni Bakiyesi</span>
+            <span className="text-sm font-bold text-amber-700">{fmtH(remaining)}</span>
           </div>
+          {/* Progress bar */}
           <div className="w-full bg-amber-200/50 rounded-full h-2">
-            <div
-              className="bg-amber-500 h-2 rounded-full transition-all"
-              style={{ width: `${pct}%` }}
-            />
+            <div className="bg-amber-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          {/* Detay satırları */}
+          <div className="space-y-1 pt-1 border-t border-amber-200/40">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">Kullanılan</span>
+              <span className="text-slate-600">{fmtH(used)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">Yıllık Kota</span>
+              <span className="text-slate-600">{fmtH(total)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">Günlük Maksimum</span>
+              <span className="font-medium text-amber-700">4sa 30dk</span>
+            </div>
           </div>
         </div>
       );
