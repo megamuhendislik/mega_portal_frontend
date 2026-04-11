@@ -147,7 +147,7 @@ export default function LeaveInfoPanel({
         </button>
         <div className={`${calendarOpen ? 'block' : 'hidden'} lg:block`}>
           <SmartDatePicker
-            compact={calendarMode === 'range'}
+            compact
             mode={calendarMode}
             value={calendarMode === 'single'
               ? leaveForm.start_date
