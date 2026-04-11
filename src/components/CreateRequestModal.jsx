@@ -172,7 +172,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
     // Working days info (FIX-4)
     const [workingDaysInfo, setWorkingDaysInfo] = useState(null);
-    const [workingDaysLoading, setWorkingDaysLoading] = useState(false);
+    const [, setWorkingDaysLoading] = useState(false);
 
     // Recent leave history
     const [recentLeaveHistory, setRecentLeaveHistory] = useState([]);
@@ -187,9 +187,9 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [excuseBalance, setExcuseBalance] = useState(null);
 
     // Special leave (Özel İzin) state
-    const [specialLeaveType, setSpecialLeaveType] = useState('');
-    const [specialLeaveForm, setSpecialLeaveForm] = useState({ start_date: '', end_date: '', description: '' });
-    const [specialLeaveFiles, setSpecialLeaveFiles] = useState([]);
+    const [, setSpecialLeaveType] = useState('');
+    const [, setSpecialLeaveForm] = useState({ start_date: '', end_date: '', description: '' });
+    const [, setSpecialLeaveFiles] = useState([]);
 
     // Leave-specific calendar history (from recent leave requests)
     const leaveCalendarHistory = useMemo(() => {

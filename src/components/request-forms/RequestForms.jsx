@@ -793,7 +793,7 @@ export const OvertimeRequestForm = ({
 // Props:
 //   mealForm, setMealForm
 // ============================================================
-export const MealRequestForm = ({ mealForm, setMealForm, holidays, calendarLeaveHistory }) => {
+export const MealRequestForm = ({ mealForm, setMealForm }) => {
     // Tarih sınırları: 2 mali ay geri (~75 gün), 2 gün ileri (backend ile uyumlu)
     const minStr = getIstanbulDateOffset(-75);
     const maxStr = getIstanbulDateOffset(2);

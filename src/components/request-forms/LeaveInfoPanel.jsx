@@ -15,21 +15,13 @@ const statusColors = {
   ESCALATED: 'bg-indigo-500',
 };
 
-const statusLabels = {
-  APPROVED: 'Onaylı',
-  PENDING: 'Bekliyor',
-  ESCALATED: 'Eskalasyon',
-};
-
 export default function LeaveInfoPanel({
   leaveType,
   leaveForm,
   setLeaveForm,
   leaveBalance,
   excuseBalance,
-  birthdayBalance,
   entitlementInfo,
-  fifoPreview,
   recentLeaveHistory = [],
   holidays = [],
   calendarLeaveHistory = [],
