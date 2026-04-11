@@ -1539,7 +1539,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                 {/* Footer - Show for all types except OVERTIME without manual open */}
                 {step === 2 && (selectedType !== 'OVERTIME' || showOvertimeSubmit) && (
-                    <div className="p-3 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-2 sm:gap-3">
+                    <div className="p-3 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2 sm:gap-3">
                         <div>
                             {selectedType === 'LEAVE' && (() => {
                                 const typeObj = requestTypes.find(t => t.id == leaveForm.request_type);
@@ -1558,7 +1558,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                 );
                             })()}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 ml-auto">
                             <button
                                 type="button"
                                 onClick={onClose}
