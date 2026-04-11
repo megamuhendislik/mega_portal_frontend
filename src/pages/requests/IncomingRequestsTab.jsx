@@ -1097,13 +1097,14 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         onChange={handleResultLimitChange}
                         loading={loadingOlder}
                         disabled={loadingOlder}
-                        style={{ width: 130 }}
+                        style={{ width: 140 }}
                         options={[
                             { value: 100, label: 'Son 100' },
                             { value: 250, label: 'Son 250' },
                             { value: 500, label: 'Son 500' },
                             { value: 1000, label: 'Son 1000' },
-                            { value: 2000, label: 'Tümü (2000)' },
+                            { value: 2000, label: 'Son 2000' },
+                            { value: -1, label: 'Tümü (sınırsız)' },
                         ]}
                     />
                 </div>
