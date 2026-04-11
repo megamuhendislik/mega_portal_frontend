@@ -68,7 +68,7 @@ export default function SmartDatePicker({
   className = '',
 }) {
   // Compact vs normal boyutlar
-  const cellSize = compact ? 'w-9 h-9 text-xs' : 'w-10 h-10 text-sm';
+  const cellSize = compact ? 'aspect-square w-full text-xs' : 'aspect-square w-full text-sm';
   const headerSize = compact ? 'text-sm font-semibold' : 'text-base font-semibold';
   const weekdaySize = compact ? 'text-[11px]' : 'text-xs';
   const containerPadding = compact ? 'p-3' : 'p-4';
