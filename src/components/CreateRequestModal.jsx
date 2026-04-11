@@ -1328,6 +1328,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     excuseBalance={excuseBalance}
                                     birthdayBalance={birthdayBalance}
                                     entitlementInfo={entitlementInfo}
+                                    workingDaysInfo={workingDaysInfo}
                                     fifoPreview={fifoPreview}
                                     recentLeaveHistory={recentLeaveHistory}
                                     holidays={holidays}
