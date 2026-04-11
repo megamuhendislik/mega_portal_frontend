@@ -19,6 +19,8 @@ export const LeaveRequestForm = ({
     duration,
     recentLeaveHistory,
     excuseBalance,
+    entitlementInfo,
+    leaveBalance,
 }) => {
     const isAnnualLeave = leaveType === 'ANNUAL_LEAVE';
     const isExcuseLeave = leaveType === 'EXCUSE_LEAVE';
@@ -55,6 +57,48 @@ export const LeaveRequestForm = ({
                     )}
                 </div>
             )}
+
+            {/* Annual Leave: Entitlement Detail */}
+            {isAnnualLeave && entitlementInfo?.entitlements?.length > 0 && (() => {
+                const available = leaveBalance?.available || 0;
+                const requestDays = workingDaysInfo?.working_days || 0;
+                const afterRequest = available - requestDays;
+                return (
+                    <div className="bg-blue-50/60 rounded-lg p-3 space-y-1.5 border border-blue-100/60">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-slate-500">Yıl Bazlı Hakediş</span>
+                            {entitlementInfo?.years_of_service != null && (
+                                <span className="text-[10px] text-slate-400">
+                                    Kıdem: {entitlementInfo.years_of_service} yıl • Hak: {entitlementInfo.entitlement_tier} gün/yıl
+                                </span>
+                            )}
+                        </div>
+                        {entitlementInfo.entitlements.map(e => (
+                            <div key={e.year} className="flex items-center justify-between text-xs">
+                                <span className="text-slate-600">{e.year}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400">{e.days_used}/{e.days_entitled} kullanıldı</span>
+                                    <span className="font-semibold text-blue-700">{e.remaining} kalan</span>
+                                </div>
+                            </div>
+                        ))}
+                        {requestDays > 0 && (
+                            <div className="pt-1 border-t border-blue-200/40 flex justify-between items-center text-xs">
+                                <span className="text-slate-500">Bu talep ({requestDays} gün) sonrası:</span>
+                                <span className={`font-bold ${afterRequest < 0 ? 'text-red-600' : afterRequest <= 5 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                    {afterRequest} gün
+                                </span>
+                            </div>
+                        )}
+                        {leaveBalance?.advance_used > 0 && (
+                            <div className="flex justify-between text-xs text-amber-600">
+                                <span>Avans Kullanılan</span>
+                                <span>{leaveBalance.advance_used} gün</span>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* Excuse Leave: Time Selection */}
             {isExcuseLeave ? (
