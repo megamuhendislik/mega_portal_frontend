@@ -58,7 +58,14 @@ export const LeaveRequestForm = ({
                 </div>
             )}
 
-            {/* Annual Leave: Entitlement Detail */}
+            {/* Annual Leave: Entitlement Detail — sabit alan */}
+            {isAnnualLeave && !entitlementInfo && (
+                <div className="bg-blue-50/60 rounded-lg p-3 space-y-2 border border-blue-100/60 min-h-[80px]">
+                    <div className="h-3 w-28 bg-blue-100 rounded animate-pulse" />
+                    <div className="h-3 w-full bg-blue-100/60 rounded animate-pulse" />
+                    <div className="h-3 w-full bg-blue-100/60 rounded animate-pulse" />
+                </div>
+            )}
             {isAnnualLeave && entitlementInfo?.entitlements?.length > 0 && (() => {
                 const available = leaveBalance?.available || 0;
                 const requestDays = workingDaysInfo?.working_days || 0;

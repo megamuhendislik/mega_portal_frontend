@@ -147,13 +147,23 @@ export default function LeaveInfoPanel({
         </div>
       </div>
 
-      {/* Bölüm B: Bakiye Kartı */}
-      <div>{renderBalanceCard()}</div>
+      {/* Bölüm B: Bakiye Kartı — sabit min yükseklik */}
+      <div className="min-h-[44px]">{renderBalanceCard()}</div>
 
-      {/* Bölüm C: Son İzinler */}
-      <div className="space-y-1.5">
-        <div className="text-xs font-medium text-slate-500">Son İzinler</div>
-        {activeLeaves.length > 0 ? (
+      {/* Bölüm C: Son İzinler — sabit 5 satır alanı */}
+      <div className="min-h-[100px]">
+        <div className="text-xs font-medium text-slate-500 mb-1.5">Son İzinler</div>
+        {recentLeaveHistory.length === 0 && activeLeaves.length === 0 ? (
+          /* Veri henüz yüklenmedi veya hiç yok — sabit placeholder */
+          <div className="space-y-1.5">
+            {[0,1,2].map(i => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <div className="w-2 h-2 rounded-full bg-slate-200 animate-pulse" />
+                <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : activeLeaves.length > 0 ? (
           activeLeaves.map(leave => (
             <div key={leave.id} className="flex items-center gap-2 text-xs">
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[leave.status] || 'bg-slate-300'}`} />
