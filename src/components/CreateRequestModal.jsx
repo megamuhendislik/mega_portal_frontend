@@ -792,7 +792,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     try {
                         const res = await api.get(`/available-approvers/?type=${typeMap[selectedType] || 'LEAVE'}`);
                         setAvailableApprovers(res.data || []);
-                    } catch {}
+                    } catch { /* approver fetch silent fail */ }
                 }
                 setLoading(false);
                 return;
