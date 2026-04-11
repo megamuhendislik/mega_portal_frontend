@@ -64,8 +64,16 @@ export default function SmartDatePicker({
   leaveHistory = [],
   accentColor = 'blue',
   showLegend = true,
+  compact = false,
   className = '',
 }) {
+  // Compact vs normal boyutlar
+  const cellSize = compact ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
+  const headerSize = compact ? 'text-sm font-semibold' : 'text-base font-semibold';
+  const weekdaySize = compact ? 'text-[10px]' : 'text-xs';
+  const containerPadding = compact ? 'p-2' : 'p-4';
+  const dotSize = compact ? 'w-1 h-1' : 'w-1.5 h-1.5';
+  const navBtnSize = compact ? 'w-7 h-7' : 'w-8 h-8';
   const initialDate = useMemo(() => {
     if (mode === 'single' && value) {
       const [y, m] = value.split('-').map(Number);
@@ -178,25 +186,25 @@ export default function SmartDatePicker({
   }, [mode, rangeStart]);
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm p-4 select-none ${className}`}>
+    <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${containerPadding} select-none ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
           onClick={prevMonth}
-          className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-500"
+          className={`${navBtnSize} flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500`}
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={compact ? 14 : 18} />
         </button>
-        <span className="text-sm font-semibold text-slate-700">
+        <span className={`${headerSize} text-slate-700`}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
         <button
           type="button"
           onClick={nextMonth}
-          className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-500"
+          className={`${navBtnSize} flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500`}
         >
-          <ChevronRight size={18} />
+          <ChevronRight size={compact ? 14 : 18} />
         </button>
       </div>
 
@@ -205,7 +213,7 @@ export default function SmartDatePicker({
         {WEEKDAYS.map((wd, i) => (
           <div
             key={wd}
-            className={`text-center text-xs font-medium py-1 ${
+            className={`text-center ${weekdaySize} font-medium py-1 ${
               i >= 5 ? 'text-red-400' : 'text-slate-400'
             }`}
           >
@@ -258,7 +266,7 @@ export default function SmartDatePicker({
               onMouseEnter={() => handleDayHover(dateStr)}
               className={`
                 relative flex flex-col items-center justify-center
-                w-full aspect-square rounded-lg text-xs
+                ${cellSize} rounded-lg
                 transition-all duration-150
                 ${bgClass}
                 ${!disabled && d.isCurrentMonth ? 'hover:ring-1 hover:ring-slate-300 cursor-pointer' : ''}
@@ -275,14 +283,14 @@ export default function SmartDatePicker({
                   {leaves.slice(0, 3).map((l, i) => (
                     <span
                       key={i}
-                      className={`w-1 h-1 rounded-full ${DOT_COLORS[l.status] || 'bg-slate-300'}`}
+                      className={`${dotSize} rounded-full ${DOT_COLORS[l.status] || 'bg-slate-300'}`}
                     />
                   ))}
                 </div>
               )}
 
               {holiday && d.isCurrentMonth && !selected && (
-                <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-red-400" />
+                <span className={`absolute top-0.5 right-0.5 ${dotSize} rounded-full bg-red-400`} />
               )}
             </button>
           );
@@ -290,7 +298,7 @@ export default function SmartDatePicker({
       </div>
 
       {/* Legend */}
-      {showLegend && (leaveHistory.length > 0 || holidays.length > 0) && (
+      {showLegend && !compact && (leaveHistory.length > 0 || holidays.length > 0) && (
         <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-100">
           {leaveHistory.some(l => l.status === 'APPROVED') && (
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
