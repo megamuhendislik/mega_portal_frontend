@@ -13,10 +13,10 @@ import {
 } from 'lucide-react';
 
 const SPECIAL_LEAVES = [
-  { code: 'SPECIAL:PATERNITY_LEAVE', label: 'Babalık İzni', icon: Baby, color: 'indigo' },
-  { code: 'SPECIAL:BEREAVEMENT_LEAVE', label: 'Ölüm İzni', icon: Heart, color: 'slate' },
-  { code: 'SPECIAL:MARRIAGE_LEAVE', label: 'Evlilik İzni', icon: Sparkles, color: 'rose' },
-  { code: 'SPECIAL:UNPAID_LEAVE', label: 'Ücretsiz İzin', icon: Ban, color: 'gray' },
+  { code: 'SPECIAL:PATERNITY', label: 'Babalık İzni', icon: Baby, color: 'indigo' },
+  { code: 'SPECIAL:BEREAVEMENT', label: 'Ölüm İzni', icon: Heart, color: 'slate' },
+  { code: 'SPECIAL:MARRIAGE', label: 'Evlilik İzni', icon: Sparkles, color: 'rose' },
+  { code: 'SPECIAL:UNPAID', label: 'Ücretsiz İzin', icon: Ban, color: 'gray' },
 ];
 
 // Purge-safe static class maps
