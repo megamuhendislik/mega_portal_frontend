@@ -1205,7 +1205,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Shared approver dropdown element (passed as prop to form components)
     const approverDropdownElement = renderApproverDropdown();
 
-    const modalWidth = (selectedType === 'LEAVE' && step === 2) ? 'max-w-7xl' : 'max-w-2xl';
+    const modalWidth = (selectedType === 'LEAVE' && step === 2) ? 'max-w-5xl' : 'max-w-2xl';
 
     const handleBack = () => {
         if (step === 2 && selectedType === 'LEAVE') {
