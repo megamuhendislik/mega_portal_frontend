@@ -23,6 +23,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // "Load older data" state
     const [daysBack, setDaysBack] = useState(90);
+    const [resultLimit, setResultLimit] = useState(0); // 0 = otomatik (backend default)
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState(null);
     const [metaInfo, setMetaInfo] = useState(null);
@@ -159,6 +160,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         try {
             const params = {};
             if (effectiveDays !== 90) params.days_back = effectiveDays;
+            if (resultLimit > 0) params.limit = resultLimit;
             if (forceRefresh) params.force_refresh = '1';
             const res = await api.get('/requests-init/incoming-requests-init/', { params });
             applyInitData(res.data);
@@ -174,7 +176,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             setLoadingOlder(false);
             setLastFetchedAt(new Date());
         }
-    }, [daysBack, applyInitData, fetchAllDataLegacy]);
+    }, [daysBack, resultLimit, applyInitData, fetchAllDataLegacy]);
 
     useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
@@ -736,6 +738,19 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         fetchAllData(newDaysBack);
     };
 
+    const handleResultLimitChange = (newLimit) => {
+        setResultLimit(newLimit);
+        // Refetch with new limit
+        const params = {};
+        if (daysBack !== 90) params.days_back = daysBack;
+        if (newLimit > 0) params.limit = newLimit;
+        setLoadingOlder(true);
+        api.get('/requests-init/incoming-requests-init/', { params })
+            .then(res => applyInitData(res.data))
+            .catch(() => {})
+            .finally(() => { setLoadingOlder(false); setLastFetchedAt(new Date()); });
+    };
+
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
@@ -1069,12 +1084,28 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
             {/* Truncation warning */}
             {metaInfo?.is_truncated && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-xs text-amber-700">
-                    <Info size={14} className="text-amber-500 flex-shrink-0" />
-                    <span>
-                        Toplam <strong>{metaInfo.all_team_total}</strong> talep bulundu, en son <strong>{metaInfo.result_cap}</strong> tanesi gösteriliyor.
-                        Daha fazla görmek için zaman aralığını değiştirin veya filtre kullanın.
-                    </span>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-700 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <Info size={14} className="text-amber-500 flex-shrink-0" />
+                        <span>
+                            Toplam <strong>{metaInfo.all_team_total}</strong> talep bulundu, en son <strong>{metaInfo.result_cap}</strong> tanesi gösteriliyor.
+                        </span>
+                    </div>
+                    <Select
+                        size="small"
+                        value={resultLimit || metaInfo.result_cap}
+                        onChange={handleResultLimitChange}
+                        loading={loadingOlder}
+                        disabled={loadingOlder}
+                        style={{ width: 130 }}
+                        options={[
+                            { value: 100, label: 'Son 100' },
+                            { value: 250, label: 'Son 250' },
+                            { value: 500, label: 'Son 500' },
+                            { value: 1000, label: 'Son 1000' },
+                            { value: 2000, label: 'Tümü (2000)' },
+                        ]}
+                    />
                 </div>
             )}
 
