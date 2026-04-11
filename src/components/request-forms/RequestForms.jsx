@@ -4,35 +4,26 @@ import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../
 import SmartDatePicker from '../common/SmartDatePicker';
 
 // ============================================================
-// LeaveRequestForm
+// LeaveRequestForm (Right Panel Only)
 // Props:
-//   leaveForm, setLeaveForm, requestTypes, leaveBalance,
-//   duration, isInsufficientBalance, approverDropdown
+//   leaveType, leaveForm, setLeaveForm, workingDaysInfo, fifoPreview,
+//   approverDropdown, duration, recentLeaveHistory, excuseBalance
 // ============================================================
 export const LeaveRequestForm = ({
+    leaveType,
     leaveForm,
     setLeaveForm,
-    requestTypes,
-    leaveBalance,
-    duration,
-    isInsufficientBalance,
-    approverDropdown,
-    entitlementInfo,
     workingDaysInfo,
-    recentLeaveHistory,
     fifoPreview,
+    approverDropdown,
+    duration,
+    recentLeaveHistory,
     excuseBalance,
-    birthdayBalance,
-    holidays,
 }) => {
-    const balance = leaveBalance;
-    const selectedTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
-    const isSpecialLeave = typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:');
-    const specialLeaveCode = isSpecialLeave ? leaveForm.request_type.split(':')[1] : null;
-    const isAnnualLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'ANNUAL_LEAVE';
-    const isExcuseLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'EXCUSE_LEAVE';
-    const isBirthdayLeave = !isSpecialLeave && selectedTypeObj && selectedTypeObj.code === 'BIRTHDAY_LEAVE';
-    const isInsufficient = isSpecialLeave ? false : isInsufficientBalance;
+    const isAnnualLeave = leaveType === 'ANNUAL_LEAVE';
+    const isExcuseLeave = leaveType === 'EXCUSE_LEAVE';
+    const isBirthdayLeave = leaveType === 'BIRTHDAY_LEAVE';
+    const isSpecialLeave = leaveType?.startsWith('SPECIAL:');
 
     // Proactive overlap detection
     const conflictingLeaves = React.useMemo(() => {
@@ -47,502 +38,32 @@ export const LeaveRequestForm = ({
 
     return (
         <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-            {/* Balance Info Box */}
-            {isAnnualLeave && balance && (
-                <div className={`p-4 rounded-xl border ${isInsufficient ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'} transition-colors`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <Briefcase size={18} className={isInsufficient ? 'text-red-600' : 'text-blue-600'} />
-                        <h4 className={`font-bold ${isInsufficient ? 'text-red-700' : 'text-blue-700'}`}>Yıllık İzin Bakiyesi</h4>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-center mb-2">
-                        <div className="bg-white/60 p-2 rounded-lg">
-                            <span className="block text-xs text-slate-500 font-bold uppercase">ANA BAKİYE</span>
-                            <span className="block font-black text-slate-700 text-lg">{balance.balance}</span>
-                        </div>
-                        <div className={`p-2 rounded-lg bg-indigo-50 ring-1 ring-indigo-100`}>
-                            <span className={`block text-xs font-bold uppercase text-indigo-700`}>YILLIK İZİN YENİLEMESİNE KALAN</span>
-                            <span className={`block font-black text-lg text-indigo-700`}>{balance.daysToAccrual !== undefined ? `${balance.daysToAccrual} Gün` : '-'}</span>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
-                            <span className="text-slate-500 font-bold">BU YIL KULLANILAN</span>
-                            <span className="text-amber-600 font-bold">{balance.usedThisYear}</span>
-                        </div>
-                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-2">
-                            <span className="text-slate-500 font-bold">SIRADAKİ İZİN</span>
-                            <span className="text-blue-600 font-bold">
-                                {balance.nextLeave ? (
-                                    <span title={`${balance.nextLeave.start_date} (${balance.nextLeave.total_days} gün)`}>
-                                        {balance.nextLeave.start_date.split('-').slice(1).reverse().join('.')}
-                                    </span>
-                                ) : '-'}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                            <span className="text-slate-500">Avans Limiti:</span>
-                            <span className="font-bold text-slate-700">{balance.limit} gün</span>
-                        </div>
-                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                            <span className="text-slate-500">Avans Kullanılan:</span>
-                            <span className="font-bold text-amber-600">{balance.advanceUsed || 0} gün</span>
-                        </div>
-                        <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                            <span className="text-slate-500">Max Talep:</span>
-                            <span className={`font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>{balance.available} gün</span>
-                        </div>
-                    </div>
-                    {/* Bu Taleple Kalacak Preview */}
-                    {duration > 0 && (
-                        <div className="mt-2 flex items-center justify-between text-xs bg-white/50 p-2 rounded-lg border border-blue-100">
-                            <span className="text-slate-500 font-medium">Bu taleple kalacak:</span>
-                            <span className={`font-black ${(balance.available - duration) < 0 ? 'text-red-600' : (balance.available - duration) <= 3 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                {balance.available - duration} gün
-                            </span>
-                        </div>
-                    )}
-                    {/* Avans İzin Uyarısı */}
-                    {balance && duration > 0 && (balance.effective || balance.balance || 0) < duration && (balance.advanceRemaining || balance.limit || 0) > 0 && (balance.available || 0) >= duration && (
-                        <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-                            <div className="flex items-start gap-2">
-                                <span className="text-amber-500 text-base leading-none mt-0.5">&#9888;</span>
-                                <div>
-                                    <p className="text-xs font-bold text-amber-800">Avans İzin Kullanılacak</p>
-                                    <p className="text-[11px] text-amber-700 mt-0.5">
-                                        Bu talep mevcut bakiyenizi aşıyor. Gelecek yılınızdan <strong>{Math.ceil(duration - Math.max(0, balance.effective || balance.balance || 0))}</strong> gün avans olarak kullanılacaktır.
-                                        {(balance.advanceUsed || 0) > 0 && <span className="block mt-0.5 text-[10px]">(Mevcut avans borcu: {balance.advanceUsed} gün)</span>}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {/* Kidem ve Hakedis Bilgisi */}
-                    {entitlementInfo && (
-                        <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                            {entitlementInfo.hired_date && (
-                                <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                    <span className="text-slate-500">İşe Giriş:</span>
-                                    <span className="font-bold text-slate-700">{new Date(entitlementInfo.hired_date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</span>
-                                </div>
-                            )}
-                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                <span className="text-slate-500">Kıdem:</span>
-                                <span className="font-bold text-slate-700">{entitlementInfo.years_of_service} Yıl</span>
-                            </div>
-                            <div className="bg-white/40 p-1.5 rounded flex justify-between px-3">
-                                <span className="text-slate-500">Yıllık Hak:</span>
-                                <span className="font-bold text-emerald-600">{entitlementInfo.entitlement_tier} Gün</span>
-                            </div>
-                        </div>
-                    )}
-                    {/* Yil Bazli Detay */}
-                    {entitlementInfo?.entitlements?.length > 0 && (
-                        <details className="mt-3 bg-white/50 rounded-lg border border-blue-100 overflow-hidden">
-                            <summary className="px-3 py-2 text-xs font-bold text-blue-700 cursor-pointer hover:bg-blue-50/50 transition-colors select-none">
-                                Yıl Bazlı İzin Detayı ({entitlementInfo.entitlements.length} yıl)
-                            </summary>
-                            <div className="px-3 pb-3 space-y-1.5">
-                                {entitlementInfo.entitlements.map((ent, i) => (
-                                    <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
-                                        <span className="font-bold text-slate-700">{ent.year}</span>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-slate-500">Hak: <span className="font-bold text-slate-700">{ent.days_entitled}</span></span>
-                                            <span className="text-slate-500">Kullanılan: <span className="font-bold text-amber-600">{ent.days_used}</span></span>
-                                            <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${ent.remaining > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                                {ent.remaining} kalan
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </details>
-                    )}
-                    {/* FIFO Kesinti Preview */}
-                    {fifoPreview?.breakdown_list?.length > 0 && (
-                        <div className="mt-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3">
-                            <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1.5">
-                                📋 Bu Talep İçin Yıl Bazlı Kesinti
-                            </h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs">
-                                    <thead>
-                                        <tr className="text-slate-500 border-b border-blue-200">
-                                            <th className="text-left py-1 pr-2">Yıl</th>
-                                            <th className="text-center py-1 px-1">Hak</th>
-                                            <th className="text-center py-1 px-1">Kullanılan</th>
-                                            <th className="text-center py-1 px-1">Kalan</th>
-                                            <th className="text-center py-1 px-1">Kesinti</th>
-                                            <th className="text-center py-1 px-1">Sonrası</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {fifoPreview.breakdown_list.map((row, i) => (
-                                            <tr key={i} className={`border-b border-blue-100 ${row.to_deduct > 0 ? 'bg-amber-50/50' : ''}`}>
-                                                <td className="py-1.5 pr-2 font-bold text-slate-700">{row.year}</td>
-                                                <td className="text-center text-slate-600">{row.days_entitled}</td>
-                                                <td className="text-center text-amber-600">{row.days_used}</td>
-                                                <td className="text-center text-slate-700 font-semibold">{row.remaining_before}</td>
-                                                <td className="text-center">
-                                                    {row.to_deduct > 0
-                                                        ? <span className="text-red-600 font-bold">-{row.to_deduct}</span>
-                                                        : <span className="text-slate-400">—</span>
-                                                    }
-                                                </td>
-                                                <td className="text-center">
-                                                    <span className={`font-bold ${row.remaining_after > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                        {row.remaining_after}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length > 1 && (
-                                <p className="text-[10px] text-blue-600 mt-2 font-medium">
-                                    ℹ️ {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length} farklı yıldan kesilecek → {fifoPreview.breakdown_list.filter(r => r.to_deduct > 0).length} ayrı dilekçe oluşacak
-                                </p>
-                            )}
-                        </div>
-                    )}
-                    {entitlementInfo && !entitlementInfo.has_entitlement && (
-                        <div className="mt-2 text-xs text-red-600 font-bold flex items-start gap-2 bg-red-50 p-3 rounded-lg border border-red-200">
-                            <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-                            <div>
-                                <p>Yıllık izin hakediş kaydınız bulunmamaktadır.</p>
-                                <p className="text-[10px] font-normal text-red-500 mt-1">
-                                    Yöneticiniz veya İK birimi, <strong>Personel</strong> sayfasından ilgili çalışanı seçip
-                                    <strong> İzin Yönetimi</strong> sekmesinden yıl bazlı hak edişlerinizi tanımlayabilir.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                    {isInsufficient && (
-                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1">
-                            <AlertCircle size={12} />
-                            Yetersiz bakiye! Talep oluşturamazsınız. ({duration} gün talep, {balance.available} gün mevcut)
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Excuse Leave Balance Box */}
-            {isExcuseLeave && excuseBalance && (
-                <div className="p-4 rounded-xl border bg-orange-50 border-orange-100 transition-colors">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Clock size={18} className="text-orange-600" />
-                        <h4 className="font-bold text-orange-700">Mazeret İzni Bakiyesi</h4>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                        <div className="bg-white/60 p-2 rounded-lg">
-                            <span className="block text-xs text-slate-500 font-bold uppercase">TOPLAM HAK</span>
-                            <span className="block font-black text-slate-700 text-lg">{(() => { const h = Math.floor(excuseBalance.hours_entitled); const m = Math.round((excuseBalance.hours_entitled - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
-                        </div>
-                        <div className="bg-white/60 p-2 rounded-lg">
-                            <span className="block text-xs text-slate-500 font-bold uppercase">KULLANILAN</span>
-                            <span className="block font-black text-amber-700 text-lg">{(() => { const h = Math.floor(excuseBalance.hours_used); const m = Math.round((excuseBalance.hours_used - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
-                        </div>
-                        <div className={`p-2 rounded-lg ${excuseBalance.hours_remaining <= 0 ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-100'}`}>
-                            <span className="block text-xs font-bold uppercase text-slate-500">KALAN</span>
-                            <span className={`block font-black text-lg ${excuseBalance.hours_remaining <= 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {(() => { const h = Math.floor(excuseBalance.hours_remaining); const m = Math.round((excuseBalance.hours_remaining - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all ${excuseBalance.hours_remaining <= 4.5 ? 'bg-red-400' : 'bg-orange-400'}`}
-                            style={{ width: `${Math.min(100, (excuseBalance.hours_used / excuseBalance.hours_entitled) * 100)}%` }}
-                        />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                        <span>0sa</span>
-                        <span>{(() => { const h = Math.floor(excuseBalance.hours_entitled); const m = Math.round((excuseBalance.hours_entitled - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()}</span>
-                    </div>
-
-                    {/* Son Kullanım */}
-                    {excuseBalance.recent_requests?.length > 0 && (
-                        <div className="mt-2 flex items-center gap-2 text-xs bg-white/50 p-2 rounded-lg border border-orange-100">
-                            <CalendarDays size={12} className="text-orange-500 shrink-0" />
-                            <span className="text-slate-500">Son Kullanım:</span>
-                            <span className="font-bold text-slate-700">
-                                {new Date(excuseBalance.recent_requests[0].date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}
-                            </span>
-                            <span className="text-slate-400">
-                                ({(() => { const v = excuseBalance.recent_requests[0].hours; const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; })()})
-                            </span>
-                            <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                excuseBalance.recent_requests[0].status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
-                                excuseBalance.recent_requests[0].status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
-                            }`}>
-                                {excuseBalance.recent_requests[0].status === 'APPROVED' ? 'Onaylı' :
-                                 excuseBalance.recent_requests[0].status === 'PENDING' ? 'Bekliyor' : excuseBalance.recent_requests[0].status}
-                            </span>
-                        </div>
-                    )}
-
-                    {excuseBalance.hours_remaining <= 0 && (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1">
-                            <AlertCircle size={14} /> Bu yılın mazeret izni kotası dolmuştur.
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Birthday Leave Balance Box */}
-            {isBirthdayLeave && birthdayBalance && (
-                <div className="p-4 rounded-xl border bg-pink-50 border-pink-100 transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">🎂</span>
-                        <h4 className="font-bold text-pink-700">Doğum Günü İzni</h4>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-center mb-2">
-                        <div className="bg-white/60 p-2 rounded-lg">
-                            <span className="block text-xs text-slate-500 font-bold uppercase">HAK</span>
-                            <span className="block font-black text-slate-700 text-lg">1 Gün</span>
-                        </div>
-                        <div className={`p-2 rounded-lg ${birthdayBalance.is_used ? 'bg-red-100 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-100'}`}>
-                            <span className="block text-xs font-bold uppercase text-slate-500">DURUM</span>
-                            <span className={`block font-black text-lg ${birthdayBalance.is_used ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {birthdayBalance.is_used ? 'Kullanıldı' : 'Kullanılabilir'}
-                            </span>
-                        </div>
-                    </div>
-                    <p className="text-xs text-pink-600 mt-1">
-                        Doğum günü izninizi sadece {birthdayBalance.birth_month_name} ayında, 1 günlük olarak kullanabilirsiniz.
-                    </p>
-                    {birthdayBalance.is_used && (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1">
-                            <AlertCircle size={14} /> Bu yılın doğum günü izni hakkınız kullanılmıştır.
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Gecmis Izin Talepleri */}
-            {recentLeaveHistory && recentLeaveHistory.length > 0 && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <h4 className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
-                        <Clock size={12} />
-                        Aktif İzin Talepleriniz ({recentLeaveHistory.length})
-                    </h4>
-                    <div className="space-y-1.5">
-                        {recentLeaveHistory.slice(0, 5).map((h, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-100">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                        h.status === 'APPROVED' ? 'bg-emerald-500' :
-                                        h.status === 'REJECTED' ? 'bg-red-500' :
-                                        h.status === 'PENDING' ? 'bg-amber-500' : 'bg-slate-400'
-                                    }`} />
-                                    <span className="font-medium text-slate-700 truncate">{h.leave_type_name || h.request_type_detail?.name || 'İzin'}</span>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <span className="text-slate-400">
-                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }) : '-'}
-                                    </span>
-                                    <span className="text-slate-500 font-bold">{h.total_days} gün</span>
-                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                                        h.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
-                                        h.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
-                                        h.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
-                                    }`}>
-                                        {h.status === 'APPROVED' ? 'Onaylı' :
-                                         h.status === 'REJECTED' ? 'Red' :
-                                         h.status === 'PENDING' ? 'Bekliyor' : h.status}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">İzin Türü <span className="text-red-500">*</span></label>
-                <select
-                    required
-                    value={leaveForm.request_type}
-                    onChange={e => setLeaveForm({ ...leaveForm, request_type: e.target.value })}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                >
-                    <option value="">Seçiniz</option>
-                    {requestTypes
-                        .filter(t => {
-                            const allowed = ['ANNUAL_LEAVE', 'EXCUSE_LEAVE'];
-                            if (birthdayBalance?.is_birthday_month && !birthdayBalance?.is_used) {
-                                allowed.push('BIRTHDAY_LEAVE');
+            {/* Selected Date Summary */}
+            {leaveForm.start_date && (
+                <div className="bg-slate-50/80 rounded-xl p-3 flex items-center gap-3">
+                    <CalendarDays className="w-5 h-5 text-slate-500" />
+                    <div>
+                        <div className="text-sm font-medium text-slate-700">
+                            {isExcuseLeave || isBirthdayLeave
+                                ? new Date(leaveForm.start_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long', year:'numeric'})
+                                : `${new Date(leaveForm.start_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long'})} — ${leaveForm.end_date ? new Date(leaveForm.end_date).toLocaleDateString('tr-TR', {day:'numeric', month:'long', year:'numeric'}) : '...'}`
                             }
-                            return allowed.includes(t.code);
-                        })
-                        .filter((t, i, arr) => arr.findIndex(x => x.code === t.code) === i)
-                        .map(t => (
-                            <option key={t.id} value={t.id}>{t.name}{t.code === 'BIRTHDAY_LEAVE' ? ' 🎂' : ''}</option>
-                        ))}
-                    <optgroup label="Özel İzinler">
-                        <option value="SPECIAL:PATERNITY">Babalık İzni (5 gün)</option>
-                        <option value="SPECIAL:BEREAVEMENT">Ölüm İzni (3 gün)</option>
-                        <option value="SPECIAL:UNPAID">Ücretsiz İzin</option>
-                        <option value="SPECIAL:MARRIAGE">Evlilik İzni (3 gün)</option>
-                    </optgroup>
-                </select>
-            </div>
+                        </div>
+                        {workingDaysInfo && (
+                            <div className="text-xs text-slate-500">
+                                {workingDaysInfo.working_days} is gunu
+                                {workingDaysInfo.total_days !== workingDaysInfo.working_days &&
+                                    ` (${workingDaysInfo.total_days} takvim gunu)`}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
-            {/* Özel İzinler: Babalık/Ölüm/Evlilik/Ücretsiz */}
-            {isSpecialLeave ? (
+            {/* Excuse Leave: Time Selection */}
+            {isExcuseLeave ? (
                 <div className="space-y-4">
-                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                        <p className="text-sm font-bold text-indigo-700">
-                            {specialLeaveCode === 'PATERNITY' && 'Babalık İzni — 5 takvim günü'}
-                            {specialLeaveCode === 'BEREAVEMENT' && 'Ölüm İzni — 3 takvim günü'}
-                            {specialLeaveCode === 'MARRIAGE' && 'Evlilik İzni — 3 takvim günü'}
-                            {specialLeaveCode === 'UNPAID' && 'Ücretsiz İzin — başlangıç ve bitiş tarihi girin'}
-                        </p>
-                        <p className="text-xs text-indigo-500 mt-1">Bu izin muhasebe tarafından onaylanacaktır.</p>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç Tarihi <span className="text-red-500">*</span></label>
-                        <SmartDatePicker
-                            mode="single"
-                            value={leaveForm.start_date}
-                            onChange={(dateStr) => {
-                                const updates = { ...leaveForm, start_date: dateStr };
-                                if (specialLeaveCode !== 'UNPAID') {
-                                    const durationMap = { PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3 };
-                                    const dur = durationMap[specialLeaveCode] || 3;
-                                    const sd = new Date(dateStr);
-                                    sd.setDate(sd.getDate() + dur - 1);
-                                    updates.end_date = sd.toISOString().split('T')[0];
-                                }
-                                setLeaveForm(updates);
-                            }}
-                            holidays={holidays}
-                            leaveHistory={recentLeaveHistory}
-                            accentColor="indigo"
-                        />
-                    </div>
-                    {specialLeaveCode === 'UNPAID' ? (
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Bitiş Tarihi <span className="text-red-500">*</span></label>
-                            <SmartDatePicker
-                                mode="single"
-                                value={leaveForm.end_date}
-                                minDate={leaveForm.start_date}
-                                onChange={(dateStr) => setLeaveForm({ ...leaveForm, end_date: dateStr })}
-                                holidays={holidays}
-                                leaveHistory={recentLeaveHistory}
-                                accentColor="indigo"
-                                showLegend={false}
-                            />
-                        </div>
-                    ) : leaveForm.start_date ? (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                            <p className="text-sm text-blue-700">
-                                Bitiş Tarihi: <strong>{new Date(leaveForm.end_date).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' })}</strong>
-                                {' '}({({PATERNITY: 5, BEREAVEMENT: 3, MARRIAGE: 3})[specialLeaveCode]} takvim günü)
-                            </p>
-                        </div>
-                    ) : null}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Açıklama</label>
-                        <textarea
-                            value={leaveForm.reason}
-                            onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                            rows={3}
-                            placeholder="Açıklama (opsiyonel)..."
-                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-medium text-slate-700 resize-none"
-                        />
-                    </div>
-                </div>
-
-            ) : isBirthdayLeave ? (
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                        {(() => {
-                            const today = getIstanbulToday();
-                            const [yr] = today.split('-').map(Number);
-                            const bm = birthdayBalance?.birth_month;
-                            const minDate = bm ? `${yr}-${String(bm).padStart(2, '0')}-01` : today;
-                            // Last day of birth month
-                            const lastDay = bm ? new Date(yr, bm, 0).getDate() : 28;
-                            const maxDate = bm ? `${yr}-${String(bm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` : today;
-                            return (
-                                <SmartDatePicker
-                                    mode="single"
-                                    value={leaveForm.start_date}
-                                    minDate={minDate}
-                                    maxDate={maxDate}
-                                    onChange={(dateStr) => setLeaveForm({ ...leaveForm, start_date: dateStr, end_date: dateStr })}
-                                    holidays={holidays}
-                                    leaveHistory={recentLeaveHistory}
-                                    accentColor="pink"
-                                />
-                            );
-                        })()}
-                    </div>
-                    <div className="p-2.5 bg-pink-50 rounded-lg border border-pink-100 flex items-center gap-2">
-                        <span className="text-base">🎂</span>
-                        <span className="text-sm font-bold text-pink-700">1 günlük doğum günü izni (tam gün)</span>
-                    </div>
-                </div>
-            ) : isExcuseLeave ? (
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih <span className="text-red-500">*</span></label>
-                        {(() => {
-                            // 2 mali dönem geriye: ayın 26'sından önceysek 3 ay geri, sonrasıysak 2 ay geri (26'sı dahil)
-                            const [_yr, _mo, curDay] = getIstanbulToday().split('-').map(Number);
-                            const curYear = _yr;
-                            const curMonth = _mo - 1; // 0-based
-                            // Mali dönem: 26-25 cycle. Şu anki mali ay hesabı
-                            let fiscalMonth, fiscalYear;
-                            if (curDay >= 26) {
-                                fiscalMonth = curMonth + 1; // next month is fiscal month
-                                fiscalYear = curMonth === 11 ? curYear + 1 : curYear;
-                            } else {
-                                fiscalMonth = curMonth; // current month is fiscal month
-                                fiscalYear = curYear;
-                            }
-                            // 2 mali dönem geri = fiscalMonth - 2
-                            let minFiscalMonth = fiscalMonth - 2;
-                            let minFiscalYear = fiscalYear;
-                            if (minFiscalMonth <= 0) {
-                                minFiscalMonth += 12;
-                                minFiscalYear -= 1;
-                            }
-                            // O mali dönemin başlangıcı: önceki ayın 26'sı
-                            let minStartMonth = minFiscalMonth - 1; // 0-based prev month
-                            let minStartYear = minFiscalYear;
-                            if (minStartMonth <= 0) {
-                                minStartMonth += 12;
-                                minStartYear -= 1;
-                            }
-                            const minDate = `${minStartYear}-${String(minStartMonth).padStart(2, '0')}-26`;
-                            // Yıl sonuna kadar
-                            const maxDate = `${curYear}-12-31`;
-                            return (
-                                <SmartDatePicker
-                                    mode="single"
-                                    value={leaveForm.start_date}
-                                    minDate={minDate}
-                                    maxDate={maxDate}
-                                    onChange={(dateStr) => setLeaveForm({ ...leaveForm, start_date: dateStr, end_date: dateStr })}
-                                    holidays={holidays}
-                                    leaveHistory={recentLeaveHistory}
-                                    accentColor="orange"
-                                />
-                            );
-                        })()}
-                    </div>
-                    {/* İzin günü uyarısı */}
+                    {/* Izin gunu uyarisi */}
                     {excuseBalance?.schedule_info?.is_off_day && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
                             <p className="text-sm font-bold text-red-700">Bu tarih çalışma günü değil.</p>
@@ -654,25 +175,7 @@ export const LeaveRequestForm = ({
                         })()}
                     </div>
                 </div>
-            ) : (
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tarih Aralığı <span className="text-red-500">*</span></label>
-                    <SmartDatePicker
-                        mode="range"
-                        value={leaveForm.start_date && leaveForm.end_date ? [leaveForm.start_date, leaveForm.end_date] : null}
-                        onChange={([start, end]) => {
-                            if (start && end) {
-                                setLeaveForm({ ...leaveForm, start_date: start, end_date: end });
-                            } else {
-                                setLeaveForm({ ...leaveForm, start_date: start || '', end_date: '' });
-                            }
-                        }}
-                        holidays={holidays}
-                        leaveHistory={recentLeaveHistory}
-                        accentColor="blue"
-                    />
-                </div>
-            )}
+            ) : null}
 
             {/* Overlap Warning */}
             {conflictingLeaves.length > 0 && (
