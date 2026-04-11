@@ -2,6 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { Clock, User, CheckCircle, XCircle, AlertTriangle, Shield } from 'lucide-react';
 import api from '../services/api';
 
+function ReasonText({ reason }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = reason.length > 120;
+  return (
+    <div className="mt-3 p-3 bg-white bg-opacity-50 rounded text-sm text-slate-700">
+      <span className="font-medium">Açıklama:</span>{' '}
+      <span className="break-words whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+        {isLong && !expanded ? reason.slice(0, 120) + '...' : reason}
+      </span>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+        >
+          {expanded ? 'Kısalt' : 'Devamını gör'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const DecisionHistoryTimeline = ({ contentType, objectId }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,9 +177,7 @@ const DecisionHistoryTimeline = ({ contentType, objectId }) => {
 
                 {/* Reason */}
                 {item.reason && (
-                  <div className="mt-3 p-3 bg-white bg-opacity-50 rounded text-sm text-slate-700">
-                    <span className="font-medium">Açıklama:</span> {item.reason}
-                  </div>
+                  <ReasonText reason={item.reason} />
                 )}
 
                 {/* Overridden decision reference */}

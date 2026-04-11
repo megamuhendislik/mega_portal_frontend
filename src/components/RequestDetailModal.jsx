@@ -26,6 +26,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
   const [showFullReason, setShowFullReason] = useState(false);
+  const [showFullRejection, setShowFullRejection] = useState(false);
   const [weeklyOtStatus, setWeeklyOtStatus] = useState(null);
   const [weeklyOtLoading, setWeeklyOtLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
@@ -1349,7 +1350,25 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     <XCircle size={16} />
                     Red Sebebi
                   </div>
-                  <p className="text-sm text-red-600 leading-relaxed">{request.rejection_reason}</p>
+                  {(() => {
+                    const text = request.rejection_reason;
+                    const isLong = text.length > 150;
+                    return (
+                      <>
+                        <p className="text-sm text-red-600 leading-relaxed break-words whitespace-pre-wrap overflow-hidden" style={{ wordBreak: 'break-word' }}>
+                          {isLong && !showFullRejection ? text.slice(0, 150) + '...' : text}
+                        </p>
+                        {isLong && (
+                          <button
+                            onClick={() => setShowFullRejection(prev => !prev)}
+                            className="text-xs font-medium text-red-500 hover:text-red-700 mt-1"
+                          >
+                            {showFullRejection ? 'Kısalt' : 'Devamını gör'}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
