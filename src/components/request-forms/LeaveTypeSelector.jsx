@@ -46,10 +46,10 @@ const BORDER_COLORS = {
 };
 
 const SPECIAL_LEAVES = [
-  { code: 'SPECIAL:PATERNITY_LEAVE', label: 'Babal\u0131k \u0130zni', icon: Baby, color: 'indigo' },
-  { code: 'SPECIAL:BEREAVEMENT_LEAVE', label: '\u00d6l\u00fcm \u0130zni', icon: Heart, color: 'slate' },
-  { code: 'SPECIAL:MARRIAGE_LEAVE', label: 'Evlilik \u0130zni', icon: Sparkles, color: 'rose' },
-  { code: 'SPECIAL:UNPAID_LEAVE', label: '\u00dccretsiz \u0130zin', icon: Ban, color: 'gray' },
+  { code: 'SPECIAL:PATERNITY_LEAVE', label: 'Babalık İzni', icon: Baby, color: 'indigo' },
+  { code: 'SPECIAL:BEREAVEMENT_LEAVE', label: 'Ölüm İzni', icon: Heart, color: 'slate' },
+  { code: 'SPECIAL:MARRIAGE_LEAVE', label: 'Evlilik İzni', icon: Sparkles, color: 'rose' },
+  { code: 'SPECIAL:UNPAID_LEAVE', label: 'Ücretsiz İzin', icon: Ban, color: 'gray' },
 ];
 
 function LeaveCard({ label, icon: Icon, color, balanceText, onClick, disabled, chevron }) {
@@ -116,42 +116,42 @@ export default function LeaveTypeSelector({
 
   return (
     <div className="space-y-3">
-      {/* 1 - Y\u0131ll\u0131k \u0130zin */}
+      {/* 1 - Yıllık İzin */}
       <LeaveCard
-        label="Y\u0131ll\u0131k \u0130zin"
+        label="Yıllık İzin"
         icon={Calendar}
         color="blue"
-        balanceText={`Kalan: ${leaveBalance?.available || 0} g\u00fcn`}
+        balanceText={`Kalan: ${leaveBalance?.available || 0} gün`}
         onClick={() => onSelect('ANNUAL_LEAVE')}
       />
 
-      {/* 2 - Mazeret \u0130zni */}
+      {/* 2 - Mazeret İzni */}
       <LeaveCard
-        label="Mazeret \u0130zni"
+        label="Mazeret İzni"
         icon={Clock}
         color="amber"
         balanceText={`Kalan: ${excuseBalance?.remaining_hours || 0} saat`}
         onClick={() => onSelect('EXCUSE_LEAVE')}
       />
 
-      {/* 3 - Do\u011fum G\u00fcn\u00fc \u0130zni */}
+      {/* 3 - Doğum Günü İzni */}
       {showBirthday && (
         <LeaveCard
-          label="Do\u011fum G\u00fcn\u00fc \u0130zni"
+          label="Doğum Günü İzni"
           icon={Gift}
           color="pink"
-          balanceText={birthdayDisabled ? 'Kullan\u0131ld\u0131' : '1 g\u00fcn hakk\u0131n\u0131z var'}
+          balanceText={birthdayDisabled ? 'Kullanıldı' : '1 gün hakkınız var'}
           onClick={() => !birthdayDisabled && onSelect('BIRTHDAY_LEAVE')}
           disabled={birthdayDisabled}
         />
       )}
 
-      {/* 4 - \u00d6zel \u0130zinler */}
+      {/* 4 - Özel İzinler */}
       <LeaveCard
-        label="\u00d6zel \u0130zinler"
+        label="Özel İzinler"
         icon={FileText}
         color="purple"
-        balanceText="Babal\u0131k, \u00d6l\u00fcm, Evlilik, \u00dccretsiz"
+        balanceText="Babalık, Ölüm, Evlilik, Ücretsiz"
         onClick={() => setExpandedSpecial((prev) => !prev)}
         chevron={
           expandedSpecial ? (
@@ -162,7 +162,7 @@ export default function LeaveTypeSelector({
         }
       />
 
-      {/* \u00d6zel \u0130zinler Alt Kartlar\u0131 */}
+      {/* Özel İzinler Alt Kartları */}
       <div
         className={`overflow-hidden transition-all duration-250 ease-in-out
                     ${expandedSpecial ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}
