@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope, Download } from 'lucide-react';
 import { message } from 'antd';
 import api from '../services/api';
@@ -14,6 +14,8 @@ import {
     ExternalDutyForm,
     CardlessEntryForm,
 } from './request-forms/RequestForms';
+import LeaveTypeSelector from './request-forms/LeaveTypeSelector';
+import LeaveInfoPanel from './request-forms/LeaveInfoPanel';
 
 // ... (Inside Component)
 
@@ -21,6 +23,8 @@ import {
 const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData, onOvertimeTabSwitch }) => {
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
+    const [leaveSubStep, setLeaveSubStep] = useState(null); // null | 'type'
+    const [selectedLeaveType, setSelectedLeaveType] = useState(null); // 'ANNUAL_LEAVE' | 'EXCUSE_LEAVE' | 'BIRTHDAY_LEAVE' | 'SPECIAL:*'
 
     // Birthday balance
     const [birthdayBalance, setBirthdayBalance] = useState(null);
@@ -41,7 +45,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 }));
                 setOvertimeManualOpen(true);
             } else if (initialData.preselect_type === 'BIRTHDAY_LEAVE') {
-                handleTypeSelect('LEAVE');
+                // Skip type selector and go directly to BIRTHDAY_LEAVE form
+                setSelectedType('LEAVE');
+                setSelectedLeaveType('BIRTHDAY_LEAVE');
+                setLeaveSubStep(null);
+                setStep(2);
                 // Pre-select BIRTHDAY_LEAVE type after a tick (types need to load)
                 setTimeout(() => {
                     const bdType = requestTypes?.find(t => t.code === 'BIRTHDAY_LEAVE');
@@ -183,6 +191,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     const [specialLeaveForm, setSpecialLeaveForm] = useState({ start_date: '', end_date: '', description: '' });
     const [specialLeaveFiles, setSpecialLeaveFiles] = useState([]);
 
+    // Leave-specific calendar history (from recent leave requests)
+    const leaveCalendarHistory = useMemo(() => {
+        return recentLeaveHistory
+            .filter(l => ['PENDING', 'APPROVED', 'ESCALATED'].includes(l.status))
+            .map(l => ({
+                start_date: l.start_date,
+                end_date: l.end_date || l.start_date,
+                status: l.status,
+            }));
+    }, [recentLeaveHistory]);
+
     useEffect(() => {
         if (selectedType !== 'CARDLESS_ENTRY' || !cardlessEntryForm.date) {
             setCardlessSchedule(null);
@@ -271,6 +290,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             setSpecialLeaveForm({ start_date: '', end_date: '', description: '' });
             setSpecialLeaveFiles([]);
             setWeeklyOtForDuty(null);
+            setLeaveSubStep(null);
+            setSelectedLeaveType(null);
             // Reset forms
             setOvertimeForm({
                 date: getIstanbulToday(),
@@ -554,9 +575,31 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     if (!isOpen) return null;
 
     const handleTypeSelect = (type) => {
+        setError(null);
+        if (type === 'LEAVE') {
+            setSelectedType('LEAVE');
+            setLeaveSubStep('type');
+            // step stays at 1 — show leave type cards first
+            return;
+        }
         setSelectedType(type);
         setStep(2);
-        setError(null);
+    };
+
+    const handleLeaveTypeSelect = (typeCode) => {
+        setSelectedLeaveType(typeCode);
+        setLeaveSubStep(null);
+        setStep(2);
+
+        // Set leaveForm.request_type
+        if (typeCode.startsWith('SPECIAL:')) {
+            setLeaveForm(prev => ({ ...prev, request_type: typeCode }));
+        } else {
+            const rt = requestTypes?.find(r => r.code === typeCode);
+            if (rt) {
+                setLeaveForm(prev => ({ ...prev, request_type: rt.id }));
+            }
+        }
     };
 
     const handleDownloadPetition = async (leaveRequestId = null) => {
@@ -1139,15 +1182,64 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Shared approver dropdown element (passed as prop to form components)
     const approverDropdownElement = renderApproverDropdown();
 
+    const modalWidth = (selectedType === 'LEAVE' && step === 2) ? 'max-w-5xl' : 'max-w-2xl';
+
+    const handleBack = () => {
+        if (step === 2 && selectedType === 'LEAVE') {
+            // Leave form -> leave type cards
+            setStep(1);
+            setLeaveSubStep('type');
+            setSelectedLeaveType(null);
+            setLeaveForm({
+                request_type: '',
+                start_date: '',
+                end_date: '',
+                reason: '',
+                destination: '',
+                contact_phone: '',
+                send_to_substitute: false,
+                start_time: '',
+                end_time: '',
+            });
+        } else if (leaveSubStep === 'type') {
+            // Leave type cards -> main type selection
+            setLeaveSubStep(null);
+            setSelectedType(null);
+        } else {
+            // Other types -> main type selection (existing behavior)
+            setStep(1);
+            setSelectedType(null);
+        }
+    };
+
+    const getHeaderTitle = () => {
+        if (step === 1 && leaveSubStep === 'type') return 'İzin Türü Seçin';
+        if (step === 1) return 'Yeni Talep Oluştur';
+        if (selectedType === 'LEAVE') return 'İzin Talebi';
+        if (selectedType === 'OVERTIME') return 'Fazla Mesai Talebi';
+        if (selectedType === 'MEAL') return 'Yemek Talebi';
+        if (selectedType === 'CARDLESS_ENTRY') return 'Kartsız Giriş Talebi';
+        if (selectedType === 'HEALTH_REPORT') return 'Sağlık Raporu';
+        if (selectedType === 'HOSPITAL_VISIT') return 'Hastane Ziyareti';
+        return 'Şirket Dışı Görev';
+    };
+
+    const getHeaderSubtitle = () => {
+        if (step === 1 && leaveSubStep === 'type') return 'Hangi izin türünü kullanmak istiyorsunuz?';
+        if (step === 1) return 'Talep türünü seçiniz';
+        if (selectedType === 'OVERTIME') return 'Mevcut mesaileri talep edin veya manuel giriş yapın';
+        return 'Bilgileri doldurunuz';
+    };
+
     return (
         <ModalOverlay open={isOpen} onClose={onClose}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className={`bg-white rounded-3xl shadow-2xl w-full ${modalWidth} overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300`}>
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        {step === 2 && (
+                        {(step === 2 || leaveSubStep === 'type') && (
                             <button
-                                onClick={() => setStep(1)}
+                                onClick={handleBack}
                                 className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors"
                             >
                                 <ArrowLeft size={18} />
@@ -1155,19 +1247,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         )}
                         <div>
                             <h2 className="text-xl font-bold text-slate-800">
-                                {step === 1 ? 'Yeni Talep Oluştur' :
-                                    selectedType === 'LEAVE' ? 'İzin Talebi' :
-                                        selectedType === 'OVERTIME' ? 'Fazla Mesai Talebi' :
-                                            selectedType === 'MEAL' ? 'Yemek Talebi' :
-                                                selectedType === 'CARDLESS_ENTRY' ? 'Kartsız Giriş Talebi' :
-                                                    selectedType === 'HEALTH_REPORT' ? 'Sağlık Raporu' :
-                                                        selectedType === 'HOSPITAL_VISIT' ? 'Hastane Ziyareti' :
-                                                            'Şirket Dışı Görev'}
+                                {getHeaderTitle()}
                             </h2>
                             <p className="text-slate-500 text-xs mt-0.5 font-medium">
-                                {step === 1 ? 'Talep türünü seçiniz' :
-                                    selectedType === 'OVERTIME' ? 'Mevcut mesaileri talep edin veya manuel giriş yapın' :
-                                        'Bilgileri doldurunuz'}
+                                {getHeaderSubtitle()}
                             </p>
                         </div>
                     </div>
@@ -1188,12 +1271,44 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         </div>
                     )}
 
-                    {step === 1 && renderTypeSelection()}
+                    {/* Step 1: Main type selection OR leave sub-type selection */}
+                    {step === 1 && !leaveSubStep && renderTypeSelection()}
 
-                    {step === 2 && (
-                        <form id="requestForm" onSubmit={handleSubmit}>
-                            {selectedType === 'LEAVE' && (
+                    {step === 1 && leaveSubStep === 'type' && (
+                        <div className="p-6">
+                            <LeaveTypeSelector
+                                onSelect={handleLeaveTypeSelect}
+                                leaveBalance={getLeaveBalance()}
+                                excuseBalance={excuseBalance}
+                                birthdayBalance={birthdayBalance}
+                                requestTypes={requestTypes}
+                            />
+                        </div>
+                    )}
+
+                    {/* Step 2: Leave — side-by-side layout */}
+                    {step === 2 && selectedType === 'LEAVE' && (
+                        <form id="requestForm" onSubmit={handleSubmit} className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                            {/* Left Panel */}
+                            <div className="w-full lg:w-2/5 border-b lg:border-b-0 lg:border-r border-slate-100 p-4 overflow-y-auto bg-slate-50/30">
+                                <LeaveInfoPanel
+                                    leaveType={selectedLeaveType}
+                                    leaveForm={leaveForm}
+                                    setLeaveForm={setLeaveForm}
+                                    leaveBalance={getLeaveBalance()}
+                                    excuseBalance={excuseBalance}
+                                    birthdayBalance={birthdayBalance}
+                                    entitlementInfo={entitlementInfo}
+                                    fifoPreview={fifoPreview}
+                                    recentLeaveHistory={recentLeaveHistory}
+                                    holidays={holidays}
+                                    calendarLeaveHistory={leaveCalendarHistory}
+                                />
+                            </div>
+                            {/* Right Panel */}
+                            <div className="w-full lg:w-3/5 p-6 overflow-y-auto">
                                 <LeaveRequestForm
+                                    leaveType={selectedLeaveType}
                                     leaveForm={leaveForm}
                                     setLeaveForm={setLeaveForm}
                                     requestTypes={requestTypes}
@@ -1209,7 +1324,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     birthdayBalance={birthdayBalance}
                                     holidays={holidays}
                                 />
-                            )}
+                            </div>
+                        </form>
+                    )}
+
+                    {/* Step 2: Other types — existing render */}
+                    {step === 2 && selectedType && selectedType !== 'LEAVE' && (
+                        <form id="requestForm" onSubmit={handleSubmit}>
                             {selectedType === 'OVERTIME' && (
                                 <OvertimeRequestForm
                                     overtimeForm={overtimeForm}
