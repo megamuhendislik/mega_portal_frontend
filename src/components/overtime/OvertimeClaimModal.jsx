@@ -40,6 +40,8 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         api.get('/overtime-requests/claimable/'),
         api.get('/overtime-requests/my-managers/'),
       ]);
+      console.log('[OT Modal] claimRes:', claimRes.status, claimRes.status === 'fulfilled' ? claimRes.value.data : claimRes.reason?.message);
+      console.log('[OT Modal] mgrRes:', mgrRes.status, mgrRes.status === 'fulfilled' ? mgrRes.value.data : mgrRes.reason?.message);
       if (claimRes.status === 'fulfilled') setClaimableData(claimRes.value.data);
       if (mgrRes.status === 'fulfilled') {
         const mgrs = mgrRes.value.data;
