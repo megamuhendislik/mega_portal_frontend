@@ -20,7 +20,7 @@ import LeaveInfoPanel from './request-forms/LeaveInfoPanel';
 // ... (Inside Component)
 
 
-const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData, onOvertimeTabSwitch }) => {
+const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialData, onOvertimeTabSwitch, onOvertimeOpen }) => {
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState(null); // 'LEAVE', 'OVERTIME', 'MEAL'
     const [leaveSubStep, setLeaveSubStep] = useState(null); // null | 'type'
@@ -35,6 +35,11 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     useEffect(() => {
         if (isOpen && initialData) {
             if (initialData.type === 'OVERTIME') {
+                if (onOvertimeOpen) {
+                    onClose();
+                    onOvertimeOpen();
+                    return;
+                }
                 handleTypeSelect('OVERTIME');
                 setOvertimeForm(prev => ({
                     ...prev,
@@ -1058,7 +1063,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
             <button
                 onClick={() => {
-                    if (onOvertimeTabSwitch) {
+                    if (onOvertimeOpen) {
+                        onClose();
+                        onOvertimeOpen();
+                    } else if (onOvertimeTabSwitch) {
                         onClose();
                         onOvertimeTabSwitch();
                     } else {

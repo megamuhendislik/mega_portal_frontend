@@ -9,6 +9,7 @@ import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
+import OvertimeClaimModal from '../../components/overtime/OvertimeClaimModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
@@ -100,6 +101,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     const [expandedRowId] = useState(null);
     const [claimManagers, setClaimManagers] = useState([]);
     const [claimModal, setClaimModal] = useState({ open: false, target: null });
+    const [overtimeModalOpen, setOvertimeModalOpen] = useState(false);
 
     // Date range filter (null = tüm dönemler, default)
     const [dateFrom, setDateFrom] = useState(null);
@@ -742,6 +744,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                 onSuccess={handleCreateSuccess}
                 requestTypes={requestTypes}
                 initialData={createModalInitialData}
+                onOvertimeOpen={() => setOvertimeModalOpen(true)}
+            />
+
+            {/* Overtime Claim Modal (new unified OT modal) */}
+            <OvertimeClaimModal
+                open={overtimeModalOpen}
+                onClose={() => setOvertimeModalOpen(false)}
+                onSuccess={() => { setOvertimeModalOpen(false); handleCreateSuccess(); }}
             />
 
             {/* Edit Overtime Modal */}

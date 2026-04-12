@@ -1,0 +1,200 @@
+import React, { useState, useMemo } from 'react';
+import { ArrowLeft, CalendarCheck, Zap, AlertTriangle } from 'lucide-react';
+import WeeklyOTLimitBar from './WeeklyOTLimitBar';
+
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0 dk';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0 && m > 0) return `${h} sa ${m} dk`;
+  if (h > 0) return `${h} saat`;
+  return `${m} dk`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${days[d.getDay()]}`;
+}
+
+export default function ClaimConfirmPanel({
+  type,
+  claimTarget,
+  weeklyStatus,
+  approvers,
+  onBack,
+  onConfirm,
+  submitting,
+}) {
+  const isIntended = type === 'intended';
+  const [reason, setReason] = useState('');
+  const [selectedApproverId, setSelectedApproverId] = useState(
+    approvers.length === 1 ? approvers[0].id : null
+  );
+  const [sendToSubstitute, setSendToSubstitute] = useState(false);
+
+  const segments = isIntended ? [] : (claimTarget?.items || []);
+  const [selectedSegIds, setSelectedSegIds] = useState(
+    () => new Set(segments.map(s => s.overtime_request_id))
+  );
+
+  const toggleSegment = (id) => {
+    setSelectedSegIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const totalSeconds = useMemo(() => {
+    if (isIntended) {
+      return claimTarget?.actual_overtime_seconds || 0;
+    }
+    return segments
+      .filter(s => selectedSegIds.has(s.overtime_request_id))
+      .reduce((sum, s) => sum + (s.actual_overtime_seconds || 0), 0);
+  }, [isIntended, claimTarget, segments, selectedSegIds]);
+
+  const projectedHours = totalSeconds / 3600;
+  const willExceed = weeklyStatus && !weeklyStatus.is_unlimited
+    && (weeklyStatus.used_hours + projectedHours) > weeklyStatus.limit_hours;
+
+  const canConfirm = totalSeconds > 0 && !submitting && !willExceed
+    && (approvers.length <= 1 || selectedApproverId);
+
+  const date = claimTarget?.date;
+  const TypeIcon = isIntended ? CalendarCheck : Zap;
+  const typeLabel = isIntended ? 'Planlanmış' : 'Planlanmamış';
+
+  const handleConfirm = () => {
+    const excludedIds = segments
+      .filter(s => !selectedSegIds.has(s.overtime_request_id))
+      .map(s => s.overtime_request_id);
+
+    onConfirm({
+      type,
+      claimTarget,
+      reason,
+      target_approver_id: selectedApproverId,
+      send_to_substitute: sendToSubstitute,
+      selected_ids: [...selectedSegIds],
+      excluded_ids: excludedIds,
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-3 mb-4">
+        <button type="button" onClick={onBack}
+          className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        </button>
+        <TypeIcon className={`w-5 h-5 ${isIntended ? 'text-emerald-600' : 'text-amber-600'}`} />
+        <h3 className="font-bold text-slate-800">Talep Onayı</h3>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-slate-800">{formatDate(date)}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            isIntended ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            {typeLabel}
+          </span>
+        </div>
+
+        {segments.length > 0 && (
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="text-sm font-medium text-slate-700 mb-2">
+              Seçili Segmentler ({selectedSegIds.size}/{segments.length})
+            </div>
+            <div className="space-y-1.5">
+              {segments.map(seg => (
+                <label key={seg.overtime_request_id}
+                  className="flex items-center justify-between gap-2 text-sm py-1 px-2 rounded-lg hover:bg-white cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedSegIds.has(seg.overtime_request_id)}
+                      onChange={() => toggleSegment(seg.overtime_request_id)}
+                      className={`w-4 h-4 rounded border-slate-300 ${
+                        isIntended ? 'text-emerald-600 focus:ring-emerald-500' : 'text-amber-600 focus:ring-amber-500'
+                      }`}
+                    />
+                    <span>{seg.start_time} – {seg.end_time}</span>
+                  </div>
+                  <span className="text-slate-400 text-xs">{formatDuration(seg.actual_overtime_seconds)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-sm text-slate-700">
+          Toplam: <b>{formatDuration(totalSeconds)}</b>
+        </div>
+
+        <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={projectedHours} />
+
+        {willExceed && (
+          <div className="flex items-center gap-1.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+            <AlertTriangle className="w-4 h-4" />
+            Bu talep haftalık limiti aşacak! Segment seçimini azaltın.
+          </div>
+        )}
+
+        {approvers.length > 1 && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici</label>
+            <select value={selectedApproverId || ''}
+              onChange={e => setSelectedApproverId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Seçiniz...</option>
+              {approvers.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.full_name} ({a.relationship_type === 'PRIMARY' ? 'Birincil' : 'İkincil'})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+          <textarea value={reason} onChange={e => setReason(e.target.value)}
+            rows={2} placeholder="İsteğe bağlı..."
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" checked={sendToSubstitute}
+            onChange={e => setSendToSubstitute(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300"
+          />
+          Vekil yöneticiye de gönder
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-4 pt-3 border-t">
+        <button type="button" onClick={onBack}
+          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">
+          İptal
+        </button>
+        <button type="button" onClick={handleConfirm}
+          disabled={!canConfirm}
+          className={`px-5 py-2 rounded-lg text-sm font-medium shadow-sm transition-all
+            ${isIntended
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              : 'bg-amber-600 hover:bg-amber-700 text-white'
+            }
+            disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed`}>
+          {submitting ? 'Gönderiliyor...' : 'Talep Et'}
+        </button>
+      </div>
+    </div>
+  );
+}
