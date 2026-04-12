@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2, Download, Check } from 'lucide-react';
+import { X, Clock, Calendar, FileText, AlertCircle, AlertTriangle, Shield, Lock, CheckCircle, XCircle, Briefcase, User, ChevronDown, ChevronRight, Utensils, BarChart3, LogIn, LogOut, ClipboardList, Edit3, Trash2, Download, Check, Gift } from 'lucide-react';
 import { Modal, message } from 'antd';
 // CardlessEntry fixes v2: dynamic ContentType ID, override_decision support
 import { useAuth } from '../context/AuthContext';
@@ -701,6 +701,22 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   </>
                   );
                 })()}
+              </div>
+              ) : request.employee_annual_leave_balance.type === 'BIRTHDAY_LEAVE' ? (
+              /* Doğum Günü İzni — ayrı hak, bakiyeden düşülmez */
+              <div className="bg-pink-50/80 rounded-xl p-4 border border-pink-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Gift size={16} className="text-pink-600" />
+                  <h4 className="text-sm font-bold text-pink-700">Doğum Günü İzni ({request.employee_annual_leave_balance.year})</h4>
+                </div>
+                <div className="text-center bg-white p-3 rounded-lg border border-pink-100 mb-2">
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Hak</span>
+                  <span className="block font-black text-pink-700 text-lg">1 Gün</span>
+                  <span className={`block text-xs mt-1 font-semibold ${request.employee_annual_leave_balance.is_used ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {request.employee_annual_leave_balance.is_used ? 'Kullanıldı' : 'Kullanılmadı'}
+                  </span>
+                </div>
+                <p className="text-xs text-pink-600 text-center">Doğum günü izni yıllık izin bakiyesinden düşülmez</p>
               </div>
               ) : (
               /* Yıllık İzin — gün bazlı bakiye */
