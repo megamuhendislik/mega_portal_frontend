@@ -199,27 +199,31 @@ export default function ClaimConfirmPanel({
           </div>
         )}
 
-        {/* Planlanmış: yönetici seçimi yok, doğrudan atayan yöneticiye gider */}
-        {isIntended && claimTarget?.manager_name && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
-            <span className="font-medium">Yönetici:</span> {claimTarget.manager_name}
-          </div>
-        )}
-
-        {/* Planlanmamış: 2+ yönetici varsa seçim dropdown */}
-        {!isIntended && approvers.length > 1 && (
+        {/* Yönetici seçimi — her zaman göster */}
+        {approvers.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Yönetici *</label>
-            <select value={selectedApproverId || ''}
-              onChange={e => setSelectedApproverId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option value="">Seçiniz...</option>
-              {approvers.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.full_name} ({a.relationship_type === 'PRIMARY' ? 'Birincil' : 'İkincil'})
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Yönetici {approvers.length > 1 ? '*' : ''}
+            </label>
+            {approvers.length === 1 ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700">
+                <span className="font-medium">{approvers[0].full_name}</span>
+                <span className="text-xs text-slate-400">
+                  ({approvers[0].relationship_type === 'PRIMARY' ? 'Birincil' : 'İkincil'})
+                </span>
+              </div>
+            ) : (
+              <select value={selectedApproverId || ''}
+                onChange={e => setSelectedApproverId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Seçiniz...</option>
+                {approvers.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.full_name} ({a.relationship_type === 'PRIMARY' ? 'Birincil' : 'İkincil'})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         )}
 
