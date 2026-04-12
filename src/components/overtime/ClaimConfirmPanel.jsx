@@ -106,7 +106,8 @@ export default function ClaimConfirmPanel({
     && (weeklyStatus.used_hours + projectedHours) > weeklyStatus.limit_hours;
 
   const canConfirm = totalSeconds > 0 && !submitting && !willExceed
-    && (approvers.length <= 1 || selectedApproverId);
+    && (approvers.length <= 1 || selectedApproverId)
+    && reason.trim().length > 0;
 
   const date = claimTarget?.date;
   const TypeIcon = isIntended ? CalendarCheck : Zap;
@@ -214,9 +215,9 @@ export default function ClaimConfirmPanel({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama *</label>
           <textarea value={reason} onChange={e => setReason(e.target.value)}
-            rows={2} placeholder="İsteğe bağlı..."
+            rows={2} placeholder="Ek mesai nedeni..."
             className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           />
         </div>
