@@ -98,12 +98,16 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         });
       } else {
         const ids = payload.selected_ids;
-        await api.post('/overtime-requests/claim-potential/', {
+        const body = {
           overtime_request_ids: ids,
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
           excluded_ids: payload.excluded_ids,
-        });
+        };
+        if (payload.selected_segments) {
+          body.selected_segments = payload.selected_segments;
+        }
+        await api.post('/overtime-requests/claim-potential/', body);
       }
       message.success('Ek mesai talebi gönderildi');
       await fetchData();

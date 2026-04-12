@@ -113,12 +113,15 @@ export default function ClaimConfirmPanel({
   const typeLabel = isIntended ? 'Planlanmış' : 'Planlanmamış';
 
   const handleConfirm = () => {
-    // Seçili segment'lerin request ID'lerini topla
-    const selectedRequestIds = [...new Set(
-      displaySegments.filter(s => selectedSegIds.has(s.id)).map(s => s.requestId)
-    )];
+    const selectedSegs = displaySegments.filter(s => selectedSegIds.has(s.id));
+    const selectedRequestIds = [...new Set(selectedSegs.map(s => s.requestId))];
     const allRequestIds = [...new Set(rawItems.map(i => i.overtime_request_id))];
     const excludedIds = allRequestIds.filter(id => !selectedRequestIds.includes(id));
+
+    // Seçili segment saat bilgilerini backend'e gönder (kısmi claim için)
+    const selectedSegmentTimes = selectedSegs.map(s => ({ start: s.start, end: s.end }));
+    const allSegmentCount = displaySegments.length;
+    const isPartialClaim = selectedSegs.length < allSegmentCount;
 
     onConfirm({
       type,
@@ -128,6 +131,7 @@ export default function ClaimConfirmPanel({
       send_to_substitute: sendToSubstitute,
       selected_ids: selectedRequestIds,
       excluded_ids: excludedIds,
+      selected_segments: isPartialClaim ? selectedSegmentTimes : null,
     });
   };
 
