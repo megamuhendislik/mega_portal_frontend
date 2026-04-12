@@ -159,8 +159,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-0 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5 min-h-0">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
@@ -237,7 +236,6 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                 )}
               </>
             )}
-          </div>
         </div>
       </div>
     </div>
