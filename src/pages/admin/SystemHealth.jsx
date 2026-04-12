@@ -73,6 +73,7 @@ import SubstituteAuditTab from './system-health/SubstituteAuditTab';
 import DailyRecordAuditTab from './system-health/DailyRecordAuditTab';
 import ExcuseLeaveAuditTab from './system-health/ExcuseLeaveAuditTab';
 import RequestInspectionTab from './system-health/RequestInspectionTab';
+import PotentialAuditTab from './system-health/PotentialAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -167,6 +168,7 @@ export default function SystemHealth() {
                         { id: 'service_health', name: 'Servis Sağlığı', icon: ServerStackIcon },
                         { id: 'excuse_leave_audit', name: 'Mazeret İzni', icon: ClockIcon },
                         { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
+                        { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -233,6 +235,7 @@ export default function SystemHealth() {
                 {activeTab === 'service_health' && <ServiceHealthTab />}
                 {activeTab === 'excuse_leave_audit' && <ExcuseLeaveAuditTab />}
                 {activeTab === 'request_inspection' && <RequestInspectionTab />}
+                {activeTab === 'potential_audit' && <PotentialAuditTab />}
             </div>
 
         </div>
