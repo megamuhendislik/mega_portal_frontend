@@ -18,7 +18,6 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const [claimableData, setClaimableData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [approvers, setApprovers] = useState([]);
-  const [claimingId, setClaimingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [view, setView] = useState('categories');
@@ -40,8 +39,6 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         api.get('/overtime-assignments/claimable/'),
         api.get('/overtime-requests/my-managers/'),
       ]);
-      console.log('[OT Modal] claimRes:', claimRes.status, claimRes.status === 'fulfilled' ? claimRes.value.data : claimRes.reason?.message);
-      console.log('[OT Modal] mgrRes:', mgrRes.status, mgrRes.status === 'fulfilled' ? mgrRes.value.data : mgrRes.reason?.message);
       if (claimRes.status === 'fulfilled') setClaimableData(claimRes.value.data);
       if (mgrRes.status === 'fulfilled') {
         const mgrs = mgrRes.value.data;
@@ -198,7 +195,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                     weeklyStatus={weeklyStatus}
                     onBack={goBack}
                     onClaim={handleIntendedClaim}
-                    claimingId={claimingId}
+                    claimingId={null}
                   />
                 </div>
               )}
@@ -210,7 +207,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                     weeklyStatus={weeklyStatus}
                     onBack={goBack}
                     onClaim={handlePotentialClaim}
-                    claimingId={claimingId}
+                    claimingId={null}
                   />
                 </div>
               )}

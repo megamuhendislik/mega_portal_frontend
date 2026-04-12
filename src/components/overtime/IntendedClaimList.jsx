@@ -34,8 +34,6 @@ export default function IntendedClaimList({ items, weeklyStatus, onBack, onClaim
         <span className="text-xs text-slate-400 ml-auto">{claimable.length} adet</span>
       </div>
 
-      <WeeklyOTLimitBar weeklyStatus={weeklyStatus} compact />
-
       <div className="flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
         {claimable.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm">
