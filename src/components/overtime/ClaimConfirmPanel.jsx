@@ -19,6 +19,45 @@ function formatDate(dateStr) {
   return `${d.getDate()} ${months[d.getMonth()]} ${days[d.getDay()]}`;
 }
 
+function calcSegSeconds(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) diff += 24 * 60;
+  return diff * 60;
+}
+
+// Tüm item'ların iç segment'lerini düz listeye aç
+function flattenSegments(items) {
+  const result = [];
+  for (const item of items) {
+    const segs = item.segments;
+    if (segs && Array.isArray(segs) && segs.length > 1) {
+      // Birden fazla iç segment — her birini ayrı göster
+      segs.forEach((s, i) => {
+        result.push({
+          id: `${item.overtime_request_id}_${i}`,
+          requestId: item.overtime_request_id,
+          start: s.start,
+          end: s.end,
+          seconds: calcSegSeconds(s.start, s.end),
+        });
+      });
+    } else {
+      // Tek segment — item'ın kendi start/end'ini kullan
+      result.push({
+        id: `${item.overtime_request_id}_0`,
+        requestId: item.overtime_request_id,
+        start: item.start_time,
+        end: item.end_time,
+        seconds: item.actual_overtime_seconds || 0,
+      });
+    }
+  }
+  return result;
+}
+
 export default function ClaimConfirmPanel({
   type,
   claimTarget,
@@ -35,9 +74,13 @@ export default function ClaimConfirmPanel({
   );
   const [sendToSubstitute, setSendToSubstitute] = useState(false);
 
-  const segments = isIntended ? [] : (claimTarget?.items || []);
+  // items = dayGroup'taki POTENTIAL kayıtlar
+  const rawItems = isIntended ? [] : (claimTarget?.items || []);
+  // Segment'leri aç — her iç segment ayrı checkbox olur
+  const displaySegments = useMemo(() => flattenSegments(rawItems), [rawItems]);
+
   const [selectedSegIds, setSelectedSegIds] = useState(
-    () => new Set(segments.map(s => s.overtime_request_id))
+    () => new Set(displaySegments.map(s => s.id))
   );
 
   const toggleSegment = (id) => {
@@ -53,10 +96,10 @@ export default function ClaimConfirmPanel({
     if (isIntended) {
       return claimTarget?.actual_overtime_seconds || 0;
     }
-    return segments
-      .filter(s => selectedSegIds.has(s.overtime_request_id))
-      .reduce((sum, s) => sum + (s.actual_overtime_seconds || 0), 0);
-  }, [isIntended, claimTarget, segments, selectedSegIds]);
+    return displaySegments
+      .filter(s => selectedSegIds.has(s.id))
+      .reduce((sum, s) => sum + s.seconds, 0);
+  }, [isIntended, claimTarget, displaySegments, selectedSegIds]);
 
   const projectedHours = totalSeconds / 3600;
   const willExceed = weeklyStatus && !weeklyStatus.is_unlimited
@@ -70,9 +113,12 @@ export default function ClaimConfirmPanel({
   const typeLabel = isIntended ? 'Planlanmış' : 'Planlanmamış';
 
   const handleConfirm = () => {
-    const excludedIds = segments
-      .filter(s => !selectedSegIds.has(s.overtime_request_id))
-      .map(s => s.overtime_request_id);
+    // Seçili segment'lerin request ID'lerini topla
+    const selectedRequestIds = [...new Set(
+      displaySegments.filter(s => selectedSegIds.has(s.id)).map(s => s.requestId)
+    )];
+    const allRequestIds = [...new Set(rawItems.map(i => i.overtime_request_id))];
+    const excludedIds = allRequestIds.filter(id => !selectedRequestIds.includes(id));
 
     onConfirm({
       type,
@@ -80,7 +126,7 @@ export default function ClaimConfirmPanel({
       reason,
       target_approver_id: selectedApproverId,
       send_to_substitute: sendToSubstitute,
-      selected_ids: [...selectedSegIds],
+      selected_ids: selectedRequestIds,
       excluded_ids: excludedIds,
     });
   };
@@ -106,27 +152,28 @@ export default function ClaimConfirmPanel({
           </span>
         </div>
 
-        {segments.length > 0 && (
+        {/* Segment checkbox'ları */}
+        {displaySegments.length > 0 && (
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
             <div className="text-sm font-medium text-slate-700 mb-2">
-              Seçili Segmentler ({selectedSegIds.size}/{segments.length})
+              Segmentler ({selectedSegIds.size}/{displaySegments.length} seçili)
             </div>
             <div className="space-y-1.5">
-              {segments.map(seg => (
-                <label key={seg.overtime_request_id}
-                  className="flex items-center justify-between gap-2 text-sm py-1 px-2 rounded-lg hover:bg-white cursor-pointer">
+              {displaySegments.map(seg => (
+                <label key={seg.id}
+                  className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg hover:bg-white cursor-pointer">
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={selectedSegIds.has(seg.overtime_request_id)}
-                      onChange={() => toggleSegment(seg.overtime_request_id)}
+                      checked={selectedSegIds.has(seg.id)}
+                      onChange={() => toggleSegment(seg.id)}
                       className={`w-4 h-4 rounded border-slate-300 ${
                         isIntended ? 'text-emerald-600 focus:ring-emerald-500' : 'text-amber-600 focus:ring-amber-500'
                       }`}
                     />
-                    <span>{seg.start_time} – {seg.end_time}</span>
+                    <span className="font-medium">{seg.start} – {seg.end}</span>
                   </div>
-                  <span className="text-slate-400 text-xs">{formatDuration(seg.actual_overtime_seconds)}</span>
+                  <span className="text-slate-400 text-xs">{formatDuration(seg.seconds)}</span>
                 </label>
               ))}
             </div>

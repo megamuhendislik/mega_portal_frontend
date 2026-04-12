@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { ArrowLeft, Zap, Clock, AlertCircle } from 'lucide-react';
-import WeeklyOTLimitBar from './WeeklyOTLimitBar';
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '0 dk';
@@ -19,12 +18,47 @@ function formatDate(dateStr) {
   return `${d.getDate()} ${months[d.getMonth()]} ${days[d.getDay()]}`;
 }
 
+function calcSegDuration(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) diff += 24 * 60;
+  return diff * 60; // seconds
+}
+
+function formatTimeDuration(start, end) {
+  const secs = calcSegDuration(start, end);
+  return formatDuration(secs);
+}
+
 const OT_TYPE_LABELS = {
   POST_SHIFT: { label: 'Vardiya Sonrası', cls: 'bg-blue-100 text-blue-700' },
   PRE_SHIFT: { label: 'Vardiya Öncesi', cls: 'bg-purple-100 text-purple-700' },
   OFF_DAY: { label: 'Tatil Günü', cls: 'bg-orange-100 text-orange-700' },
   MIXED: { label: 'Karışık', cls: 'bg-slate-100 text-slate-700' },
 };
+
+// Bir POTENTIAL item'ından gösterilebilir segment listesi çıkar
+function getDisplaySegments(item) {
+  // segments JSON varsa ve birden fazla segment içeriyorsa, onları göster
+  const segs = item.segments;
+  if (segs && Array.isArray(segs) && segs.length > 1) {
+    return segs.map((s, i) => ({
+      id: `${item.overtime_request_id}_seg${i}`,
+      start: s.start,
+      end: s.end,
+      durationSeconds: calcSegDuration(s.start, s.end),
+    }));
+  }
+  // Tek segment veya segments yoksa, start_time/end_time kullan
+  return [{
+    id: `${item.overtime_request_id}_seg0`,
+    start: item.start_time,
+    end: item.end_time,
+    durationSeconds: item.actual_overtime_seconds || 0,
+  }];
+}
 
 export default function PotentialClaimList({ items, weeklyStatus, onBack, onClaim, claimingId }) {
   const dayGroups = useMemo(() => {
@@ -67,6 +101,10 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
           const otType = group.items[0]?.ot_type;
           const typeInfo = OT_TYPE_LABELS[otType] || null;
 
+          // Tüm item'ların segment'lerini aç
+          const allSegments = group.items.flatMap(item => getDisplaySegments(item));
+          const totalSegCount = allSegments.length;
+
           return (
             <div key={group.date}
               className={`p-4 rounded-xl border transition-all ${
@@ -74,6 +112,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                   ? 'border-l-4 border-l-red-500 border-red-200 bg-red-50/30'
                   : 'border-amber-200 bg-white hover:shadow-sm'
               }`}>
+              {/* Üst satır */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="font-semibold text-slate-800 text-sm">{formatDate(group.date)}</span>
                 {typeInfo && (
@@ -81,9 +120,9 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                     {typeInfo.label}
                   </span>
                 )}
-                {group.items.length > 1 && (
+                {totalSegCount > 1 && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
-                    {group.items.length} segment
+                    {totalSegCount} segment
                   </span>
                 )}
                 {group.isRejected && (
@@ -93,31 +132,27 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                 )}
               </div>
 
+              {/* Toplam süre */}
               <div className="flex items-center gap-1.5 mb-2 text-sm text-slate-600">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 Toplam: <b>{formatDuration(group.totalSeconds)}</b>
               </div>
 
+              {/* Segment listesi — her segment ayrı satır */}
               <div className="space-y-1 ml-1">
-                {group.items.map((seg) => (
-                  <label key={seg.overtime_request_id}
-                    className="flex items-center gap-2 text-sm text-slate-600 py-0.5">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                      data-seg-id={seg.overtime_request_id}
-                    />
-                    <span>
-                      {seg.start_time} – {seg.end_time}
-                      <span className="text-slate-400 ml-1.5">
-                        ({formatDuration(seg.actual_overtime_seconds)})
-                      </span>
+                {allSegments.map((seg) => (
+                  <div key={seg.id}
+                    className="flex items-center gap-2 text-sm text-slate-600 py-0.5 px-2 rounded-lg bg-slate-50">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    <span className="font-medium">{seg.start} – {seg.end}</span>
+                    <span className="text-slate-400 text-xs">
+                      ({formatTimeDuration(seg.start, seg.end)})
                     </span>
-                  </label>
+                  </div>
                 ))}
               </div>
 
+              {/* Red nedeni */}
               {group.isRejected && group.rejectionReason && (
                 <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-red-50 text-red-700 text-xs">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -125,6 +160,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                 </div>
               )}
 
+              {/* Talep Et butonu */}
               <div className="mt-3 flex justify-end">
                 <button type="button"
                   onClick={() => onClaim(group)}
