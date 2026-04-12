@@ -374,8 +374,9 @@ export default function EmployeeDetailTab() {
                                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                                 r.source === 'POTENTIAL' ? 'bg-blue-100 text-blue-700' :
                                                 r.source === 'MANUAL' ? 'bg-purple-100 text-purple-700' :
+                                                r.source === 'ADMIN_ENTRY' ? 'bg-indigo-100 text-indigo-700' :
                                                 'bg-amber-100 text-amber-700'
-                                            }`}>{r.source}</span>
+                                            }`}>{r.source === 'ADMIN_ENTRY' ? 'Admin Girişi' : r.source}</span>
                                         </td>
                                         <td className="py-1 px-2 text-gray-400">{r.created_at}</td>
                                     </tr>

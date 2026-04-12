@@ -454,8 +454,8 @@ function ForensicAttendanceTable({ records, deleteLoading, onDelete }) {
                                 }`}>{att.status}</span>
                             </td>
                             <td className="p-2">
-                                <span className={`font-bold ${att.source === 'SYSTEM' ? 'text-amber-600' : att.source === 'CARD' ? 'text-emerald-600' : 'text-gray-600'}`}>
-                                    {att.source}
+                                <span className={`font-bold ${att.source === 'ADMIN_ENTRY' ? 'text-indigo-600' : att.source === 'SYSTEM' ? 'text-amber-600' : att.source === 'CARD' ? 'text-emerald-600' : 'text-gray-600'}`}>
+                                    {att.source === 'ADMIN_ENTRY' ? 'Admin Girişi' : att.source}
                                 </span>
                             </td>
                             <td className="p-2 font-mono">{att.check_in ? formatTime(att.check_in) : '-'}</td>

@@ -92,6 +92,7 @@ export default function DailyRecordAuditTab() {
             'SYSTEM': 'bg-slate-100 text-slate-800',
             'DUTY': 'bg-green-100 text-green-800',
             'MANUAL_OT': 'bg-orange-100 text-orange-800',
+            'ADMIN_ENTRY': 'bg-indigo-100 text-indigo-800',
         };
         return colors[source] || 'bg-gray-100 text-gray-600';
     };

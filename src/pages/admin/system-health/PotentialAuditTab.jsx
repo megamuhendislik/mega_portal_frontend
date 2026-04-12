@@ -205,7 +205,9 @@ export default function PotentialAuditTab() {
                           {r.card_entries.map((ce, i) => (
                             <div key={i} className="text-[11px] text-slate-600">
                               {ce.check_in || '?'}–{ce.check_out || '?'}
-                              <span className="text-slate-400 ml-1">({ce.source})</span>
+                              <span className={ce.source === 'ADMIN_ENTRY' ? 'text-indigo-600 font-medium ml-1' : 'text-slate-400 ml-1'}>
+                                ({ce.source === 'ADMIN_ENTRY' ? 'Admin Girişi' : ce.source})
+                              </span>
                               {ce.is_overtime_record && <span className="text-amber-600 ml-1">[OT]</span>}
                             </div>
                           ))}

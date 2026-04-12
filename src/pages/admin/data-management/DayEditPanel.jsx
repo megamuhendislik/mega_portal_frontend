@@ -58,6 +58,7 @@ const sourceOptions = [
     { value: 'CARD', label: 'CARD' },
     { value: 'FACE', label: 'FACE' },
     { value: 'QR', label: 'QR' },
+    { value: 'ADMIN_ENTRY', label: 'ADMIN_ENTRY' },
 ];
 
 /* ───── component ───── */
