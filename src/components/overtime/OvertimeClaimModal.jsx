@@ -37,7 +37,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
     setLoading(true);
     try {
       const [claimRes, mgrRes] = await Promise.allSettled([
-        api.get('/overtime-requests/claimable/'),
+        api.get('/overtime-assignments/claimable/'),
         api.get('/overtime-requests/my-managers/'),
       ]);
       console.log('[OT Modal] claimRes:', claimRes.status, claimRes.status === 'fulfilled' ? claimRes.value.data : claimRes.reason?.message);
