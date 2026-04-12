@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { message } from 'antd';
 import api from '../../services/api';
@@ -20,11 +21,9 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const [claimingId, setClaimingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Navigasyon: 'categories' | 'intended' | 'potential' | 'manual' | 'confirm'
   const [view, setView] = useState('categories');
   const [confirmData, setConfirmData] = useState(null);
 
-  // Manuel form state
   const [manualForm, setManualForm] = useState({
     date: getIstanbulToday(),
     start_time: '',
@@ -146,12 +145,21 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
 
   if (!open) return null;
 
-  return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={onClose} />
+  // createPortal ile document.body'ye render et — parent CSS transform/filter sorununu çözer
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Backdrop — tüm ekranı kaplar */}
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)' }}
+      />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden" style={{ zIndex: 1 }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+      {/* Modal */}
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden"
+        style={{ position: 'relative', zIndex: 1, maxHeight: '85vh' }}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <h2 className="text-lg font-bold text-slate-800">Fazla Mesai Talebi</h2>
           <button type="button" onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
@@ -160,84 +168,85 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 min-h-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
-              </div>
-            ) : (
-              <>
-                {view === 'categories' && (
-                  <div className="animate-fadeIn">
-                    <WeeklyOTLimitBar weeklyStatus={weeklyStatus} />
-                    <div className="mt-4">
-                      <OTCategoryCards
-                        intendedCount={intendedClaimable.length - intendedRejCount}
-                        intendedRejCount={intendedRejCount}
-                        potentialCount={potentialClaimable.length - potentialRejCount}
-                        potentialRejCount={potentialRejCount}
-                        onSelect={(cat) => setView(cat)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {view === 'intended' && (
-                  <div className="animate-slideInRight">
-                    <IntendedClaimList
-                      items={intended}
-                      weeklyStatus={weeklyStatus}
-                      onBack={goBack}
-                      onClaim={handleIntendedClaim}
-                      claimingId={claimingId}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
+            </div>
+          ) : (
+            <>
+              {view === 'categories' && (
+                <div className="animate-fadeIn">
+                  <WeeklyOTLimitBar weeklyStatus={weeklyStatus} />
+                  <div className="mt-4">
+                    <OTCategoryCards
+                      intendedCount={intendedClaimable.length - intendedRejCount}
+                      intendedRejCount={intendedRejCount}
+                      potentialCount={potentialClaimable.length - potentialRejCount}
+                      potentialRejCount={potentialRejCount}
+                      onSelect={(cat) => setView(cat)}
                     />
                   </div>
-                )}
+                </div>
+              )}
 
-                {view === 'potential' && (
-                  <div className="animate-slideInRight">
-                    <PotentialClaimList
-                      items={potential}
-                      weeklyStatus={weeklyStatus}
-                      onBack={goBack}
-                      onClaim={handlePotentialClaim}
-                      claimingId={claimingId}
-                    />
-                  </div>
-                )}
+              {view === 'intended' && (
+                <div className="animate-slideInRight">
+                  <IntendedClaimList
+                    items={intended}
+                    weeklyStatus={weeklyStatus}
+                    onBack={goBack}
+                    onClaim={handleIntendedClaim}
+                    claimingId={claimingId}
+                  />
+                </div>
+              )}
 
-                {view === 'manual' && (
-                  <div className="animate-slideInRight">
-                    <ManualEntryForm
-                      weeklyStatus={weeklyStatus}
-                      form={manualForm}
-                      setForm={setManualForm}
-                      approvers={approvers}
-                      selectedApproverId={selectedApproverId}
-                      onApproverSelect={setSelectedApproverId}
-                      onBack={goBack}
-                      onSubmit={handleManualSubmit}
-                      submitting={submitting}
-                    />
-                  </div>
-                )}
+              {view === 'potential' && (
+                <div className="animate-slideInRight">
+                  <PotentialClaimList
+                    items={potential}
+                    weeklyStatus={weeklyStatus}
+                    onBack={goBack}
+                    onClaim={handlePotentialClaim}
+                    claimingId={claimingId}
+                  />
+                </div>
+              )}
 
-                {view === 'confirm' && confirmData && (
-                  <div className="animate-slideInRight">
-                    <ClaimConfirmPanel
-                      type={confirmData.type}
-                      claimTarget={confirmData.claimTarget}
-                      weeklyStatus={weeklyStatus}
-                      approvers={approvers}
-                      onBack={goBack}
-                      onConfirm={handleConfirm}
-                      submitting={submitting}
-                    />
-                  </div>
-                )}
-              </>
-            )}
+              {view === 'manual' && (
+                <div className="animate-slideInRight">
+                  <ManualEntryForm
+                    weeklyStatus={weeklyStatus}
+                    form={manualForm}
+                    setForm={setManualForm}
+                    approvers={approvers}
+                    selectedApproverId={selectedApproverId}
+                    onApproverSelect={setSelectedApproverId}
+                    onBack={goBack}
+                    onSubmit={handleManualSubmit}
+                    submitting={submitting}
+                  />
+                </div>
+              )}
+
+              {view === 'confirm' && confirmData && (
+                <div className="animate-slideInRight">
+                  <ClaimConfirmPanel
+                    type={confirmData.type}
+                    claimTarget={confirmData.claimTarget}
+                    weeklyStatus={weeklyStatus}
+                    approvers={approvers}
+                    onBack={goBack}
+                    onConfirm={handleConfirm}
+                    submitting={submitting}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CalendarCheck, Zap, PenLine, ChevronRight } from 'lucide-react';
 
-function CategoryCard({ label, description, icon: Icon, iconBg, iconColor, borderColor, count, rejectedCount, onClick }) {
+function CategoryCard({ label, description, hint, icon: Icon, iconBg, iconColor, borderColor, count, rejectedCount, onClick }) {
   const total = (count || 0) + (rejectedCount || 0);
 
   return (
@@ -21,6 +21,9 @@ function CategoryCard({ label, description, icon: Icon, iconBg, iconColor, borde
       <div className="flex-1 min-w-0">
         <div className="font-bold text-slate-900 text-[15px]">{label}</div>
         <div className="text-xs text-slate-500 mt-0.5">{description}</div>
+        {hint && (
+          <div className="text-[11px] text-amber-600 mt-0.5">{hint}</div>
+        )}
         <div className="flex items-center gap-2 mt-1.5">
           {total > 0 ? (
             <>
@@ -72,7 +75,8 @@ export default function OTCategoryCards({ intendedCount, intendedRejCount, poten
       />
       <CategoryCard
         label="Manuel Giriş"
-        description="Acil durumlar için. Evden mesai → Şirket Dışı Görev kullanın"
+        description="Sadece acil durumlar için kullanın"
+        hint="Evden çalışma için Şirket Dışı Görev tercih edin"
         icon={PenLine}
         iconBg="bg-blue-100"
         iconColor="text-blue-600"
