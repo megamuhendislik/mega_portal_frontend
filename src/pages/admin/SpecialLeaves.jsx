@@ -6,7 +6,7 @@ import {
     ChevronLeft, ChevronRight, Eye, FileText, Trash2,
     Download, Calendar, Clock, User, Building,
     RefreshCw, AlertCircle, ExternalLink,
-    Baby, Flower2, Wallet, Heart
+    Baby, Flower2, Wallet, Heart, Edit3
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -194,6 +194,33 @@ const SpecialLeaves = () => {
             fetchData();
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Reddetme başarısız.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const [overrideModal, setOverrideModal] = useState(null); // { id, currentStatus }
+    const [overrideAction, setOverrideAction] = useState('approve');
+    const [overrideReason, setOverrideReason] = useState('');
+
+    const handleOverride = async () => {
+        if (!overrideReason.trim()) {
+            toast.error('Karar değiştirme gerekçesi zorunludur.');
+            return;
+        }
+        setActionLoading(true);
+        try {
+            const res = await api.post(`/special-leaves/${overrideModal.id}/override_decision/`, {
+                action: overrideAction,
+                reason: overrideReason,
+            });
+            toast.success(`Karar değiştirildi: ${overrideAction === 'approve' ? 'Onaylandı' : 'Reddedildi'}`);
+            setOverrideModal(null);
+            setOverrideReason('');
+            setDetailModal(res.data);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.detail || 'Karar değiştirme başarısız.');
         } finally {
             setActionLoading(false);
         }
@@ -477,6 +504,18 @@ const SpecialLeaves = () => {
                                                             </button>
                                                         </>
                                                     )}
+                                                    {(leave.status === 'APPROVED' || leave.status === 'REJECTED') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setOverrideModal({ id: leave.id, currentStatus: leave.status });
+                                                                setOverrideAction(leave.status === 'APPROVED' ? 'reject' : 'approve');
+                                                                setOverrideReason('');
+                                                            }}
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                                                        >
+                                                            <Edit3 size={13} /> Değiştir
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -686,6 +725,18 @@ const SpecialLeaves = () => {
                                     </button>
                                 </>
                             )}
+                            {(detailModal.status === 'APPROVED' || detailModal.status === 'REJECTED') && (
+                                <button
+                                    onClick={() => {
+                                        setOverrideModal({ id: detailModal.id, currentStatus: detailModal.status });
+                                        setOverrideAction(detailModal.status === 'APPROVED' ? 'reject' : 'approve');
+                                        setOverrideReason('');
+                                    }}
+                                    className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 text-sm flex items-center gap-1.5 border border-amber-200"
+                                >
+                                    <Edit3 size={14} /> Karar Değiştir
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
@@ -731,6 +782,75 @@ const SpecialLeaves = () => {
                             >
                                 {actionLoading && <Loader2 size={14} className="animate-spin" />}
                                 <Ban size={14} /> Reddet
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </ModalOverlay>
+
+            {/* Override Modal */}
+            <ModalOverlay open={!!overrideModal} onClose={() => setOverrideModal(null)} level="tertiary">
+                {overrideModal && (
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="p-5 border-b border-slate-100">
+                            <h3 className="text-lg font-bold text-slate-800">Karar Değiştir</h3>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Mevcut durum: <span className="font-semibold">{overrideModal.currentStatus === 'APPROVED' ? 'Onaylı' : 'Reddedildi'}</span>
+                            </p>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 block mb-2">Yeni Karar</label>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setOverrideAction('approve')}
+                                        className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                            overrideAction === 'approve'
+                                                ? 'bg-green-600 text-white shadow-lg'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        Onayla
+                                    </button>
+                                    <button
+                                        onClick={() => setOverrideAction('reject')}
+                                        className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                            overrideAction === 'reject'
+                                                ? 'bg-red-600 text-white shadow-lg'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        Reddet
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 block mb-1">Gerekçe *</label>
+                                <textarea
+                                    rows={3}
+                                    value={overrideReason}
+                                    onChange={(e) => setOverrideReason(e.target.value)}
+                                    placeholder="Karar değiştirme nedeninizi yazınız..."
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-400 resize-none text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-5 border-t border-slate-100 flex gap-3 justify-end">
+                            <button
+                                onClick={() => setOverrideModal(null)}
+                                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                onClick={handleOverride}
+                                disabled={actionLoading || !overrideReason.trim()}
+                                className={`px-5 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 ${
+                                    overrideAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                                }`}
+                            >
+                                {actionLoading && <Loader2 size={14} className="animate-spin" />}
+                                {overrideAction === 'approve' ? 'Onayla' : 'Reddet'}
                             </button>
                         </div>
                     </div>
