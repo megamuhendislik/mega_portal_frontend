@@ -35,7 +35,7 @@ function CategoryCard({ label, description, icon: Icon, iconBg, iconColor, borde
             </>
           ) : (
             <span className="text-xs text-slate-400">
-              {label === 'Manuel Giriş' ? 'Saat girişi yapın' : 'Henüz talep yok'}
+              {label === 'Manuel Giriş' ? 'Sadece acil durumlar için' : 'Henüz talep yok'}
             </span>
           )}
         </div>
@@ -72,7 +72,7 @@ export default function OTCategoryCards({ intendedCount, intendedRejCount, poten
       />
       <CategoryCard
         label="Manuel Giriş"
-        description="Kart kaydı olmadan saat girişi yapın"
+        description="Acil durumlar için. Evden mesai → Şirket Dışı Görev kullanın"
         icon={PenLine}
         iconBg="bg-blue-100"
         iconColor="text-blue-600"
