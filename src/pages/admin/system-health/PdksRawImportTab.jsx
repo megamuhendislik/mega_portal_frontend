@@ -13,12 +13,13 @@ export default function PdksRawImportTab() {
   const [results, setResults] = useState(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [cleanImport, setCleanImport] = useState(false);
 
   const buildFormData = (mode) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('mode', mode);
-    formData.append('clean_import', 'true');
+    formData.append('clean_import', cleanImport ? 'true' : 'false');
     if (dateFrom) formData.append('date_from', dateFrom);
     if (dateTo) formData.append('date_to', dateTo);
     return formData;
@@ -129,15 +130,19 @@ export default function PdksRawImportTab() {
     { title: 'Sicil No', dataIndex: 'employee_code', key: 'code', width: 100 },
     {
       title: 'Yeni', dataIndex: 'new_count', key: 'new', width: 80,
-      render: v => v > 0 ? <Tag color="green">{v}</Tag> : <Tag>{v}</Tag>
+      render: v => v > 0 ? <Tag color="green">{v}</Tag> : <Tag color="default">0</Tag>,
+      sorter: (a, b) => b.new_count - a.new_count,
+      defaultSortOrder: 'descend',
     },
     {
-      title: 'Duplicate', dataIndex: 'duplicate_count', key: 'dup', width: 100,
-      render: v => v > 0 ? <Tag color="blue">{v}</Tag> : <Tag>{v}</Tag>
+      title: 'Mevcut', dataIndex: 'duplicate_count', key: 'dup', width: 100,
+      render: v => v > 0 ? <Tag color="blue">{v}</Tag> : <Tag>0</Tag>
     },
     {
-      title: 'Tarih Sayısı', key: 'dates', width: 100,
-      render: (_, r) => r.dates?.length || 0
+      title: 'Durum', key: 'status', width: 120,
+      render: (_, r) => r.new_count > 0
+        ? <Tag color="orange">Değişecek</Tag>
+        : <Tag color="green">Tam</Tag>
     },
   ];
 
@@ -226,13 +231,33 @@ export default function PdksRawImportTab() {
           <p className="ant-upload-hint">SicilID, EventTime, Direction, EventID sütunları beklenir</p>
         </Dragger>
 
-        <Alert
-          type="info"
-          showIcon
-          icon={<DeleteOutlined />}
-          className="mb-3"
-          message="Temiz Yükleme: Tarih aralığındaki eski GateEventLog kayıtları silinir, CSV'den yeniden yüklenir."
-        />
+        <div className="flex items-center gap-3 mb-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={cleanImport}
+              onChange={(e) => setCleanImport(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm font-medium">Temiz Yükleme (eski kayıtları sil + yeniden yükle)</span>
+          </label>
+        </div>
+        {cleanImport ? (
+          <Alert
+            type="warning"
+            showIcon
+            icon={<DeleteOutlined />}
+            className="mb-3"
+            message="Temiz Yükleme: Tarih aralığındaki eski GateEventLog kayıtları silinir, CSV'den yeniden yüklenir."
+          />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            className="mb-3"
+            message="Ekleme Modu: Sadece eksik eventler eklenir. Mevcut kayıtlara dokunulmaz. TXT raporu sadece yeni eklenen verileri gösterir."
+          />
+        )}
 
         <div className="flex gap-2">
           <Button
@@ -245,7 +270,9 @@ export default function PdksRawImportTab() {
           </Button>
           <Popconfirm
             title="GateEventLog'a yüklensin mi?"
-            description="Tarih aralığındaki eski kayıtlar silinip CSV'den yeniden yüklenecek."
+            description={cleanImport
+              ? "Tarih aralığındaki eski kayıtlar silinip CSV'den yeniden yüklenecek."
+              : "Sadece eksik eventler eklenecek. Mevcut kayıtlara dokunulmayacak."}
             onConfirm={handleApply}
             okText="Evet, Yükle"
             cancelText="İptal"
