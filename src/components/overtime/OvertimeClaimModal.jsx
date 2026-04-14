@@ -92,7 +92,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       if (payload.type === 'intended') {
-        await api.post(`/overtime-requests/${payload.claimTarget.assignment_id}/claim/`, {
+        await api.post(`/overtime-assignments/${payload.claimTarget.assignment_id}/claim/`, {
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
         });
