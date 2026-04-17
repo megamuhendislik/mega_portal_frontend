@@ -75,6 +75,7 @@ import ExcuseLeaveAuditTab from './system-health/ExcuseLeaveAuditTab';
 import RequestInspectionTab from './system-health/RequestInspectionTab';
 import PotentialAuditTab from './system-health/PotentialAuditTab';
 import BugFixVerificationTab from './system-health/BugFixVerificationTab';
+import QuickGateFixTab from './system-health/QuickGateFixTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -125,6 +126,7 @@ export default function SystemHealth() {
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'bugfix_verify', name: 'Canlı Bug Fix Doğrulama', icon: SparklesIcon },
+                        { id: 'quick_gate_fix', name: 'Hızlı Kart Onarımı', icon: BoltIcon },
                         { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
                         { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
                         { id: 'stress_test', name: 'Stres Testi & Konsol', icon: CommandLineIcon },
@@ -193,6 +195,7 @@ export default function SystemHealth() {
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
                 {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
+                {activeTab === 'quick_gate_fix' && <QuickGateFixTab />}
                 {activeTab === 'error_logs' && <ErrorLogsTab />}
                 {activeTab === 'permissions' && <PermissionsTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}
