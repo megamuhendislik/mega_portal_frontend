@@ -267,17 +267,15 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                 // Indicator position: past_target (including duty+leave+report credits) as % of full month target
                 indicatorLeft: targetSec > 0 ? Math.min(100, ((realizedSec + dutySec + missingSec + leaveSec + healthReportSec) / targetSec) * 100) : 0,
 
-                // Net balance vs past_target (total effort including credits vs expected)
-                // Net hesaplar: BUGÜNE KADAR hedefe göre (past_target bazlı, gelecek günler HARİÇ)
-                // past_target_balance = total_work - past_target (backend'den)
-                // past_target_balance > 0 → ilerde, < 0 → geride
-                // Net Eksik = OT hariç past bakiye = past_target_balance - overtime
-                // OT ile Net = past_target_balance (OT dahil)
-                // Potansiyel ile = past_target_balance + potansiyel
-                _pastBalanceSec: netBalanceReal, // raw past_target_balance from backend
-                _netDeficitSec: netBalanceReal - overtimeSec, // OT hariç: ne kadar geride/ilerde
-                _netWithOtSec: netBalanceReal, // OT dahil
-                _netWithPotentialSec: netBalanceReal + potentialOtFromBackend, // potansiyel dahil
+                // Net balance: eksik (missing) bazlı — kullanıcının izlediği gerçek çalışma açığı
+                // missing_seconds = günlük eksiklerin toplamı (izin/görev günleri hariç)
+                // OT Hariç = saf çalışma eksikliği
+                // OT Dahil = eksiklik + onaylı OT ile telafi
+                // Potansiyel ile = eksiklik + tüm OT (onaylı + bekleyen + potansiyel)
+                _pastBalanceSec: netBalanceReal, // raw past_target_balance from backend (credits dahil)
+                _netDeficitSec: -(missingSec), // OT hariç: saf çalışma eksikliği
+                _netWithOtSec: -(missingSec) + overtimeSec, // OT dahil: eksik + onaylı OT
+                _netWithPotentialSec: -(missingSec) + overtimeSec + potentialOtFromBackend, // potansiyel dahil
                 netBalanceForLabelDisplay: fmtSec(Math.abs(overtimeSec - missingSec)),
                 netBalanceForLabelHours: (Math.abs(overtimeSec - missingSec) / 3600).toFixed(1),
                 isNetSurplus: overtimeSec - missingSec > 0,
@@ -532,10 +530,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                         </div>
                     </div>{/* end relative bar area */}
 
-                    {/* Bugüne kadar net durum — past_target bazlı (gelecek günler HARİÇ) */}
+                    {/* Bugüne kadar net durum — eksik + OT bazlı (OT Dahil ile tutarlı) */}
                     {(() => {
-                        // past_target_balance: pozitif = ilerde, negatif = geride
-                        const bal = stats._pastBalanceSec ?? 0;
+                        // OT Dahil: -eksik + onaylı OT (pozitif = ilerde, negatif = geride)
+                        const bal = stats._netWithOtSec ?? 0;
                         const isOk = bal >= 0;
                         return (
                             <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold ${isOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-700' : 'bg-rose-50/50 border-rose-100 text-rose-700'}`}>
