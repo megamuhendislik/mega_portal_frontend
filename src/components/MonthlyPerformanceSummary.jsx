@@ -303,10 +303,10 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                     prevMonthCarryOver: ((periodSummary.cumulative_balance_seconds || 0) / 3600).toFixed(1),
                     prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative_balance_seconds || 0),
 
-                    // TOPLAM BAKİYE = devreden + cari ay bakiye (OT dahil, bugüne kadar)
-                    // Ensures mathematical consistency: carry + current = total
-                    totalNetBalance: (((periodSummary.cumulative_balance_seconds || 0) + (periodSummary.past_target_balance_seconds || 0)) / 3600).toFixed(1),
-                    totalNetBalanceDisplay: fmtSec((periodSummary.cumulative_balance_seconds || 0) + (periodSummary.past_target_balance_seconds || 0)),
+                    // TOPLAM BAKİYE = devreden + cari ay OT Dahil (-eksik + onaylı OT)
+                    // Ensures mathematical consistency: carry + current month deficit-based balance = total
+                    totalNetBalance: (((periodSummary.cumulative_balance_seconds || 0) + (-(periodSummary.missing_seconds || 0) + (periodSummary.overtime_seconds || 0))) / 3600).toFixed(1),
+                    totalNetBalanceDisplay: fmtSec((periodSummary.cumulative_balance_seconds || 0) + (-(periodSummary.missing_seconds || 0) + (periodSummary.overtime_seconds || 0))),
 
                     // YTD values (ytd_target_to_date uses past_target for current month)
                     ytdTargetHours: ((periodSummary.cumulative.ytd_target_to_date_seconds ?? periodSummary.cumulative.ytd_target_seconds) / 3600).toFixed(1),
