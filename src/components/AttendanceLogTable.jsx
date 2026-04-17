@@ -83,7 +83,11 @@ const RecordTypeBadgeMobile = ({ log }) => {
 
 const getStatusBadge = (log) => {
     // OT Status override: show OvertimeRequest status when available
-    if (log.ot_status) {
+    // POTENTIAL guard: minimum eşik altındaki OT kayıtlarında POTENTIAL gösterme
+    const effectiveOtStatus = log.ot_status === 'POTENTIAL' && (log.overtime_minutes || 0) < 30
+        ? null
+        : log.ot_status;
+    if (effectiveOtStatus) {
         const otStyles = {
             'POTENTIAL': 'bg-purple-50 border-purple-200 text-purple-600',
             'PENDING': 'bg-amber-50 border-amber-100 text-amber-600',
@@ -107,9 +111,9 @@ const getStatusBadge = (log) => {
         };
 
         return (
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${otStyles[log.ot_status] || 'bg-gray-50 border-gray-100 text-gray-500'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${otDots[log.ot_status] || 'bg-gray-400'} shadow-sm`}></span>
-                <span className="text-[10px] font-bold uppercase tracking-wide">{otLabels[log.ot_status] || log.ot_status}</span>
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${otStyles[effectiveOtStatus] || 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${otDots[effectiveOtStatus] || 'bg-gray-400'} shadow-sm`}></span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">{otLabels[effectiveOtStatus] || effectiveOtStatus}</span>
             </div>
         );
     }
