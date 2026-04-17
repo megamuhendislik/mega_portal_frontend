@@ -301,16 +301,16 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                     prevYearBalance: (periodSummary.cumulative.previous_year_balance_seconds / 3600).toFixed(1),
                     prevYearBalanceDisplay: fmtSec(periodSummary.cumulative.previous_year_balance_seconds),
 
-                    // DB-persisted carry-over: respects settlements (mutabakat → 0)
-                    prevMonthCarryOver: ((periodSummary.cumulative_balance_seconds || 0) / 3600).toFixed(1),
-                    prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative_balance_seconds || 0),
+                    // Fresh carry-over from cumulative stats (not stale MWS cache)
+                    prevMonthCarryOver: (((periodSummary.cumulative.previous_year_balance_seconds || 0) + (periodSummary.cumulative.carry_over_seconds || 0)) / 3600).toFixed(1),
+                    prevMonthCarryOverDisplay: fmtSec((periodSummary.cumulative.previous_year_balance_seconds || 0) + (periodSummary.cumulative.carry_over_seconds || 0)),
 
                     totalNetBalance: (periodSummary.cumulative.total_net_balance_seconds / 3600).toFixed(1),
                     totalNetBalanceDisplay: fmtSec(periodSummary.cumulative.total_net_balance_seconds),
 
-                    // YTD values
-                    ytdTargetHours: (periodSummary.cumulative.ytd_target_seconds / 3600).toFixed(1),
-                    ytdTargetDisplay: fmtSec(periodSummary.cumulative.ytd_target_seconds),
+                    // YTD values (ytd_target_to_date uses past_target for current month)
+                    ytdTargetHours: ((periodSummary.cumulative.ytd_target_to_date_seconds ?? periodSummary.cumulative.ytd_target_seconds) / 3600).toFixed(1),
+                    ytdTargetDisplay: fmtSec(periodSummary.cumulative.ytd_target_to_date_seconds ?? periodSummary.cumulative.ytd_target_seconds),
                     ytdCompletedHours: (periodSummary.cumulative.ytd_completed_seconds / 3600).toFixed(1),
                     ytdCompletedDisplay: fmtSec(periodSummary.cumulative.ytd_completed_seconds),
                     ytdNetBalanceHours: (periodSummary.cumulative.ytd_net_balance_seconds / 3600).toFixed(1),
