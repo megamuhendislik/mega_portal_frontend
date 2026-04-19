@@ -13,12 +13,13 @@
 import { useState, useCallback } from 'react';
 import {
   Card, Button, Tag, Space, Typography, Row, Col, Statistic, Alert,
-  Table, Empty, Badge,
+  Table, Empty, Badge, Modal, message, Divider,
 } from 'antd';
 import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
   ExclamationCircleOutlined, LoadingOutlined,
   WarningOutlined, InfoCircleOutlined, SafetyCertificateOutlined,
+  ToolOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -43,6 +44,8 @@ export default function PostFixAuditTab() {
   const [data, setData] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastRun, setLastRun] = useState(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState(null);
 
   const runAudit = useCallback(async () => {
     setLoading(true);
@@ -58,6 +61,59 @@ export default function PostFixAuditTab() {
       setLoading(false);
     }
   }, []);
+
+  const runCleanup = useCallback(async (mode) => {
+    setCleanupLoading(true);
+    setCleanupResult(null);
+    try {
+      const resp = await api.post('/system/health-check/cleanup-post-fix-residue/', {
+        mode,
+        categories: ['C5', 'H1', 'H3', 'M2', 'M4'],
+      });
+      setCleanupResult(resp.data);
+      message.success(
+        mode === 'apply'
+          ? 'Temizlik uygulandı. Denetimi tekrar çalıştırın.'
+          : 'Tarama tamamlandı — "Temizliği Uygula" butonuyla gerçekleştirebilirsiniz.'
+      );
+      if (mode === 'apply') {
+        // Otomatik olarak denetimi tekrar çalıştır
+        setTimeout(() => runAudit(), 1000);
+      }
+    } catch (err) {
+      message.error(err?.response?.data?.error || err?.message || 'Temizlik başarısız');
+    } finally {
+      setCleanupLoading(false);
+    }
+  }, [runAudit]);
+
+  const confirmApply = () => {
+    Modal.confirm({
+      title: 'Temizliği Uygulamak İstiyor Musunuz?',
+      content: (
+        <div>
+          <p>Bu işlem aşağıdaki eski veri kalıntılarını onaracak:</p>
+          <ul>
+            <li><b>C5:</b> Sabah CARD kayıtlarındaki OT için recalc</li>
+            <li><b>H1:</b> Orphan APPROVED MANUAL_OT için recalc</li>
+            <li><b>H3:</b> Sema Melek pattern (onaylı OT, Mesai=0) için recalc + cascade</li>
+            <li><b>M2:</b> Yarım HOSPITAL_VISIT günleri için recalc</li>
+            <li><b>M4:</b> Stuck RECEIVED event'ler için gate_retry tetikle</li>
+          </ul>
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginTop: 12 }}
+            message="Attendance kayıtları yeniden hesaplanır ve MonthlyWorkSummary cascade edilir. İşlem yoğun, biraz sürebilir."
+          />
+        </div>
+      ),
+      okText: 'Uygula',
+      cancelText: 'İptal',
+      onOk: () => runCleanup('apply'),
+      width: 600,
+    });
+  };
 
   const renderExamples = (examples) => {
     if (!examples || examples.length === 0) return null;
@@ -164,6 +220,57 @@ export default function PostFixAuditTab() {
       {errorMsg && (
         <Alert type="error" showIcon message="Doğrulama Hatası" description={errorMsg} closable />
       )}
+
+      {/* Cleanup Control Card */}
+      <Card
+        style={{ backgroundColor: '#fff7e6', borderColor: '#ffd591' }}
+        title={<Space><ToolOutlined /> Kalıntı Veri Temizliği</Space>}
+      >
+        <Paragraph style={{ marginBottom: 12 }}>
+          Audit'te UYARI gösteren <b>eski veri kalıntılarını</b> otomatik olarak temizler.
+          Fix'ler yeni oluşumları zaten engelliyor — bu buton sadece geçmişten kalan
+          kayıtları recalc ile senkronize eder.
+        </Paragraph>
+        <Space wrap>
+          <Button
+            icon={<PlayCircleOutlined />}
+            onClick={() => runCleanup('scan')}
+            loading={cleanupLoading}
+          >
+            Kuru Tara (scan)
+          </Button>
+          <Button
+            type="primary"
+            danger
+            icon={<ThunderboltOutlined />}
+            onClick={confirmApply}
+            loading={cleanupLoading}
+          >
+            Temizliği Uygula (apply)
+          </Button>
+        </Space>
+        {cleanupResult && (
+          <div style={{ marginTop: 16 }}>
+            <Divider style={{ margin: '8px 0' }} />
+            <Text strong>
+              {cleanupResult.mode === 'apply' ? 'Temizlik sonucu:' : 'Tarama sonucu:'}
+            </Text>
+            <div style={{ marginTop: 8 }}>
+              {Object.entries(cleanupResult.results || {}).map(([cat, r]) => (
+                <Card size="small" key={cat} style={{ marginBottom: 6 }}>
+                  <Space>
+                    <Tag color="gold">{cat}</Tag>
+                    <Text>{r.message}</Text>
+                    {r.errors?.length > 0 && (
+                      <Tag color="red">⚠ {r.errors.length} hata</Tag>
+                    )}
+                  </Space>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
 
       {summary && (
         <Card>
