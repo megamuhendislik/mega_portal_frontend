@@ -19,7 +19,7 @@ import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
   ExclamationCircleOutlined, LoadingOutlined,
   WarningOutlined, InfoCircleOutlined, SafetyCertificateOutlined,
-  ToolOutlined, ThunderboltOutlined,
+  ToolOutlined, ThunderboltOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -86,6 +86,27 @@ export default function PostFixAuditTab() {
       setCleanupLoading(false);
     }
   }, [runAudit]);
+
+  const downloadTxt = useCallback(async () => {
+    try {
+      const resp = await api.get('/system/health-check/post-fix-audit/?format=txt', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([resp.data], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.download = `post_fix_audit_${stamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      message.success('Rapor indirildi');
+    } catch (err) {
+      message.error(err?.response?.data?.error || err?.message || 'TXT indirme başarısız');
+    }
+  }, []);
 
   const confirmApply = () => {
     Modal.confirm({
@@ -198,16 +219,26 @@ export default function PostFixAuditTab() {
             </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              size="large"
-              icon={loading ? <LoadingOutlined /> : <PlayCircleOutlined />}
-              onClick={runAudit}
-              loading={loading}
-              disabled={loading}
-            >
-              {loading ? 'Çalışıyor...' : (data ? 'Tekrar Çalıştır' : 'Testi Başlat')}
-            </Button>
+            <Space>
+              <Button
+                type="primary"
+                size="large"
+                icon={loading ? <LoadingOutlined /> : <PlayCircleOutlined />}
+                onClick={runAudit}
+                loading={loading}
+                disabled={loading}
+              >
+                {loading ? 'Çalışıyor...' : (data ? 'Tekrar Çalıştır' : 'Testi Başlat')}
+              </Button>
+              <Button
+                size="large"
+                icon={<DownloadOutlined />}
+                onClick={downloadTxt}
+                title="Audit raporunu TXT olarak indir"
+              >
+                TXT İndir
+              </Button>
+            </Space>
           </Col>
         </Row>
         {lastRun && (
