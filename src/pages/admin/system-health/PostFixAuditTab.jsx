@@ -89,7 +89,7 @@ export default function PostFixAuditTab() {
 
   const downloadTxt = useCallback(async () => {
     try {
-      const resp = await api.get('/system/health-check/post-fix-audit/?format=txt', {
+      const resp = await api.get('/system/health-check/post-fix-audit/?output=txt', {
         responseType: 'blob',
       });
       const blob = new Blob([resp.data], { type: 'text/plain;charset=utf-8' });
