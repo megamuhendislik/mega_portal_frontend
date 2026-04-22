@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-    Layers, ArrowDownLeft, CalendarCheck, BarChart3, Search, X
+    Layers, ArrowDownLeft, CalendarCheck, Search, X
 } from 'lucide-react';
 import api from '../services/api';
 
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
 import OvertimeRequestsTab from './requests/OvertimeRequestsTab';
-import AnalyticsTab from './requests/AnalyticsTab';
 
 // =========== TAB BUTTON ===========
 const TabButton = ({ active, onClick, children, badge, icon }) => (
@@ -38,7 +37,6 @@ const TAB_ALIASES = {
     'incoming_requests': 'incoming_requests',
     'overtime': 'overtime_requests',
     'overtime_requests': 'overtime_requests',
-    'analytics': 'analytics',
     'my_requests': 'my_requests',
 };
 
@@ -107,7 +105,6 @@ const Requests = () => {
         my_requests: { title: 'Kendi Taleplerim', subtitle: 'Tüm izin, mesai ve diğer taleplerinizi tek yerden yönetin. Yeni talep oluşturmak için "Yeni Talep" butonunu kullanın.' },
         incoming_requests: { title: 'Gelen Talepler', subtitle: 'Ekibinizden gelen talepleri inceleyin, onaylayın veya reddedin. Önceki kararları değiştirmek için "Değiştir" butonunu kullanabilirsiniz.' },
         overtime_requests: { title: 'Ek Mesai Talepleri', subtitle: 'Ek mesai takvimini görüntüleyin, manuel talep oluşturun veya yöneticiyseniz ekibinize mesai atayın.' },
-        analytics: { title: 'Talep Analizi', subtitle: 'Talep istatistiklerinizi ve ekip performansını grafiklerle inceleyin.' },
     };
     const { title, subtitle } = titles[activeTab] || titles.my_requests;
 
@@ -169,13 +166,7 @@ const Requests = () => {
                     Ek Mesai
                 </TabButton>
 
-                <TabButton
-                    active={activeTab === 'analytics'}
-                    onClick={() => handleTabChange('analytics')}
-                    icon={<BarChart3 size={18} />}
-                >
-                    Analiz
-                </TabButton>
+
             </div>
 
             {/* Content Area */}
@@ -222,13 +213,7 @@ const Requests = () => {
                     )}
                 </div>
 
-                <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
-                    {mountedTabs.analytics && (
-                        <AnalyticsTab
-                            refreshTrigger={refreshTrigger}
-                        />
-                    )}
-                </div>
+
             </div>
         </div>
     );

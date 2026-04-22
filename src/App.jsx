@@ -47,7 +47,7 @@ const Feedback = lazyRetry(() => import('./pages/Feedback'));
 const HealthReports = lazyRetry(() => import('./pages/admin/HealthReports'));
 const SpecialLeaves = lazyRetry(() => import('./pages/admin/SpecialLeaves'));
 const Procurement = lazyRetry(() => import('./pages/Procurement'));
-const RequestAnalytics = lazyRetry(() => import('./pages/request-analytics/RequestAnalyticsPage'));
+
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
 
 const PageLoader = () => (
@@ -133,8 +133,7 @@ function App() {
             {/* Reports - Requires PAGE_REPORTS */}
             <Route path="reports" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Suspense fallback={<PageLoader />}><Reports /></Suspense></ProtectedRoute>} />
 
-            {/* Request Analytics - Requires PAGE_REPORTS */}
-            <Route path="request-analytics" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Suspense fallback={<PageLoader />}><RequestAnalytics /></Suspense></ProtectedRoute>} />
+
 
             {/* Admin Pages */}
             <Route path="admin/system-health" element={<ProtectedRoute requiredPermission="PAGE_SYSTEM_HEALTH"><Suspense fallback={<PageLoader />}><SystemHealth /></Suspense></ProtectedRoute>} />

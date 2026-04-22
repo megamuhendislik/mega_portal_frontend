@@ -20,7 +20,7 @@ import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
 import { Drawer } from 'antd';
 import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 
-const TeamAnalyticsV3 = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalyticsV3'));
+const TeamAnalytics = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalytics'));
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -1034,7 +1034,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
             {/* Analytics View — vekiller göremez */}
             {viewMode === 'analytics' && !isOnlySubstitute && (
                 <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>}>
-                    <TeamAnalyticsV3 />
+                    <TeamAnalytics />
                 </Suspense>
             )}
 
