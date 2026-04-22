@@ -1,133 +1,180 @@
 import React, { useMemo } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, TrendingUp, Activity } from 'lucide-react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield } from 'lucide-react';
 import { useAnalytics } from '../AnalyticsContext';
-import KPICard from '../shared/KPICard';
+import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton } from '../shared/EmptyState';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    Cell, PieChart, Pie, Legend, LineChart, Line, ComposedChart, Area,
+} from 'recharts';
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b', low: '#ef4444' };
+const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
+
+const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
+            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
+            {payload.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 py-0.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                    <span className="text-slate-500">{p.name}:</span>
+                    <span className="font-bold text-slate-800 tabular-nums">{p.value}</span>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default function OverviewTab() {
     const { data, loading } = useAnalytics();
     const overview = data?.team_overview;
-
     const kpi = overview?.kpi;
-    const distribution = overview?.distribution;
+    const distribution = overview?.efficiency_distribution || overview?.distribution;
     const trendData = overview?.monthly_trend;
 
     const distChartData = useMemo(() => {
         if (!distribution) return [];
-        return [
-            { name: 'Mükemmel (≥95%)', value: distribution.excellent || 0, color: '#10b981' },
-            { name: 'İyi (80-95%)', value: distribution.good || 0, color: '#6366f1' },
-            { name: 'Orta (60-80%)', value: distribution.average || 0, color: '#f59e0b' },
-            { name: 'Düşük (<60%)', value: distribution.low || 0, color: '#ef4444' },
-        ].filter(d => d.value > 0);
+        return Object.entries(distribution)
+            .map(([key, val]) => ({ name: DIST_LABELS[key] || key, value: val || 0, color: DIST_COLORS[key] || '#94a3b8' }))
+            .filter(d => d.value > 0);
     }, [distribution]);
+
+    const totalPeople = useMemo(() => distChartData.reduce((s, d) => s + d.value, 0), [distChartData]);
 
     const trendChartData = useMemo(() => {
         if (!trendData) return [];
         return trendData.map(m => ({
-            name: m.label || m.month_label || '',
-            worked: Math.round((m.total_worked_hours || 0) * 10) / 10,
-            overtime: Math.round((m.overtime_hours || 0) * 10) / 10,
-            missing: Math.round((m.missing_hours || 0) * 10) / 10,
+            name: (m.label || '').replace(/\d{4}$/, '').trim(),
+            çalışma: Math.round(m.worked_hours || m.total_worked_hours || 0),
+            hedef: Math.round(m.target_hours || 0),
+            'ek mesai': Math.round(m.ot_hours || m.overtime_hours || 0),
         }));
     }, [trendData]);
 
-    if (loading && !data) return <LoadingSkeleton rows={2} />;
-    if (!kpi) return <LoadingSkeleton rows={2} />;
+    // Sparkline data from trend
+    const sparklineWorked = useMemo(() => trendChartData.map(t => t.çalışma), [trendChartData]);
+    const sparklineOT = useMemo(() => trendChartData.map(t => t['ek mesai']), [trendChartData]);
 
-    const healthColor = kpi.health_score >= 80 ? 'from-emerald-500 to-emerald-600'
-        : kpi.health_score >= 60 ? 'from-amber-500 to-amber-600'
-            : 'from-red-500 to-red-600';
+    if (loading && !data) return <LoadingSkeleton rows={3} />;
+    if (!kpi) return <LoadingSkeleton rows={3} />;
+
+    const healthColor = kpi.health_score >= 80 ? 'emerald' : kpi.health_score >= 60 ? 'amber' : 'red';
 
     return (
-        <div className="space-y-5">
-            {/* KPI Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}%`} icon={Target}
-                    gradient="from-indigo-500 to-indigo-600" delta={kpi.vs_prev?.worked} />
-                <KPICard title="Ek Mesai" value={`${kpi.total_overtime_hours || 0}`} suffix="saat" icon={Clock}
-                    gradient="from-amber-500 to-orange-500" delta={kpi.vs_prev?.ot} />
-                <KPICard title="Kayıp Saat" value={`${kpi.total_missing_hours || 0}`} suffix="saat" icon={AlertCircle}
-                    gradient="from-red-500 to-red-600" delta={kpi.vs_prev?.missing} />
-                <KPICard title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}%`} icon={CalendarCheck}
-                    gradient="from-blue-500 to-blue-600" />
-                <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="puan" icon={Activity}
-                    gradient={healthColor} subtitle={`Dakiklik: ${kpi.punctual_pct || 0}% • Yemek: ${kpi.meal_rate_pct || 0}%`} />
+        <div className="space-y-5 animate-in fade-in duration-500">
+            {/* Main KPI Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
+                    gradient="indigo" delta={kpi.vs_prev?.worked} sparkline={sparklineWorked} />
+                <KPICard title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="saat" icon={Clock}
+                    gradient="blue" subtitle={`Hedef: ${overview?.kpi?.total_target_hours || '—'} saat`} />
+                <KPICard title="Ek Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="saat" icon={TrendingUp}
+                    gradient="amber" delta={kpi.vs_prev?.ot} sparkline={sparklineOT} />
+                <KPICard title="Kayıp Saat" value={Math.round(kpi.total_missing_hours || 0)} suffix="saat" icon={AlertCircle}
+                    gradient="red" delta={kpi.vs_prev?.missing} />
+                <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
+                    gradient={healthColor} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Secondary metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
+                <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue" />
+                <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald" />
+                <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber" />
+                <KPICard mini title="İzin Kullanımı" value={kpi.total_leave_days || 0} suffix="gün" icon={CalendarCheck} gradient="violet" />
+                <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Efficiency Distribution */}
                 <SectionCard title="Verimlilik Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
-                    subtitle="Çalışan bazlı verimlilik segmentasyonu" collapsible={false}>
+                    subtitle={`${totalPeople} çalışan`} collapsible={false}>
                     {distChartData.length > 0 ? (
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={distChartData} cx="50%" cy="50%" outerRadius={90} innerRadius={50}
-                                        dataKey="value" label={({ name, value }) => `${name}: ${value}`}
-                                        labelLine={false} >
-                                        {distChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                    </Pie>
-                                    <Tooltip formatter={(val) => [val, 'Kişi']} />
-                                    <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                        <div className="space-y-4">
+                            <div className="h-56">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={distChartData} cx="50%" cy="50%" outerRadius={85} innerRadius={50}
+                                            dataKey="value" strokeWidth={2} stroke="#fff">
+                                            {distChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                        </Pie>
+                                        <Tooltip content={<CustomTooltip />} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            {/* Legend as progress bars */}
+                            <div className="space-y-2">
+                                {distChartData.map((d, i) => (
+                                    <KPIProgressBar key={i} label={`${d.name} (${d.value})`}
+                                        value={totalPeople > 0 ? Math.round(d.value / totalPeople * 100) : 0}
+                                        color={d.color} />
+                                ))}
+                            </div>
                         </div>
                     ) : (
-                        <div className="h-64 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
+                        <div className="h-56 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
                     )}
                 </SectionCard>
 
                 {/* Monthly Trend */}
-                <SectionCard title="Aylık Trend" icon={TrendingUp} iconGradient="from-emerald-500 to-emerald-600"
-                    subtitle="Çalışma, ek mesai ve kayıp saat trendi" collapsible={false}>
-                    {trendChartData.length > 0 ? (
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={trendChartData} barGap={2}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                                    <Bar dataKey="worked" name="Çalışma (saat)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="overtime" name="Ek Mesai (saat)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="missing" name="Kayıp (saat)" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    ) : (
-                        <div className="h-64 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
-                    )}
-                </SectionCard>
+                <div className="lg:col-span-2">
+                    <SectionCard title="Aylık Performans Trendi" icon={BarChart3} iconGradient="from-blue-500 to-blue-600"
+                        subtitle="Çalışma vs hedef ve ek mesai" collapsible={false}>
+                        {trendChartData.length > 0 ? (
+                            <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={trendChartData} barGap={4}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} />
+                                        <YAxis tick={{ fontSize: 10 }} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                        <Bar dataKey="çalışma" name="Çalışma" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="ek mesai" name="Ek Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                        <Line type="monotone" dataKey="hedef" name="Hedef" stroke="#ef4444" strokeWidth={2}
+                                            strokeDasharray="6 3" dot={false} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (
+                            <div className="h-72 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
+                        )}
+                    </SectionCard>
+                </div>
             </div>
 
-            {/* Employee count & punctuality bars */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 text-center">
-                    <Users size={20} className="mx-auto text-indigo-500 mb-1" />
-                    <p className="text-2xl font-black text-slate-800">{overview?.employee_count || 0}</p>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase">Ekip Üyesi</p>
+            {/* Health Score Breakdown */}
+            <SectionCard title="Sağlık Skoru Detayı" icon={Activity} iconGradient="from-emerald-500 to-emerald-600"
+                subtitle="Ekip performansını oluşturan bileşenler" collapsible defaultOpen={false}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                        <KPIProgressBar label="Verimlilik (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1" />
+                        <KPIProgressBar label="Devam Oranı (30%)" value={kpi.attendance_rate_pct || 0} color="#3b82f6" />
+                        <KPIProgressBar label="Dakiklik (20%)" value={kpi.punctual_pct || 0} color="#10b981" />
+                    </div>
+                    <div className="space-y-3">
+                        <KPIProgressBar label="Kayıp Oranı (20%)" value={Math.max(0, 100 - (kpi.total_missing_hours / Math.max(kpi.total_worked_hours || 1, 1) * 100))} color="#f59e0b" />
+                        <div className="mt-4 p-3 bg-slate-50 rounded-xl">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${DIST_COLORS[healthColor] ? '' : 'from-emerald-500 to-emerald-600'} flex items-center justify-center`}
+                                    style={{ background: `linear-gradient(135deg, ${healthColor === 'emerald' ? '#10b981' : healthColor === 'amber' ? '#f59e0b' : '#ef4444'}, ${healthColor === 'emerald' ? '#059669' : healthColor === 'amber' ? '#d97706' : '#dc2626'})` }}>
+                                    <span className="text-xl font-black text-white">{kpi.health_score || 0}</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-700">
+                                        {kpi.health_score >= 80 ? 'Mükemmel' : kpi.health_score >= 60 ? 'İyi' : 'Geliştirilmeli'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400">Ağırlıklı toplam skor</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 text-center">
-                    <Coffee size={20} className="mx-auto text-orange-500 mb-1" />
-                    <p className="text-2xl font-black text-slate-800">{kpi.avg_break_minutes || 0}<span className="text-sm text-slate-400 ml-1">dk</span></p>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase">Ort. Mola</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 text-center">
-                    <CalendarCheck size={20} className="mx-auto text-blue-500 mb-1" />
-                    <p className="text-2xl font-black text-slate-800">{kpi.total_leave_days || 0}<span className="text-sm text-slate-400 ml-1">gün</span></p>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase">İzin Kullanımı</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 text-center">
-                    <Target size={20} className="mx-auto text-emerald-500 mb-1" />
-                    <p className="text-2xl font-black text-slate-800">{kpi.total_worked_hours || 0}<span className="text-sm text-slate-400 ml-1">saat</span></p>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase">Toplam Çalışma</p>
-                </div>
-            </div>
+            </SectionCard>
         </div>
     );
 }
