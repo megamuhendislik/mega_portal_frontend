@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield } from 'lucide-react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, ArrowRight, GitCompare } from 'lucide-react';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function OverviewTab() {
-    const { data, loading } = useAnalytics();
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData } = useAnalytics();
     const overview = data?.team_overview;
     const kpi = overview?.kpi;
     const distribution = overview?.efficiency_distribution || overview?.distribution;
@@ -54,7 +54,6 @@ export default function OverviewTab() {
         }));
     }, [trendData]);
 
-    // Sparkline data from trend
     const sparklineWorked = useMemo(() => trendChartData.map(t => t.çalışma), [trendChartData]);
     const sparklineOT = useMemo(() => trendChartData.map(t => t['ek mesai']), [trendChartData]);
 
@@ -63,26 +62,64 @@ export default function OverviewTab() {
 
     const healthColor = kpi.health_score >= 80 ? 'emerald' : kpi.health_score >= 60 ? 'amber' : 'red';
 
+    // Comparison data
+    const cmpKpi = compareData?.team_overview?.kpi;
+
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Comparison Summary Banner ═══ */}
+            {isComparing && cmpKpi && (
+                <div className="bg-gradient-to-r from-violet-50/80 to-indigo-50/80 rounded-2xl border border-violet-200/60 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                        <GitCompare size={14} className="text-violet-500" />
+                        <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Dönem Karşılaştırması</span>
+                        <span className="text-[10px] text-violet-400">{periodLabel} vs {compareLabel}</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[
+                            { label: 'Verimlilik', curr: `${kpi.avg_efficiency_pct || 0}%`, prev: `${cmpKpi.avg_efficiency_pct || 0}%`, delta: deltas?.efficiency },
+                            { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
+                            { label: 'Ek Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
+                            { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
+                            { label: 'Sağlık', curr: kpi.health_score || 0, prev: cmpKpi.health_score || 0, delta: deltas?.health, isSuffix: 'puan' },
+                        ].map((item, i) => (
+                            <div key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/80">
+                                <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider mb-1">{item.label}</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-lg font-black text-slate-800">{item.curr}</span>
+                                    <span className="text-[10px] text-slate-400">vs</span>
+                                    <span className="text-sm font-bold text-slate-500">{item.prev}</span>
+                                </div>
+                                {item.delta != null && (
+                                    <span className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${item.delta > 0 ? 'text-emerald-600 bg-emerald-50' : item.delta < 0 ? 'text-red-600 bg-red-50' : 'text-slate-400 bg-slate-50'}`}>
+                                        {item.delta > 0 ? '+' : ''}{item.delta}{item.isSuffix || '%'}
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Main KPI Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
-                    gradient="indigo" delta={kpi.vs_prev?.worked} sparkline={sparklineWorked} />
+                    gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked} sparkline={sparklineWorked} />
                 <KPICard title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="saat" icon={Clock}
-                    gradient="blue" subtitle={`Hedef: ${overview?.kpi?.total_target_hours || '—'} saat`} />
+                    gradient="blue" delta={isComparing ? deltas?.worked : null} subtitle={`Hedef: ${overview?.kpi?.total_target_hours || '—'} saat`} />
                 <KPICard title="Ek Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="saat" icon={TrendingUp}
-                    gradient="amber" delta={kpi.vs_prev?.ot} sparkline={sparklineOT} />
+                    gradient="amber" delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot} sparkline={sparklineOT} />
                 <KPICard title="Kayıp Saat" value={Math.round(kpi.total_missing_hours || 0)} suffix="saat" icon={AlertCircle}
-                    gradient="red" delta={kpi.vs_prev?.missing} />
+                    gradient="red" delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing} />
                 <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
-                    gradient={healthColor} />
+                    gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan" />
             </div>
 
             {/* Secondary metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
                 <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
-                <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue" />
+                <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
+                    delta={isComparing ? deltas?.attendance : null} />
                 <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald" />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber" />
                 <KPICard mini title="İzin Kullanımı" value={kpi.total_leave_days || 0} suffix="gün" icon={CalendarCheck} gradient="violet" />
