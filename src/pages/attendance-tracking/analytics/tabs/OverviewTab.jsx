@@ -6,6 +6,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
+import ChartTooltip from '../shared/ChartTooltip';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -13,22 +14,6 @@ import {
 
 const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b', low: '#ef4444' };
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800 tabular-nums">{p.value}</span>
-                </div>
-            ))}
-        </div>
-    );
-};
 
 export default function OverviewTab() {
     const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData } = useAnalytics();
@@ -171,7 +156,7 @@ export default function OverviewTab() {
                                             dataKey="value" strokeWidth={2} stroke="#fff">
                                             {distChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -199,7 +184,7 @@ export default function OverviewTab() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} />
                                         <YAxis tick={{ fontSize: 10 }} />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip unit="sa" />} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                         <Bar dataKey="çalışma" name="Çalışma" fill="#6366f1" radius={[4, 4, 0, 0]} />
                                         <Bar dataKey="ek mesai" name="Ek Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />

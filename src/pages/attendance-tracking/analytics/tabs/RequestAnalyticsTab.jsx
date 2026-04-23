@@ -9,6 +9,7 @@ import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState, ErrorState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
+import ChartTooltip from '../shared/ChartTooltip';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -18,22 +19,6 @@ const TYPE_COLORS = { leave: '#3B82F6', overtime: '#F59E0B', meal: '#10B981', ca
 const TYPE_LABELS = { leave: 'İzin', overtime: 'Ek Mesai', meal: 'Yemek', cardless: 'Kartsız Giriş', health_report: 'Sağlık Raporu' };
 const STATUS_COLORS = { approved: '#10B981', rejected: '#EF4444', pending: '#F59E0B', cancelled: '#94A3B8' };
 const STATUS_LABELS = { APPROVED: 'Onaylı', REJECTED: 'Reddedildi', PENDING: 'Bekleyen', CANCELLED: 'İptal' };
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || p.fill }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800 tabular-nums">{p.value}</span>
-                </div>
-            ))}
-        </div>
-    );
-};
 
 export default function RequestAnalyticsTab() {
     const { queryParams } = useAnalytics();
@@ -182,7 +167,7 @@ export default function RequestAnalyticsTab() {
                                             dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
                                             {typeDistData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -208,7 +193,7 @@ export default function RequestAnalyticsTab() {
                                             dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
                                             {statusDistData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -234,7 +219,7 @@ export default function RequestAnalyticsTab() {
                                             dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
                                             {leaveTypeData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -260,7 +245,7 @@ export default function RequestAnalyticsTab() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
                                 <YAxis tick={{ fontSize: 10 }} />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip content={<ChartTooltip />} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                 <Bar dataKey="izin" name="İzin" fill={TYPE_COLORS.leave} radius={[3, 3, 0, 0]} stackId="a" />
                                 <Bar dataKey="ek_mesai" name="Ek Mesai" fill={TYPE_COLORS.overtime} radius={[3, 3, 0, 0]} stackId="a" />

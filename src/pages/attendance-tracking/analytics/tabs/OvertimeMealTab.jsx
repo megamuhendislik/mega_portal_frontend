@@ -6,6 +6,7 @@ import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
+import ChartTooltip from '../shared/ChartTooltip';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -13,22 +14,6 @@ import {
 
 const OT_COLORS = { intended: '#6366f1', potential: '#f59e0b', manual: '#10b981', weekend: '#8b5cf6' };
 const OT_LABELS = { intended: 'Planlı', potential: 'Potansiyel', manual: 'Manuel', weekend: 'Hafta Sonu' };
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || p.fill }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800 tabular-nums">{p.value}</span>
-                </div>
-            ))}
-        </div>
-    );
-};
 
 export default function OvertimeMealTab() {
     const { data: bulkData, loading: bulkLoading, queryParams } = useAnalytics();
@@ -167,7 +152,7 @@ export default function OvertimeMealTab() {
                                             dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
                                             {otSourceData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -190,7 +175,7 @@ export default function OvertimeMealTab() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                     <XAxis dataKey="day" tick={{ fontSize: 12, fontWeight: 700 }} />
                                     <YAxis tick={{ fontSize: 10 }} unit="h" />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<ChartTooltip />} />
                                     <Bar dataKey="saat" name="OT Saati" radius={[8, 8, 0, 0]}>
                                         {otDowData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                     </Bar>
@@ -215,7 +200,7 @@ export default function OvertimeMealTab() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
                                     <YAxis tick={{ fontSize: 10 }} />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<ChartTooltip />} />
                                     <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                     <Area type="monotone" dataKey="toplam" name="Toplam OT" stroke="#f59e0b" fill="url(#otGrad)" strokeWidth={2.5} dot={{ r: 3 }} />
                                     <Line type="monotone" dataKey="onaylı" name="Onaylı OT" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} />
@@ -236,7 +221,7 @@ export default function OvertimeMealTab() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis type="number" tick={{ fontSize: 10 }} unit="h" />
                                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={100} />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip content={<ChartTooltip />} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                 <Bar dataKey="toplam" name="Toplam OT" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                                 <Bar dataKey="onaylı" name="Onaylı" fill="#10b981" radius={[0, 4, 4, 0]} />
@@ -303,7 +288,7 @@ export default function OvertimeMealTab() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                     <XAxis type="number" tick={{ fontSize: 10 }} unit=" dk" />
                                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} width={90} />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<ChartTooltip />} />
                                     <Bar dataKey="mola_dk" name="Ort. Mola" radius={[0, 6, 6, 0]}>
                                         {breakDistribution.map((entry, i) => (
                                             <Cell key={i} fill={entry.mola_dk > 75 ? '#ef4444' : entry.mola_dk > 60 ? '#f59e0b' : '#06b6d4'} />
@@ -326,7 +311,7 @@ export default function OvertimeMealTab() {
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
                                     <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<ChartTooltip />} />
                                     <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                     <Bar yAxisId="left" dataKey="sipariş" name="Sipariş Sayısı" fill="#f97316" radius={[4, 4, 0, 0]} />
                                     <Line yAxisId="right" type="monotone" dataKey="oran" name="Sipariş Oranı %" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />

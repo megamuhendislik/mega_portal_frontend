@@ -6,6 +6,7 @@ import PersonSelector from '../shared/PersonSelector';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
+import ChartTooltip from '../shared/ChartTooltip';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
     ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis,
@@ -14,22 +15,6 @@ import {
 
 const PERSON_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
 const PERSON_BG = ['bg-indigo-50 text-indigo-700 border-indigo-200', 'bg-emerald-50 text-emerald-700 border-emerald-200', 'bg-amber-50 text-amber-700 border-amber-200', 'bg-red-50 text-red-700 border-red-200'];
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || p.stroke }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800 tabular-nums">{p.value}</span>
-                </div>
-            ))}
-        </div>
-    );
-};
 
 export default function ComparisonTab() {
     const { employees, queryParams, data: bulkData, departments } = useAnalytics();
@@ -167,7 +152,7 @@ export default function ComparisonTab() {
                                                     dot={{ r: 4, fill: PERSON_COLORS[i], strokeWidth: 0 }} />
                                             ))}
                                             <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
-                                            <Tooltip content={<CustomTooltip />} />
+                                            <Tooltip content={<ChartTooltip />} />
                                         </RadarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -256,7 +241,7 @@ export default function ComparisonTab() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                             <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
                                             <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
-                                            <Tooltip content={<CustomTooltip />} />
+                                            <Tooltip content={<ChartTooltip />} />
                                             <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                             <Bar dataKey="verimlilik" name="Verimlilik %" fill="#6366f1" radius={[6, 6, 0, 0]} />
                                             <Bar dataKey="devam" name="Devam %" fill="#10b981" radius={[6, 6, 0, 0]} />

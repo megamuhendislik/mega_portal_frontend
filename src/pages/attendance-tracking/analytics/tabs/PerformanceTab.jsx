@@ -6,27 +6,20 @@ import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
+import ChartTooltip from '../shared/ChartTooltip';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Area, AreaChart, ComposedChart, Legend, ReferenceLine,
 } from 'recharts';
 
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200/80 shadow-xl px-4 py-3 text-xs">
-            <p className="font-bold text-slate-700 mb-1.5">{label}</p>
-            {payload.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || p.stroke }} />
-                    <span className="text-slate-500">{p.name}:</span>
-                    <span className="font-bold text-slate-800 tabular-nums">
-                        {typeof p.value === 'number' ? (p.value % 1 !== 0 ? `${Math.floor(p.value)}:${String(Math.round((p.value % 1) * 60)).padStart(2, '0')}` : p.value) : p.value}
-                    </span>
-                </div>
-            ))}
-        </div>
-    );
+// HH:MM formatter — PerformanceTab saat değerlerini "s:dd" olarak göstermek için
+const hoursFormatter = (value, name) => {
+    if (typeof value === 'number' && value % 1 !== 0) {
+        const h = Math.floor(value);
+        const m = String(Math.round((value % 1) * 60)).padStart(2, '0');
+        return [`${h}:${m}`, name];
+    }
+    return [value, name];
 };
 
 export default function PerformanceTab() {
@@ -165,7 +158,7 @@ export default function PerformanceTab() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis dataKey="dayLabel" tick={{ fontSize: 9, fontWeight: 600 }} interval="preserveStartEnd" angle={-30} textAnchor="end" height={50} />
                                         <YAxis tick={{ fontSize: 10 }} domain={[0, 'auto']} unit="h" />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip formatter={hoursFormatter} />} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                         <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'Hedef 8h', position: 'right', style: { fontSize: 9, fill: '#ef4444' } }} />
                                         <Bar dataKey="normal" name="Normal" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
@@ -197,7 +190,7 @@ export default function PerformanceTab() {
                                         <XAxis dataKey="date" tick={{ fontSize: 9, fontWeight: 600 }} interval="preserveStartEnd" />
                                         <YAxis tick={{ fontSize: 10 }} domain={[6, 22]}
                                             tickFormatter={v => `${Math.floor(v)}:${String(Math.round((v % 1) * 60)).padStart(2, '0')}`} />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<ChartTooltip formatter={hoursFormatter} />} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                         <ReferenceLine y={9} stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={1}
                                             label={{ value: '09:00', position: 'left', style: { fontSize: 9, fill: '#94a3b8' } }} />
@@ -222,7 +215,7 @@ export default function PerformanceTab() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                             <XAxis dataKey="day" tick={{ fontSize: 11, fontWeight: 700 }} />
                                             <YAxis tick={{ fontSize: 10 }} domain={[0, 12]} />
-                                            <Tooltip content={<CustomTooltip />} />
+                                            <Tooltip content={<ChartTooltip formatter={hoursFormatter} />} />
                                             <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1} />
                                             <Bar dataKey="saat" name="Ort. Saat" radius={[8, 8, 0, 0]}>
                                                 {weeklyPattern.map((e, i) => <Cell key={i} fill={e.fill} />)}
