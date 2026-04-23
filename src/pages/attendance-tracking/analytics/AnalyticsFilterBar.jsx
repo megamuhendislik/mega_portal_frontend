@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, Calendar, Filter, RefreshCw, ChevronDown,
-    GitCompare, Building2, UserX, ArrowRight, X,
+    GitCompare, Building2, UserX, ArrowRight, X, Briefcase,
 } from 'lucide-react';
 import { useAnalytics, COMPARE_MODES, getFiscalMonth } from './AnalyticsContext';
 import { format } from 'date-fns';
+import MultiSelect from './shared/MultiSelect';
 
 const QUICK_RANGES = [
     { label: 'Bu Ay', getOffset: () => ({ single: 0 }) },
@@ -17,6 +18,15 @@ export default function AnalyticsFilterBar() {
     const ctx = useAnalytics();
     const [showFilters, setShowFilters] = useState(false);
     const [showCompare, setShowCompare] = useState(ctx.compareMode !== 'none');
+
+    const deptOptions = useMemo(
+        () => (ctx.departments || []).map((d) => ({ value: d.id, label: d.name })),
+        [ctx.departments]
+    );
+    const positionOptions = useMemo(
+        () => (ctx.positions || []).map((p) => ({ value: p.id, label: p.title || p.name })),
+        [ctx.positions]
+    );
 
     const handleQuickRange = (qr) => {
         const off = qr.getOffset();
@@ -168,7 +178,7 @@ export default function AnalyticsFilterBar() {
 
             {/* ═══ Expanded Filters ═══ */}
             {showFilters && (
-                <div className="px-4 pb-4 pt-2 border-t border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="px-4 pb-4 pt-2 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
                             <Calendar size={10} /> Başlangıç
@@ -185,13 +195,29 @@ export default function AnalyticsFilterBar() {
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                            <Building2 size={10} /> Departman
+                            <Building2 size={10} /> Departman(lar)
                         </label>
-                        <select value={ctx.departmentIds[0] || ''} onChange={e => ctx.setDepartmentIds(e.target.value ? [parseInt(e.target.value)] : [])}
-                            className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                            <option value="">Tümü</option>
-                            {ctx.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </select>
+                        <MultiSelect
+                            value={ctx.departmentIds}
+                            onChange={(vals) => ctx.setDepartmentIds(vals.map((v) => typeof v === 'string' ? parseInt(v, 10) : v).filter((v) => !isNaN(v)))}
+                            options={deptOptions}
+                            placeholder="Tümü"
+                            className="w-full"
+                            size="small"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                            <Briefcase size={10} /> Pozisyon(lar)
+                        </label>
+                        <MultiSelect
+                            value={ctx.positionIds}
+                            onChange={(vals) => ctx.setPositionIds(vals.map((v) => typeof v === 'string' ? parseInt(v, 10) : v).filter((v) => !isNaN(v)))}
+                            options={positionOptions}
+                            placeholder="Tümü"
+                            className="w-full"
+                            size="small"
+                        />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
