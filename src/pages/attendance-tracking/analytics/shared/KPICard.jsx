@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import InfoTooltip from './InfoTooltip';
 
 const GRADIENTS = {
     indigo: 'from-indigo-500 via-indigo-600 to-indigo-700',
@@ -16,6 +17,7 @@ export default function KPICard({
     title, value, suffix, icon: Icon,
     gradient = 'slate', delta, deltaSuffix = '%',
     subtitle, sparkline, className = '', mini = false,
+    info, // { title, content } for InfoTooltip
 }) {
     const isPositive = delta > 0;
     const isNegative = delta < 0;
@@ -30,7 +32,10 @@ export default function KPICard({
                     </div>
                 )}
                 <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{title}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate flex items-center gap-1">
+                        {title}
+                        {info && <InfoTooltip title={info.title}>{info.content}</InfoTooltip>}
+                    </p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-lg font-black text-slate-800 tabular-nums">{value}</span>
                         {suffix && <span className="text-[11px] font-bold text-slate-400">{suffix}</span>}
@@ -55,7 +60,10 @@ export default function KPICard({
 
             <div className="relative z-10">
                 <div className="flex items-start justify-between mb-2">
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{title}</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                        {title}
+                        {info && <InfoTooltip title={info.title} className="[&_button]:text-white/30 [&_button:hover]:text-white/60">{info.content}</InfoTooltip>}
+                    </p>
                     {Icon && (
                         <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/15 transition-colors">
                             <Icon size={14} className="text-white/80" />
@@ -96,12 +104,15 @@ export default function KPICard({
 /**
  * A horizontal progress bar KPI used for inline stats.
  */
-export function KPIProgressBar({ label, value, max = 100, suffix = '%', color = '#6366f1' }) {
+export function KPIProgressBar({ label, value, max = 100, suffix = '%', color = '#6366f1', info }) {
     const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
     return (
         <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-slate-500">{label}</span>
+                <span className="font-medium text-slate-500 flex items-center gap-1">
+                    {label}
+                    {info && <InfoTooltip title={info.title}>{info.content}</InfoTooltip>}
+                </span>
                 <span className="font-black text-slate-700 tabular-nums">{value}{suffix}</span>
             </div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

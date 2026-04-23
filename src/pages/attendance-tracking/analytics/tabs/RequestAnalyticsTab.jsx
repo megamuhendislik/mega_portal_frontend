@@ -8,6 +8,7 @@ import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState, ErrorState } from '../shared/EmptyState';
+import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -158,13 +159,15 @@ export default function RequestAnalyticsTab() {
             {/* KPI row */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Toplam Talep" value={totalRequests} icon={FileText} gradient="slate" />
-                <KPICard title="Onay Oranı" value={`${approvalRate}`} suffix="%" icon={CheckCircle2} gradient="emerald" />
+                <KPICard title="Onay Oranı" value={`${approvalRate}`} suffix="%" icon={CheckCircle2} gradient="emerald"
+                    info={METRIC_EXPLANATIONS.approval_rate} />
                 <KPICard title="Bekleyen" value={pendingCount} icon={Hourglass} gradient="amber" />
                 <KPICard title="Reddedilen" value={data?.rejected_count || 0} icon={XCircle} gradient="red" />
                 <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'OT Saati'}
                     value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours || 0)}
                     suffix={avgDecisionHours != null ? 'saat' : 'saat'}
-                    icon={Clock} gradient="blue" />
+                    icon={Clock} gradient="blue"
+                    info={avgDecisionHours != null ? METRIC_EXPLANATIONS.decision_time : METRIC_EXPLANATIONS.overtime} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

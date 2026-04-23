@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-export default function SectionCard({ title, subtitle, icon: Icon, iconGradient = 'from-indigo-500 to-indigo-600', children, collapsible = true, defaultOpen = true }) {
+export default function SectionCard({ title, subtitle, icon: Icon, iconGradient = 'from-indigo-500 to-indigo-600', children, collapsible = true, defaultOpen = true, headerExtra }) {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
@@ -21,9 +21,12 @@ export default function SectionCard({ title, subtitle, icon: Icon, iconGradient 
                         {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
                     </div>
                 </div>
-                {collapsible && (
-                    <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-                )}
+                <div className="flex items-center gap-2">
+                    {headerExtra}
+                    {collapsible && (
+                        <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                    )}
+                </div>
             </div>
             {(!collapsible || open) && (
                 <div className="px-5 pb-5 pt-1">{children}</div>

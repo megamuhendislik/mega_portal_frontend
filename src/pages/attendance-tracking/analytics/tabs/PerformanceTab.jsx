@@ -5,6 +5,7 @@ import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
+import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Area, AreaChart, ComposedChart, Legend, ReferenceLine,
@@ -128,15 +129,15 @@ export default function PerformanceTab() {
                     {kpi && (
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                             <KPICard title="Çalışma" value={kpi.total_worked_hours} suffix="saat" icon={Clock}
-                                gradient="indigo" delta={kpi.vs_prev?.worked} />
+                                gradient="indigo" delta={kpi.vs_prev?.worked} info={METRIC_EXPLANATIONS.worked_hours} />
                             <KPICard title="Verimlilik" value={`${kpi.efficiency_pct}`} suffix="%" icon={Target}
-                                gradient="emerald" delta={kpi.vs_prev?.efficiency} />
+                                gradient="emerald" delta={kpi.vs_prev?.efficiency} info={METRIC_EXPLANATIONS.efficiency} />
                             <KPICard title="Ek Mesai" value={kpi.overtime_hours} suffix="saat" icon={TrendingUp}
-                                gradient="amber" delta={kpi.vs_prev?.ot} />
+                                gradient="amber" delta={kpi.vs_prev?.ot} info={METRIC_EXPLANATIONS.overtime} />
                             <KPICard title="Kayıp" value={kpi.missing_hours} suffix="saat" icon={BarChart3}
-                                gradient="red" delta={kpi.vs_prev?.missing} />
+                                gradient="red" delta={kpi.vs_prev?.missing} info={METRIC_EXPLANATIONS.missing_hours} />
                             <KPICard title="Ort. Mola" value={kpi.avg_break_minutes} suffix="dk" icon={Coffee}
-                                gradient="cyan" />
+                                gradient="cyan" info={METRIC_EXPLANATIONS.break_minutes} />
                         </div>
                     )}
 

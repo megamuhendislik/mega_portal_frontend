@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, ArrowRight, GitCompare } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink } from 'lucide-react';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton } from '../shared/EmptyState';
+import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
+import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    Cell, PieChart, Pie, Legend, LineChart, Line, ComposedChart, Area,
+    Cell, PieChart, Pie, Legend, ComposedChart, Line,
 } from 'recharts';
 
 const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b', low: '#ef4444' };
@@ -35,6 +37,8 @@ export default function OverviewTab() {
     const distribution = overview?.efficiency_distribution || overview?.distribution;
     const trendData = overview?.monthly_trend;
 
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
     const distChartData = useMemo(() => {
         if (!distribution) return [];
         return Object.entries(distribution)
@@ -57,12 +61,26 @@ export default function OverviewTab() {
     const sparklineWorked = useMemo(() => trendChartData.map(t => t.çalışma), [trendChartData]);
     const sparklineOT = useMemo(() => trendChartData.map(t => t['ek mesai']), [trendChartData]);
 
+    // Employee list for detail modal (from work_hours or entry_exit data)
+    const employeeList = useMemo(() => {
+        const workHours = data?.work_hours?.employee_hours || data?.work_hours?.per_employee || [];
+        const entryExit = data?.entry_exit?.performance_ranking || [];
+        // Prefer work_hours if available (has efficiency), else entry_exit
+        if (workHours.length > 0) return workHours;
+        if (entryExit.length > 0) return entryExit.map(e => ({
+            ...e,
+            efficiency_pct: e.work_score || 0,
+            total_worked_hours: e.worked_hours || 0,
+            total_overtime_hours: e.overtime_hours || 0,
+            total_missing_hours: e.missing_hours || 0,
+        }));
+        return [];
+    }, [data]);
+
     if (loading && !data) return <LoadingSkeleton rows={3} />;
     if (!kpi) return <LoadingSkeleton rows={3} />;
 
     const healthColor = kpi.health_score >= 80 ? 'emerald' : kpi.health_score >= 60 ? 'amber' : 'red';
-
-    // Comparison data
     const cmpKpi = compareData?.team_overview?.kpi;
 
     return (
@@ -81,7 +99,7 @@ export default function OverviewTab() {
                             { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
                             { label: 'Ek Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
                             { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
-                            { label: 'Sağlık', curr: kpi.health_score || 0, prev: cmpKpi.health_score || 0, delta: deltas?.health, isSuffix: 'puan' },
+                            { label: 'Sağlık', curr: kpi.health_score || 0, prev: cmpKpi.health_score || 0, delta: deltas?.health, isSuffix: ' puan' },
                         ].map((item, i) => (
                             <div key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/80">
                                 <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider mb-1">{item.label}</p>
@@ -104,32 +122,46 @@ export default function OverviewTab() {
             {/* Main KPI Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
-                    gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked} sparkline={sparklineWorked} />
+                    gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked}
+                    sparkline={sparklineWorked} info={METRIC_EXPLANATIONS.efficiency} />
                 <KPICard title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="saat" icon={Clock}
-                    gradient="blue" delta={isComparing ? deltas?.worked : null} subtitle={`Hedef: ${overview?.kpi?.total_target_hours || '—'} saat`} />
+                    gradient="blue" delta={isComparing ? deltas?.worked : null}
+                    subtitle={`Hedef: ${kpi.total_target_hours || '—'} saat`} info={METRIC_EXPLANATIONS.worked_hours} />
                 <KPICard title="Ek Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="saat" icon={TrendingUp}
-                    gradient="amber" delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot} sparkline={sparklineOT} />
+                    gradient="amber" delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
+                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard title="Kayıp Saat" value={Math.round(kpi.total_missing_hours || 0)} suffix="saat" icon={AlertCircle}
-                    gradient="red" delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing} />
+                    gradient="red" delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
+                    info={METRIC_EXPLANATIONS.missing_hours} />
                 <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
-                    gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan" />
+                    gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan"
+                    info={METRIC_EXPLANATIONS.health_score} />
             </div>
 
             {/* Secondary metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
                 <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
-                    delta={isComparing ? deltas?.attendance : null} />
-                <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald" />
-                <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber" />
+                    delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
+                <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald"
+                    info={METRIC_EXPLANATIONS.punctuality} />
+                <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
+                    info={METRIC_EXPLANATIONS.meal_rate} />
                 <KPICard mini title="İzin Kullanımı" value={kpi.total_leave_days || 0} suffix="gün" icon={CalendarCheck} gradient="violet" />
-                <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan" />
+                <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"
+                    info={METRIC_EXPLANATIONS.break_minutes} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Efficiency Distribution */}
                 <SectionCard title="Verimlilik Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
-                    subtitle={`${totalPeople} çalışan`} collapsible={false}>
+                    subtitle={`${totalPeople} çalışan`} collapsible={false}
+                    headerExtra={
+                        <button onClick={() => setShowDetailModal(true)}
+                            className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200/60">
+                            <ExternalLink size={10} /> Detayları Göster
+                        </button>
+                    }>
                     {distChartData.length > 0 ? (
                         <div className="space-y-4">
                             <div className="h-56">
@@ -143,7 +175,6 @@ export default function OverviewTab() {
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
-                            {/* Legend as progress bars */}
                             <div className="space-y-2">
                                 {distChartData.map((d, i) => (
                                     <KPIProgressBar key={i} label={`${d.name} (${d.value})`}
@@ -189,15 +220,19 @@ export default function OverviewTab() {
                 subtitle="Ekip performansını oluşturan bileşenler" collapsible defaultOpen={false}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                        <KPIProgressBar label="Verimlilik (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1" />
-                        <KPIProgressBar label="Devam Oranı (30%)" value={kpi.attendance_rate_pct || 0} color="#3b82f6" />
-                        <KPIProgressBar label="Dakiklik (20%)" value={kpi.punctual_pct || 0} color="#10b981" />
+                        <KPIProgressBar label="Verimlilik (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1"
+                            info={METRIC_EXPLANATIONS.efficiency} />
+                        <KPIProgressBar label="Devam Oranı (30%)" value={kpi.attendance_rate_pct || 0} color="#3b82f6"
+                            info={METRIC_EXPLANATIONS.attendance_rate} />
+                        <KPIProgressBar label="Dakiklik (20%)" value={kpi.punctual_pct || 0} color="#10b981"
+                            info={METRIC_EXPLANATIONS.punctuality} />
                     </div>
                     <div className="space-y-3">
-                        <KPIProgressBar label="Kayıp Oranı (20%)" value={Math.max(0, 100 - (kpi.total_missing_hours / Math.max(kpi.total_worked_hours || 1, 1) * 100))} color="#f59e0b" />
+                        <KPIProgressBar label="Kayıp Oranı (20%)" value={Math.max(0, 100 - (kpi.total_missing_hours / Math.max(kpi.total_worked_hours || 1, 1) * 100))} color="#f59e0b"
+                            info={METRIC_EXPLANATIONS.missing_hours} />
                         <div className="mt-4 p-3 bg-slate-50 rounded-xl">
                             <div className="flex items-center gap-3">
-                                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${DIST_COLORS[healthColor] ? '' : 'from-emerald-500 to-emerald-600'} flex items-center justify-center`}
+                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                                     style={{ background: `linear-gradient(135deg, ${healthColor === 'emerald' ? '#10b981' : healthColor === 'amber' ? '#f59e0b' : '#ef4444'}, ${healthColor === 'emerald' ? '#059669' : healthColor === 'amber' ? '#d97706' : '#dc2626'})` }}>
                                     <span className="text-xl font-black text-white">{kpi.health_score || 0}</span>
                                 </div>
@@ -212,6 +247,13 @@ export default function OverviewTab() {
                     </div>
                 </div>
             </SectionCard>
+
+            {/* Efficiency Detail Modal */}
+            <EfficiencyDetailModal
+                open={showDetailModal}
+                onClose={() => setShowDetailModal(false)}
+                employees={employeeList}
+            />
         </div>
     );
 }

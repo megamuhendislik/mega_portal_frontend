@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Clock, Utensils, TrendingUp, BarChart3, Zap, Award, AlertTriangle, Calendar } from 'lucide-react';
+import { Clock, Utensils, TrendingUp, BarChart3, Zap, Award, AlertTriangle, Calendar, Coffee } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
+import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -143,13 +144,15 @@ export default function OvertimeMealTab() {
         <div className="space-y-5 animate-in fade-in duration-500">
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPICard title="Toplam OT" value={totalOT} suffix="saat" icon={Clock} gradient="amber" />
+                <KPICard title="Toplam OT" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
+                    info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard title="Onaylı OT" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
-                    subtitle={`Onay oranı: ${approvalRate}%`} />
+                    subtitle={`Onay oranı: ${approvalRate}%`}
+                    info={{ title: 'Onaylı OT', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan OT kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış ek mesai saatleri.</p></> }} />
                 <KPICard title="OT Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
                 <KPICard title="Ort. OT / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
                 <KPICard title="Yemek Oranı" value={breakMeal?.meal_rate_pct || breakMeal?.overall_meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
-                    subtitle="İş günlerinde yemek" />
+                    subtitle="İş günlerinde yemek" info={METRIC_EXPLANATIONS.meal_rate} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
