@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { message } from 'antd';
 import api from '../../../services/api';
 
 const AnalyticsContext = createContext(null);
@@ -47,29 +49,85 @@ export const COMPARE_MODES = [
     { key: 'custom', label: 'Özel Dönem' },
 ];
 
+const MAX_RANGE_DAYS = 366;
+
+/**
+ * Validate a date range — returns error message string or null.
+ * - start <= end
+ * - max 1 year (366 gün, artık yıl dahil)
+ * - ISO format kontrolü
+ */
+export function validateDateRange(start, end) {
+    if (!start || !end) return null;
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+        return 'Geçersiz tarih formatı';
+    }
+    if (s > e) {
+        return 'Başlangıç tarihi bitiş tarihinden sonra olamaz';
+    }
+    const days = (e - s) / (1000 * 60 * 60 * 24);
+    if (days > MAX_RANGE_DAYS) {
+        return 'Tarih aralığı 1 yılı geçemez';
+    }
+    return null;
+}
+
+// Local parser helpers for URL params
+const parseIntList = (raw) =>
+    (raw || '')
+        .split(',')
+        .map((x) => parseInt(x, 10))
+        .filter((x) => !isNaN(x));
+
+const parseIntOrNull = (raw) => {
+    if (raw == null) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+};
+
 /**
  * AnalyticsProvider — Provides global analytics state with period comparison support.
+ *
+ * Yeni Faz 1 özellikleri:
+ *  - URL state sync: filtreler ?period=N&dept=1,2&position=3&compare=prev_month&... ile URL'de
+ *  - Tarih validasyonu (custom compare range için)
+ *  - Section-bazlı error state (bir bölüm fail = tüm tab düşmez)
+ *  - Per-section cache tazeliği (lastFetchedAt single + per-section)
  */
 export function AnalyticsProvider({ children }) {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const hydratedRef = useRef(false);
+
     // ─── Primary period ───
     const current = getFiscalMonth(0);
-    const [monthOffset, setMonthOffset] = useState(0);
+    const [monthOffset, setMonthOffset] = useState(() => parseIntOrNull(searchParams.get('period')) ?? 0);
     const [startDate, setStartDate] = useState(current.startDate);
     const [endDate, setEndDate] = useState(current.endDate);
     const [periodLabel, setPeriodLabel] = useState(current.label);
     const [isMultiMonth, setIsMultiMonth] = useState(false);
 
     // ─── Comparison period ───
-    const [compareMode, setCompareMode] = useState('none');
-    const [compareStartDate, setCompareStartDate] = useState('');
-    const [compareEndDate, setCompareEndDate] = useState('');
+    const [compareMode, setCompareMode] = useState(() => {
+        const raw = searchParams.get('compare');
+        return COMPARE_MODES.some((m) => m.key === raw) ? raw : 'none';
+    });
+    const [compareStartDate, setCompareStartDate] = useState(() => searchParams.get('cmp_start') || '');
+    const [compareEndDate, setCompareEndDate] = useState(() => searchParams.get('cmp_end') || '');
     const [compareLabel, setCompareLabel] = useState('');
 
     // ─── Filters ───
-    const [departmentIds, setDepartmentIds] = useState([]);
-    const [positionIds, setPositionIds] = useState([]);
-    const [minAttendancePct, setMinAttendancePct] = useState(50);
-    const [minAttendanceEnabled, setMinAttendanceEnabled] = useState(true);
+    const [departmentIds, setDepartmentIds] = useState(() => parseIntList(searchParams.get('dept')));
+    const [positionIds, setPositionIds] = useState(() => parseIntList(searchParams.get('position')));
+    const [minAttendancePct, setMinAttendancePct] = useState(() => {
+        const n = parseIntOrNull(searchParams.get('min_att'));
+        return n != null && n >= 0 && n <= 100 ? n : 50;
+    });
+    const [minAttendanceEnabled, setMinAttendanceEnabled] = useState(() => {
+        const raw = searchParams.get('min_att_on');
+        return raw === null ? true : raw === '1';
+    });
 
     // ─── Lookups ───
     const [departments, setDepartments] = useState([]);
@@ -83,6 +141,9 @@ export function AnalyticsProvider({ children }) {
     const [loading, setLoading] = useState(false);
     const [compareLoading, setCompareLoading] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState(null);
+    const [sectionLastFetchedAt, setSectionLastFetchedAt] = useState({});
+    const [error, setError] = useState(null);
+    const [sectionErrors, setSectionErrors] = useState({});
 
     // Navigate to a fiscal month by offset from current
     const navigateMonth = useCallback((offset) => {
@@ -103,6 +164,15 @@ export function AnalyticsProvider({ children }) {
         setEndDate(end.endDate);
         setPeriodLabel(label || `${start.label} — ${end.label}`);
         setIsMultiMonth(true);
+    }, []);
+
+    // On mount: if URL had period offset, sync dates
+    useEffect(() => {
+        if (!hydratedRef.current && monthOffset !== 0) {
+            navigateMonth(monthOffset);
+        }
+        hydratedRef.current = true;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Update comparison dates when mode changes
@@ -131,8 +201,73 @@ export function AnalyticsProvider({ children }) {
             setCompareEndDate(prev.endDate);
             setCompareLabel(prev.label);
         }
-        // 'custom' is set manually by user
+        // 'custom' is set manually by user via setCompareCustomRange
     }, [compareMode, monthOffset]);
+
+    // Custom compare range setter with validation
+    const setCompareCustomRange = useCallback((start, end) => {
+        const err = validateDateRange(start, end);
+        if (err) {
+            message.error(err);
+            return false;
+        }
+        setCompareStartDate(start || '');
+        setCompareEndDate(end || '');
+        if (start && end) {
+            setCompareLabel(`${start} — ${end}`);
+        } else {
+            setCompareLabel('');
+        }
+        return true;
+    }, []);
+
+    // Section error management
+    const setSectionError = useCallback((section, err) => {
+        setSectionErrors((prev) => {
+            if (err == null) {
+                const next = { ...prev };
+                delete next[section];
+                return next;
+            }
+            return { ...prev, [section]: err };
+        });
+    }, []);
+
+    const clearSectionError = useCallback((section) => {
+        setSectionErrors((prev) => {
+            if (!(section in prev)) return prev;
+            const next = { ...prev };
+            delete next[section];
+            return next;
+        });
+    }, []);
+
+    // URL state sync (after hydration)
+    useEffect(() => {
+        if (!hydratedRef.current) return;
+        const params = new URLSearchParams();
+        if (monthOffset !== 0) params.set('period', String(monthOffset));
+        if (departmentIds.length) params.set('dept', departmentIds.join(','));
+        if (positionIds.length) params.set('position', positionIds.join(','));
+        if (compareMode !== 'none') params.set('compare', compareMode);
+        if (compareMode === 'custom' && compareStartDate && compareEndDate) {
+            params.set('cmp_start', compareStartDate);
+            params.set('cmp_end', compareEndDate);
+        }
+        if (!minAttendanceEnabled) params.set('min_att_on', '0');
+        if (minAttendancePct !== 50) params.set('min_att', String(minAttendancePct));
+        setSearchParams(params, { replace: true });
+    }, [
+        monthOffset,
+        departmentIds,
+        positionIds,
+        compareMode,
+        compareStartDate,
+        compareEndDate,
+        minAttendanceEnabled,
+        minAttendancePct,
+        setSearchParams,
+    ]);
 
     // Query params
     const queryParams = useMemo(() => {
@@ -178,13 +313,25 @@ export function AnalyticsProvider({ children }) {
     // Fetch primary data
     const fetchData = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const sections = 'team_overview,entry_exit,work_hours,overtime,break_meal,absence_leave';
             const res = await api.get('/attendance-analytics/bulk/', { params: { ...queryParams, sections }, timeout: 60000 });
             setData(res.data);
-            setLastFetchedAt(new Date());
-        } catch (err) { console.error('Bulk analytics error:', err); }
-        setLoading(false);
+            const now = new Date();
+            setLastFetchedAt(now);
+            // Per-section freshness tracking
+            const perSection = {};
+            sections.split(',').forEach((s) => { perSection[s] = now; });
+            setSectionLastFetchedAt((prev) => ({ ...prev, ...perSection }));
+            // Clear any previous section errors on successful fetch
+            setSectionErrors({});
+        } catch (err) {
+            console.error('Bulk analytics error:', err);
+            setError(err?.response?.data?.detail || err?.message || 'Analiz verileri yüklenemedi');
+        } finally {
+            setLoading(false);
+        }
     }, [queryParams]);
 
     // Fetch comparison data
@@ -198,8 +345,9 @@ export function AnalyticsProvider({ children }) {
         } catch (err) {
             console.error('Compare analytics error:', err);
             setCompareData(null);
+        } finally {
+            setCompareLoading(false);
         }
-        setCompareLoading(false);
     }, [compareQueryParams]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
@@ -231,6 +379,7 @@ export function AnalyticsProvider({ children }) {
         compareMode, setCompareMode,
         compareStartDate, setCompareStartDate,
         compareEndDate, setCompareEndDate,
+        setCompareCustomRange,
         compareLabel,
         compareData, compareLoading,
         deltas,
@@ -243,15 +392,17 @@ export function AnalyticsProvider({ children }) {
         // Lookups
         departments, positions, employees, employeesLoading,
         // Data
-        data, loading, lastFetchedAt, queryParams, compareQueryParams,
+        data, loading, lastFetchedAt, sectionLastFetchedAt, queryParams, compareQueryParams,
+        error, sectionErrors, setSectionError, clearSectionError,
         refetch: () => { fetchData(); fetchCompareData(); },
     }), [startDate, endDate, periodLabel, isMultiMonth, monthOffset,
         navigateMonth, navigateRange,
-        compareMode, compareStartDate, compareEndDate, compareLabel,
+        compareMode, compareStartDate, compareEndDate, setCompareCustomRange, compareLabel,
         compareData, compareLoading, deltas,
         departmentIds, positionIds, minAttendancePct, minAttendanceEnabled,
         departments, positions, employees, employeesLoading,
-        data, loading, lastFetchedAt, queryParams, compareQueryParams,
+        data, loading, lastFetchedAt, sectionLastFetchedAt, queryParams, compareQueryParams,
+        error, sectionErrors, setSectionError, clearSectionError,
         fetchData, fetchCompareData]);
 
     return <AnalyticsContext.Provider value={value}>{children}</AnalyticsContext.Provider>;
