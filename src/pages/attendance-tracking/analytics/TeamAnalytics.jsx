@@ -4,6 +4,7 @@ import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle } from 'lucide
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
+import './analytics-print.css';
 import ErrorBoundary from './shared/ErrorBoundary';
 import ExportMenu from './shared/ExportMenu';
 import SkeletonLoader from './shared/SkeletonLoader';

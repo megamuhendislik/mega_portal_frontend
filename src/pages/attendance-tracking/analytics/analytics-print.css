@@ -1,0 +1,117 @@
+/*
+ * Analytics Print Stylesheet
+ * Part of Analytics v2 Phase 6.
+ *
+ * @media print — kullanıcı yazıcı/PDF-kaydet seçtiğinde çıktıyı temizler:
+ *  - Sidebar, header, filter bar, export menu gizlenir
+ *  - Renkli arka planlar beyaz olur (mürekkep tasarrufu)
+ *  - Kartlar siyah border ile görünür
+ *  - Sayfa kırılımları grafik içinde olmaz
+ */
+
+@media print {
+    /* Global reset */
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    /* Header / sidebar / non-essential UI */
+    header,
+    aside,
+    nav.sidebar,
+    .no-print,
+    .analytics-filter-bar,
+    .analytics-export-menu,
+    .analytics-help-button,
+    .analytics-favorite-views,
+    button[aria-label="Yardım (?)"],
+    .ant-modal,
+    .ant-drawer {
+        display: none !important;
+    }
+
+    /* Tab container — seçili içerik görünsün, bar gizlensin */
+    .analytics-tabs-nav {
+        display: none !important;
+    }
+
+    /* Kartlar: beyaz bg + siyah ince border */
+    .rounded-xl,
+    .rounded-2xl {
+        background: white !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+
+    /* Gradient backgrounds → düz beyaz */
+    [class*='bg-gradient'],
+    [class*='from-'] {
+        background: white !important;
+        color: black !important;
+    }
+
+    /* KPICard gradient metinleri siyah */
+    [class*='bg-gradient'] .text-white,
+    [class*='bg-gradient'] .text-white\/60,
+    [class*='bg-gradient'] .text-white\/70 {
+        color: black !important;
+    }
+
+    /* Charts: büyütme/küçültme yok, aynı boyutta */
+    .recharts-wrapper svg {
+        max-width: 100% !important;
+    }
+
+    /* Tablolar */
+    table {
+        page-break-inside: auto;
+    }
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Her büyük bölüm yeni sayfaya */
+    section,
+    .section-card {
+        page-break-before: auto;
+        page-break-after: auto;
+    }
+
+    /* Link URL'lerini parantez içinde göster */
+    a[href]::after {
+        content: ' (' attr(href) ')';
+        font-size: 10px;
+        color: #64748b;
+    }
+
+    /* Print'te renk kodlu badge'ler korunur (önemli bilgi) */
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+}
+
+/* Mobile tweaks (Phase 6 — dar ekran optimizasyonu) */
+@media (max-width: 640px) {
+    /* KPI grid mobilde 2 kolon max */
+    .analytics-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Filter bar'ı altta fixed bar olarak değil, üstte tam genişlik */
+    .analytics-filter-bar {
+        padding: 0.75rem !important;
+    }
+
+    /* Modal (DrilldownModal, HelpOverlay) tam ekran */
+    .ant-modal {
+        max-width: 100vw !important;
+        margin: 0 !important;
+    }
+    .ant-modal-content {
+        min-height: 100vh;
+    }
+}
