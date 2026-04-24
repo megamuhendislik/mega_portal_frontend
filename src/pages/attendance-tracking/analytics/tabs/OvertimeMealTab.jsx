@@ -7,6 +7,8 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
+import DrilldownModal from '../shared/DrilldownModal';
+import { ExternalLink, X as XIcon } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -20,6 +22,10 @@ export default function OvertimeMealTab() {
     const [otData, setOtData] = useState(null);
     const [breakMealData, setBreakMealData] = useState(null);
     const [loading, setLoading] = useState(true);
+    // Click-to-filter: OT source pie segment tıklanınca employee listesi bu kaynakla filtrelenir
+    const [sourceFilter, setSourceFilter] = useState(null);
+    // Drill-down modal state
+    const [drilldown, setDrilldown] = useState(null); // { type: 'ot_ranking' | 'break_distribution', title, data }
 
     // Fetch OT & break-meal data individually for richer data
     const fetchData = useCallback(async () => {
@@ -48,11 +54,23 @@ export default function OvertimeMealTab() {
             .filter(d => d.value > 0);
     }, [ot]);
 
-    // OT per employee (top 20)
+    // OT per employee (top 20) — source filter uygulanır (varsa)
     const otPerEmployee = useMemo(() => {
         if (!ot?.per_employee) return [];
-        return ot.per_employee
-            .sort((a, b) => (b.total_hours || 0) - (a.total_hours || 0))
+        const src = (ot.per_employee || []).map(e => ({
+            ...e,
+            _matches_filter: sourceFilter
+                ? (e.by_source?.[sourceFilter] || 0) > 0
+                : true,
+        }));
+        return src
+            .filter(e => e._matches_filter)
+            .sort((a, b) => {
+                if (sourceFilter) {
+                    return (b.by_source?.[sourceFilter] || 0) - (a.by_source?.[sourceFilter] || 0);
+                }
+                return (b.total_hours || 0) - (a.total_hours || 0);
+            })
             .slice(0, 20)
             .map(e => ({
                 name: (e.name || e.employee_name || '').split(' ').slice(0, 2).join(' '),
@@ -60,7 +78,36 @@ export default function OvertimeMealTab() {
                 onaylı: Math.round((e.approved_hours || 0) * 10) / 10,
                 dept: e.department || '',
             }));
+    }, [ot, sourceFilter]);
+
+    // Full OT per employee for drill-down (no top-20 limit, includes source breakdown)
+    const otPerEmployeeFull = useMemo(() => {
+        if (!ot?.per_employee) return [];
+        return ot.per_employee.map(e => ({
+            key: e.id || e.employee_id || e.name,
+            id: e.id || e.employee_id,
+            name: e.name || e.employee_name || '',
+            department: e.department || '—',
+            total_hours: Math.round((e.total_hours || 0) * 10) / 10,
+            approved_hours: Math.round((e.approved_hours || 0) * 10) / 10,
+            pending_hours: Math.round((e.pending_hours || 0) * 10) / 10,
+            approval_rate: e.total_hours > 0 ? Math.round((e.approved_hours / e.total_hours) * 100) : 0,
+        })).sort((a, b) => b.total_hours - a.total_hours);
     }, [ot]);
+
+    const breakDistributionFull = useMemo(() => {
+        if (!breakMeal?.break_distribution) return [];
+        return breakMeal.break_distribution.map((d, i) => ({
+            key: d.id || i,
+            id: d.id,
+            name: d.name || d.employee_name || '',
+            department: d.department || '—',
+            avg_break_minutes: Math.round(d.avg_break_minutes || 0),
+            min_break_minutes: Math.round(d.min_break_minutes || 0),
+            max_break_minutes: Math.round(d.max_break_minutes || 0),
+            days_count: d.days_count || 0,
+        })).sort((a, b) => b.avg_break_minutes - a.avg_break_minutes);
+    }, [breakMeal]);
 
     // OT trend
     const otTrend = useMemo(() => {
@@ -141,16 +188,38 @@ export default function OvertimeMealTab() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* OT Source Pie */}
-                <SectionCard title="OT Kaynak Dağılımı" icon={Zap} iconGradient="from-amber-500 to-amber-600" collapsible={false}>
+                {/* OT Source Pie — click-to-filter */}
+                <SectionCard title="OT Kaynak Dağılımı" icon={Zap} iconGradient="from-amber-500 to-amber-600" collapsible={false}
+                    headerExtra={sourceFilter ? (
+                        <button onClick={() => setSourceFilter(null)}
+                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors">
+                            <XIcon size={10} /> Filtre Kaldır
+                        </button>
+                    ) : null}>
                     {otSourceData.length > 0 ? (
                         <div className="space-y-4">
                             <div className="h-52">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={otSourceData} cx="50%" cy="50%" outerRadius={80} innerRadius={45}
-                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
-                                            {otSourceData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}
+                                            onClick={(entry) => {
+                                                // entry.name örn: "Planlı" — OT_LABELS değerinden key'e çevir
+                                                const matchedKey = Object.keys(OT_LABELS).find(k => OT_LABELS[k] === entry.name);
+                                                if (matchedKey) {
+                                                    setSourceFilter(matchedKey === sourceFilter ? null : matchedKey);
+                                                }
+                                            }}
+                                            cursor="pointer">
+                                            {otSourceData.map((e, i) => {
+                                                const key = Object.keys(OT_LABELS).find(k => OT_LABELS[k] === e.name);
+                                                const isActive = sourceFilter === key;
+                                                const isDim = sourceFilter && !isActive;
+                                                return <Cell key={i} fill={e.color}
+                                                    fillOpacity={isDim ? 0.3 : 1}
+                                                    stroke={isActive ? '#1e293b' : '#fff'}
+                                                    strokeWidth={isActive ? 3 : 2} />;
+                                            })}
                                         </Pie>
                                         <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
@@ -161,6 +230,9 @@ export default function OvertimeMealTab() {
                                     <KPIProgressBar key={i} label={`${d.name} — ${d.value}h`}
                                         value={totalOT > 0 ? Math.round(d.value / totalOT * 100) : 0} color={d.color} />
                                 ))}
+                            </div>
+                            <div className="text-[10px] text-slate-400 text-center italic">
+                                💡 Pie diliminde kaynağa tıklayarak kişi listesini filtreleyin
                             </div>
                         </div>
                     ) : <EmptyState message="Kaynak verisi yok" />}
@@ -213,7 +285,13 @@ export default function OvertimeMealTab() {
 
             {/* OT per employee - horizontal bar */}
             <SectionCard title="Kişi Bazlı Ek Mesai Sıralaması" icon={Award} iconGradient="from-amber-500 to-orange-600"
-                subtitle="En çok ek mesai yapan çalışanlar — toplam vs onaylı">
+                subtitle={sourceFilter ? `Filtrelendi: ${OT_LABELS[sourceFilter]}` : 'En çok ek mesai yapan çalışanlar — toplam vs onaylı'}
+                headerExtra={
+                    <button onClick={() => setDrilldown({ type: 'ot_ranking' })}
+                        className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200/60">
+                        <ExternalLink size={10} /> Detayları Göster
+                    </button>
+                }>
                 {otPerEmployee.length > 0 ? (
                     <div style={{ height: Math.max(300, otPerEmployee.length * 32) }}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -280,7 +358,13 @@ export default function OvertimeMealTab() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Break Analysis */}
                 <SectionCard title="Mola Süreleri Analizi" icon={Coffee} iconGradient="from-cyan-500 to-blue-600"
-                    subtitle="Kişi bazlı ortalama mola süreleri">
+                    subtitle="Kişi bazlı ortalama mola süreleri"
+                    headerExtra={breakDistributionFull.length > 0 ? (
+                        <button onClick={() => setDrilldown({ type: 'break_distribution' })}
+                            className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border border-cyan-200/60">
+                            <ExternalLink size={10} /> Detayları Göster
+                        </button>
+                    ) : null}>
                     {breakDistribution.length > 0 ? (
                         <div style={{ height: Math.max(250, breakDistribution.length * 28) }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -321,6 +405,92 @@ export default function OvertimeMealTab() {
                     ) : <EmptyState message="Yemek trend verisi yok" />}
                 </SectionCard>
             </div>
+
+            {/* Drill-down modals */}
+            {drilldown?.type === 'break_distribution' && (
+                <DrilldownModal
+                    open={true}
+                    onClose={() => setDrilldown(null)}
+                    title="Mola Süreleri Detayı"
+                    subtitle="Tüm çalışanlar — ortalama/min/max mola süreleri"
+                    data={breakDistributionFull}
+                    columns={[
+                        { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
+                        { title: 'Departman', dataIndex: 'department', sorter: (a, b) => (a.department || '').localeCompare(b.department || '', 'tr') },
+                        {
+                            title: 'Ort. Mola (dk)',
+                            dataIndex: 'avg_break_minutes',
+                            sorter: (a, b) => a.avg_break_minutes - b.avg_break_minutes,
+                            defaultSortOrder: 'descend',
+                            align: 'right',
+                            render: (v) => (
+                                <span className={`font-bold tabular-nums ${v > 75 ? 'text-red-600' : v > 60 ? 'text-amber-600' : 'text-cyan-600'}`}>
+                                    {v}
+                                </span>
+                            ),
+                        },
+                        { title: 'Min (dk)', dataIndex: 'min_break_minutes', sorter: (a, b) => a.min_break_minutes - b.min_break_minutes, align: 'right' },
+                        { title: 'Max (dk)', dataIndex: 'max_break_minutes', sorter: (a, b) => a.max_break_minutes - b.max_break_minutes, align: 'right' },
+                        { title: 'Gün', dataIndex: 'days_count', sorter: (a, b) => a.days_count - b.days_count, align: 'right' },
+                    ]}
+                    groupBy="department"
+                    groupLabel="Departman"
+                    searchFields={['name', 'department']}
+                    rowKey="key"
+                    pageSize={25}
+                />
+            )}
+            {drilldown?.type === 'ot_ranking' && (
+                <DrilldownModal
+                    open={true}
+                    onClose={() => setDrilldown(null)}
+                    title="Ek Mesai Kişi Detayı"
+                    subtitle={sourceFilter ? `Filtre: ${OT_LABELS[sourceFilter]}` : 'Tüm OT kaynakları'}
+                    data={otPerEmployeeFull}
+                    columns={[
+                        { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
+                        { title: 'Departman', dataIndex: 'department', sorter: (a, b) => (a.department || '').localeCompare(b.department || '', 'tr') },
+                        {
+                            title: 'Toplam (saat)',
+                            dataIndex: 'total_hours',
+                            sorter: (a, b) => a.total_hours - b.total_hours,
+                            defaultSortOrder: 'descend',
+                            align: 'right',
+                            render: (v) => <span className="font-bold tabular-nums">{v.toFixed(1)}</span>,
+                        },
+                        {
+                            title: 'Onaylı (saat)',
+                            dataIndex: 'approved_hours',
+                            sorter: (a, b) => a.approved_hours - b.approved_hours,
+                            align: 'right',
+                            render: (v) => <span className="tabular-nums text-emerald-700">{v.toFixed(1)}</span>,
+                        },
+                        {
+                            title: 'Bekleyen (saat)',
+                            dataIndex: 'pending_hours',
+                            sorter: (a, b) => a.pending_hours - b.pending_hours,
+                            align: 'right',
+                            render: (v) => <span className="tabular-nums text-amber-700">{v.toFixed(1)}</span>,
+                        },
+                        {
+                            title: 'Onay Oranı',
+                            dataIndex: 'approval_rate',
+                            sorter: (a, b) => a.approval_rate - b.approval_rate,
+                            align: 'right',
+                            render: (v) => (
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${v >= 80 ? 'bg-emerald-50 text-emerald-700' : v >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                                    {v}%
+                                </span>
+                            ),
+                        },
+                    ]}
+                    groupBy="department"
+                    groupLabel="Departman"
+                    searchFields={['name', 'department']}
+                    rowKey="key"
+                    pageSize={25}
+                />
+            )}
         </div>
     );
 }
