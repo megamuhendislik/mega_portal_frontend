@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useCallback } from 'react';
 import { message } from 'antd';
-import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle } from 'lucide-react';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Hourglass } from 'lucide-react';
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
@@ -17,6 +17,7 @@ const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
 const ComparisonTab = React.lazy(() => import('./tabs/ComparisonTab'));
 const OvertimeMealTab = React.lazy(() => import('./tabs/OvertimeMealTab'));
 const RequestAnalyticsTab = React.lazy(() => import('./tabs/RequestAnalyticsTab'));
+const SLATab = React.lazy(() => import('./tabs/SLATab'));
 
 const TABS = [
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
@@ -24,6 +25,7 @@ const TABS = [
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
     { key: 'overtime_meal', label: 'OT & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
     { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'İzin, OT, yemek talepleri' },
+    { key: 'sla', label: 'SLA Paneli', icon: Hourglass, desc: 'Onay süresi ve gecikmeler' },
 ];
 
 const TAB_LABEL = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -43,11 +45,8 @@ function TeamAnalyticsInner() {
             message.info('PNG export yakinda aktif olacak (chart snapshot)');
             return;
         }
-        if (format === 'pdf') {
-            message.info('PDF export yakinda aktif olacak');
-            return;
-        }
-        if (format !== 'excel' && format !== 'csv') {
+        // pdf, excel, csv hepsi backend'ten — sadece format stringi degisir
+        if (format !== 'excel' && format !== 'csv' && format !== 'pdf') {
             message.warning(`Bilinmeyen format: ${format}`);
             return;
         }
@@ -60,7 +59,8 @@ function TeamAnalyticsInner() {
             // Content-Disposition'dan dosya adını çöz
             const contentDisposition = response.headers['content-disposition'] || '';
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
-            const filename = match ? match[1] : `analiz.${format === 'excel' ? 'xlsx' : 'csv'}`;
+            const extMap = { excel: 'xlsx', csv: 'csv', pdf: 'pdf' };
+            const filename = match ? match[1] : `analiz.${extMap[format] || format}`;
 
             const blob = new Blob([response.data]);
             const url = window.URL.createObjectURL(blob);
@@ -170,6 +170,7 @@ function TeamAnalyticsInner() {
                     {activeTab === 'comparison' && <ComparisonTab />}
                     {activeTab === 'overtime_meal' && <OvertimeMealTab />}
                     {activeTab === 'requests' && <RequestAnalyticsTab />}
+                    {activeTab === 'sla' && <SLATab />}
                 </Suspense>
             </ErrorBoundary>
 
