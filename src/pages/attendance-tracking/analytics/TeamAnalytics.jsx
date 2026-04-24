@@ -1,10 +1,13 @@
-import React, { useState, Suspense } from 'react';
-import { BarChart3, User, GitCompare, Clock, FileText } from 'lucide-react';
-import { AnalyticsProvider } from './AnalyticsContext';
+import React, { useState, Suspense, useCallback } from 'react';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle } from 'lucide-react';
+import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
 import ErrorBoundary from './shared/ErrorBoundary';
 import ExportMenu from './shared/ExportMenu';
 import SkeletonLoader from './shared/SkeletonLoader';
+import HelpOverlay from './shared/HelpOverlay';
+import FavoriteViews from './shared/FavoriteViews';
+import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
 
 const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
 const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
@@ -22,64 +25,120 @@ const TABS = [
 
 const TAB_LABEL = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
 
-export default function TeamAnalytics() {
+/**
+ * TeamAnalyticsInner — AnalyticsProvider context'ine erişimi gereken ana içerik.
+ * Keyboard shortcuts, favori görünümler, ve ay navigasyonu context'i kullanır.
+ */
+function TeamAnalyticsInner() {
+    const ctx = useAnalytics();
     const [activeTab, setActiveTab] = useState('overview');
+    const [helpOpen, setHelpOpen] = useState(false);
+
+    // URL query state getter — FavoriteViews için
+    const getCurrentQueryString = useCallback(() => {
+        if (typeof window === 'undefined') return '';
+        return window.location.search || '';
+    }, []);
+
+    // Favori uygulama — URL'i değiştir, context URL'den hydrate edecek (sayfa yenileme ile)
+    const applyFavorite = useCallback((queryString) => {
+        if (typeof window === 'undefined') return;
+        const newUrl = `${window.location.pathname}${queryString}`;
+        // History'yi kirletmeden değiştir
+        window.history.replaceState(null, '', newUrl);
+        // Reload sayfayı — basit ve güvenilir (URL'i Context hydrate eder)
+        window.location.reload();
+    }, []);
+
+    // Klavye kısayolları
+    useKeyboardShortcuts({
+        '?': () => setHelpOpen((v) => !v),
+        'Escape': () => setHelpOpen(false),
+        'r': () => ctx?.refetch && ctx.refetch(),
+        'ArrowLeft': () => ctx?.navigateMonth && ctx.navigateMonth((ctx.monthOffset ?? 0) - 1),
+        'ArrowRight': () => ctx?.navigateMonth && ctx.navigateMonth((ctx.monthOffset ?? 0) + 1),
+        't': () => ctx?.navigateMonth && ctx.navigateMonth(0),
+    });
 
     return (
-        <AnalyticsProvider>
-            <div className="space-y-4">
-                {/* Filter Bar */}
-                <AnalyticsFilterBar />
+        <div className="space-y-4">
+            {/* Filter Bar */}
+            <AnalyticsFilterBar />
 
-                {/* Tab navigation + actions */}
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-sm overflow-x-auto no-scrollbar flex-1 min-w-0">
-                        <div className="flex items-center gap-1 min-w-max">
-                            {TABS.map(tab => {
-                                const Icon = tab.icon;
-                                const isActive = activeTab === tab.key;
-                                return (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setActiveTab(tab.key)}
-                                        className={`relative flex items-center gap-2.5 px-5 py-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap group ${
-                                            isActive
-                                                ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 shadow-sm border border-indigo-200/80'
-                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/80'
-                                        }`}
-                                    >
-                                        <div className={`p-1.5 rounded-lg transition-all ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-transparent text-slate-400 group-hover:text-slate-500'}`}>
-                                            <Icon size={14} />
-                                        </div>
-                                        <div className="text-left">
-                                            <div>{tab.label}</div>
-                                            <div className={`text-[9px] font-medium mt-0.5 ${isActive ? 'text-indigo-400' : 'text-slate-300 group-hover:text-slate-400'}`}>{tab.desc}</div>
-                                        </div>
-                                        {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-500 rounded-full" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
+            {/* Tab navigation + actions */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-sm overflow-x-auto no-scrollbar flex-1 min-w-0">
+                    <div className="flex items-center gap-1 min-w-max">
+                        {TABS.map(tab => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                    className={`relative flex items-center gap-2.5 px-5 py-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap group ${
+                                        isActive
+                                            ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/80'
+                                    }`}
+                                >
+                                    <div className={`p-1.5 rounded-lg transition-all ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-transparent text-slate-400 group-hover:text-slate-500'}`}>
+                                        <Icon size={14} />
+                                    </div>
+                                    <div className="text-left">
+                                        <div>{tab.label}</div>
+                                        <div className={`text-[9px] font-medium mt-0.5 ${isActive ? 'text-indigo-400' : 'text-slate-300 group-hover:text-slate-400'}`}>{tab.desc}</div>
+                                    </div>
+                                    {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-500 rounded-full" />}
+                                </button>
+                            );
+                        })}
                     </div>
-
-                    {/* Export menu (Faz 1'de UI stub, Faz 5'te backend entegrasyonu) */}
-                    <ExportMenu size="middle" />
                 </div>
 
-                {/* Tab content — ErrorBoundary ile sarılı, resetKey tab değişiminde sıfırlar */}
-                <ErrorBoundary
-                    resetKey={activeTab}
-                    label={`${TAB_LABEL[activeTab] || 'Bu sekme'} yüklenemedi`}
-                >
-                    <Suspense fallback={<SkeletonLoader variant="section" />}>
-                        {activeTab === 'overview' && <OverviewTab />}
-                        {activeTab === 'performance' && <PerformanceTab />}
-                        {activeTab === 'comparison' && <ComparisonTab />}
-                        {activeTab === 'overtime_meal' && <OvertimeMealTab />}
-                        {activeTab === 'requests' && <RequestAnalyticsTab />}
-                    </Suspense>
-                </ErrorBoundary>
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
+                    <FavoriteViews
+                        getCurrentState={getCurrentQueryString}
+                        onApply={applyFavorite}
+                        activeQueryString={getCurrentQueryString()}
+                    />
+                    <button
+                        onClick={() => setHelpOpen(true)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 rounded-lg border border-slate-200/80 hover:border-indigo-200 transition-colors"
+                        title="Yardım (?)"
+                    >
+                        <HelpCircle size={11} />
+                        Yardım
+                    </button>
+                    <ExportMenu size="middle" />
+                </div>
             </div>
+
+            {/* Tab content — ErrorBoundary ile sarılı */}
+            <ErrorBoundary
+                resetKey={activeTab}
+                label={`${TAB_LABEL[activeTab] || 'Bu sekme'} yüklenemedi`}
+            >
+                <Suspense fallback={<SkeletonLoader variant="section" />}>
+                    {activeTab === 'overview' && <OverviewTab />}
+                    {activeTab === 'performance' && <PerformanceTab />}
+                    {activeTab === 'comparison' && <ComparisonTab />}
+                    {activeTab === 'overtime_meal' && <OvertimeMealTab />}
+                    {activeTab === 'requests' && <RequestAnalyticsTab />}
+                </Suspense>
+            </ErrorBoundary>
+
+            {/* Help overlay (? ile açılır, Escape ile kapanır) */}
+            <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+        </div>
+    );
+}
+
+export default function TeamAnalytics() {
+    return (
+        <AnalyticsProvider>
+            <TeamAnalyticsInner />
         </AnalyticsProvider>
     );
 }
