@@ -1,5 +1,7 @@
 import React, { useState, Suspense, useCallback } from 'react';
+import { message } from 'antd';
 import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle } from 'lucide-react';
+import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
 import ErrorBoundary from './shared/ErrorBoundary';
@@ -33,6 +35,47 @@ function TeamAnalyticsInner() {
     const ctx = useAnalytics();
     const [activeTab, setActiveTab] = useState('overview');
     const [helpOpen, setHelpOpen] = useState(false);
+
+    // Export — backend /api/attendance-analytics/export/ endpoint'ini cagir, dosyayi indir
+    const handleExport = useCallback(async (format) => {
+        if (format === 'png') {
+            message.info('PNG export yakinda aktif olacak (chart snapshot)');
+            return;
+        }
+        if (format === 'pdf') {
+            message.info('PDF export yakinda aktif olacak');
+            return;
+        }
+        if (format !== 'excel' && format !== 'csv') {
+            message.warning(`Bilinmeyen format: ${format}`);
+            return;
+        }
+        try {
+            const response = await api.get('/attendance-analytics/export/', {
+                params: { ...ctx.queryParams, format },
+                responseType: 'blob',
+                timeout: 120000,
+            });
+            // Content-Disposition'dan dosya adını çöz
+            const contentDisposition = response.headers['content-disposition'] || '';
+            const match = contentDisposition.match(/filename="?([^"]+)"?/);
+            const filename = match ? match[1] : `analiz.${format === 'excel' ? 'xlsx' : 'csv'}`;
+
+            const blob = new Blob([response.data]);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            message.success(`${format.toUpperCase()} indirildi: ${filename}`);
+        } catch (err) {
+            const msg = err?.response?.data?.error || err?.message || 'Indirme hatasi';
+            message.error(`Disa aktarim basarisiz: ${msg}`);
+        }
+    }, [ctx.queryParams]);
 
     // URL query state getter — FavoriteViews için
     const getCurrentQueryString = useCallback(() => {
@@ -111,7 +154,7 @@ function TeamAnalyticsInner() {
                         <HelpCircle size={11} />
                         Yardım
                     </button>
-                    <ExportMenu size="middle" />
+                    <ExportMenu size="middle" onExport={handleExport} />
                 </div>
             </div>
 
