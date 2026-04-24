@@ -7,6 +7,7 @@ import { LoadingSkeleton } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
+import AnomaliesPanel from '../shared/AnomaliesPanel';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -70,6 +71,9 @@ export default function OverviewTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Anomaly Detection Panel (Phase 4) ═══ */}
+            <AnomaliesPanel threshold={2.0} />
+
             {/* ═══ Comparison Summary Banner ═══ */}
             {isComparing && cmpKpi && (
                 <div className="bg-gradient-to-r from-violet-50/80 to-indigo-50/80 rounded-2xl border border-violet-200/60 p-4 shadow-sm">
