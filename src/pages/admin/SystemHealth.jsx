@@ -42,6 +42,7 @@ import DashboardTab from './system-health/DashboardTab';
 import AttendanceDiagTab from './system-health/AttendanceDiagTab';
 import SecurityAuditTab from './system-health/SecurityAuditTab';
 import RBACAuditTab from './system-health/RBACAuditTab';
+import PermissionAnalysisTab from './system-health/PermissionAnalysisTab';
 import AttendanceAuditTab from './system-health/AttendanceAuditTab';
 import SpecTestsTab from './system-health/SpecTestsTab';
 import PasswordResetTab from './system-health/PasswordResetTab';
@@ -141,6 +142,7 @@ export default function SystemHealth() {
                         { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
                         { id: 'security_audit', name: 'RBAC Denetimi', icon: ShieldCheckIcon },
                         { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
+                        { id: 'permission_analysis', name: 'Yetki Sistemi Analizi', icon: KeyIcon },
                         { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
                         { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
                         { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
@@ -213,6 +215,7 @@ export default function SystemHealth() {
                 {activeTab === 'security' && <SecurityTab />}
                 {activeTab === 'security_audit' && <SecurityAuditTab />}
                 {activeTab === 'rbac_audit' && <RBACAuditTab />}
+                {activeTab === 'permission_analysis' && <PermissionAnalysisTab />}
                 {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
                 {activeTab === 'spec_tests' && <SpecTestsTab />}
                 {activeTab === 'overtime_audit' && <OvertimeAuditTab />}
