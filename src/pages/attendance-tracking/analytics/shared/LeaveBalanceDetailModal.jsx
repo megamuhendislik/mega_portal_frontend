@@ -356,7 +356,11 @@ export default function LeaveBalanceDetailModal({ open, onClose }) {
                         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                             {filtered.length === 0 ? (
                                 <div className="py-10">
-                                    <Empty description="Eşleşen çalışan yok" />
+                                    <Empty description={
+                                        (search || selectedDepts.length > 0)
+                                            ? "Eşleşen çalışan yok"
+                                            : "Ekibinizde çalışan yok"
+                                    } />
                                 </div>
                             ) : (
                                 <Table
