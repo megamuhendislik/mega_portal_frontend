@@ -14,7 +14,8 @@ import {
     Cog6ToothIcon,
     DocumentCheckIcon,
     LinkIcon,
-    ClipboardDocumentListIcon
+    ClipboardDocumentListIcon,
+    LockClosedIcon
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -49,7 +50,7 @@ function StatusBadge({ status }) {
     );
 }
 
-function SectionStatusIcon({ passed, failed, warnings }) {
+function SectionStatusIcon({ failed, warnings }) {
     if (failed > 0) return <XCircleIcon className="w-6 h-6 text-red-500" />;
     if (warnings > 0) return <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />;
     return <CheckCircleIcon className="w-6 h-6 text-green-500" />;
@@ -261,7 +262,23 @@ function RolesSection({ data }) {
 // ─── Section 3: Employee RBAC Status ───────────────────────────────────────────
 
 function EmployeeRBACSection({ data }) {
+    const [rolesSearch, setRolesSearch] = useState('');
+    const [managerSearch, setManagerSearch] = useState('');
+
     if (!data) return <p className="text-gray-400 text-sm">Çalışan RBAC verisi bulunamadı.</p>;
+
+    const matches = (emp, q) => {
+        if (!q) return true;
+        const s = q.toLowerCase();
+        return [emp.name, emp.employee_code, emp.department, emp.first_name, emp.last_name]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(s));
+    };
+
+    const noRoles = data.employees_without_roles || [];
+    const noManager = data.employees_without_manager || [];
+    const filteredNoRoles = noRoles.filter((e) => matches(e, rolesSearch));
+    const filteredNoManager = noManager.filter((e) => matches(e, managerSearch));
 
     return (
         <div className="space-y-6">
@@ -279,18 +296,27 @@ function EmployeeRBACSection({ data }) {
                     <div className="text-2xl font-bold text-amber-700">{data.without_manager ?? '-'}</div>
                     <div className="text-xs text-amber-600 font-medium mt-1">Yöneticisiz</div>
                 </div>
-                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center">
+                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 text-center" title="is_exempt_from_attendance — devam takibinden muaf çalışanlar (YK ve üst yönetim)">
                     <div className="text-2xl font-bold text-indigo-700">{data.board_exempt ?? '-'}</div>
-                    <div className="text-xs text-indigo-600 font-medium mt-1">Yönetim Kurulu</div>
+                    <div className="text-xs text-indigo-600 font-medium mt-1">Devam Muafiyetli</div>
                 </div>
             </div>
 
             {/* Employees without roles */}
-            {data.employees_without_roles && data.employees_without_roles.length > 0 && (
+            {noRoles.length > 0 && (
                 <div>
-                    <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
-                        <XCircleIcon className="w-4 h-4" /> Rolü Olmayan Çalışanlar ({data.employees_without_roles.length})
-                    </h4>
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                        <h4 className="text-sm font-bold text-red-700 flex items-center gap-1 flex-shrink-0">
+                            <XCircleIcon className="w-4 h-4" /> Rolü Olmayan Çalışanlar ({noRoles.length})
+                        </h4>
+                        <input
+                            type="text"
+                            placeholder="Ad, kod, departman ara..."
+                            value={rolesSearch}
+                            onChange={(e) => setRolesSearch(e.target.value)}
+                            className="text-xs px-3 py-1.5 border border-red-200 rounded-lg w-56 focus:outline-none focus:ring-1 focus:ring-red-300"
+                        />
+                    </div>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-red-50 text-red-700 font-semibold border-b border-red-100">
@@ -301,7 +327,9 @@ function EmployeeRBACSection({ data }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-red-50">
-                                {data.employees_without_roles.map((emp, i) => (
+                                {filteredNoRoles.length === 0 ? (
+                                    <tr><td colSpan={3} className="px-4 py-3 text-xs text-gray-400 text-center">Eşleşen kayıt yok.</td></tr>
+                                ) : filteredNoRoles.map((emp, i) => (
                                     <tr key={emp.id || i} className="hover:bg-red-50/50">
                                         <td className="px-4 py-2 font-mono text-xs">{emp.employee_code || '-'}</td>
                                         <td className="px-4 py-2 text-gray-800">{emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim()}</td>
@@ -315,11 +343,20 @@ function EmployeeRBACSection({ data }) {
             )}
 
             {/* Employees without managers */}
-            {data.employees_without_manager && data.employees_without_manager.length > 0 && (
+            {noManager.length > 0 && (
                 <div>
-                    <h4 className="text-sm font-bold text-amber-700 mb-2 flex items-center gap-1">
-                        <ExclamationTriangleIcon className="w-4 h-4" /> Yöneticisi Olmayan Çalışanlar ({data.employees_without_manager.length})
-                    </h4>
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                        <h4 className="text-sm font-bold text-amber-700 flex items-center gap-1 flex-shrink-0">
+                            <ExclamationTriangleIcon className="w-4 h-4" /> Yöneticisi Olmayan Çalışanlar ({noManager.length})
+                        </h4>
+                        <input
+                            type="text"
+                            placeholder="Ad, kod, departman ara..."
+                            value={managerSearch}
+                            onChange={(e) => setManagerSearch(e.target.value)}
+                            className="text-xs px-3 py-1.5 border border-amber-200 rounded-lg w-56 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                        />
+                    </div>
                     <div className="overflow-x-auto border border-amber-100 rounded-lg">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-amber-50 text-amber-700 font-semibold border-b border-amber-100">
@@ -330,7 +367,9 @@ function EmployeeRBACSection({ data }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-amber-50">
-                                {data.employees_without_manager.map((emp, i) => (
+                                {filteredNoManager.length === 0 ? (
+                                    <tr><td colSpan={3} className="px-4 py-3 text-xs text-gray-400 text-center">Eşleşen kayıt yok.</td></tr>
+                                ) : filteredNoManager.map((emp, i) => (
                                     <tr key={emp.id || i} className="hover:bg-amber-50/50">
                                         <td className="px-4 py-2 font-mono text-xs">{emp.employee_code || '-'}</td>
                                         <td className="px-4 py-2 text-gray-800">{emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim()}</td>
@@ -344,8 +383,7 @@ function EmployeeRBACSection({ data }) {
             )}
 
             {/* All good */}
-            {(!data.employees_without_roles || data.employees_without_roles.length === 0) &&
-             (!data.employees_without_manager || data.employees_without_manager.length === 0) && (
+            {noRoles.length === 0 && noManager.length === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
                     Tüm çalışanların rolleri ve yöneticileri tanımlı.
@@ -358,12 +396,35 @@ function EmployeeRBACSection({ data }) {
 // ─── Section 4: Manager Relations ──────────────────────────────────────────────
 
 function ManagerRelationsSection({ data }) {
+    const [orphanSearch, setOrphanSearch] = useState('');
+    const [multiSearch, setMultiSearch] = useState('');
+
     if (!data) return <p className="text-gray-400 text-sm">Yönetici ilişkileri verisi bulunamadı.</p>;
+
+    const orphans = data.orphan_employees || [];
+    const filteredOrphans = orphanSearch
+        ? orphans.filter((e) => {
+            const q = orphanSearch.toLowerCase();
+            return [e.name, e.employee_code, e.department, e.position]
+                .filter(Boolean)
+                .some((v) => String(v).toLowerCase().includes(q));
+        })
+        : orphans;
+
+    const multiPrimary = data.multi_primary_items || [];
+    const filteredMultiPrimary = multiSearch
+        ? multiPrimary.filter((e) => {
+            const q = multiSearch.toLowerCase();
+            return [e.name, e.employee_code, ...(e.managers || [])]
+                .filter(Boolean)
+                .some((v) => String(v).toLowerCase().includes(q));
+        })
+        : multiPrimary;
 
     return (
         <div className="space-y-4">
             {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
                     <div className="text-2xl font-bold text-blue-700">{data.primary_count ?? '-'}</div>
                     <div className="text-xs text-blue-600 font-medium mt-1">PRIMARY İlişki</div>
@@ -376,15 +437,32 @@ function ManagerRelationsSection({ data }) {
                     <div className={`text-2xl font-bold ${(data.orphan_count ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>{data.orphan_count ?? 0}</div>
                     <div className={`text-xs font-medium mt-1 ${(data.orphan_count ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>Yetim Çalışan</div>
                 </div>
+                <div
+                    className={`p-4 rounded-lg border text-center ${(data.multi_primary_count ?? 0) > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}
+                    title="Bir çalışana atanmış 2+ PRIMARY yönetici (data integrity ihlali)"
+                >
+                    <div className={`text-2xl font-bold ${(data.multi_primary_count ?? 0) > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.multi_primary_count ?? 0}</div>
+                    <div className={`text-xs font-medium mt-1 ${(data.multi_primary_count ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'}`}>Çoklu PRIMARY</div>
+                </div>
             </div>
 
             {/* Orphan employees list */}
-            {data.orphan_employees && data.orphan_employees.length > 0 && (
+            {orphans.length > 0 && (
                 <div>
-                    <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1">
-                        <ExclamationTriangleIcon className="w-4 h-4" />
-                        Yetim Çalışanlar (yöneticisiz, YK değil, superuser değil)
-                    </h4>
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                        <h4 className="text-sm font-bold text-red-700 flex items-center gap-1 flex-shrink-0">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            Yetim Çalışanlar ({orphans.length})
+                        </h4>
+                        <input
+                            type="text"
+                            placeholder="Ad, kod, departman ara..."
+                            value={orphanSearch}
+                            onChange={(e) => setOrphanSearch(e.target.value)}
+                            className="text-xs px-3 py-1.5 border border-red-200 rounded-lg w-56 focus:outline-none focus:ring-1 focus:ring-red-300"
+                        />
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">Yöneticisi yok, devam muafiyetli değil, superuser değil.</p>
                     <div className="overflow-x-auto border border-red-100 rounded-lg">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-red-50 text-red-700 font-semibold border-b border-red-100">
@@ -396,8 +474,10 @@ function ManagerRelationsSection({ data }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-red-50">
-                                {data.orphan_employees.map((emp, i) => (
-                                    <tr key={emp.id || i} className="hover:bg-red-50/50">
+                                {filteredOrphans.length === 0 ? (
+                                    <tr><td colSpan={4} className="px-4 py-3 text-xs text-gray-400 text-center">Eşleşen kayıt yok.</td></tr>
+                                ) : filteredOrphans.map((emp, i) => (
+                                    <tr key={emp.id || emp.employee_id || i} className="hover:bg-red-50/50">
                                         <td className="px-4 py-2 font-mono text-xs">{emp.employee_code || '-'}</td>
                                         <td className="px-4 py-2 text-gray-800">{emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim()}</td>
                                         <td className="px-4 py-2 text-gray-500 text-xs">{emp.department || '-'}</td>
@@ -410,10 +490,164 @@ function ManagerRelationsSection({ data }) {
                 </div>
             )}
 
-            {(!data.orphan_employees || data.orphan_employees.length === 0) && (
+            {/* Multi-primary employees list */}
+            {multiPrimary.length > 0 && (
+                <div>
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                        <h4 className="text-sm font-bold text-amber-700 flex items-center gap-1 flex-shrink-0">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            Çoklu PRIMARY Yöneticisi Olan Çalışanlar ({multiPrimary.length})
+                        </h4>
+                        <input
+                            type="text"
+                            placeholder="Ad, kod, yönetici ara..."
+                            value={multiSearch}
+                            onChange={(e) => setMultiSearch(e.target.value)}
+                            className="text-xs px-3 py-1.5 border border-amber-200 rounded-lg w-56 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                        />
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">Bir çalışana 2+ PRIMARY atanmış — data integrity ihlali, tek bir doğrudan yönetici olmalı.</p>
+                    <div className="overflow-x-auto border border-amber-100 rounded-lg">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-amber-50 text-amber-700 font-semibold border-b border-amber-100">
+                                <tr>
+                                    <th className="px-4 py-2">Personel Kodu</th>
+                                    <th className="px-4 py-2">Ad Soyad</th>
+                                    <th className="px-4 py-2 text-center">PRIMARY Sayısı</th>
+                                    <th className="px-4 py-2">Atanmış Yöneticiler</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-amber-50">
+                                {filteredMultiPrimary.length === 0 ? (
+                                    <tr><td colSpan={4} className="px-4 py-3 text-xs text-gray-400 text-center">Eşleşen kayıt yok.</td></tr>
+                                ) : filteredMultiPrimary.map((emp, i) => (
+                                    <tr key={emp.employee_id || i} className="hover:bg-amber-50/50">
+                                        <td className="px-4 py-2 font-mono text-xs">{emp.employee_code || '-'}</td>
+                                        <td className="px-4 py-2 text-gray-800">{emp.name || '-'}</td>
+                                        <td className="px-4 py-2 text-center">
+                                            <CountBadge count={emp.primary_manager_count} color="amber" />
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-600 text-xs">{(emp.managers || []).join(' · ') || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {orphans.length === 0 && multiPrimary.length === 0 && (
                 <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-100">
                     <CheckCircleIcon className="w-5 h-5" />
-                    Tüm çalışanların yönetici ataması mevcut veya muaf.
+                    Tüm yönetici ilişkileri sağlıklı (yetim yok, çoklu PRIMARY yok).
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Section 4.5: Permission Bypass Hierarchy ──────────────────────────────────
+
+function PermissionBypassSection({ data }) {
+    const [showSuperusers, setShowSuperusers] = useState(false);
+
+    if (!data) return <p className="text-gray-400 text-sm">Yetki bypass verisi bulunamadı.</p>;
+
+    const layers = data.admin_layer_counts || {};
+    const superusers = data.superuser_audit || [];
+
+    return (
+        <div className="space-y-4">
+            <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4">
+                <p className="text-xs text-indigo-900 leading-relaxed">
+                    <strong>5-Katman Yetki Hiyerarşisi:</strong>{' '}
+                    Django superuser → SYSTEM_ADMIN rolü → SYSTEM_FULL_ACCESS yetkisi → Rol yetkileri → Doğrudan yetkiler.
+                    Bu bölüm, defense-in-depth tutarlılığını ve <code className="bg-white px-1 rounded">enforce_architecture_consistency</code> komutunun başarılı çalıştığını doğrular.
+                </p>
+            </div>
+
+            {/* Layer counts */}
+            <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-gray-800">{layers.superuser ?? 0}</div>
+                    <div className="text-xs text-gray-500 font-medium mt-1">Django Superuser</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">1. katman</div>
+                </div>
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-indigo-700">{layers.system_admin_role ?? 0}</div>
+                    <div className="text-xs text-indigo-600 font-medium mt-1">SYSTEM_ADMIN Rolü</div>
+                    <div className="text-[10px] text-indigo-400 mt-0.5">2. katman</div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-700">{layers.system_full_access_perm ?? 0}</div>
+                    <div className="text-xs text-purple-600 font-medium mt-1">SYSTEM_FULL_ACCESS</div>
+                    <div className="text-[10px] text-purple-400 mt-0.5">3. katman</div>
+                </div>
+            </div>
+
+            {/* Check items */}
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                        <tr>
+                            <th className="px-4 py-3">Kontrol</th>
+                            <th className="px-4 py-3">Detay</th>
+                            <th className="px-4 py-3 w-[120px]">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {(data.items || []).map((item, i) => (
+                            <tr key={i} className={`transition-colors ${item.status === 'FAIL' ? 'bg-red-50/50 hover:bg-red-50' : item.status === 'WARNING' ? 'bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-gray-50'}`}>
+                                <td className="px-4 py-3 text-gray-800">{item.check}</td>
+                                <td className="px-4 py-3 text-gray-500 text-xs font-mono">{item.detail || '-'}</td>
+                                <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Superuser audit drilldown */}
+            {superusers.length > 0 && (
+                <div>
+                    <button
+                        type="button"
+                        onClick={() => setShowSuperusers((v) => !v)}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                    >
+                        {showSuperusers ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                        Superuser detayları ({superusers.length})
+                    </button>
+                    {showSuperusers && (
+                        <div className="mt-2 overflow-x-auto border border-gray-200 rounded-lg">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-2">Kullanıcı Adı</th>
+                                        <th className="px-4 py-2">Personel Kodu</th>
+                                        <th className="px-4 py-2">Ad Soyad</th>
+                                        <th className="px-4 py-2 text-center">SYSTEM_ADMIN Rolü</th>
+                                        <th className="px-4 py-2">Not</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {superusers.map((s, i) => (
+                                        <tr key={i} className={s.has_sysadmin_role ? 'hover:bg-gray-50' : 'bg-red-50/40 hover:bg-red-50'}>
+                                            <td className="px-4 py-2 font-mono text-xs">{s.username}</td>
+                                            <td className="px-4 py-2 font-mono text-xs">{s.employee_code || '-'}</td>
+                                            <td className="px-4 py-2 text-gray-800">{s.name || '-'}</td>
+                                            <td className="px-4 py-2 text-center">
+                                                {s.has_sysadmin_role
+                                                    ? <CheckCircleIcon className="w-5 h-5 text-green-500 mx-auto" />
+                                                    : <XCircleIcon className="w-5 h-5 text-red-400 mx-auto" />}
+                                            </td>
+                                            <td className="px-4 py-2 text-gray-500 text-xs">{s.note || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -488,17 +722,21 @@ function RequestIntegritySection({ data }) {
             )}
 
             {/* Stats row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {data.auto_approve_user_count !== undefined && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <div className="text-xl font-bold text-blue-700">{data.auto_approve_user_count}</div>
-                        <div className="text-xs text-blue-600 font-medium mt-1">AUTO_APPROVE Kullanıcısı</div>
-                    </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {data.stale_request_count !== undefined && (
-                    <div className={`p-4 rounded-lg border ${data.stale_request_count > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
+                    <div
+                        className={`p-4 rounded-lg border ${data.stale_request_count > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}
+                        title={data.stale_breakdown
+                            ? `İzin: ${data.stale_breakdown.LEAVE ?? 0}, Mesai: ${data.stale_breakdown.OVERTIME ?? 0}, Kartsız: ${data.stale_breakdown.CARDLESS_ENTRY ?? 0}, Yemek: ${data.stale_breakdown.MEAL ?? 0}`
+                            : undefined}
+                    >
                         <div className={`text-xl font-bold ${data.stale_request_count > 0 ? 'text-amber-700' : 'text-green-700'}`}>{data.stale_request_count}</div>
                         <div className={`text-xs font-medium mt-1 ${data.stale_request_count > 0 ? 'text-amber-600' : 'text-green-600'}`}>Bayat Talep (&gt;7 gün)</div>
+                        {data.stale_breakdown && data.stale_request_count > 0 && (
+                            <div className="text-[10px] text-amber-700/70 mt-1 font-mono">
+                                İzn:{data.stale_breakdown.LEAVE ?? 0} · Msi:{data.stale_breakdown.OVERTIME ?? 0} · Krt:{data.stale_breakdown.CARDLESS_ENTRY ?? 0} · Ymk:{data.stale_breakdown.MEAL ?? 0}
+                            </div>
+                        )}
                     </div>
                 )}
                 {data.ot_planning_model_exists !== undefined && (
@@ -678,6 +916,7 @@ export default function RBACAuditTab() {
         { key: 'roles', title: 'Roller (Roles)', icon: UserGroupIcon, Component: RolesSection },
         { key: 'employee_rbac', title: 'Çalışan RBAC Durumu', icon: UserIcon, Component: EmployeeRBACSection },
         { key: 'manager_relations', title: 'Yönetici İlişkileri', icon: LinkIcon, Component: ManagerRelationsSection },
+        { key: 'permission_bypass', title: '5-Katman Yetki Bypass', icon: LockClosedIcon, Component: PermissionBypassSection },
         { key: 'request_types', title: 'Talep Tipleri (Request Types)', icon: ClipboardDocumentListIcon, Component: RequestTypesSection },
         { key: 'request_integrity', title: 'Talep Bütünlüğü (Request Integrity)', icon: DocumentCheckIcon, Component: RequestIntegritySection },
         { key: 'system_config', title: 'Sistem Yapılandırması', icon: Cog6ToothIcon, Component: SystemConfigSection },
