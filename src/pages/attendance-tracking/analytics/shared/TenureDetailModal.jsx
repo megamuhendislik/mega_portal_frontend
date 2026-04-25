@@ -86,6 +86,18 @@ function computeStats(list) {
     return { avg, median };
 }
 
+// Departman bazlı tutarlı renkler (hash bazlı)
+const DEPT_PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
+
+function deptColor(dept) {
+    if (!dept) return DEPT_PALETTE[0];
+    let hash = 0;
+    for (let i = 0; i < dept.length; i++) {
+        hash = (hash * 31 + dept.charCodeAt(i)) >>> 0;
+    }
+    return DEPT_PALETTE[hash % DEPT_PALETTE.length];
+}
+
 export default function TenureDetailModal({ open, onClose, data }) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('months_desc');
@@ -301,57 +313,147 @@ export default function TenureDetailModal({ open, onClose, data }) {
         });
     };
 
-    // Custom Y-axis tick: çalışan adı + departman alt satırda + dept transition separator
-    const renderYAxisTick = (props, dataMap, showDept, deptTransitions) => {
+    // Çalışan adı tek satır Y-axis tick (sadece adı; dept yan panelden gelir)
+    const renderSimpleYTick = (props) => {
         const { x, y, payload } = props;
-        const item = dataMap[payload.value];
-        const isFirstOfDept = deptTransitions?.has(payload.value);
         return (
             <g transform={`translate(${x},${y})`}>
-                {/* Dept transition separator — bu kişi yeni bir dept'in ilk üyesiyse üstüne ince çizgi */}
-                {isFirstOfDept && (
-                    <line
-                        x1={-200}
-                        y1={-11}
-                        x2={1500}
-                        y2={-11}
-                        stroke="#cbd5e1"
-                        strokeWidth={1}
-                        strokeDasharray="4 4"
-                    />
-                )}
-                <text
-                    x={-6}
-                    y={showDept ? -3 : 0}
-                    dy={showDept ? 0 : 4}
-                    textAnchor="end"
-                    fill="#475569"
-                    fontSize={9}
-                    fontWeight={600}
-                >
+                <text x={-6} y={0} dy={4} textAnchor="end" fill="#475569" fontSize={10} fontWeight={600}>
                     {payload.value}
                 </text>
-                {showDept && item?.department && (
-                    <text
-                        x={-6}
-                        y={9}
-                        textAnchor="end"
-                        fill={isFirstOfDept ? '#6366f1' : '#94a3b8'}
-                        fontSize={8}
-                        fontStyle="italic"
-                        fontWeight={isFirstOfDept ? 700 : 400}
-                    >
-                        {String(item.department).length > 18 ? String(item.department).slice(0, 17) + '…' : item.department}
-                    </text>
-                )}
             </g>
         );
     };
 
-    // Single chart renderer
-    // - showDept: combined modda dept Y-axis'te gözüksün mü (>1 dept varsa true)
-    // Dept transitions otomatik hesaplanır — sıralı listede her yeni dept'in ilk üyesi işaretlenir
-    const renderChart = (data, { showDept = false } = {}) => {
+    // Bir tek dept grubu için bar chart (yan panel yok, sadece bars)
+    const renderDeptGroupChart = (employees) => {
+        const rowHeight = 24;
+        const height = Math.max(80, employees.length * rowHeight + 16);
+        return (
+            <div style={{ height }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={employees}
+                        layout="vertical"
+                        margin={{ top: 4, right: 60, left: 96, bottom: 4 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                        <XAxis
+                            type="number"
+                            tick={{ fontSize: 9, fill: '#94a3b8' }}
+                            tickFormatter={(v) => `${(v / 12).toFixed(1)}y`}
+                        />
+                        <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={96}
+                            interval={0}
+                            tick={renderSimpleYTick}
+                        />
+                        <RTooltip
+                            cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
+                            content={({ active, payload }) => {
+                                if (!active || !payload || !payload.length) return null;
+                                const d = payload[0].payload;
+                                return (
+                                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xl text-xs min-w-[180px]">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <div
+                                                className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                                                style={{ backgroundColor: d.color }}
+                                            >
+                                                {initials(d.fullName)}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-800 text-[12px]">{d.fullName}</div>
+                                                <div className="text-[10px] text-slate-500">{d.department || '—'}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                            <span className="text-slate-600 text-[11px]">Kıdem:</span>
+                                            <span className="font-black text-slate-900 tabular-nums text-[11px]">{formatTenureLong(d.months)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                        />
+                        <Bar dataKey="months" radius={[0, 5, 5, 0]} barSize={10}>
+                            <LabelList
+                                dataKey="months"
+                                position="right"
+                                formatter={(v) => formatTenure(v)}
+                                style={{ fontSize: 9, fill: '#64748b', fontWeight: 600 }}
+                            />
+                            {employees.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        );
+    };
+
+    // Yan-panel + chart layoutu: sortBy=department + 2+ dept varsa
+    const renderDeptPanelsLayout = (data) => {
+        if (!data || data.length === 0) {
+            return <div className="py-10"><Empty description="Filtre sonucu yok" /></div>;
+        }
+        // Dept gruplarına böl
+        const groups = [];
+        let current = null;
+        data.forEach((d) => {
+            if (!current || current.dept !== d.department) {
+                current = { dept: d.department || '—', employees: [] };
+                groups.push(current);
+            }
+            current.employees.push(d);
+        });
+        return (
+            <div className="space-y-2">
+                {groups.map((g) => {
+                    const accent = deptColor(g.dept);
+                    const stats = computeStats(g.employees);
+                    return (
+                        <div
+                            key={g.dept}
+                            className="flex items-stretch rounded-xl overflow-hidden border-2 shadow-sm"
+                            style={{
+                                borderColor: `${accent}40`,
+                                backgroundColor: `${accent}08`,
+                            }}
+                        >
+                            {/* Sol: dept label panel */}
+                            <div
+                                className="w-36 flex-shrink-0 flex flex-col justify-center items-start px-3 py-3 text-white relative overflow-hidden"
+                                style={{ backgroundColor: accent }}
+                            >
+                                <div className="absolute -right-3 -bottom-3 h-16 w-16 rounded-full bg-white/10 blur-xl" />
+                                <div className="relative">
+                                    <div className="text-[8px] font-bold uppercase tracking-[0.15em] opacity-80">Departman</div>
+                                    <div className="text-[13px] font-black leading-tight mt-0.5 break-words">{g.dept}</div>
+                                    <div className="mt-1.5 flex items-center gap-2 text-[10px]">
+                                        <span className="font-bold tabular-nums bg-white/20 px-1.5 py-0.5 rounded">
+                                            {g.employees.length} kişi
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] opacity-90 mt-1">
+                                        Ort: <span className="font-bold tabular-nums">{(stats.avg / 12).toFixed(1)}y</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Sağ: chart */}
+                            <div className="flex-1 min-w-0 p-2">
+                                {renderDeptGroupChart(g.employees)}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    // Single chart renderer (basit, dept ayrımı yok)
+    // sortBy='department' + 2+ dept = renderDeptPanelsLayout kullanılır (üstte ayrı)
+    const renderChart = (data) => {
         if (!data || data.length === 0) {
             return (
                 <div className="py-10">
@@ -359,24 +461,8 @@ export default function TenureDetailModal({ open, onClose, data }) {
                 </div>
             );
         }
-        // Hızlı lookup için map
-        const dataMap = data.reduce((acc, d) => { acc[d.name] = d; return acc; }, {});
-
-        // Dept transitions: hangi kişiler yeni bir dept'in ilk üyesidir?
-        // Sadece showDept=true ve ardışık dept'ler farklıysa
-        const deptTransitions = new Set();
-        if (showDept) {
-            let prevDept = null;
-            data.forEach((d, i) => {
-                if (i > 0 && d.department !== prevDept) {
-                    deptTransitions.add(d.name);
-                }
-                prevDept = d.department;
-            });
-        }
-
-        const yAxisWidth = showDept ? 160 : 110;
-        const rowHeight = showDept ? 22 : 16;
+        const yAxisWidth = 110;
+        const rowHeight = 16;
         const height = Math.max(280, Math.min(data.length * rowHeight, 720));
         return (
             <div style={{ height }}>
@@ -397,7 +483,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                             dataKey="name"
                             width={yAxisWidth}
                             interval={0}
-                            tick={(props) => renderYAxisTick(props, dataMap, showDept, deptTransitions)}
+                            tick={renderSimpleYTick}
                         />
                         <RTooltip
                             cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
@@ -693,7 +779,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                         </span>
                                     </div>
                                     <div className="p-3">
-                                        {renderChart(g.chart, { showDept: false })}
+                                        {renderChart(g.chart)}
                                     </div>
                                 </div>
                             ))
@@ -716,7 +802,9 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                 ))}
                             </div>
                         </div>
-                        {renderChart(chartData, { showDept: showDeptFilter })}
+                        {(sortBy === 'department' && showDeptFilter && new Set(chartData.map((d) => d.department)).size > 1)
+                            ? renderDeptPanelsLayout(chartData)
+                            : renderChart(chartData)}
                     </div>
                 )}
 
