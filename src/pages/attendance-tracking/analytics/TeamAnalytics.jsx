@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useCallback } from 'react';
 import { message } from 'antd';
-import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Hourglass, Sparkles } from 'lucide-react';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Hourglass, Sparkles, AlertTriangle } from 'lucide-react';
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
@@ -20,6 +20,7 @@ const OvertimeMealTab = React.lazy(() => import('./tabs/OvertimeMealTab'));
 const RequestAnalyticsTab = React.lazy(() => import('./tabs/RequestAnalyticsTab'));
 const SLATab = React.lazy(() => import('./tabs/SLATab'));
 const InsightsTab = React.lazy(() => import('./tabs/InsightsTab'));
+const AnomaliesTab = React.lazy(() => import('./tabs/AnomaliesTab'));
 
 const TABS = [
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
@@ -29,6 +30,7 @@ const TABS = [
     { key: 'insights', label: 'İçgörüler', icon: Sparkles, desc: 'Otomatik öneriler' },
     { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'İzin, OT, yemek talepleri' },
     { key: 'sla', label: 'SLA Paneli', icon: Hourglass, desc: 'Onay süresi ve gecikmeler' },
+    { key: 'anomalies', label: 'Anomaliler', icon: AlertTriangle, desc: 'Z-score sapma tespiti' },
 ];
 
 const TAB_LABEL = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -176,6 +178,7 @@ function TeamAnalyticsInner() {
                     {activeTab === 'insights' && <InsightsTab />}
                     {activeTab === 'requests' && <RequestAnalyticsTab />}
                     {activeTab === 'sla' && <SLATab />}
+                    {activeTab === 'anomalies' && <AnomaliesTab />}
                 </Suspense>
             </ErrorBoundary>
 
