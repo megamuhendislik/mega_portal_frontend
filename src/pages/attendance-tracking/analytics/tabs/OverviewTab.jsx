@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink } from 'lucide-react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink, RotateCw } from 'lucide-react';
+import { Button } from 'antd';
+import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
-import { LoadingSkeleton } from '../shared/EmptyState';
+import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
@@ -17,8 +19,46 @@ const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b',
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
 
 export default function OverviewTab() {
-    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData } = useAnalytics();
-    const overview = data?.team_overview;
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch } = useAnalytics();
+
+    // Defensive fallback: bulk endpoint başarısız olursa kendi başımıza çekelim
+    const [fallbackData, setFallbackData] = useState(null);
+    const [fallbackLoading, setFallbackLoading] = useState(false);
+    const [fallbackError, setFallbackError] = useState(null);
+
+    const fetchFallback = useCallback(async () => {
+        if (!queryParams?.start_date) return;
+        setFallbackLoading(true);
+        setFallbackError(null);
+        try {
+            // Paralel: team_overview + work_hours + entry_exit
+            const [toRes, whRes, eeRes] = await Promise.allSettled([
+                api.get('/attendance-analytics/team-overview/', { params: queryParams, timeout: 30000 }),
+                api.get('/attendance-analytics/work-hours/', { params: queryParams, timeout: 30000 }),
+                api.get('/attendance-analytics/entry-exit/', { params: queryParams, timeout: 30000 }),
+            ]);
+            setFallbackData({
+                team_overview: toRes.status === 'fulfilled' ? toRes.value.data : null,
+                work_hours: whRes.status === 'fulfilled' ? whRes.value.data : null,
+                entry_exit: eeRes.status === 'fulfilled' ? eeRes.value.data : null,
+            });
+        } catch (err) {
+            setFallbackError(err?.response?.data?.error || err?.message || 'Veri yüklenemedi');
+        } finally {
+            setFallbackLoading(false);
+        }
+    }, [queryParams]);
+
+    // Bulk yoksa veya boşsa fallback
+    useEffect(() => {
+        if (!loading && !data?.team_overview && queryParams?.start_date && !fallbackData && !fallbackLoading) {
+            fetchFallback();
+        }
+    }, [data, loading, queryParams, fallbackData, fallbackLoading, fetchFallback]);
+
+    // Effective data: bulk varsa onu, yoksa fallback'i kullan
+    const effectiveData = data?.team_overview ? data : fallbackData;
+    const overview = effectiveData?.team_overview;
     const kpi = overview?.kpi;
     const distribution = overview?.efficiency_distribution || overview?.distribution;
     const trendData = overview?.monthly_trend;
@@ -49,8 +89,8 @@ export default function OverviewTab() {
 
     // Employee list for detail modal (from work_hours or entry_exit data)
     const employeeList = useMemo(() => {
-        const workHours = data?.work_hours?.employee_hours || data?.work_hours?.per_employee || [];
-        const entryExit = data?.entry_exit?.performance_ranking || [];
+        const workHours = effectiveData?.work_hours?.employee_hours || effectiveData?.work_hours?.per_employee || [];
+        const entryExit = effectiveData?.entry_exit?.performance_ranking || [];
         // Prefer work_hours if available (has efficiency), else entry_exit
         if (workHours.length > 0) return workHours;
         if (entryExit.length > 0) return entryExit.map(e => ({
@@ -61,16 +101,59 @@ export default function OverviewTab() {
             total_missing_hours: e.missing_hours || 0,
         }));
         return [];
-    }, [data]);
+    }, [effectiveData]);
 
-    if (loading && !data) return <LoadingSkeleton rows={3} />;
-    if (!kpi) return <LoadingSkeleton rows={3} />;
+    // Yükleme: hem bulk hem fallback yoksa skeleton
+    if ((loading || fallbackLoading) && !kpi) return <LoadingSkeleton rows={3} />;
+
+    // Hata: bulk fail + fallback fail
+    if (fallbackError && !kpi) {
+        return (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
+                <AlertCircle size={32} className="mx-auto mb-3 text-red-500" />
+                <h3 className="font-bold text-red-800 mb-1">Veri yüklenemedi</h3>
+                <p className="text-sm text-red-600 mb-4">{fallbackError}</p>
+                <Button
+                    icon={<RotateCw size={14} />}
+                    onClick={() => { setFallbackData(null); setFallbackError(null); refetch?.(); fetchFallback(); }}
+                    danger
+                >
+                    Tekrar Dene
+                </Button>
+            </div>
+        );
+    }
+
+    // Veri yok: kullanıcıya boş bir state göster
+    if (!kpi) {
+        return (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
+                <BarChart3 size={32} className="mx-auto mb-3 text-slate-400" />
+                <h3 className="font-bold text-slate-700 mb-1">Bu dönem için veri yok</h3>
+                <p className="text-sm text-slate-500 mb-4">Başka bir dönem seçin veya filtreleri sıfırlayın.</p>
+                <Button
+                    icon={<RotateCw size={14} />}
+                    onClick={() => { setFallbackData(null); refetch?.(); fetchFallback(); }}
+                >
+                    Yenile
+                </Button>
+            </div>
+        );
+    }
 
     const healthColor = kpi.health_score >= 80 ? 'emerald' : kpi.health_score >= 60 ? 'amber' : 'red';
     const cmpKpi = compareData?.team_overview?.kpi;
+    const isUsingFallback = !data?.team_overview && fallbackData?.team_overview;
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* Fallback uyarısı: bulk endpoint başarısız oldu, tekil endpointlerden çekildi */}
+            {isUsingFallback && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+                    ℹ️ Toplu endpoint yanıt vermedi; veriler tekil endpointlerden yüklendi (yavaş olabilir).
+                </div>
+            )}
+
             {/* ═══ Anomaly Detection Panel (Phase 4) ═══ */}
             <AnomaliesPanel threshold={2.0} />
 
