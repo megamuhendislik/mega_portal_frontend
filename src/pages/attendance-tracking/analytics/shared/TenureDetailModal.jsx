@@ -470,18 +470,13 @@ export default function TenureDetailModal({ open, onClose, data }) {
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                     <div className="px-5 pt-4 pb-2 border-b border-slate-100">
                         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Detaylı Liste</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">Sıralanabilir kolonlar · sayfa başına 25 kayıt</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Sıralanabilir kolonlar · tüm çalışanlar tek sayfada</div>
                     </div>
                     <Table
                         columns={columns}
                         dataSource={filtered}
                         rowKey={(r) => r.employee_id || r.name}
-                        pagination={filtered.length > 25 ? {
-                            pageSize: 25,
-                            showSizeChanger: false,
-                            size: 'small',
-                            position: ['bottomCenter'],
-                        } : false}
+                        pagination={false}
                         size="middle"
                         scroll={{ x: 'max-content' }}
                     />
