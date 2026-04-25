@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
 import TenureDetailModal from './TenureDetailModal';
+import SpanDetailModal from './SpanDetailModal';
 
 /**
  * WorkforcePanel — Tier 1 6 KPI'yi tek ekranda gösterir.
@@ -37,6 +38,7 @@ export default function WorkforcePanel() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [tenureModalOpen, setTenureModalOpen] = useState(false);
+    const [spanModalOpen, setSpanModalOpen] = useState(false);
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -138,10 +140,19 @@ export default function WorkforcePanel() {
                         <UserCheck size={16} className="text-emerald-600" />
                         <h3 className="font-bold text-slate-800">Yönetici Yükü</h3>
                         {span_of_control?.overloaded_count > 0 && (
-                            <Tag color="red" className="ml-auto text-[10px]">
+                            <Tag color="red" className="text-[10px]">
                                 {span_of_control.overloaded_count} aşırı yüklü
                             </Tag>
                         )}
+                        <Tooltip title="Genişlet — her yöneticiyi ayrı bar olarak gör + tam liste">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setSpanModalOpen(true)}
+                                className="ml-auto text-slate-400 hover:text-emerald-600"
+                            />
+                        </Tooltip>
                     </div>
                     <div className="grid grid-cols-3 gap-2 mb-3 text-center">
                         <div className="bg-slate-50 rounded-lg p-2">
@@ -340,6 +351,13 @@ export default function WorkforcePanel() {
                 open={tenureModalOpen}
                 onClose={() => setTenureModalOpen(false)}
                 data={tenure}
+            />
+
+            {/* Span of Control detail modal */}
+            <SpanDetailModal
+                open={spanModalOpen}
+                onClose={() => setSpanModalOpen(false)}
+                data={span_of_control}
             />
         </div>
     );
