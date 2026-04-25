@@ -15,6 +15,7 @@ import {
  * Pattern: TenureDetailModal ile aynı (band, dept paneller, filtre, search).
  *
  * Bantlar (hierarchical total_managed):
+ *   admin (is_system_admin=true) → indigo, "Sistem Yöneticisi"
  *   critical (>=26) → kırmızı, "Aşırı Yük"
  *   high (11-25)    → turuncu, "Yoğun"
  *   normal (4-10)   → emerald, "Normal"
@@ -26,6 +27,7 @@ const BAND_COLORS = {
     normal: '#10b981',
     high: '#f59e0b',
     critical: '#ef4444',
+    admin: '#6366f1',
 };
 
 const BAND_LABELS = {
@@ -33,6 +35,7 @@ const BAND_LABELS = {
     normal: 'Normal',
     high: 'Yoğun',
     critical: 'Aşırı Yük',
+    admin: 'Sistem Yöneticisi',
 };
 
 const BAND_DESCRIPTIONS = {
@@ -40,9 +43,11 @@ const BAND_DESCRIPTIONS = {
     normal: '4-10 kişi',
     high: '11-25 kişi',
     critical: '26+ kişi',
+    admin: 'Sistem yetkisi',
 };
 
-function getBand(total) {
+function getBand(total, isSystemAdmin = false) {
+    if (isSystemAdmin) return 'admin';
     if (total >= 26) return 'critical';
     if (total >= 11) return 'high';
     if (total >= 4) return 'normal';
@@ -149,7 +154,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         }
 
         if (bandFilter !== 'all') {
-            list = list.filter((m) => getBand(m.total_managed || 0) === bandFilter);
+            list = list.filter((m) => getBand(m.total_managed || 0, m.is_system_admin) === bandFilter);
         }
 
         list.sort((a, b) => {
@@ -178,8 +183,9 @@ export default function SpanDetailModal({ open, onClose, data }) {
         total_managed: m.total_managed || 0,
         depth: m.depth || 0,
         secondary: m.secondary_count || 0,
-        band: getBand(m.total_managed || 0),
-        color: BAND_COLORS[getBand(m.total_managed || 0)],
+        is_system_admin: !!m.is_system_admin,
+        band: getBand(m.total_managed || 0, m.is_system_admin),
+        color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin)],
     })), [filtered]);
 
     const groupedData = useMemo(() => {
@@ -204,19 +210,20 @@ export default function SpanDetailModal({ open, onClose, data }) {
                     total_managed: m.total_managed || 0,
                     depth: m.depth || 0,
                     secondary: m.secondary_count || 0,
-                    band: getBand(m.total_managed || 0),
-                    color: BAND_COLORS[getBand(m.total_managed || 0)],
+                    is_system_admin: !!m.is_system_admin,
+                    band: getBand(m.total_managed || 0, m.is_system_admin),
+                    color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin)],
                 })),
             }))
             .sort((a, b) => b.count - a.count);
     }, [filtered]);
 
     const bandCounts = useMemo(() => {
-        const counts = { light: 0, normal: 0, high: 0, critical: 0 };
+        const counts = { light: 0, normal: 0, high: 0, critical: 0, admin: 0 };
         const sourceList = (showDeptFilter && selectedDepts.length > 0)
             ? allManagers.filter((m) => selectedDepts.includes(m.department || '—'))
             : allManagers;
-        sourceList.forEach((m) => { counts[getBand(m.total_managed || 0)]++; });
+        sourceList.forEach((m) => { counts[getBand(m.total_managed || 0, m.is_system_admin)]++; });
         return counts;
     }, [allManagers, selectedDepts, showDeptFilter]);
 
@@ -234,7 +241,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         return computeStats(sourceList);
     }, [allManagers, selectedDepts, showDeptFilter]);
 
-    const stackedSegments = ['light', 'normal', 'high', 'critical'].map((band) => {
+    const stackedSegments = ['light', 'normal', 'high', 'critical', 'admin'].map((band) => {
         const count = bandCounts[band] || 0;
         const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
         return { band, count, pct };
@@ -246,7 +253,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
             dataIndex: 'name',
             sorter: (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'tr'),
             render: (v, row) => {
-                const band = getBand(row.total_managed || 0);
+                const band = getBand(row.total_managed || 0, row.is_system_admin);
                 return (
                     <div className="flex items-center gap-2">
                         <div
@@ -318,8 +325,8 @@ export default function SpanDetailModal({ open, onClose, data }) {
             dataIndex: 'total_managed',
             key: 'band',
             align: 'center',
-            render: (v) => {
-                const band = getBand(v || 0);
+            render: (v, row) => {
+                const band = getBand(v || 0, row.is_system_admin);
                 return (
                     <span
                         className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
