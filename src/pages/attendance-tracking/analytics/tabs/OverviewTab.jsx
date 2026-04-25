@@ -11,7 +11,6 @@ import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import AnomaliesPanel from '../shared/AnomaliesPanel';
 import InsightsBanner from '../shared/InsightsBanner';
-import CostCard from '../shared/CostCard';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -162,9 +161,6 @@ export default function OverviewTab() {
 
             {/* ═══ Anomaly Detection Panel (Phase 4) ═══ */}
             <AnomaliesPanel threshold={2.0} />
-
-            {/* ═══ Cost Estimate (Phase 8.2) ═══ */}
-            <CostCard />
 
             {/* ═══ Workforce Panel — 6 KPI Tier 1 (Phase 9) ═══ */}
             <WorkforcePanel />

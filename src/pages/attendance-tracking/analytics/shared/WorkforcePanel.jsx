@@ -30,11 +30,6 @@ const TENURE_COLORS = { '<1yr': '#94a3b8', '1-5yr': '#6366f1', '5-10yr': '#10b98
 const SPAN_COLORS = { '1-3': '#94a3b8', '4-7': '#10b981', '8-12': '#f59e0b', '13+': '#ef4444' };
 const APPROVAL_COLORS = { '<24h': '#10b981', '24-48h': '#6366f1', '48-72h': '#f59e0b', '72h-1w': '#f97316', '>1w': '#ef4444' };
 
-const formatTry = (n) => {
-    if (n === null || n === undefined) return '—';
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(n);
-};
-
 export default function WorkforcePanel() {
     const { queryParams } = useAnalytics();
     const [data, setData] = useState(null);
@@ -169,22 +164,19 @@ export default function WorkforcePanel() {
                     )}
                 </div>
 
-                {/* Leave Liability */}
+                {/* Leave Balance */}
                 <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/50 to-white p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                         <Coins size={16} className="text-amber-700" />
-                        <h3 className="font-bold text-slate-800">İzin Bakiye Yükü</h3>
-                        <Tooltip title={`Saatlik ücret varsayılan: ${leave_liability?.hourly_rate_used || 250} TL`}>
-                            <AlertCircle size={11} className="text-slate-400 cursor-help" />
-                        </Tooltip>
+                        <h3 className="font-bold text-slate-800">İzin Bakiyesi</h3>
                     </div>
                     <div className="text-3xl font-black text-amber-800 tabular-nums mb-2">
-                        {formatTry(leave_liability?.estimated_cost_try)}
+                        {leave_liability?.total_days_remaining || 0}
+                        <span className="text-lg text-slate-500"> gün</span>
                     </div>
                     <div className="text-xs text-slate-600 mb-3">
-                        <span className="font-bold">{leave_liability?.total_days_remaining || 0} gün</span> birikmiş
-                        ({leave_liability?.total_employees_with_balance || 0} çalışan, ort.
-                        <span className="font-bold"> {leave_liability?.avg_days_per_employee || 0} gün</span>/kişi)
+                        <span className="font-bold">{leave_liability?.total_employees_with_balance || 0} çalışan</span>'da birikmiş
+                        (ort. <span className="font-bold">{leave_liability?.avg_days_per_employee || 0} gün</span>/kişi)
                     </div>
                     {leave_liability?.expiring_soon?.length > 0 && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-2">
@@ -300,7 +292,7 @@ export default function WorkforcePanel() {
                         {missing_hours?.cumulative_hours || 0}<span className="text-lg text-slate-500"> sa</span>
                     </div>
                     <div className="text-xs text-slate-600 mb-3">
-                        Tahmini maliyet: <span className="font-bold text-red-700">{formatTry(missing_hours?.cumulative_cost_try)}</span>
+                        Toplam eksik saat (kümülatif)
                     </div>
                     {missingTrend.length > 0 && (
                         <div className="h-24 mb-3">
