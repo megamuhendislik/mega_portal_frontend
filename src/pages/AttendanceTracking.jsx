@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, AlertCircle, Users,
     Search, RefreshCw,
@@ -20,7 +20,6 @@ import OTAssignmentCreator from '../components/overtime/OTAssignmentCreator';
 import { Drawer } from 'antd';
 import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 
-const TeamAnalytics = React.lazy(() => import('./attendance-tracking/analytics/TeamAnalytics'));
 
 const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth, scope = 'MONTHLY', onMemberClick }) => {
     const { hasPermission } = useAuth();
@@ -72,7 +71,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [hierarchySort, setHierarchySort] = useState(true);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [expandedDepts, setExpandedDepts] = useState({}); // {deptId: true}
-    const [viewMode, setViewMode] = useState('list'); // 'list' | 'analytics' | 'overtime'
+    const [viewMode, setViewMode] = useState('list'); // 'list' | 'overtime' (analiz ayri sayfaya tasindi -> /analytics)
     const [teamTab, setTeamTab] = useState('primary'); // 'primary' | 'secondary'
 
     // Weekly OT limit panel state
@@ -260,9 +259,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
     // Turkish-aware normalize for search: lowercase + strip diacritics (ışık → isik)
     const trNorm = (s) => (s || '').toLocaleLowerCase('tr').replace(/[şçöüğı]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i' })[c]);
-
-    // Kullanıcı sadece vekil mi? (yönetici değil, sadece vekalet ile ekip görüyor)
-    const isOnlySubstitute = hierarchyData.length === 0 && secondaryTeam.length === 0 && substituteTeams != null;
 
     // Filter Logic (Common for List) — use primaryStats for primary tab
     const activeStats = teamTab === 'secondary' ? secondaryStats : primaryStats;
@@ -982,7 +978,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             )}
 
-            {/* View Toggle: Liste / Analiz / Ek Mesai */}
+            {/* View Toggle: Liste / Ek Mesai
+                NOT: Analiz görünümü ayrı sayfaya tasindi -> /analytics
+                (Sidebar'da "Ekip Analizi" menusu, sadece PRIMARY ekibi olan kullanicilar gorur). */}
             {activeStats.length > 0 && (
                 <div className={`flex items-center gap-1 bg-white p-1 rounded-xl border w-fit ${
                     teamTab === 'secondary' ? 'border-amber-200/80' : 'border-slate-200/80'
@@ -1000,21 +998,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             Liste
                         </button>
                     )}
-                    {!isOnlySubstitute && (
-                        <button
-                            onClick={() => setViewMode('analytics')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                                viewMode === 'analytics'
-                                    ? teamTab === 'secondary'
-                                        ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200/80'
-                                        : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80'
-                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                            }`}
-                        >
-                            <BarChart3 size={14} />
-                            Analiz
-                        </button>
-                    )}
                     <button
                         onClick={() => setViewMode('overtime')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -1029,13 +1012,6 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         Ek Mesai
                     </button>
                 </div>
-            )}
-
-            {/* Analytics View — vekiller göremez */}
-            {viewMode === 'analytics' && !isOnlySubstitute && (
-                <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>}>
-                    <TeamAnalytics />
-                </Suspense>
             )}
 
             {/* Overtime Management View */}

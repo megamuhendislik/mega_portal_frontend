@@ -34,6 +34,7 @@ const CalendarPage = lazyRetry(() => import('./pages/CalendarPage'));
 const WorkSchedules = lazyRetry(() => import('./pages/WorkSchedules'));
 const PublicHolidays = lazyRetry(() => import('./pages/PublicHolidays'));
 const AttendanceTracking = lazyRetry(() => import('./pages/AttendanceTracking'));
+const TeamAnalytics = lazyRetry(() => import('./pages/attendance-tracking/analytics/TeamAnalytics'));
 const Reports = lazyRetry(() => import('./pages/Reports'));
 const SystemHealth = lazyRetry(() => import('./pages/admin/SystemHealth'));
 const AttendanceDebugger = lazyRetry(() => import('./pages/admin/AttendanceDebugger'));
@@ -56,7 +57,7 @@ const PageLoader = () => (
   </div>
 );
 
-const ProtectedRoute = ({ children, requiredPermission }) => {
+const ProtectedRoute = ({ children, requiredPermission, requireManager }) => {
   const { user, loading, hasPermission } = useAuth();
 
   if (loading) {
@@ -65,6 +66,18 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // requireManager: PRIMARY ekibi olan kullanıcılar veya superuser görebilir.
+  // Backend `/users/me/` yanıtında is_manager flag'i hesaplar:
+  //   get_managed_employees(employee, 'PRIMARY', recursive=False).exists()
+  if (requireManager) {
+    const isSuperuser = !!user?.user?.is_superuser;
+    const isManager = !!user?.is_manager;
+    if (!isSuperuser && !isManager) {
+      // Yetkisiz: anasayfaya yönlendir (analiz dışındaki tüm sayfalar açık)
+      return <Navigate to="/" replace />;
+    }
   }
 
   if (requiredPermission) {
@@ -110,6 +123,9 @@ function App() {
             {/* Attendance - No permission required (everyone can access) */}
             <Route path="attendance" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><Attendance /></Suspense></ProtectedRoute>} />
             <Route path="attendance-tracking" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><AttendanceTracking /></Suspense></ProtectedRoute>} />
+
+            {/* Analytics — Sadece PRIMARY ekibi olan kullanicilar veya superuser */}
+            <Route path="analytics" element={<ProtectedRoute requireManager><Suspense fallback={<PageLoader />}><TeamAnalytics /></Suspense></ProtectedRoute>} />
 
             {/* Calendar - No permission required (everyone can access) */}
             <Route path="calendar" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><CalendarPage /></Suspense></ProtectedRoute>} />

@@ -30,7 +30,8 @@ import {
     BookOpen,
     HeartPulse,
     HeartHandshake,
-    ShoppingCart
+    ShoppingCart,
+    BarChart3
 } from 'lucide-react';
 import clsx from 'clsx';
 import { message } from 'antd';
@@ -159,6 +160,14 @@ const MainLayout = () => {
         { path: '/organization-chart', label: 'Organizasyon Şeması', icon: Network, permission: 'PAGE_ORG_CHART' },
 
         { path: '/attendance', label: 'Mesai Takibi', icon: Clock, permission: null },
+        {
+            path: '/analytics',
+            label: 'Ekip Analizi',
+            icon: BarChart3,
+            permission: null,
+            // PRIMARY ekibi olan kullanicilar veya superuser görür
+            visibleWhen: (u) => u?.is_manager || u?.user?.is_superuser,
+        },
         { path: '/calendar', label: 'Takvim', icon: Calendar, permission: null },
         { path: '/work-schedules', label: 'Çalışma Takvimleri', icon: CalendarRange, permission: 'PAGE_WORK_SCHEDULES' },
 
