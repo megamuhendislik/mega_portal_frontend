@@ -296,8 +296,42 @@ export default function TenureDetailModal({ open, onClose, data }) {
         });
     };
 
-    // Single chart renderer (combined mode)
-    const renderChart = (data) => {
+    // Custom Y-axis tick: çalışan adı + departman alt satırda
+    const renderYAxisTick = (props, dataMap, showDept) => {
+        const { x, y, payload } = props;
+        const item = dataMap[payload.value];
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text
+                    x={-6}
+                    y={showDept ? -3 : 0}
+                    dy={showDept ? 0 : 4}
+                    textAnchor="end"
+                    fill="#475569"
+                    fontSize={9}
+                    fontWeight={600}
+                >
+                    {payload.value}
+                </text>
+                {showDept && item?.department && (
+                    <text
+                        x={-6}
+                        y={9}
+                        textAnchor="end"
+                        fill="#94a3b8"
+                        fontSize={8}
+                        fontStyle="italic"
+                    >
+                        {String(item.department).length > 18 ? String(item.department).slice(0, 17) + '…' : item.department}
+                    </text>
+                )}
+            </g>
+        );
+    };
+
+    // Single chart renderer
+    // - combinedShowDept: combined modda dept Y-axis'te gözüksün mü (>1 dept varsa true)
+    const renderChart = (data, { showDept = false } = {}) => {
         if (!data || data.length === 0) {
             return (
                 <div className="py-10">
@@ -305,14 +339,18 @@ export default function TenureDetailModal({ open, onClose, data }) {
                 </div>
             );
         }
-        const height = Math.max(280, Math.min(data.length * 16, 600));
+        // Hızlı lookup için map
+        const dataMap = data.reduce((acc, d) => { acc[d.name] = d; return acc; }, {});
+        const yAxisWidth = showDept ? 160 : 110;
+        const rowHeight = showDept ? 22 : 16;
+        const height = Math.max(280, Math.min(data.length * rowHeight, 720));
         return (
             <div style={{ height }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={data}
                         layout="vertical"
-                        margin={{ top: 4, right: 70, left: 110, bottom: 4 }}
+                        margin={{ top: 4, right: 70, left: yAxisWidth, bottom: 4 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                         <XAxis
@@ -323,9 +361,9 @@ export default function TenureDetailModal({ open, onClose, data }) {
                         <YAxis
                             type="category"
                             dataKey="name"
-                            tick={{ fontSize: 9, fontWeight: 600, fill: '#475569' }}
-                            width={110}
+                            width={yAxisWidth}
                             interval={0}
+                            tick={(props) => renderYAxisTick(props, dataMap, showDept)}
                         />
                         <RTooltip
                             cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
@@ -621,7 +659,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                         </span>
                                     </div>
                                     <div className="p-3">
-                                        {renderChart(g.chart)}
+                                        {renderChart(g.chart, { showDept: false })}
                                     </div>
                                 </div>
                             ))
@@ -644,7 +682,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                 ))}
                             </div>
                         </div>
-                        {renderChart(chartData)}
+                        {renderChart(chartData, { showDept: showDeptFilter })}
                     </div>
                 )}
 
