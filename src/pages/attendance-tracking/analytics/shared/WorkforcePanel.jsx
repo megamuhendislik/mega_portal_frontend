@@ -29,7 +29,7 @@ import SpanDetailModal from './SpanDetailModal';
  */
 
 const TENURE_COLORS = { '<1yr': '#94a3b8', '1-5yr': '#6366f1', '5-10yr': '#10b981', '10yr+': '#f59e0b' };
-const SPAN_COLORS = { '1-3': '#94a3b8', '4-7': '#10b981', '8-12': '#f59e0b', '13+': '#ef4444' };
+const SPAN_COLORS = { '1-3': '#94a3b8', '4-10': '#10b981', '11-25': '#f59e0b', '26+': '#ef4444' };
 const APPROVAL_COLORS = { '<24h': '#10b981', '24-48h': '#6366f1', '48-72h': '#f59e0b', '72h-1w': '#f97316', '>1w': '#ef4444' };
 
 export default function WorkforcePanel() {
@@ -64,10 +64,13 @@ export default function WorkforcePanel() {
         name: k, value: v, color: TENURE_COLORS[k],
     })).filter((d) => d.value > 0);
 
-    // Span pie data
-    const spanData = Object.entries(span_of_control?.distribution || {}).map(([k, v]) => ({
-        name: `${k} kişi`, value: v, color: SPAN_COLORS[k],
-    })).filter((d) => d.value > 0);
+    // Span hierarchical data — top 5 managers with direct/indirect breakdown
+    const spanData = (span_of_control?.managers || []).slice(0, 5).map((m) => ({
+        name: m.name?.split(' ')[0] || m.name,
+        direct: m.direct_count || 0,
+        indirect: m.indirect_count || 0,
+        total: m.total_managed || 0,
+    }));
 
     // Approval bar data
     const approvalData = Object.entries(approval_delays?.buckets || {}).map(([k, v]) => ({
@@ -134,7 +137,7 @@ export default function WorkforcePanel() {
                     ) : <Empty description="Veri yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
                 </div>
 
-                {/* Span of Control */}
+                {/* Span of Control — Hiyerarşik */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                         <UserCheck size={16} className="text-emerald-600" />
@@ -144,7 +147,7 @@ export default function WorkforcePanel() {
                                 {span_of_control.overloaded_count} aşırı yüklü
                             </Tag>
                         )}
-                        <Tooltip title="Genişlet — her yöneticiyi ayrı bar olarak gör + tam liste">
+                        <Tooltip title="Genişlet — alt ağaç + tam liste">
                             <Button
                                 type="text"
                                 size="small"
@@ -160,11 +163,11 @@ export default function WorkforcePanel() {
                             <div className="text-[9px] text-slate-500 uppercase tracking-wider">Yönetici</div>
                         </div>
                         <div className="bg-emerald-50 rounded-lg p-2">
-                            <div className="text-xl font-black text-emerald-700 tabular-nums">{span_of_control?.avg_primary_team || 0}</div>
-                            <div className="text-[9px] text-emerald-600 uppercase tracking-wider">Ort. Ekip</div>
+                            <div className="text-xl font-black text-emerald-700 tabular-nums">{span_of_control?.avg_total_managed || 0}</div>
+                            <div className="text-[9px] text-emerald-600 uppercase tracking-wider">Ort. Toplam</div>
                         </div>
                         <div className="bg-amber-50 rounded-lg p-2">
-                            <div className="text-xl font-black text-amber-700 tabular-nums">{span_of_control?.max_span || 0}</div>
+                            <div className="text-xl font-black text-amber-700 tabular-nums">{span_of_control?.max_total_managed || 0}</div>
                             <div className="text-[9px] text-amber-600 uppercase tracking-wider">Maks.</div>
                         </div>
                     </div>
@@ -175,10 +178,9 @@ export default function WorkforcePanel() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                     <XAxis type="number" tick={{ fontSize: 9 }} />
                                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={50} />
-                                    <RTooltip content={<ChartTooltip unit=" yönetici" />} />
-                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                        {spanData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                                    </Bar>
+                                    <RTooltip content={<ChartTooltip unit=" kişi" />} />
+                                    <Bar dataKey="direct" stackId="span" fill="#6366f1" radius={[0, 0, 0, 0]} />
+                                    <Bar dataKey="indirect" stackId="span" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
