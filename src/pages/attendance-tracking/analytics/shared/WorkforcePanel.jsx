@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, Tooltip, Progress, Empty } from 'antd';
+import { Tag, Tooltip, Progress, Empty, Button } from 'antd';
 import {
     Users, Calendar, Coins, Hourglass, UserCheck, Clock,
-    TrendingDown, AlertCircle, Award, ChevronRight,
+    TrendingDown, AlertCircle, Award, ChevronRight, Maximize2,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
@@ -11,6 +11,7 @@ import {
     PieChart, Pie, Cell, LineChart, Line, Area, AreaChart,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
+import TenureDetailModal from './TenureDetailModal';
 
 /**
  * WorkforcePanel — Tier 1 6 KPI'yi tek ekranda gösterir.
@@ -35,6 +36,7 @@ export default function WorkforcePanel() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [tenureModalOpen, setTenureModalOpen] = useState(false);
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -96,6 +98,16 @@ export default function WorkforcePanel() {
                         <Tag color="default" className="ml-auto text-[10px]">
                             {tenure?.total || 0} çalışan
                         </Tag>
+                        <Tooltip title="Genişlet — her çalışanı ayrı bar olarak gör + tam liste">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setTenureModalOpen(true)}
+                                disabled={!tenure?.all_employees?.length}
+                                className="text-slate-400 hover:text-indigo-600"
+                            />
+                        </Tooltip>
                     </div>
                     {tenureData.length > 0 ? (
                         <>
@@ -322,6 +334,13 @@ export default function WorkforcePanel() {
                     )}
                 </div>
             </div>
+
+            {/* Tenure detail modal — genişletilmiş görünüm */}
+            <TenureDetailModal
+                open={tenureModalOpen}
+                onClose={() => setTenureModalOpen(false)}
+                data={tenure}
+            />
         </div>
     );
 }
