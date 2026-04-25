@@ -20,8 +20,10 @@ function initials(name) {
 
 // Inline iki-bar gösterim (yıllık + mazeret, ayrı renk)
 function LeaveBars({ row }) {
-    const annualPct = row.annual.entitled_total > 0
-        ? Math.min(100, (row.annual.used_this_year / row.annual.entitled_total) * 100)
+    // Yıllık bar: bu yıl kullanım / (kullanım + kalan) — aktif bakiyeye göre oran
+    const annualBase = (row.annual.used_this_year + row.annual.remaining);
+    const annualPct = annualBase > 0
+        ? Math.min(100, (row.annual.used_this_year / annualBase) * 100)
         : 0;
     const excusePct = row.excuse.entitled > 0
         ? Math.min(100, (row.excuse.used / row.excuse.entitled) * 100)
@@ -31,7 +33,7 @@ function LeaveBars({ row }) {
             <div
                 className="relative h-2 rounded-full overflow-hidden"
                 style={{ backgroundColor: ANNUAL_BG_COLOR }}
-                title={`Yıllık: ${row.annual.used_this_year}g / ${row.annual.entitled_total}g`}
+                title={`Yıllık: ${row.annual.used_this_year}g kullanıldı / ${row.annual.remaining}g kalan`}
             >
                 <div
                     className="absolute h-full transition-all"
@@ -150,15 +152,6 @@ export default function LeaveBalanceDetailModal({ open, onClose }) {
             title: 'Departman',
             dataIndex: 'department',
             render: (v) => <span className="text-slate-500 text-[12px]">{v || '—'}</span>,
-        },
-        {
-            title: <span className="font-semibold text-[12px] text-blue-700">Yıllık Birikmiş</span>,
-            key: 'annual_entitled',
-            align: 'right',
-            sorter: (a, b) => a.annual.entitled_total - b.annual.entitled_total,
-            render: (_, row) => (
-                <span className="font-bold tabular-nums text-blue-700 text-[13px]">{row.annual.entitled_total} g</span>
-            ),
         },
         {
             title: <span className="font-semibold text-[12px] text-blue-700">Yıllık Bu Yıl Kull.</span>,
