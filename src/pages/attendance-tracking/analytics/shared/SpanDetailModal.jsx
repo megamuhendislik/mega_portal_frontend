@@ -7,18 +7,18 @@ import {
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
-    ResponsiveContainer, Cell, LabelList,
+    ResponsiveContainer, LabelList,
 } from 'recharts';
 
 /**
  * SpanDetailModal — Yönetici yükü genişletilmiş görünüm.
  * Pattern: TenureDetailModal ile aynı (band, dept paneller, filtre, search).
  *
- * Bantlar:
- *   critical (>=10) → kırmızı, "Aşırı Yük"
- *   high (5-9)      → turuncu, "Yoğun"
- *   normal (3-4)    → emerald, "Normal"
- *   light (1-2)     → slate, "Az Ekipli"
+ * Bantlar (hierarchical total_managed):
+ *   critical (>=26) → kırmızı, "Aşırı Yük"
+ *   high (11-25)    → turuncu, "Yoğun"
+ *   normal (4-10)   → emerald, "Normal"
+ *   light (1-3)     → slate, "Az Ekipli"
  */
 
 const BAND_COLORS = {
@@ -36,16 +36,16 @@ const BAND_LABELS = {
 };
 
 const BAND_DESCRIPTIONS = {
-    light: '1-2 kişi',
-    normal: '3-4 kişi',
-    high: '5-9 kişi',
-    critical: '10+ kişi',
+    light: '1-3 kişi',
+    normal: '4-10 kişi',
+    high: '11-25 kişi',
+    critical: '26+ kişi',
 };
 
 function getBand(total) {
-    if (total >= 10) return 'critical';
-    if (total >= 5) return 'high';
-    if (total >= 3) return 'normal';
+    if (total >= 26) return 'critical';
+    if (total >= 11) return 'high';
+    if (total >= 4) return 'normal';
     return 'light';
 }
 
@@ -65,7 +65,7 @@ function shortName(name) {
 
 function computeStats(list) {
     if (!list.length) return { avg: 0, median: 0 };
-    const totals = list.map((m) => m.total || 0);
+    const totals = list.map((m) => m.total_managed || 0);
     const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
     const sorted = [...totals].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
@@ -120,17 +120,20 @@ export default function SpanDetailModal({ open, onClose, data }) {
         }
 
         if (bandFilter !== 'all') {
-            list = list.filter((m) => getBand(m.total || 0) === bandFilter);
+            list = list.filter((m) => getBand(m.total_managed || 0) === bandFilter);
         }
 
         list.sort((a, b) => {
-            if (sortBy === 'total_asc') return (a.total || 0) - (b.total || 0);
-            if (sortBy === 'total_desc') return (b.total || 0) - (a.total || 0);
+            if (sortBy === 'total_asc') return (a.total_managed || 0) - (b.total_managed || 0);
+            if (sortBy === 'total_desc') return (b.total_managed || 0) - (a.total_managed || 0);
+            if (sortBy === 'direct_desc') return (b.direct_count || 0) - (a.direct_count || 0);
+            if (sortBy === 'indirect_desc') return (b.indirect_count || 0) - (a.indirect_count || 0);
+            if (sortBy === 'depth_desc') return (b.depth || 0) - (a.depth || 0);
             if (sortBy === 'name') return String(a.name || '').localeCompare(String(b.name || ''), 'tr');
             if (sortBy === 'department') {
                 const dCmp = String(a.department || '').localeCompare(String(b.department || ''), 'tr');
                 if (dCmp !== 0) return dCmp;
-                return (b.total || 0) - (a.total || 0);
+                return (b.total_managed || 0) - (a.total_managed || 0);
             }
             return 0;
         });
@@ -141,11 +144,13 @@ export default function SpanDetailModal({ open, onClose, data }) {
         name: shortName(m.name),
         fullName: m.name,
         department: m.department,
-        total: m.total || 0,
-        primary: m.primary_count || 0,
+        direct: m.direct_count || 0,
+        indirect: m.indirect_count || 0,
+        total_managed: m.total_managed || 0,
+        depth: m.depth || 0,
         secondary: m.secondary_count || 0,
-        band: getBand(m.total || 0),
-        color: BAND_COLORS[getBand(m.total || 0)],
+        band: getBand(m.total_managed || 0),
+        color: BAND_COLORS[getBand(m.total_managed || 0)],
     })), [filtered]);
 
     const groupedData = useMemo(() => {
@@ -165,11 +170,13 @@ export default function SpanDetailModal({ open, onClose, data }) {
                     name: shortName(m.name),
                     fullName: m.name,
                     department: m.department,
-                    total: m.total || 0,
-                    primary: m.primary_count || 0,
+                    direct: m.direct_count || 0,
+                    indirect: m.indirect_count || 0,
+                    total_managed: m.total_managed || 0,
+                    depth: m.depth || 0,
                     secondary: m.secondary_count || 0,
-                    band: getBand(m.total || 0),
-                    color: BAND_COLORS[getBand(m.total || 0)],
+                    band: getBand(m.total_managed || 0),
+                    color: BAND_COLORS[getBand(m.total_managed || 0)],
                 })),
             }))
             .sort((a, b) => b.count - a.count);
@@ -180,7 +187,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         const sourceList = (showDeptFilter && selectedDepts.length > 0)
             ? allManagers.filter((m) => selectedDepts.includes(m.department || '—'))
             : allManagers;
-        sourceList.forEach((m) => { counts[getBand(m.total || 0)]++; });
+        sourceList.forEach((m) => { counts[getBand(m.total_managed || 0)]++; });
         return counts;
     }, [allManagers, selectedDepts, showDeptFilter]);
 
@@ -210,7 +217,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
             dataIndex: 'name',
             sorter: (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'tr'),
             render: (v, row) => {
-                const band = getBand(row.total || 0);
+                const band = getBand(row.total_managed || 0);
                 return (
                     <div className="flex items-center gap-2">
                         <div
@@ -231,27 +238,27 @@ export default function SpanDetailModal({ open, onClose, data }) {
             render: (v) => <span className="text-slate-500 text-[12px]">{v || '—'}</span>,
         },
         {
-            title: <span className="font-semibold text-[12px]">Primary</span>,
-            dataIndex: 'primary_count',
-            sorter: (a, b) => (a.primary_count || 0) - (b.primary_count || 0),
+            title: <span className="font-semibold text-[12px]">Direkt</span>,
+            dataIndex: 'direct_count',
+            sorter: (a, b) => (a.direct_count || 0) - (b.direct_count || 0),
             align: 'right',
             render: (v) => (
                 <span className="font-bold tabular-nums text-indigo-700 text-[13px]">{v || 0}</span>
             ),
         },
         {
-            title: <span className="font-semibold text-[12px]">Secondary</span>,
-            dataIndex: 'secondary_count',
-            sorter: (a, b) => (a.secondary_count || 0) - (b.secondary_count || 0),
+            title: <span className="font-semibold text-[12px]">Dolaylı</span>,
+            dataIndex: 'indirect_count',
+            sorter: (a, b) => (a.indirect_count || 0) - (b.indirect_count || 0),
             align: 'right',
             render: (v) => (
-                <span className="tabular-nums text-amber-700 text-[12px]">{v || 0}</span>
+                <span className="font-bold tabular-nums text-amber-700 text-[13px]">{v || 0}</span>
             ),
         },
         {
             title: <span className="font-semibold text-[12px]">Toplam</span>,
-            dataIndex: 'total',
-            sorter: (a, b) => (a.total || 0) - (b.total || 0),
+            dataIndex: 'total_managed',
+            sorter: (a, b) => (a.total_managed || 0) - (b.total_managed || 0),
             defaultSortOrder: 'descend',
             align: 'right',
             render: (v) => (
@@ -259,8 +266,26 @@ export default function SpanDetailModal({ open, onClose, data }) {
             ),
         },
         {
+            title: <span className="font-semibold text-[12px]">Derinlik</span>,
+            dataIndex: 'depth',
+            sorter: (a, b) => (a.depth || 0) - (b.depth || 0),
+            align: 'center',
+            render: (v) => (
+                <span className="tabular-nums text-slate-600 text-[12px]">{v || 0} sv</span>
+            ),
+        },
+        {
+            title: <span className="font-semibold text-[12px]">SEC</span>,
+            dataIndex: 'secondary_count',
+            sorter: (a, b) => (a.secondary_count || 0) - (b.secondary_count || 0),
+            align: 'right',
+            render: (v) => (
+                <span className="tabular-nums text-amber-600 text-[11px] opacity-75">{v || 0}</span>
+            ),
+        },
+        {
             title: 'Bant',
-            dataIndex: 'total',
+            dataIndex: 'total_managed',
             key: 'band',
             align: 'center',
             render: (v) => {
@@ -313,14 +338,14 @@ export default function SpanDetailModal({ open, onClose, data }) {
                         <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8' }} allowDecimals={false} />
                         <YAxis type="category" dataKey="name" width={96} interval={0} tick={renderSimpleYTick} />
                         <RTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} content={tooltipRenderer} />
-                        <Bar dataKey="total" radius={[0, 5, 5, 0]} barSize={10}>
+                        <Bar dataKey="direct" stackId="span" fill="#6366f1" barSize={10} />
+                        <Bar dataKey="indirect" stackId="span" fill="#f59e0b" barSize={10} radius={[0, 5, 5, 0]}>
                             <LabelList
-                                dataKey="total"
+                                dataKey="total_managed"
                                 position="right"
                                 formatter={(v) => `${v} kişi`}
                                 style={{ fontSize: 9, fill: '#64748b', fontWeight: 600 }}
                             />
-                            {managers.map((m, i) => <Cell key={i} fill={m.color} />)}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
@@ -333,7 +358,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         if (!active || !payload || !payload.length) return null;
         const m = payload[0].payload;
         return (
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xl text-xs min-w-[220px]">
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xl text-xs min-w-[240px]">
                 <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
                         style={{ backgroundColor: m.color }}>
@@ -346,18 +371,22 @@ export default function SpanDetailModal({ open, onClose, data }) {
                 </div>
                 <div className="pt-1.5 border-t border-slate-100 space-y-1">
                     <div className="flex items-center justify-between">
-                        <span className="text-slate-600 text-[11px]">Primary:</span>
-                        <span className="font-bold text-indigo-700 tabular-nums text-[11px]">{m.primary} kişi</span>
+                        <span className="text-slate-600 text-[11px]">Direkt:</span>
+                        <span className="font-bold text-indigo-700 tabular-nums text-[11px]">{m.direct} kişi</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-slate-600 text-[11px]">Dolaylı:</span>
+                        <span className="font-bold text-amber-700 tabular-nums text-[11px]">{m.indirect} kişi</span>
                     </div>
                     {m.secondary > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-slate-600 text-[11px]">Secondary:</span>
-                            <span className="font-bold text-amber-700 tabular-nums text-[11px]">{m.secondary} kişi</span>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                            <span>SEC (sadece direkt):</span>
+                            <span className="tabular-nums">{m.secondary}</span>
                         </div>
                     )}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                         <span className="text-slate-700 text-[11px] font-semibold">Toplam:</span>
-                        <span className="font-black text-slate-900 tabular-nums text-[11px]">{m.total} kişi</span>
+                        <span className="font-black text-slate-900 tabular-nums text-[11px]">{m.total_managed} kişi · {m.depth} sv</span>
                     </div>
                 </div>
             </div>
@@ -433,14 +462,14 @@ export default function SpanDetailModal({ open, onClose, data }) {
                         <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8' }} allowDecimals={false} />
                         <YAxis type="category" dataKey="name" width={yAxisWidth} interval={0} tick={renderSimpleYTick} />
                         <RTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} content={tooltipRenderer} />
-                        <Bar dataKey="total" radius={[0, 5, 5, 0]} barSize={10}>
+                        <Bar dataKey="direct" stackId="span" fill="#6366f1" barSize={10} />
+                        <Bar dataKey="indirect" stackId="span" fill="#f59e0b" barSize={10} radius={[0, 5, 5, 0]}>
                             <LabelList
-                                dataKey="total"
+                                dataKey="total_managed"
                                 position="right"
                                 formatter={(v) => `${v}`}
                                 style={{ fontSize: 9, fill: '#64748b', fontWeight: 600 }}
                             />
-                            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
@@ -512,8 +541,8 @@ export default function SpanDetailModal({ open, onClose, data }) {
                     Yönetici Yükü
                 </h2>
                 <p className="text-[12px] text-slate-500 max-w-2xl">
-                    Yöneticilik yapan PRIMARY alt çalışanlarınızın ekip büyüklüğü dağılımı.
-                    Aşırı yüklü veya az ekipli yöneticileri tespit edin.
+                    Yöneticilik yapan PRIMARY alt çalışanlarınızın hiyerarşik ekip büyüklüğü.
+                    Direkt + dolaylı (alt-yöneticilerin ekipleri) toplamı.
                 </p>
             </div>
 
@@ -586,7 +615,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
                         <div className="relative">
                             <div className="flex items-center gap-1.5 mb-2">
                                 <Sparkles size={11} className="text-emerald-500" />
-                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ortalama Ekip</span>
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ort. Toplam Ekip</span>
                             </div>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">
@@ -678,8 +707,11 @@ export default function SpanDetailModal({ open, onClose, data }) {
                         onChange={setSortBy}
                         size="small"
                         options={[
-                            { value: 'total_desc', label: <span className="flex items-center gap-1 text-[11px]"><SortDesc size={10} /> Ekip</span> },
-                            { value: 'total_asc', label: <span className="flex items-center gap-1 text-[11px]"><SortAsc size={10} /> Ekip</span> },
+                            { value: 'total_desc', label: <span className="flex items-center gap-1 text-[11px]"><SortDesc size={10} /> Toplam</span> },
+                            { value: 'total_asc', label: <span className="flex items-center gap-1 text-[11px]"><SortAsc size={10} /> Toplam</span> },
+                            { value: 'direct_desc', label: <span className="text-[11px]">Direkt</span> },
+                            { value: 'indirect_desc', label: <span className="text-[11px]">Dolaylı</span> },
+                            { value: 'depth_desc', label: <span className="text-[11px]">Derinlik</span> },
                             { value: 'name', label: <span className="text-[11px]">Ad</span> },
                             { value: 'department', label: <span className="text-[11px]">Dept</span> },
                         ]}
