@@ -93,30 +93,28 @@ export default function WorkforcePanel() {
                     <div className="flex items-center gap-2 mb-3">
                         <Calendar size={16} className="text-indigo-600" />
                         <h3 className="font-bold text-slate-800">Kıdem Dağılımı</h3>
+                        <Tag color="default" className="ml-auto text-[10px]">
+                            {tenure?.total || 0} çalışan
+                        </Tag>
                     </div>
                     {tenureData.length > 0 ? (
                         <>
-                            <div className="h-40">
+                            <div className="h-44">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={tenureData} dataKey="value" cx="50%" cy="50%" outerRadius={60} innerRadius={35}>
-                                            {tenureData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                                        </Pie>
+                                    <BarChart data={tenureData} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
+                                        <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                                         <RTooltip content={<ChartTooltip unit=" kişi" />} />
-                                    </PieChart>
+                                        <Bar dataKey="value" radius={[6, 6, 0, 0]} label={{ position: 'top', fontSize: 11, fontWeight: 700, fill: '#1e293b' }}>
+                                            {tenureData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                                        </Bar>
+                                    </BarChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="grid grid-cols-2 gap-1.5 text-xs">
-                                {tenureData.map((d) => (
-                                    <div key={d.name} className="flex items-center gap-1.5">
-                                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }} />
-                                        <span className="text-slate-600">{d.name}:</span>
-                                        <span className="font-bold text-slate-800 ml-auto tabular-nums">{d.value}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
-                                Ort. {Math.round((tenure?.avg_months || 0) / 12 * 10) / 10} yıl · Medyan {Math.round((tenure?.median_months || 0) / 12 * 10) / 10} yıl
+                            <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                                <span>Ort. <span className="font-bold text-slate-700">{Math.round((tenure?.avg_months || 0) / 12 * 10) / 10}</span> yıl</span>
+                                <span>Medyan <span className="font-bold text-slate-700">{Math.round((tenure?.median_months || 0) / 12 * 10) / 10}</span> yıl</span>
                             </div>
                         </>
                     ) : <Empty description="Veri yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
