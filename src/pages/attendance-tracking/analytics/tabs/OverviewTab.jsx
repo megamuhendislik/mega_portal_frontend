@@ -12,6 +12,7 @@ import ChartTooltip from '../shared/ChartTooltip';
 import AnomaliesPanel from '../shared/AnomaliesPanel';
 import InsightsBanner from '../shared/InsightsBanner';
 import CostCard from '../shared/CostCard';
+import WorkforcePanel from '../shared/WorkforcePanel';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -164,6 +165,9 @@ export default function OverviewTab() {
 
             {/* ═══ Cost Estimate (Phase 8.2) ═══ */}
             <CostCard />
+
+            {/* ═══ Workforce Panel — 6 KPI Tier 1 (Phase 9) ═══ */}
+            <WorkforcePanel />
 
             {/* ═══ Comparison Summary Banner ═══ */}
             {isComparing && cmpKpi && (
