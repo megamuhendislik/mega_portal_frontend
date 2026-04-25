@@ -29,7 +29,6 @@ import SpanDetailModal from './SpanDetailModal';
  */
 
 const TENURE_COLORS = { '<1yr': '#94a3b8', '1-5yr': '#6366f1', '5-10yr': '#10b981', '10yr+': '#f59e0b' };
-const SPAN_COLORS = { '1-3': '#94a3b8', '4-10': '#10b981', '11-25': '#f59e0b', '26+': '#ef4444' };
 const APPROVAL_COLORS = { '<24h': '#10b981', '24-48h': '#6366f1', '48-72h': '#f59e0b', '72h-1w': '#f97316', '>1w': '#ef4444' };
 
 export default function WorkforcePanel() {
@@ -178,7 +177,29 @@ export default function WorkforcePanel() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                     <XAxis type="number" tick={{ fontSize: 9 }} />
                                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={50} />
-                                    <RTooltip content={<ChartTooltip unit=" kişi" />} />
+                                    <RTooltip
+                                        content={({ active, payload }) => {
+                                            if (!active || !payload || !payload.length) return null;
+                                            const d = payload[0]?.payload || {};
+                                            return (
+                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg text-xs">
+                                                    <div className="font-bold text-slate-800 mb-1">{d.name}</div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-indigo-600">Direkt:</span>
+                                                        <span className="font-bold tabular-nums">{d.direct} kişi</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-amber-600">Dolaylı:</span>
+                                                        <span className="font-bold tabular-nums">{d.indirect} kişi</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3 pt-1 mt-1 border-t border-slate-100">
+                                                        <span className="text-slate-700 font-semibold">Toplam:</span>
+                                                        <span className="font-black tabular-nums">{d.total} kişi</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                    />
                                     <Bar dataKey="direct" stackId="span" fill="#6366f1" radius={[0, 0, 0, 0]} />
                                     <Bar dataKey="indirect" stackId="span" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                                 </BarChart>
