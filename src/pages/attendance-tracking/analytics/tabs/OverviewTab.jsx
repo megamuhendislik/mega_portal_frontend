@@ -9,8 +9,6 @@ import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
-import AnomaliesPanel from '../shared/AnomaliesPanel';
-import InsightsBanner from '../shared/InsightsBanner';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -156,13 +154,9 @@ export default function OverviewTab() {
                 </div>
             )}
 
-            {/* ═══ Auto Insights (Phase 8.2) ═══ */}
-            <InsightsBanner />
-
-            {/* ═══ Anomaly Detection Panel (Phase 4) ═══ */}
-            <AnomaliesPanel threshold={2.0} />
-
             {/* ═══ Workforce Panel — 6 KPI Tier 1 (Phase 9) ═══ */}
+            {/* NOT: AnomaliesPanel ve InsightsBanner kendi tablarına taşındı —
+                "Anomaliler" ve "İçgörüler" tab'larından erişin. */}
             <WorkforcePanel />
 
             {/* ═══ Comparison Summary Banner ═══ */}
