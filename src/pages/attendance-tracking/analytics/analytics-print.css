@@ -94,6 +94,20 @@
     }
 }
 
+/* Density Toggle (Phase 8.3) — body[data-density] hooks */
+body[data-density="compact"] .analytics-kpi-grid {
+    gap: 0.5rem;
+}
+body[data-density="compact"] .analytics-section {
+    padding: 0.75rem !important;
+}
+body[data-density="compact"] .analytics-tab-content {
+    gap: 0.75rem !important;
+}
+body[data-density="compact"] .ant-card-body {
+    padding: 12px !important;
+}
+
 /* Mobile tweaks (Phase 6 — dar ekran optimizasyonu) */
 @media (max-width: 640px) {
     /* KPI grid mobilde 2 kolon max */

@@ -11,6 +11,7 @@ import SkeletonLoader from './shared/SkeletonLoader';
 import HelpOverlay from './shared/HelpOverlay';
 import FavoriteViews from './shared/FavoriteViews';
 import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
+import DensityToggle from './shared/DensityToggle';
 
 const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
 const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
@@ -142,6 +143,7 @@ function TeamAnalyticsInner() {
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2">
+                    <DensityToggle />
                     <FavoriteViews
                         getCurrentState={getCurrentQueryString}
                         onApply={applyFavorite}
