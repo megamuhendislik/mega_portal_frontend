@@ -43,6 +43,25 @@ function pad(s, n) {
     return s.length >= n ? s : s + ' '.repeat(n - s.length);
 }
 
+// Matrix sütun başlıkları — uzun rol key'leri çakışmadan gösterilebilsin diye
+// kısaltma sözlüğü. Bilinmeyen rol için ilk 7 karakter fallback.
+const ROLE_ABBREV = {
+    SYSTEM_ADMIN:      'SYS_ADM',
+    PROJECT_MANAGER:   'PRJ_MGR',
+    ACC_MANAGER:       'ACC_MGR',
+    ACC_STAFF:         'ACC_STF',
+    GROUP_CHIEF:       'GRP_CHF',
+    SENIOR_ENGINEER:   'SR_ENG',
+    ENGINEER:          'ENG',
+    SENIOR_TECHNICIAN: 'SR_TEC',
+    TECHNICIAN:        'TEC',
+    EMPLOYEE:          'EMP',
+};
+
+function abbrevRoleKey(key) {
+    return ROLE_ABBREV[key] || key.slice(0, 7);
+}
+
 function buildTxtReport(data) {
     const { summary, permissions, roles, permission_matrix, employees, generated_at } = data;
 
@@ -105,16 +124,24 @@ function buildTxtReport(data) {
     // [4] Yetki Matrisi
     lines.push('[4] YETKİ MATRİSİ');
     const roleKeys = roles.map((r) => r.key);
-    const colWidth = 6;
-    const headerRow = pad('Permission', 30) + ' | ' + roleKeys.map((k) => pad(k.slice(0, colWidth - 1), colWidth - 1)).join(' | ');
+    const colWidth = 9;  // 8 char görünür + 1 padding (kısaltmalar 7 chare kadar)
+    const headerRow = pad('Permission', 30) + ' | '
+        + roleKeys.map((k) => pad(abbrevRoleKey(k), colWidth - 1)).join(' | ');
     lines.push('    ' + headerRow);
     lines.push('    ' + '-'.repeat(headerRow.length));
     permissions.forEach((p) => {
-        const row = pad(p.code, 30) + ' | ' + roleKeys.map((k) => {
-            const has = permission_matrix[k]?.[p.code];
-            return pad(has ? '  ✓ ' : '  − ', colWidth - 1);
-        }).join(' | ');
+        const row = pad(p.code, 30) + ' | '
+            + roleKeys.map((k) => {
+                const has = permission_matrix[k]?.[p.code];
+                return pad(has ? '   ✓   ' : '   −   ', colWidth - 1);
+            }).join(' | ');
         lines.push('    ' + row);
+    });
+    lines.push('');
+    // Sütun başlığı kısaltmalarının açılımı
+    lines.push('    Sütun Açıklamaları:');
+    roleKeys.forEach((k) => {
+        lines.push(`      ${pad(abbrevRoleKey(k), 9)} = ${k}`);
     });
     lines.push('');
 
