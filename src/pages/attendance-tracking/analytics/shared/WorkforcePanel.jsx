@@ -13,6 +13,7 @@ import {
 import ChartTooltip from './ChartTooltip';
 import TenureDetailModal from './TenureDetailModal';
 import SpanDetailModal from './SpanDetailModal';
+import LeaveBalanceDetailModal from './LeaveBalanceDetailModal';
 
 /**
  * WorkforcePanel — Tier 1 6 KPI'yi tek ekranda gösterir.
@@ -38,6 +39,7 @@ export default function WorkforcePanel() {
     const [error, setError] = useState(null);
     const [tenureModalOpen, setTenureModalOpen] = useState(false);
     const [spanModalOpen, setSpanModalOpen] = useState(false);
+    const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -213,6 +215,15 @@ export default function WorkforcePanel() {
                     <div className="flex items-center gap-2 mb-3">
                         <Coins size={16} className="text-amber-700" />
                         <h3 className="font-bold text-slate-800">İzin Bakiyesi</h3>
+                        <Tooltip title="Genişlet — kişi bazlı detay">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setLeaveModalOpen(true)}
+                                className="ml-auto text-slate-400 hover:text-amber-600"
+                            />
+                        </Tooltip>
                     </div>
                     <div className="text-3xl font-black text-amber-800 tabular-nums mb-2">
                         {leave_liability?.total_days_remaining || 0}
@@ -381,6 +392,12 @@ export default function WorkforcePanel() {
                 open={spanModalOpen}
                 onClose={() => setSpanModalOpen(false)}
                 data={span_of_control}
+            />
+
+            {/* Leave Balance detail modal — kişi bazlı yıllık + mazeret detay */}
+            <LeaveBalanceDetailModal
+                open={leaveModalOpen}
+                onClose={() => setLeaveModalOpen(false)}
             />
         </div>
     );
