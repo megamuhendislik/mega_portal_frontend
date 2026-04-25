@@ -1,20 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Input, Table, Tag, Empty, Segmented } from 'antd';
-import { Search as SearchIcon, X as CloseIcon, Calendar, Users } from 'lucide-react';
+import { Modal, Input, Table, Empty, Segmented } from 'antd';
+import {
+    Search as SearchIcon, X as CloseIcon, Calendar, Users, Sparkles,
+    SortAsc, SortDesc, Filter as FilterIcon,
+} from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
-import ChartTooltip from './ChartTooltip';
 
 /**
- * TenureDetailModal — Kıdem dağılımı genişletilmiş görünüm.
- * Her çalışanı ayrı ayrı bar olarak gösterir + alt kısımda detaylı tablo.
+ * TenureDetailModal — Editoryal dashboard tasarımı.
  *
- * Props:
- *  - open, onClose
- *  - data: { all_employees: [{ employee_id, name, department, hired_date, months }],
- *            distribution, total, avg_months, median_months }
+ * Aesthetic:
+ *  - Hero typography (display 5xl-6xl rakamlar)
+ *  - Subtle gradient hero bg (indigo soft)
+ *  - Stacked horizontal bar — tek görünümde tüm bantlar
+ *  - Asimetrik grid: filter sidebar + ana içerik
+ *  - Tabular-nums her yerde, refined spacing
+ *  - Smooth transitions, hover detayları
  */
 
 const BAND_COLORS = {
@@ -31,6 +35,13 @@ const BAND_LABELS = {
     '10yr+': '10+ yıl',
 };
 
+const BAND_DESCRIPTIONS = {
+    '<1yr': 'Yeni katılan',
+    '1-5yr': 'Aktif çekirdek',
+    '5-10yr': 'Deneyimli',
+    '10yr+': 'Uzun soluklu',
+};
+
 function getBand(months) {
     if (months < 12) return '<1yr';
     if (months < 60) return '1-5yr';
@@ -38,7 +49,15 @@ function getBand(months) {
     return '10yr+';
 }
 
-function formatMonths(months) {
+function formatTenure(months) {
+    const yrs = Math.floor(months / 12);
+    const m = months % 12;
+    if (yrs === 0) return `${m} ay`;
+    if (m === 0) return `${yrs} yıl`;
+    return `${yrs}y ${m}a`;
+}
+
+function formatTenureLong(months) {
     const yrs = Math.floor(months / 12);
     const m = months % 12;
     if (yrs === 0) return `${m} ay`;
@@ -46,29 +65,41 @@ function formatMonths(months) {
     return `${yrs} yıl ${m} ay`;
 }
 
+function initials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Personel adı kısa
+function shortName(name) {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 export default function TenureDetailModal({ open, onClose, data }) {
     const [search, setSearch] = useState('');
-    const [sortBy, setSortBy] = useState('months_asc'); // 'months_asc' | 'months_desc' | 'name' | 'department'
+    const [sortBy, setSortBy] = useState('months_desc');
     const [bandFilter, setBandFilter] = useState('all');
 
-    const allEmployees = data?.all_employees || [];
+    const allEmployees = useMemo(() => data?.all_employees || [], [data]);
 
-    // Apply search + band filter + sort
     const filtered = useMemo(() => {
         let list = [...allEmployees];
-        // Search
         if (search) {
-            const q = search.toLowerCase();
-            list = list.filter((e) =>
-                String(e.name || '').toLowerCase().includes(q) ||
-                String(e.department || '').toLowerCase().includes(q)
-            );
+            const q = search.toLowerCase().replace(/[ışçöüğ]/g, c => ({ ı: 'i', ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g' })[c] || c);
+            list = list.filter((e) => {
+                const n = String(e.name || '').toLowerCase().replace(/[ışçöüğİ]/g, c => ({ ı: 'i', ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', İ: 'i' })[c] || c);
+                const d = String(e.department || '').toLowerCase().replace(/[ışçöüğ]/g, c => ({ ı: 'i', ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g' })[c] || c);
+                return n.includes(q) || d.includes(q);
+            });
         }
-        // Band filter
         if (bandFilter !== 'all') {
             list = list.filter((e) => getBand(e.months || 0) === bandFilter);
         }
-        // Sort
         list.sort((a, b) => {
             if (sortBy === 'months_asc') return (a.months || 0) - (b.months || 0);
             if (sortBy === 'months_desc') return (b.months || 0) - (a.months || 0);
@@ -79,9 +110,8 @@ export default function TenureDetailModal({ open, onClose, data }) {
         return list;
     }, [allEmployees, search, bandFilter, sortBy]);
 
-    // Chart data — bar per employee, color by band
     const chartData = useMemo(() => filtered.map((e) => ({
-        name: (e.name || '').split(' ').slice(0, 2).join(' '),
+        name: shortName(e.name),
         fullName: e.name,
         department: e.department,
         months: e.months || 0,
@@ -89,19 +119,35 @@ export default function TenureDetailModal({ open, onClose, data }) {
         color: BAND_COLORS[getBand(e.months || 0)],
     })), [filtered]);
 
-    // Histogram data — count per band among filtered
     const bandCounts = useMemo(() => {
         const counts = { '<1yr': 0, '1-5yr': 0, '5-10yr': 0, '10yr+': 0 };
-        filtered.forEach((e) => { counts[getBand(e.months || 0)]++; });
+        allEmployees.forEach((e) => { counts[getBand(e.months || 0)]++; });
         return counts;
-    }, [filtered]);
+    }, [allEmployees]);
+
+    const totalCount = allEmployees.length;
+    const avgYears = ((data?.avg_months || 0) / 12);
+    const medianYears = ((data?.median_months || 0) / 12);
 
     const columns = [
         {
             title: 'Çalışan',
             dataIndex: 'name',
             sorter: (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'tr'),
-            render: (v) => <span className="font-semibold text-slate-700">{v}</span>,
+            render: (v, row) => {
+                const band = getBand(row.months || 0);
+                return (
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm flex-shrink-0"
+                            style={{ backgroundColor: BAND_COLORS[band] }}
+                        >
+                            {initials(v)}
+                        </div>
+                        <span className="font-semibold text-slate-700">{v}</span>
+                    </div>
+                );
+            },
         },
         {
             title: 'Departman',
@@ -113,16 +159,18 @@ export default function TenureDetailModal({ open, onClose, data }) {
             title: 'İşe Başlama',
             dataIndex: 'hired_date',
             sorter: (a, b) => String(a.hired_date || '').localeCompare(String(b.hired_date || '')),
-            render: (v) => v || '—',
+            render: (v) => <span className="text-slate-500 tabular-nums text-xs">{v || '—'}</span>,
         },
         {
-            title: 'Kıdem',
+            title: <span className="font-semibold">Kıdem</span>,
             dataIndex: 'months',
             sorter: (a, b) => (a.months || 0) - (b.months || 0),
             defaultSortOrder: 'descend',
             align: 'right',
             render: (v) => (
-                <span className="font-bold tabular-nums text-slate-800">{formatMonths(v || 0)}</span>
+                <span className="font-bold tabular-nums text-slate-800 text-sm">
+                    {formatTenureLong(v || 0)}
+                </span>
             ),
         },
         {
@@ -133,13 +181,26 @@ export default function TenureDetailModal({ open, onClose, data }) {
             render: (v) => {
                 const band = getBand(v || 0);
                 return (
-                    <Tag color="default" style={{ backgroundColor: BAND_COLORS[band], color: 'white', border: 'none' }}>
+                    <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
+                        style={{
+                            backgroundColor: `${BAND_COLORS[band]}1a`,
+                            color: BAND_COLORS[band],
+                        }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BAND_COLORS[band] }} />
                         {BAND_LABELS[band]}
-                    </Tag>
+                    </span>
                 );
             },
         },
     ];
+
+    const stackedSegments = ['<1yr', '1-5yr', '5-10yr', '10yr+'].map((band) => {
+        const count = bandCounts[band] || 0;
+        const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
+        return { band, count, pct };
+    }).filter((s) => s.count > 0);
 
     return (
         <Modal
@@ -147,159 +208,281 @@ export default function TenureDetailModal({ open, onClose, data }) {
             onCancel={onClose}
             footer={null}
             width="95%"
-            style={{ top: 20, maxWidth: 1400 }}
-            closeIcon={<CloseIcon size={16} />}
+            style={{ top: 20, maxWidth: 1500 }}
+            styles={{
+                body: { padding: 0, background: 'linear-gradient(180deg, #fafbff 0%, #ffffff 60%)' },
+                content: { padding: 0, overflow: 'hidden', borderRadius: 24 },
+            }}
+            closeIcon={null}
             destroyOnClose
-            title={
-                <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-indigo-600" />
-                    <span className="text-lg font-semibold">Kıdem Dağılımı — Detaylı Görünüm</span>
-                    <Tag color="blue" className="ml-2">{filtered.length} / {allEmployees.length} çalışan</Tag>
-                </div>
-            }
+            centered={false}
         >
-            <div className="space-y-4">
-                {/* Top stats */}
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-                    {Object.entries(bandCounts).map(([band, count]) => (
-                        <div
-                            key={band}
-                            className={`rounded-xl border p-3 cursor-pointer transition-all ${bandFilter === band ? 'ring-2 ring-indigo-300' : ''}`}
-                            style={{ backgroundColor: `${BAND_COLORS[band]}15`, borderColor: BAND_COLORS[band] }}
-                            onClick={() => setBandFilter(bandFilter === band ? 'all' : band)}
-                        >
-                            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: BAND_COLORS[band] }}>
-                                {BAND_LABELS[band]}
-                            </div>
-                            <div className="text-2xl font-black tabular-nums text-slate-800">{count}</div>
-                            <div className="text-[9px] text-slate-500">çalışan</div>
-                        </div>
-                    ))}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ortalama</div>
-                        <div className="text-2xl font-black tabular-nums text-slate-800">
-                            {Math.round((data?.avg_months || 0) / 12 * 10) / 10}
-                        </div>
-                        <div className="text-[9px] text-slate-500">yıl</div>
+            {/* Custom header */}
+            <div className="relative px-8 pt-7 pb-6 border-b border-slate-200/60 bg-gradient-to-br from-indigo-50/40 via-white to-emerald-50/30">
+                <div className="absolute top-5 right-5 z-10">
+                    <button
+                        onClick={onClose}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white border border-slate-200 hover:border-slate-300 shadow-sm transition-all backdrop-blur-sm"
+                    >
+                        <CloseIcon size={16} className="text-slate-500" />
+                    </button>
+                </div>
+                <div className="flex items-center gap-2.5 mb-2">
+                    <div className="p-1.5 rounded-lg bg-indigo-100/80">
+                        <Calendar size={14} className="text-indigo-600" />
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Medyan</div>
-                        <div className="text-2xl font-black tabular-nums text-slate-800">
-                            {Math.round((data?.median_months || 0) / 12 * 10) / 10}
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-[0.2em]">
+                        İşgücü Analizi
+                    </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-1">
+                    Kıdem Dağılımı
+                </h2>
+                <p className="text-sm text-slate-500 max-w-2xl">
+                    Tüm bağlı PRIMARY çalışanların işe başlama tarihlerine göre kıdem analizi.
+                    Her bant farklı bir aşamayı temsil eder — yeni katılanlardan uzun soluklulara.
+                </p>
+            </div>
+
+            <div className="px-8 py-6 space-y-6">
+                {/* Hero Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-100 to-blue-50 blur-2xl opacity-60" />
+                        <div className="relative">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Users size={14} className="text-indigo-500" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Toplam Çalışan</span>
+                            </div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-5xl font-black text-slate-900 tabular-nums tracking-tight">{totalCount}</span>
+                                <span className="text-sm text-slate-400 font-semibold">kişi</span>
+                            </div>
                         </div>
-                        <div className="text-[9px] text-slate-500">yıl</div>
+                    </div>
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-100 to-cyan-50 blur-2xl opacity-60" />
+                        <div className="relative">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Sparkles size={14} className="text-emerald-500" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ortalama Kıdem</span>
+                            </div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-5xl font-black text-slate-900 tabular-nums tracking-tight">
+                                    {avgYears.toFixed(1)}
+                                </span>
+                                <span className="text-sm text-slate-400 font-semibold">yıl</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gradient-to-br from-amber-100 to-orange-50 blur-2xl opacity-60" />
+                        <div className="relative">
+                            <div className="flex items-center gap-2 mb-3">
+                                <SortAsc size={14} className="text-amber-500" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Medyan Kıdem</span>
+                            </div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-5xl font-black text-slate-900 tabular-nums tracking-tight">
+                                    {medianYears.toFixed(1)}
+                                </span>
+                                <span className="text-sm text-slate-400 font-semibold">yıl</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="flex items-center gap-3 flex-wrap">
+                {/* Stacked Distribution Bar */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Bant Dağılımı</span>
+                            <span className="text-[10px] text-slate-400">— bantı tıklayarak filtrele</span>
+                        </div>
+                        {bandFilter !== 'all' && (
+                            <button
+                                onClick={() => setBandFilter('all')}
+                                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                            >
+                                <CloseIcon size={11} />
+                                Filtreyi Kaldır
+                            </button>
+                        )}
+                    </div>
+                    {/* Stacked bar */}
+                    <div className="flex items-stretch h-12 rounded-xl overflow-hidden border border-slate-200">
+                        {stackedSegments.map((s) => {
+                            const isActive = bandFilter === s.band;
+                            const isDimmed = bandFilter !== 'all' && !isActive;
+                            return (
+                                <button
+                                    key={s.band}
+                                    onClick={() => setBandFilter(isActive ? 'all' : s.band)}
+                                    style={{
+                                        width: `${s.pct}%`,
+                                        backgroundColor: BAND_COLORS[s.band],
+                                        opacity: isDimmed ? 0.3 : 1,
+                                    }}
+                                    className={`relative group transition-all hover:scale-y-110 origin-bottom flex items-center justify-center min-w-[40px] ${isActive ? 'ring-2 ring-offset-2 ring-slate-700' : ''}`}
+                                    title={`${BAND_LABELS[s.band]}: ${s.count} kişi (${s.pct.toFixed(0)}%)`}
+                                >
+                                    <span className="text-xs font-black text-white drop-shadow tabular-nums">
+                                        {s.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {/* Labels */}
+                    <div className="flex items-stretch mt-2">
+                        {stackedSegments.map((s) => (
+                            <div key={s.band} style={{ width: `${s.pct}%` }} className="text-center min-w-[40px]">
+                                <div className="text-[10px] font-bold text-slate-700">{BAND_LABELS[s.band]}</div>
+                                <div className="text-[9px] text-slate-400">{BAND_DESCRIPTIONS[s.band]}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Filter section */}
+                <div className="flex items-center gap-3 flex-wrap p-4 rounded-2xl bg-slate-50/60 border border-slate-200/60">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">
+                        <FilterIcon size={12} /> Filtre
+                    </div>
                     <Input
                         placeholder="Ad veya departman ara..."
-                        prefix={<SearchIcon size={14} className="text-slate-400" />}
+                        prefix={<SearchIcon size={13} className="text-slate-400" />}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-xs"
                         allowClear
+                        size="small"
                     />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Sırala:</span>
                     <Segmented
                         value={sortBy}
                         onChange={setSortBy}
                         size="small"
                         options={[
-                            { value: 'months_asc', label: 'Kıdem ↑' },
-                            { value: 'months_desc', label: 'Kıdem ↓' },
+                            { value: 'months_desc', label: <span className="flex items-center gap-1"><SortDesc size={11} /> Kıdem</span> },
+                            { value: 'months_asc', label: <span className="flex items-center gap-1"><SortAsc size={11} /> Kıdem</span> },
                             { value: 'name', label: 'Ad' },
                             { value: 'department', label: 'Dept' },
                         ]}
                     />
-                    {bandFilter !== 'all' && (
-                        <Tag color="blue" closable onClose={() => setBandFilter('all')}>
-                            Bant: {BAND_LABELS[bandFilter]}
-                        </Tag>
-                    )}
+                    <span className="ml-auto text-[11px] text-slate-500">
+                        Gösterilen: <span className="font-bold text-slate-700 tabular-nums">{filtered.length}</span> / {totalCount}
+                    </span>
                 </div>
 
-                {/* Per-employee bar chart */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <Users size={14} className="text-indigo-600" />
-                            <span className="text-sm font-semibold text-slate-700">
-                                Çalışan Bazlı Kıdem (her bar = 1 kişi)
-                            </span>
+                {/* Per-employee chart */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Çalışan Bazlı Kıdem</div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">Her bar tek bir kişi · renk bantını gösterir</div>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px]">
+                        <div className="flex items-center gap-3 text-[10px]">
                             {Object.entries(BAND_COLORS).map(([band, color]) => (
-                                <span key={band} className="flex items-center gap-1">
-                                    <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
-                                    <span className="text-slate-600">{BAND_LABELS[band]}</span>
+                                <span key={band} className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                                    <span className="text-slate-600 font-medium">{BAND_LABELS[band]}</span>
                                 </span>
                             ))}
                         </div>
                     </div>
                     {chartData.length > 0 ? (
-                        <div style={{ height: Math.max(320, Math.min(chartData.length * 14, 600)) }}>
+                        <div style={{ height: Math.max(360, Math.min(chartData.length * 18, 720)) }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
                                     data={chartData}
                                     layout="vertical"
-                                    margin={{ top: 8, right: 60, left: 100, bottom: 8 }}
+                                    margin={{ top: 8, right: 80, left: 130, bottom: 8 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                                     <XAxis
                                         type="number"
-                                        tick={{ fontSize: 10 }}
-                                        tickFormatter={(v) => `${Math.round(v / 12 * 10) / 10}y`}
+                                        tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                        tickFormatter={(v) => `${(v / 12).toFixed(1)}y`}
                                     />
                                     <YAxis
                                         type="category"
                                         dataKey="name"
-                                        tick={{ fontSize: 10, fontWeight: 600 }}
-                                        width={100}
+                                        tick={{ fontSize: 10, fontWeight: 600, fill: '#475569' }}
+                                        width={130}
                                         interval={0}
                                     />
                                     <RTooltip
+                                        cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
                                         content={({ active, payload }) => {
                                             if (!active || !payload || !payload.length) return null;
                                             const d = payload[0].payload;
                                             return (
-                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg text-xs">
-                                                    <div className="font-bold text-slate-800">{d.fullName}</div>
-                                                    <div className="text-slate-500">{d.department || '—'}</div>
-                                                    <div className="mt-1 text-slate-700">
-                                                        <span className="font-bold">{formatMonths(d.months)}</span>
-                                                        <Tag
-                                                            color="default"
-                                                            style={{ backgroundColor: d.color, color: 'white', border: 'none', marginLeft: 6 }}
+                                                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs min-w-[200px]">
+                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                        <div
+                                                            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                                                            style={{ backgroundColor: d.color }}
+                                                        >
+                                                            {initials(d.fullName)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-800">{d.fullName}</div>
+                                                            <div className="text-[10px] text-slate-500">{d.department || '—'}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                                        <span className="text-slate-600">Kıdem:</span>
+                                                        <span className="font-black text-slate-900 tabular-nums">{formatTenureLong(d.months)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <span className="text-slate-600">Bant:</span>
+                                                        <span
+                                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                                            style={{ backgroundColor: `${d.color}20`, color: d.color }}
                                                         >
                                                             {BAND_LABELS[d.band]}
-                                                        </Tag>
+                                                        </span>
                                                     </div>
                                                 </div>
                                             );
                                         }}
                                     />
-                                    <Bar dataKey="months" radius={[0, 4, 4, 0]}>
-                                        <LabelList dataKey="months" position="right" formatter={(v) => `${Math.round(v / 12 * 10) / 10}y`} style={{ fontSize: 10, fill: '#64748b', fontWeight: 700 }} />
+                                    <Bar dataKey="months" radius={[0, 6, 6, 0]} barSize={12}>
+                                        <LabelList
+                                            dataKey="months"
+                                            position="right"
+                                            formatter={(v) => formatTenure(v)}
+                                            style={{ fontSize: 10, fill: '#475569', fontWeight: 600 }}
+                                        />
                                         {chartData.map((d, i) => <Cell key={i} fill={d.color} />)}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     ) : (
-                        <Empty description="Filtre sonucu yok" />
+                        <div className="py-12">
+                            <Empty description="Filtre sonucu yok" />
+                        </div>
                     )}
                 </div>
 
                 {/* Employee table */}
-                <div className="rounded-xl border border-slate-200 bg-white p-2">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-5 pt-4 pb-2 border-b border-slate-100">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Detaylı Liste</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Sıralanabilir kolonlar · sayfa başına 25 kayıt</div>
+                    </div>
                     <Table
                         columns={columns}
                         dataSource={filtered}
                         rowKey={(r) => r.employee_id || r.name}
-                        pagination={filtered.length > 25 ? { pageSize: 25, showSizeChanger: false } : false}
-                        size="small"
+                        pagination={filtered.length > 25 ? {
+                            pageSize: 25,
+                            showSizeChanger: false,
+                            size: 'small',
+                            position: ['bottomCenter'],
+                        } : false}
+                        size="middle"
                         scroll={{ x: 'max-content' }}
                     />
                 </div>
