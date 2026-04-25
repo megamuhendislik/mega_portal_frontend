@@ -83,6 +83,35 @@ function deptColor(dept) {
     return DEPT_PALETTE[hash % DEPT_PALETTE.length];
 }
 
+function SubtreeView({ nodes, level = 0 }) {
+    if (!nodes || nodes.length === 0) return null;
+    return (
+        <div className={level === 0 ? 'pl-2 py-2 bg-slate-50/40 rounded' : 'pl-4'}>
+            {nodes.map((node) => {
+                const isManager = (node.children || []).length > 0;
+                return (
+                    <div key={node.employee_id} className="border-l-2 border-slate-200 pl-3 py-1">
+                        <div className="flex items-center gap-2 text-[12px]">
+                            <span className={isManager ? 'font-bold text-slate-800' : 'text-slate-600'}>
+                                {node.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{node.department || '—'}</span>
+                            {isManager && (
+                                <span className="ml-auto text-[10px] font-bold tabular-nums text-indigo-600">
+                                    {node.direct_count} alt
+                                </span>
+                            )}
+                        </div>
+                        {isManager && (
+                            <SubtreeView nodes={node.children} level={level + 1} />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function SpanDetailModal({ open, onClose, data }) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('total_desc');
@@ -786,6 +815,10 @@ export default function SpanDetailModal({ open, onClose, data }) {
                         pagination={false}
                         size="small"
                         scroll={{ x: 'max-content' }}
+                        expandable={{
+                            rowExpandable: (record) => (record.subtree || []).length > 0,
+                            expandedRowRender: (record) => <SubtreeView nodes={record.subtree || []} />,
+                        }}
                     />
                 </div>
             </div>
