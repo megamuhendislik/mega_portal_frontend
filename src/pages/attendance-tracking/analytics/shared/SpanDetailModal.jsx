@@ -258,6 +258,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         {
             title: <span className="font-semibold text-[12px]">Toplam</span>,
             dataIndex: 'total_managed',
+            key: 'total_managed',
             sorter: (a, b) => (a.total_managed || 0) - (b.total_managed || 0),
             defaultSortOrder: 'descend',
             align: 'right',
@@ -467,7 +468,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
                             <LabelList
                                 dataKey="total_managed"
                                 position="right"
-                                formatter={(v) => `${v}`}
+                                formatter={(v) => `${v} kişi`}
                                 style={{ fontSize: 9, fill: '#64748b', fontWeight: 600 }}
                             />
                         </Bar>
