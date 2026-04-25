@@ -144,7 +144,12 @@ export default function TenureDetailModal({ open, onClose, data }) {
             if (sortBy === 'months_asc') return (a.months || 0) - (b.months || 0);
             if (sortBy === 'months_desc') return (b.months || 0) - (a.months || 0);
             if (sortBy === 'name') return String(a.name || '').localeCompare(String(b.name || ''), 'tr');
-            if (sortBy === 'department') return String(a.department || '').localeCompare(String(b.department || ''), 'tr');
+            if (sortBy === 'department') {
+                // Önce departmana göre, sonra dept içinde kıdem desc
+                const dCmp = String(a.department || '').localeCompare(String(b.department || ''), 'tr');
+                if (dCmp !== 0) return dCmp;
+                return (b.months || 0) - (a.months || 0);
+            }
             return 0;
         });
         return list;
@@ -296,12 +301,25 @@ export default function TenureDetailModal({ open, onClose, data }) {
         });
     };
 
-    // Custom Y-axis tick: çalışan adı + departman alt satırda
-    const renderYAxisTick = (props, dataMap, showDept) => {
+    // Custom Y-axis tick: çalışan adı + departman alt satırda + dept transition separator
+    const renderYAxisTick = (props, dataMap, showDept, deptTransitions) => {
         const { x, y, payload } = props;
         const item = dataMap[payload.value];
+        const isFirstOfDept = deptTransitions?.has(payload.value);
         return (
             <g transform={`translate(${x},${y})`}>
+                {/* Dept transition separator — bu kişi yeni bir dept'in ilk üyesiyse üstüne ince çizgi */}
+                {isFirstOfDept && (
+                    <line
+                        x1={-200}
+                        y1={-11}
+                        x2={1500}
+                        y2={-11}
+                        stroke="#cbd5e1"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                    />
+                )}
                 <text
                     x={-6}
                     y={showDept ? -3 : 0}
@@ -318,9 +336,10 @@ export default function TenureDetailModal({ open, onClose, data }) {
                         x={-6}
                         y={9}
                         textAnchor="end"
-                        fill="#94a3b8"
+                        fill={isFirstOfDept ? '#6366f1' : '#94a3b8'}
                         fontSize={8}
                         fontStyle="italic"
+                        fontWeight={isFirstOfDept ? 700 : 400}
                     >
                         {String(item.department).length > 18 ? String(item.department).slice(0, 17) + '…' : item.department}
                     </text>
@@ -330,7 +349,8 @@ export default function TenureDetailModal({ open, onClose, data }) {
     };
 
     // Single chart renderer
-    // - combinedShowDept: combined modda dept Y-axis'te gözüksün mü (>1 dept varsa true)
+    // - showDept: combined modda dept Y-axis'te gözüksün mü (>1 dept varsa true)
+    // Dept transitions otomatik hesaplanır — sıralı listede her yeni dept'in ilk üyesi işaretlenir
     const renderChart = (data, { showDept = false } = {}) => {
         if (!data || data.length === 0) {
             return (
@@ -341,6 +361,20 @@ export default function TenureDetailModal({ open, onClose, data }) {
         }
         // Hızlı lookup için map
         const dataMap = data.reduce((acc, d) => { acc[d.name] = d; return acc; }, {});
+
+        // Dept transitions: hangi kişiler yeni bir dept'in ilk üyesidir?
+        // Sadece showDept=true ve ardışık dept'ler farklıysa
+        const deptTransitions = new Set();
+        if (showDept) {
+            let prevDept = null;
+            data.forEach((d, i) => {
+                if (i > 0 && d.department !== prevDept) {
+                    deptTransitions.add(d.name);
+                }
+                prevDept = d.department;
+            });
+        }
+
         const yAxisWidth = showDept ? 160 : 110;
         const rowHeight = showDept ? 22 : 16;
         const height = Math.max(280, Math.min(data.length * rowHeight, 720));
@@ -363,7 +397,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                             dataKey="name"
                             width={yAxisWidth}
                             interval={0}
-                            tick={(props) => renderYAxisTick(props, dataMap, showDept)}
+                            tick={(props) => renderYAxisTick(props, dataMap, showDept, deptTransitions)}
                         />
                         <RTooltip
                             cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
