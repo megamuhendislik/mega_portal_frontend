@@ -8,6 +8,7 @@ import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
 import DrilldownModal from '../shared/DrilldownModal';
+import BurnoutWidget from '../shared/BurnoutWidget';
 import { ExternalLink, X as XIcon } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -174,6 +175,9 @@ export default function OvertimeMealTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* Burnout Widget — Phase 8.2 */}
+            <BurnoutWidget />
+
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Toplam OT" value={totalOT} suffix="saat" icon={Clock} gradient="amber"

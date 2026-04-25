@@ -10,6 +10,8 @@ import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import AnomaliesPanel from '../shared/AnomaliesPanel';
+import InsightsBanner from '../shared/InsightsBanner';
+import CostCard from '../shared/CostCard';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -154,8 +156,14 @@ export default function OverviewTab() {
                 </div>
             )}
 
+            {/* ═══ Auto Insights (Phase 8.2) ═══ */}
+            <InsightsBanner />
+
             {/* ═══ Anomaly Detection Panel (Phase 4) ═══ */}
             <AnomaliesPanel threshold={2.0} />
+
+            {/* ═══ Cost Estimate (Phase 8.2) ═══ */}
+            <CostCard />
 
             {/* ═══ Comparison Summary Banner ═══ */}
             {isComparing && cmpKpi && (
