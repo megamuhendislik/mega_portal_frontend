@@ -1,290 +1,585 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Users, GitCompare, Award, Target, Clock, AlarmClock, TrendingUp, Shield } from 'lucide-react';
+import { Select, Segmented, Tag, Empty, Spin, Tooltip } from 'antd';
+import {
+    Users, GitCompare, Building2, Calendar, User as UserIcon,
+    TrendingUp, TrendingDown, BarChart3, ArrowRight,
+} from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
-import PersonSelector from '../shared/PersonSelector';
-import KPICard, { KPIProgressBar } from '../shared/KPICard';
+import KPICard from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
-import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import ChartTooltip from '../shared/ChartTooltip';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-    ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis,
-    CartesianGrid, Cell,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
+    ResponsiveContainer, Legend, LineChart, Line, Cell,
 } from 'recharts';
 
-const PERSON_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
-const PERSON_BG = ['bg-indigo-50 text-indigo-700 border-indigo-200', 'bg-emerald-50 text-emerald-700 border-emerald-200', 'bg-amber-50 text-amber-700 border-amber-200', 'bg-red-50 text-red-700 border-red-200'];
+/**
+ * ComparisonTab v2 — 4-mod karşılaştırma stüdyosu (Phase 10)
+ *
+ * Modlar:
+ *   benchmark: Kişi vs grup ortalaması (departman/şirket/pozisyon)
+ *   persons:   2-4 kişi karşılaştırma
+ *   teams:     2-4 departman karşılaştırma
+ *   periods:   Kişi vs kendi geçmişi (2 dönem)
+ *
+ * Görünüm:
+ *   anlık: snapshot (radar/bar)
+ *   trend: aylık zaman serisi (multi-line)
+ */
+
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+const MODES = [
+    { value: 'benchmark', label: 'Kişi → Benchmark', icon: UserIcon, desc: 'Bir kişiyi grup ortalamasıyla karşılaştır' },
+    { value: 'persons', label: 'Kişi vs Kişi', icon: GitCompare, desc: '2-4 çalışanı yan yana koy' },
+    { value: 'teams', label: 'Ekip vs Ekip', icon: Building2, desc: '2-4 departmanı karşılaştır' },
+    { value: 'periods', label: 'Geçmiş ile', icon: Calendar, desc: 'Bir kişinin iki dönemini kıyasla' },
+];
+
+const SCOPE_OPTIONS = [
+    { value: 'department', label: 'Departman' },
+    { value: 'company', label: 'Şirket Geneli' },
+    { value: 'position', label: 'Pozisyon' },
+];
 
 export default function ComparisonTab() {
-    const { employees, queryParams, data: bulkData, departments } = useAnalytics();
-    const [mode, setMode] = useState('person');
-    const [selectedIds, setSelectedIds] = useState([]);
-    const [compareData, setCompareData] = useState(null);
+    const { employees, departments } = useAnalytics();
+
+    const [mode, setMode] = useState('benchmark');
+    const [view, setView] = useState('snapshot'); // 'snapshot' | 'trend'
+    const [months, setMonths] = useState(6);
+
+    // Mode-specific state
+    const [selectedEmpId, setSelectedEmpId] = useState(null);
+    const [selectedEmpIds, setSelectedEmpIds] = useState([]);
+    const [selectedDeptIds, setSelectedDeptIds] = useState([]);
+    const [scope, setScope] = useState('department');
+    const [periodA, setPeriodA] = useState('');
+    const [periodB, setPeriodB] = useState('');
+
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const fetchCompare = useCallback(async () => {
-        if (selectedIds.length < 2) { setCompareData(null); return; }
+    // Auto-pick defaults
+    useEffect(() => {
+        if (!selectedEmpId && employees?.length) setSelectedEmpId(employees[0].id);
+    }, [employees, selectedEmpId]);
+
+    const empOptions = useMemo(
+        () => (employees || []).map((e) => ({ value: e.id, label: e.name || e.full_name || `#${e.id}` })),
+        [employees]
+    );
+    const deptOptions = useMemo(
+        () => (departments || []).map((d) => ({ value: d.id, label: d.name })),
+        [departments]
+    );
+
+    // Fetch
+    const fetchComparison = useCallback(async () => {
+        const params = { mode, months };
+        if (mode === 'benchmark') {
+            if (!selectedEmpId) return;
+            params.emp_id = selectedEmpId;
+            params.scope = scope;
+        } else if (mode === 'persons') {
+            if (selectedEmpIds.length < 2) return;
+            params.emp_ids = selectedEmpIds.join(',');
+        } else if (mode === 'teams') {
+            if (selectedDeptIds.length < 2) return;
+            params.dept_ids = selectedDeptIds.join(',');
+        } else if (mode === 'periods') {
+            if (!selectedEmpId || !periodA || !periodB) return;
+            params.emp_id = selectedEmpId;
+            params.period_a = periodA;
+            params.period_b = periodB;
+        }
+
         setLoading(true);
+        setError(null);
         try {
-            const results = await Promise.all(
-                selectedIds.map(id =>
-                    api.get('/attendance-analytics/', { params: { ...queryParams, employee_id: id } })
-                        .then(r => ({ id, data: r.data }))
-                        .catch(() => ({ id, data: null }))
-                )
+            const res = await api.get('/attendance-analytics/compare/', { params, timeout: 30000 });
+            setData(res.data);
+        } catch (err) {
+            setError(err?.response?.data?.error || err?.message || 'Yüklenemedi');
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [mode, months, selectedEmpId, selectedEmpIds, selectedDeptIds, scope, periodA, periodB]);
+
+    useEffect(() => { fetchComparison(); }, [fetchComparison]);
+
+    // ─── Render helpers ───
+
+    const renderModeSelector = () => (
+        <div className="bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
+            <div className="flex items-center gap-1 overflow-x-auto">
+                {MODES.map((m) => {
+                    const Icon = m.icon;
+                    const active = mode === m.value;
+                    return (
+                        <button
+                            key={m.value}
+                            onClick={() => { setMode(m.value); setData(null); }}
+                            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                                active
+                                    ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 shadow-sm border border-indigo-200/80'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/80'
+                            }`}
+                        >
+                            <Icon size={14} />
+                            <div className="text-left">
+                                <div>{m.label}</div>
+                                <div className="text-[9px] font-medium text-slate-400">{m.desc}</div>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    const renderControls = () => (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+                {/* Mode-specific selectors */}
+                {mode === 'benchmark' && (
+                    <>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Kişi:</span>
+                            <Select
+                                value={selectedEmpId}
+                                onChange={setSelectedEmpId}
+                                options={empOptions}
+                                style={{ minWidth: 220 }}
+                                size="small"
+                                showSearch
+                                optionFilterProp="label"
+                                placeholder="Çalışan seç"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Karşılaştır:</span>
+                            <Segmented
+                                value={scope}
+                                onChange={setScope}
+                                options={SCOPE_OPTIONS}
+                                size="small"
+                            />
+                        </div>
+                    </>
+                )}
+
+                {mode === 'persons' && (
+                    <div className="flex items-center gap-2 flex-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">Kişiler (2-4):</span>
+                        <Select
+                            mode="multiple"
+                            value={selectedEmpIds}
+                            onChange={(v) => setSelectedEmpIds(v.slice(0, 4))}
+                            options={empOptions}
+                            style={{ flex: 1, minWidth: 300 }}
+                            size="small"
+                            showSearch
+                            optionFilterProp="label"
+                            maxTagCount={4}
+                            placeholder="2-4 çalışan seç"
+                        />
+                    </div>
+                )}
+
+                {mode === 'teams' && (
+                    <div className="flex items-center gap-2 flex-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">Departmanlar (2-4):</span>
+                        <Select
+                            mode="multiple"
+                            value={selectedDeptIds}
+                            onChange={(v) => setSelectedDeptIds(v.slice(0, 4))}
+                            options={deptOptions}
+                            style={{ flex: 1, minWidth: 300 }}
+                            size="small"
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="2-4 departman seç"
+                        />
+                    </div>
+                )}
+
+                {mode === 'periods' && (
+                    <>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Kişi:</span>
+                            <Select
+                                value={selectedEmpId}
+                                onChange={setSelectedEmpId}
+                                options={empOptions}
+                                style={{ minWidth: 200 }}
+                                size="small"
+                                showSearch
+                                optionFilterProp="label"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">A:</span>
+                            <input type="month" value={periodA} onChange={(e) => setPeriodA(e.target.value)}
+                                className="px-2 py-1 border border-slate-200 rounded text-xs" />
+                            <ArrowRight size={12} className="text-slate-400" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">B:</span>
+                            <input type="month" value={periodB} onChange={(e) => setPeriodB(e.target.value)}
+                                className="px-2 py-1 border border-slate-200 rounded text-xs" />
+                        </div>
+                    </>
+                )}
+
+                {/* Months + View toggle (sağda) */}
+                {mode !== 'periods' && (
+                    <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Görünüm:</span>
+                        <Segmented
+                            value={view}
+                            onChange={setView}
+                            options={[
+                                { value: 'snapshot', label: 'Anlık' },
+                                { value: 'trend', label: 'Zaman Serisi' },
+                            ]}
+                            size="small"
+                        />
+                        {view === 'trend' && (
+                            <Select
+                                value={months}
+                                onChange={setMonths}
+                                options={[3, 6, 12].map((n) => ({ value: n, label: `Son ${n} ay` }))}
+                                size="small"
+                                style={{ width: 110 }}
+                            />
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderBenchmark = () => {
+        if (!data || data.mode !== 'benchmark') return null;
+        const months = data.months || [];
+        const last = months[months.length - 1] || {};
+        const person = last.person || {};
+        const benchmark = last.benchmark || {};
+
+        if (view === 'snapshot') {
+            const compareData = [
+                { metric: 'Verimlilik (%)', person: person.efficiency_pct || 0, benchmark: benchmark.efficiency_pct || 0 },
+                { metric: 'Çalışma (sa)', person: person.worked_hours || 0, benchmark: benchmark.worked_hours || 0 },
+                { metric: 'Ek Mesai (sa)', person: person.overtime_hours || 0, benchmark: benchmark.overtime_hours || 0 },
+                { metric: 'Eksik (sa)', person: person.missing_hours || 0, benchmark: benchmark.missing_hours || 0 },
+            ];
+            return (
+                <SectionCard title={`${data.person.name} vs ${data.benchmark_label}`} collapsible={false}>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={compareData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="metric" tick={{ fontSize: 11, fontWeight: 600 }} />
+                                <YAxis tick={{ fontSize: 10 }} />
+                                <RTooltip content={<ChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                <Bar dataKey="person" name={data.person.name} fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="benchmark" name={data.benchmark_label} fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+                        {compareData.map((d) => {
+                            const delta = d.benchmark > 0 ? Math.round((d.person - d.benchmark) / d.benchmark * 100) : 0;
+                            const isPositive = (d.metric.includes('Eksik') ? delta < 0 : delta > 0);
+                            return (
+                                <div key={d.metric} className="rounded-lg border border-slate-200 p-2.5 text-center">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase">{d.metric}</div>
+                                    <div className="text-lg font-black text-slate-800 tabular-nums">{d.person}</div>
+                                    <div className={`text-[10px] font-bold mt-0.5 ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {delta >= 0 ? '+' : ''}{delta}% vs ort.
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </SectionCard>
             );
-            setCompareData(results.filter(r => r.data));
-        } catch { setCompareData(null); }
-        setLoading(false);
-    }, [selectedIds, queryParams]);
+        }
 
-    useEffect(() => { if (mode === 'person') fetchCompare(); }, [fetchCompare, mode]);
-
-    // Department comparison
-    const [deptIds, setDeptIds] = useState([]);
-    const [deptData, setDeptData] = useState(null);
-    const [deptLoading, setDeptLoading] = useState(false);
-
-    const fetchDeptCompare = useCallback(async () => {
-        if (deptIds.length < 2) { setDeptData(null); return; }
-        setDeptLoading(true);
-        try {
-            const res = await api.get('/attendance-analytics/team-overview/', {
-                params: { ...queryParams, department_ids: deptIds.join(','), compare_departments: '1' },
-            });
-            setDeptData(res.data?.department_comparison || []);
-        } catch { setDeptData(null); }
-        setDeptLoading(false);
-    }, [deptIds, queryParams]);
-
-    useEffect(() => { if (mode === 'team') fetchDeptCompare(); }, [fetchDeptCompare, mode]);
-
-    // Radar data
-    const radarData = useMemo(() => {
-        if (!compareData || compareData.length < 2) return [];
-        const metrics = [
-            { label: 'Verimlilik', extract: d => Math.min(d?.kpi?.efficiency_pct || 0, 100) },
-            { label: 'Dakiklik', extract: d => d?.summary?.punctuality_pct || 0 },
-            { label: 'Devam', extract: d => Math.max(0, 100 - (d?.summary?.absence_days || 0) * 10) },
-            { label: 'Mola Uyumu', extract: d => Math.max(0, 100 - Math.abs((d?.kpi?.avg_break_minutes || 0) - 60) * 2) },
-            { label: 'Çalışma Saati', extract: d => { const t = d?.kpi?.total_worked_hours || 0; const tgt = d?.kpi?.target_hours || 176; return Math.min(Math.round(t / tgt * 100), 100); } },
-        ];
-        return metrics.map(m => {
-            const point = { metric: m.label };
-            compareData.forEach((c, i) => {
-                const emp = employees.find(e => e.id === c.id);
-                const name = (emp?.name || emp?.full_name || `#${i + 1}`).split(' ').slice(0, 2).join(' ');
-                point[name] = Math.round(m.extract(c.data));
-            });
-            return point;
-        });
-    }, [compareData, employees]);
-
-    const radarKeys = useMemo(() => radarData.length > 0 ? Object.keys(radarData[0]).filter(k => k !== 'metric') : [], [radarData]);
-
-    // Department bar data
-    const deptBarData = useMemo(() => {
-        if (!deptData) return [];
-        return deptData.map(d => ({
-            name: (d.department_name || '').length > 12 ? (d.department_name || '').slice(0, 12) + '…' : d.department_name || '',
-            verimlilik: d.avg_efficiency_pct || 0,
-            devam: d.attendance_rate_pct || 0,
-            kişi: d.employee_count || 0,
+        // Trend
+        const chartData = months.map((m) => ({
+            ay: m.period?.slice(5),
+            kişi_verimlilik: m.person?.efficiency_pct || 0,
+            ortalama_verimlilik: m.benchmark?.efficiency_pct || 0,
+            kişi_çalışma: m.person?.worked_hours || 0,
+            ortalama_çalışma: m.benchmark?.worked_hours || 0,
+            kişi_ot: m.person?.overtime_hours || 0,
+            ortalama_ot: m.benchmark?.overtime_hours || 0,
         }));
-    }, [deptData]);
+        return (
+            <SectionCard title={`${data.person.name} vs ${data.benchmark_label} — Aylık Trend`} collapsible={false}>
+                <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="ay" tick={{ fontSize: 11, fontWeight: 600 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <RTooltip content={<ChartTooltip />} />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                            <Line type="monotone" dataKey="kişi_verimlilik" name={`${data.person.name} - Verimlilik %`} stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4 }} />
+                            <Line type="monotone" dataKey="ortalama_verimlilik" name="Ortalama Verimlilik %" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </SectionCard>
+        );
+    };
 
-    // Detail comparison rows
-    const detailRows = [
-        { label: 'Verimlilik', get: d => `${d?.kpi?.efficiency_pct || 0}%`, icon: Target },
-        { label: 'Çalışma (saat)', get: d => d?.kpi?.total_worked_hours || 0, icon: Clock },
-        { label: 'Hedef (saat)', get: d => d?.kpi?.target_hours || '—', icon: Target },
-        { label: 'Ek Mesai (saat)', get: d => d?.kpi?.overtime_hours || 0, icon: TrendingUp },
-        { label: 'Kayıp (saat)', get: d => d?.kpi?.missing_hours || 0, icon: Shield },
-        { label: 'Dakiklik', get: d => `${d?.summary?.punctuality_pct || 0}%`, icon: Award },
-        { label: 'Ort. Giriş', get: d => d?.summary?.avg_check_in || '—', icon: AlarmClock },
-        { label: 'Ort. Çıkış', get: d => d?.summary?.avg_check_out || '—', icon: AlarmClock },
-        { label: 'Ort. Mola (dk)', get: d => d?.kpi?.avg_break_minutes || 0 },
-        { label: 'Devamsızlık', get: d => `${d?.summary?.absence_days || 0} gün` },
-        { label: 'Yemek', get: d => `${d?.summary?.meal_orders || 0}/${d?.summary?.meal_working_days || 0}` },
-    ];
+    const renderPersons = () => {
+        if (!data || data.mode !== 'persons') return null;
+        const emps = data.employees || [];
+        const series = data.time_series || [];
+        const snapshot = data.snapshot || [];
+
+        if (view === 'snapshot') {
+            // Radar
+            const radarMetrics = [
+                { metric: 'Verimlilik' },
+                { metric: 'Çalışma' },
+                { metric: 'Ek Mesai' },
+                { metric: 'Eksik' },
+            ];
+            // Her metrik için her kişinin değeri
+            const radarData = radarMetrics.map((m) => {
+                const point = { metric: m.metric };
+                snapshot.forEach((s) => {
+                    const key = s.name.split(' ')[0].slice(0, 12);
+                    if (m.metric === 'Verimlilik') point[key] = s.metrics?.efficiency_pct || 0;
+                    if (m.metric === 'Çalışma') point[key] = s.metrics?.worked_hours || 0;
+                    if (m.metric === 'Ek Mesai') point[key] = s.metrics?.overtime_hours || 0;
+                    if (m.metric === 'Eksik') point[key] = s.metrics?.missing_hours || 0;
+                });
+                return point;
+            });
+            const keys = snapshot.map((s) => s.name.split(' ')[0].slice(0, 12));
+            return (
+                <SectionCard title="Kişi Karşılaştırma — Anlık" collapsible={false}>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fontWeight: 600 }} />
+                                <PolarRadiusAxis tick={{ fontSize: 9 }} />
+                                {keys.map((k, i) => (
+                                    <Radar key={k} dataKey={k} stroke={COLORS[i]} fill={COLORS[i]} fillOpacity={0.2} strokeWidth={2} />
+                                ))}
+                                <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                <RTooltip content={<ChartTooltip />} />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </SectionCard>
+            );
+        }
+
+        // Trend
+        const lineData = series.map((p) => {
+            const out = { ay: p.period?.slice(5) };
+            emps.forEach((e) => {
+                const key = e.name.split(' ')[0].slice(0, 12);
+                out[`${key}_verimlilik`] = p[`${key}_efficiency`] || 0;
+            });
+            return out;
+        });
+        return (
+            <SectionCard title="Kişi Verimlilik Trendi" collapsible={false}>
+                <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={lineData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="ay" tick={{ fontSize: 11, fontWeight: 600 }} />
+                            <YAxis tick={{ fontSize: 10 }} unit="%" />
+                            <RTooltip content={<ChartTooltip unit="%" />} />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                            {emps.map((e, i) => {
+                                const key = e.name.split(' ')[0].slice(0, 12);
+                                return <Line key={e.id} type="monotone" dataKey={`${key}_verimlilik`} name={e.name} stroke={COLORS[i]} strokeWidth={2.5} dot={{ r: 4 }} />;
+                            })}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </SectionCard>
+        );
+    };
+
+    const renderTeams = () => {
+        if (!data || data.mode !== 'teams') return null;
+        const depts = data.departments || [];
+        const series = data.time_series || [];
+        const snapshot = data.snapshot || [];
+
+        if (view === 'snapshot') {
+            const barData = snapshot.map((s) => ({
+                name: s.name,
+                verimlilik: s.metrics?.efficiency_pct || 0,
+                çalışma: s.metrics?.worked_hours || 0,
+                ot: s.metrics?.overtime_hours || 0,
+                kişi: s.employee_count,
+            }));
+            return (
+                <SectionCard title="Departman Karşılaştırma — Anlık" collapsible={false}>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={barData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} />
+                                <YAxis tick={{ fontSize: 10 }} />
+                                <RTooltip content={<ChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                <Bar dataKey="verimlilik" name="Verimlilik %" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="çalışma" name="Ort. Çalışma (sa)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="ot" name="Ort. OT (sa)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                        {snapshot.map((s, i) => (
+                            <div key={s.dept_id} className="rounded-lg border border-slate-200 p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS[i] }} />
+                                    <span className="font-bold text-sm text-slate-800">{s.name}</span>
+                                    <Tag color="default" className="ml-auto text-[10px]">{s.employee_count} kişi</Tag>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div><span className="text-slate-500">Verimlilik:</span> <span className="font-bold tabular-nums">{s.metrics?.efficiency_pct}%</span></div>
+                                    <div><span className="text-slate-500">Çalışma:</span> <span className="font-bold tabular-nums">{s.metrics?.worked_hours}sa</span></div>
+                                    <div><span className="text-slate-500">OT:</span> <span className="font-bold tabular-nums">{s.metrics?.overtime_hours}sa</span></div>
+                                    <div><span className="text-slate-500">Eksik:</span> <span className="font-bold tabular-nums text-red-600">{s.metrics?.missing_hours}sa</span></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </SectionCard>
+            );
+        }
+
+        // Trend
+        const lineData = series.map((p) => {
+            const out = { ay: p.period?.slice(5) };
+            depts.forEach((d) => {
+                const key = d.name.slice(0, 12);
+                out[`${key}_verimlilik`] = p[`${key}_efficiency`] || 0;
+            });
+            return out;
+        });
+        return (
+            <SectionCard title="Departman Verimlilik Trendi" collapsible={false}>
+                <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={lineData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="ay" tick={{ fontSize: 11, fontWeight: 600 }} />
+                            <YAxis tick={{ fontSize: 10 }} unit="%" />
+                            <RTooltip content={<ChartTooltip unit="%" />} />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                            {depts.map((d, i) => {
+                                const key = d.name.slice(0, 12);
+                                return <Line key={d.id} type="monotone" dataKey={`${key}_verimlilik`} name={d.name} stroke={COLORS[i]} strokeWidth={2.5} dot={{ r: 4 }} />;
+                            })}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </SectionCard>
+        );
+    };
+
+    const renderPeriods = () => {
+        if (!data || data.mode !== 'periods') return null;
+        const deltas = data.deltas || {};
+        const cards = [
+            { label: 'Verimlilik', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
+            { label: 'Çalışma', key: 'worked_hours', suffix: 'sa', betterIsHigher: true },
+            { label: 'Ek Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
+            { label: 'Eksik Saat', key: 'missing_hours', suffix: 'sa', betterIsHigher: false },
+        ];
+        return (
+            <SectionCard title={`${data.person.name} — ${data.period_a} vs ${data.period_b}`} collapsible={false}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {cards.map((c) => {
+                        const d = deltas[c.key] || {};
+                        const isImproved = c.betterIsHigher === null
+                            ? null
+                            : c.betterIsHigher ? d.diff > 0 : d.diff < 0;
+                        const TrendIcon = d.diff > 0 ? TrendingUp : TrendingDown;
+                        return (
+                            <div key={c.key} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">{c.label}</div>
+                                <div className="flex items-baseline justify-between gap-2 mb-3">
+                                    <div>
+                                        <div className="text-[9px] text-slate-400">A: {data.period_a}</div>
+                                        <div className="text-lg font-bold text-slate-700 tabular-nums">{d.period_a}{c.suffix}</div>
+                                    </div>
+                                    <ArrowRight size={14} className="text-slate-400" />
+                                    <div className="text-right">
+                                        <div className="text-[9px] text-slate-400">B: {data.period_b}</div>
+                                        <div className="text-lg font-bold text-slate-700 tabular-nums">{d.period_b}{c.suffix}</div>
+                                    </div>
+                                </div>
+                                <div className={`flex items-center gap-1.5 text-sm font-bold ${
+                                    isImproved === null ? 'text-slate-600' : isImproved ? 'text-emerald-600' : 'text-red-600'
+                                }`}>
+                                    <TrendIcon size={14} />
+                                    {d.diff >= 0 ? '+' : ''}{d.diff}{c.suffix}
+                                    <span className="text-[10px] text-slate-400 ml-auto">
+                                        ({d.pct_change >= 0 ? '+' : ''}{d.pct_change}%)
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </SectionCard>
+        );
+    };
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
-            {/* Mode toggle */}
-            <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200/80 w-fit shadow-sm">
-                {[{ key: 'person', label: 'Kişi vs Kişi', icon: GitCompare }, { key: 'team', label: 'Ekip vs Ekip', icon: Users }].map(m => (
-                    <button key={m.key} onClick={() => setMode(m.key)}
-                        className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === m.key ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/80' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
-                        <m.icon size={15} /> {m.label}
-                    </button>
-                ))}
-            </div>
+            {renderModeSelector()}
+            {renderControls()}
 
-            {mode === 'person' ? (
-                <>
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
-                        <PersonSelector employees={employees.map(e => ({ ...e, name: e.name || e.full_name }))}
-                            selected={selectedIds} onChange={setSelectedIds} max={4} label="Karşılaştırılacak kişileri seçin" />
-                    </div>
-
-                    {selectedIds.length < 2 ? (
-                        <div className="text-center py-20">
-                            <GitCompare size={48} className="mx-auto text-slate-200 mb-4" />
-                            <p className="text-lg font-bold text-slate-400">En az 2 kişi seçin</p>
-                            <p className="text-sm text-slate-300 mt-1">Karşılaştırma için yukarıdan kişileri ekleyin</p>
-                        </div>
-                    ) : loading ? <LoadingSkeleton rows={2} /> : radarData.length > 0 ? (
-                        <>
-                            {/* Radar */}
-                            <SectionCard title="Performans Radar Karşılaştırması" icon={GitCompare}
-                                iconGradient="from-indigo-500 to-purple-600" collapsible={false}>
-                                <div className="h-96">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart data={radarData}>
-                                            <PolarGrid stroke="#e2e8f0" />
-                                            <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} />
-                                            <PolarRadiusAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[0, 100]} />
-                                            {radarKeys.map((key, i) => (
-                                                <Radar key={key} name={key} dataKey={key}
-                                                    stroke={PERSON_COLORS[i]} fill={PERSON_COLORS[i]}
-                                                    fillOpacity={0.12} strokeWidth={2.5}
-                                                    dot={{ r: 4, fill: PERSON_COLORS[i], strokeWidth: 0 }} />
-                                            ))}
-                                            <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
-                                            <Tooltip content={<ChartTooltip />} />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </SectionCard>
-
-                            {/* Detail table */}
-                            <SectionCard title="Detaylı Karşılaştırma Tablosu" icon={Users} iconGradient="from-slate-600 to-slate-800">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b-2 border-slate-100">
-                                                <th className="text-left py-3 px-4 text-slate-400 text-[10px] uppercase font-bold tracking-wider">Metrik</th>
-                                                {compareData?.map((c, i) => {
-                                                    const emp = employees.find(e => e.id === c.id);
-                                                    return (
-                                                        <th key={c.id} className="text-center py-3 px-4">
-                                                            <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${PERSON_BG[i]}`}>
-                                                                {(emp?.name || emp?.full_name || '').split(' ').slice(0, 2).join(' ')}
-                                                            </span>
-                                                        </th>
-                                                    );
-                                                })}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {detailRows.map((row, ri) => (
-                                                <tr key={ri} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                                    <td className="py-2.5 px-4 font-medium text-slate-600 flex items-center gap-2">
-                                                        {row.icon && <row.icon size={13} className="text-slate-300" />}
-                                                        {row.label}
-                                                    </td>
-                                                    {compareData?.map((c, ci) => {
-                                                        const val = row.get(c.data);
-                                                        // Highlight best value
-                                                        const allVals = compareData.map(x => {
-                                                            const v = row.get(x.data);
-                                                            return typeof v === 'number' ? v : parseFloat(v) || 0;
-                                                        });
-                                                        const isNumeric = typeof val === 'number' || (!isNaN(parseFloat(val)) && !String(val).includes(':'));
-                                                        const isBest = isNumeric && !row.label.includes('Kayıp') && !row.label.includes('Devamsız') &&
-                                                            parseFloat(val) === Math.max(...allVals);
-                                                        return (
-                                                            <td key={c.id} className={`py-2.5 px-4 text-center tabular-nums transition-colors ${isBest ? 'font-black text-emerald-600' : 'font-bold text-slate-800'}`}>
-                                                                {val}
-                                                                {isBest && <span className="ml-1 text-[8px]">🏆</span>}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </SectionCard>
-                        </>
-                    ) : <EmptyState message="Karşılaştırma verisi oluşturulamadı" />}
-                </>
-            ) : (
-                /* Team vs Team */
-                <>
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Karşılaştırılacak Departmanları Seçin (min 2)</label>
-                        <div className="flex flex-wrap gap-2">
-                            {departments.map(d => {
-                                const isSelected = deptIds.includes(d.id);
-                                return (
-                                    <button key={d.id}
-                                        onClick={() => setDeptIds(prev => isSelected ? prev.filter(x => x !== d.id) : [...prev, d.id])}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${isSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
-                                        {d.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {deptIds.length < 2 ? (
-                        <EmptyState icon={Users} message="Karşılaştırma için en az 2 departman seçin" />
-                    ) : deptLoading ? <LoadingSkeleton rows={2} /> : deptBarData.length > 0 ? (
-                        <>
-                            <SectionCard title="Departman Performans Karşılaştırması" icon={Users}
-                                iconGradient="from-cyan-500 to-blue-600" collapsible={false}>
-                                <div className="h-80">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={deptBarData} barGap={4} barSize={20}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
-                                            <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
-                                            <Tooltip content={<ChartTooltip />} />
-                                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                            <Bar dataKey="verimlilik" name="Verimlilik %" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                                            <Bar dataKey="devam" name="Devam %" fill="#10b981" radius={[6, 6, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </SectionCard>
-
-                            {/* Detail table */}
-                            <SectionCard title="Departman Detay Tablosu" icon={BarChart3} iconGradient="from-slate-600 to-slate-800">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b-2 border-slate-100">
-                                                {['Departman', 'Kişi', 'Verimlilik', 'Devam', 'Çalışma', 'Ek Mesai', 'Kayıp'].map(h => (
-                                                    <th key={h} className="text-center py-3 px-3 text-[10px] text-slate-400 uppercase font-bold tracking-wider first:text-left">{h}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(deptData || []).map((d, i) => (
-                                                <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50">
-                                                    <td className="py-2.5 px-3 font-bold text-slate-700">{d.department_name}</td>
-                                                    <td className="py-2.5 px-3 text-center tabular-nums">{d.employee_count}</td>
-                                                    <td className="py-2.5 px-3 text-center">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${d.avg_efficiency_pct >= 90 ? 'bg-emerald-50 text-emerald-700' : d.avg_efficiency_pct >= 70 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
-                                                            {d.avg_efficiency_pct}%
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-center font-bold tabular-nums">{d.attendance_rate_pct}%</td>
-                                                    <td className="py-2.5 px-3 text-center tabular-nums">{d.total_worked_hours}h</td>
-                                                    <td className="py-2.5 px-3 text-center tabular-nums text-amber-600 font-bold">{d.total_overtime_hours}h</td>
-                                                    <td className="py-2.5 px-3 text-center tabular-nums text-red-500 font-bold">{d.total_missing_hours}h</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </SectionCard>
-                        </>
-                    ) : <EmptyState message="Departman verisi yok" />}
-                </>
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    ⚠ {error}
+                </div>
             )}
+
+            {loading && (
+                <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
+                    <Spin size="large" />
+                    <div className="mt-3 text-xs text-slate-500">Karşılaştırma verisi hazırlanıyor…</div>
+                </div>
+            )}
+
+            {!loading && !data && !error && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-12 text-center">
+                    <BarChart3 size={32} className="mx-auto mb-2 text-slate-400" />
+                    <div className="text-sm text-slate-500">
+                        {mode === 'persons' && 'En az 2 çalışan seçin'}
+                        {mode === 'teams' && 'En az 2 departman seçin'}
+                        {mode === 'periods' && 'Çalışan + 2 dönem seçin'}
+                        {mode === 'benchmark' && 'Çalışan seçin'}
+                    </div>
+                </div>
+            )}
+
+            {!loading && data && mode === 'benchmark' && renderBenchmark()}
+            {!loading && data && mode === 'persons' && renderPersons()}
+            {!loading && data && mode === 'teams' && renderTeams()}
+            {!loading && data && mode === 'periods' && renderPeriods()}
         </div>
     );
 }
