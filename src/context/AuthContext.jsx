@@ -107,15 +107,22 @@ export const AuthProvider = ({ children }) => {
     const hasPermission = useCallback((permissionCode) => {
         if (!user) return false;
 
-        // Superuser Bypass (Check user.user.is_superuser because 'user' here is the Employee profile)
+        // 1. Django Superuser Bypass (en yüksek seviye)
         if (user.user?.is_superuser) return true;
+
+        // 2. is_admin flag — backend hesaplar (superuser veya SYSTEM_ADMIN rolü
+        //    veya SYSTEM_FULL_ACCESS yetkisi). Defense-in-depth.
+        if (user.is_admin) return true;
+
+        // 3. Roles SYSTEM_ADMIN içinde mi? (defense-in-depth)
+        if (Array.isArray(user.roles) && user.roles.some((r) => r?.key === 'SYSTEM_ADMIN')) return true;
 
         if (!user.all_permissions) return false;
 
-        // System Admin Bypass
+        // 4. SYSTEM_FULL_ACCESS permission bypass
         if (user.all_permissions.includes('SYSTEM_FULL_ACCESS')) return true;
 
-        // Direct permission check - no mapping (new minimal permission system)
+        // 5. Direct permission check
         return user.all_permissions.includes(permissionCode);
     }, [user]);
 

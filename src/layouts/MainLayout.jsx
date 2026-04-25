@@ -189,11 +189,18 @@ const MainLayout = () => {
         { path: '/help', label: 'Yardım', icon: BookOpen, permission: null },
     ];
 
+    // Admin bypass — Django superuser VEYA backend is_admin flag (SYSTEM_ADMIN role / SYSTEM_FULL_ACCESS)
+    const isFullAccessUser = !!(
+        user?.user?.is_superuser
+        || user?.is_admin
+        || (Array.isArray(user?.roles) && user.roles.some((r) => r?.key === 'SYSTEM_ADMIN'))
+    );
+
     const filteredNavItems = navItems.filter(item => {
         if (!user) return false;
-        if (user.user?.is_superuser) return true;
+        if (isFullAccessUser) return true;
 
-        // Hide Admin only items from non-superusers (unless they have explicit permission, but Health Check is critical)
+        // Hide Admin only items from non-superusers
         if (item.adminOnly) return false;
 
         // Custom visibility check (e.g., Vekalet Yönetimi only for managers/substitutes)

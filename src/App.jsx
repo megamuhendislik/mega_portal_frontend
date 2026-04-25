@@ -68,14 +68,13 @@ const ProtectedRoute = ({ children, requiredPermission, requireManager }) => {
     return <Navigate to="/login" />;
   }
 
-  // requireManager: PRIMARY ekibi olan kullanıcılar veya superuser görebilir.
-  // Backend `/users/me/` yanıtında is_manager flag'i hesaplar:
-  //   get_managed_employees(employee, 'PRIMARY', recursive=False).exists()
+  // requireManager: PRIMARY ekibi olan kullanıcılar veya superuser/admin görebilir.
   if (requireManager) {
     const isSuperuser = !!user?.user?.is_superuser;
+    const isAdmin = !!user?.is_admin
+        || (Array.isArray(user?.roles) && user.roles.some((r) => r?.key === 'SYSTEM_ADMIN'));
     const isManager = !!user?.is_manager;
-    if (!isSuperuser && !isManager) {
-      // Yetkisiz: anasayfaya yönlendir (analiz dışındaki tüm sayfalar açık)
+    if (!isSuperuser && !isAdmin && !isManager) {
       return <Navigate to="/" replace />;
     }
   }
