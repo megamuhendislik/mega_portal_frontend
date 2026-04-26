@@ -210,7 +210,7 @@ export default function WorkforcePanel() {
                     )}
                 </div>
 
-                {/* Leave Balance */}
+                {/* Leave Balance — Bant Dağılımı */}
                 <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/50 to-white p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                         <Coins size={16} className="text-amber-700" />
@@ -225,14 +225,108 @@ export default function WorkforcePanel() {
                             />
                         </Tooltip>
                     </div>
-                    <div className="text-3xl font-black text-amber-800 tabular-nums mb-2">
-                        {leave_liability?.total_days_remaining || 0}
-                        <span className="text-lg text-slate-500"> gün</span>
+
+                    {/* Yıllık İzin Dağılımı */}
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">Yıllık İzin</span>
+                            <span className="text-[10px] text-slate-400">kalan gün</span>
+                        </div>
+                        {(() => {
+                            const annual = leave_liability?.annual_distribution || {};
+                            const total = (annual['0-5'] || 0) + (annual['6-15'] || 0) + (annual['16-30'] || 0) + (annual['31+'] || 0);
+                            const segments = [
+                                { key: '0-5', label: '0-5g', color: '#ef4444', count: annual['0-5'] || 0 },
+                                { key: '6-15', label: '6-15g', color: '#f59e0b', count: annual['6-15'] || 0 },
+                                { key: '16-30', label: '16-30g', color: '#10b981', count: annual['16-30'] || 0 },
+                                { key: '31+', label: '31g+', color: '#3b82f6', count: annual['31+'] || 0 },
+                            ];
+                            if (total === 0) {
+                                return <div className="text-[11px] text-slate-400 italic py-2">Veri yok</div>;
+                            }
+                            return (
+                                <>
+                                    <div className="flex items-stretch h-8 rounded-lg overflow-hidden border border-slate-200">
+                                        {segments.filter(s => s.count > 0).map((s) => {
+                                            const pct = (s.count / total) * 100;
+                                            return (
+                                                <div
+                                                    key={s.key}
+                                                    style={{ width: `${pct}%`, backgroundColor: s.color }}
+                                                    className="flex items-center justify-center min-w-[28px]"
+                                                    title={`${s.label}: ${s.count} kişi`}
+                                                >
+                                                    <span className="text-[10px] font-black text-white drop-shadow tabular-nums">{s.count}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex items-stretch mt-1 gap-0.5">
+                                        {segments.filter(s => s.count > 0).map((s) => {
+                                            const pct = (s.count / total) * 100;
+                                            return (
+                                                <div key={s.key} style={{ width: `${pct}%` }} className="text-center min-w-[28px]">
+                                                    <div className="text-[8px] text-slate-500 truncate">{s.label}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
-                    <div className="text-xs text-slate-600 mb-3">
-                        <span className="font-bold">{leave_liability?.total_employees_with_balance || 0} çalışan</span>'da birikmiş
-                        (ort. <span className="font-bold">{leave_liability?.avg_days_per_employee || 0} gün</span>/kişi)
+
+                    {/* Mazeret İzni Dağılımı */}
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">Mazeret İzni</span>
+                            <span className="text-[10px] text-slate-400">kalan saat</span>
+                        </div>
+                        {(() => {
+                            const excuse = leave_liability?.excuse_distribution || {};
+                            const total = (excuse['0-4'] || 0) + (excuse['5-9'] || 0) + (excuse['10-14'] || 0) + (excuse['15-18'] || 0);
+                            const segments = [
+                                { key: '0-4', label: '0-4sa', color: '#ef4444', count: excuse['0-4'] || 0 },
+                                { key: '5-9', label: '5-9sa', color: '#f59e0b', count: excuse['5-9'] || 0 },
+                                { key: '10-14', label: '10-14sa', color: '#10b981', count: excuse['10-14'] || 0 },
+                                { key: '15-18', label: '15-18sa', color: '#3b82f6', count: excuse['15-18'] || 0 },
+                            ];
+                            if (total === 0) {
+                                return <div className="text-[11px] text-slate-400 italic py-2">Veri yok</div>;
+                            }
+                            return (
+                                <>
+                                    <div className="flex items-stretch h-8 rounded-lg overflow-hidden border border-slate-200">
+                                        {segments.filter(s => s.count > 0).map((s) => {
+                                            const pct = (s.count / total) * 100;
+                                            return (
+                                                <div
+                                                    key={s.key}
+                                                    style={{ width: `${pct}%`, backgroundColor: s.color }}
+                                                    className="flex items-center justify-center min-w-[28px]"
+                                                    title={`${s.label}: ${s.count} kişi`}
+                                                >
+                                                    <span className="text-[10px] font-black text-white drop-shadow tabular-nums">{s.count}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex items-stretch mt-1 gap-0.5">
+                                        {segments.filter(s => s.count > 0).map((s) => {
+                                            const pct = (s.count / total) * 100;
+                                            return (
+                                                <div key={s.key} style={{ width: `${pct}%` }} className="text-center min-w-[28px]">
+                                                    <div className="text-[8px] text-slate-500 truncate">{s.label}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
+
+                    {/* ⚠ Expire warning (mevcut özellik korunur) */}
                     {leave_liability?.expiring_soon?.length > 0 && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-2">
                             <div className="text-[10px] font-bold text-red-700 uppercase mb-1">
