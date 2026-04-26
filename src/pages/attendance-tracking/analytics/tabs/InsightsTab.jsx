@@ -8,6 +8,7 @@ import {
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
+import ScopeBanner from '../shared/ScopeBanner';
 
 /**
  * InsightsTab — Otomatik İçgörüler tam-ekran sekmesi.
@@ -66,7 +67,7 @@ const FILTERS = [
 ];
 
 export default function InsightsTab() {
-    const { queryParams } = useAnalytics();
+    const { queryParams, startDate, endDate } = useAnalytics();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -134,6 +135,9 @@ export default function InsightsTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Header */}
             <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 p-5 shadow-sm">
                 <div className="flex items-start justify-between flex-wrap gap-3">

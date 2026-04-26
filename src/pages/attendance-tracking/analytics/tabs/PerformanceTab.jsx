@@ -7,6 +7,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
+import ScopeBanner from '../shared/ScopeBanner';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Area, AreaChart, ComposedChart, Legend, ReferenceLine,
@@ -23,7 +24,7 @@ const hoursFormatter = (value, name) => {
 };
 
 export default function PerformanceTab() {
-    const { employees, queryParams } = useAnalytics();
+    const { employees, queryParams, startDate, endDate } = useAnalytics();
     const [selectedId, setSelectedId] = useState(null);
     const [personalData, setPersonalData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -96,6 +97,9 @@ export default function PerformanceTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Employee selector */}
             <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex items-center gap-4 flex-wrap shadow-sm">
                 <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl text-white">

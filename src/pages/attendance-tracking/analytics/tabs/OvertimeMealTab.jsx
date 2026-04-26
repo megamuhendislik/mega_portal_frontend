@@ -9,6 +9,7 @@ import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
 import DrilldownModal from '../shared/DrilldownModal';
 import BurnoutWidget from '../shared/BurnoutWidget';
+import ScopeBanner from '../shared/ScopeBanner';
 import { ExternalLink, X as XIcon } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -19,7 +20,7 @@ const OT_COLORS = { intended: '#6366f1', potential: '#f59e0b', manual: '#10b981'
 const OT_LABELS = { intended: 'Planlı', potential: 'Potansiyel', manual: 'Manuel', weekend: 'Hafta Sonu' };
 
 export default function OvertimeMealTab() {
-    const { data: bulkData, loading: bulkLoading, queryParams } = useAnalytics();
+    const { data: bulkData, loading: bulkLoading, queryParams, startDate, endDate } = useAnalytics();
     const [otData, setOtData] = useState(null);
     const [breakMealData, setBreakMealData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -175,6 +176,9 @@ export default function OvertimeMealTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Burnout Widget — Phase 8.2 */}
             <BurnoutWidget />
 

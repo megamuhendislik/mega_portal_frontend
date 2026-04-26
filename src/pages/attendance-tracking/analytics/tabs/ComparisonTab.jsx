@@ -9,6 +9,7 @@ import { useAnalytics } from '../AnalyticsContext';
 import KPICard from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import ChartTooltip from '../shared/ChartTooltip';
+import ScopeBanner from '../shared/ScopeBanner';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
@@ -45,7 +46,7 @@ const SCOPE_OPTIONS = [
 ];
 
 export default function ComparisonTab() {
-    const { employees, departments } = useAnalytics();
+    const { employees, departments, startDate, endDate } = useAnalytics();
 
     const [mode, setMode] = useState('benchmark');
     const [view, setView] = useState('snapshot'); // 'snapshot' | 'trend'
@@ -548,6 +549,9 @@ export default function ComparisonTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {renderModeSelector()}
             {renderControls()}
 

@@ -7,6 +7,7 @@ import KPICard from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import ChartTooltip from '../shared/ChartTooltip';
+import ScopeBanner from '../shared/ScopeBanner';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, Legend, PieChart, Pie, Cell,
@@ -43,7 +44,7 @@ const TYPE_LABELS = {
  *  - Geciken talepler listesi (en eski 20)
  */
 export default function SLATab() {
-    const { queryParams } = useAnalytics();
+    const { queryParams, startDate, endDate } = useAnalytics();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -171,6 +172,9 @@ export default function SLATab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* KPI row */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Toplam Talep" value={summary.total_requests || 0} icon={Users} gradient="indigo" />

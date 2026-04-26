@@ -7,6 +7,7 @@ import {
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
+import ScopeBanner from '../shared/ScopeBanner';
 
 /**
  * AnomaliesTab — Anomali Tespit tam-ekran sekmesi.
@@ -84,7 +85,7 @@ const DIR_FILTERS = [
 ];
 
 export default function AnomaliesTab() {
-    const { queryParams } = useAnalytics();
+    const { queryParams, startDate, endDate } = useAnalytics();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -179,6 +180,9 @@ export default function AnomaliesTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Header */}
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/60 to-orange-50/60 p-5 shadow-sm">
                 <div className="flex items-start justify-between flex-wrap gap-3">

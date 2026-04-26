@@ -10,6 +10,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState, ErrorState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
+import ScopeBanner from '../shared/ScopeBanner';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
@@ -21,7 +22,7 @@ const STATUS_COLORS = { approved: '#10B981', rejected: '#EF4444', pending: '#F59
 const STATUS_LABELS = { APPROVED: 'Onaylı', REJECTED: 'Reddedildi', PENDING: 'Bekleyen', CANCELLED: 'İptal' };
 
 export default function RequestAnalyticsTab() {
-    const { queryParams } = useAnalytics();
+    const { queryParams, startDate, endDate } = useAnalytics();
     const [mode, setMode] = useState('personal');
     const [personalData, setPersonalData] = useState(null);
     const [teamData, setTeamData] = useState(null);
@@ -131,6 +132,9 @@ export default function RequestAnalyticsTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Mode toggle */}
             <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200/80 w-fit shadow-sm">
                 {[{ key: 'personal', label: 'Kişisel Taleplerim', icon: FileText }, { key: 'team', label: 'Ekip Talepleri', icon: Users }].map(m => (

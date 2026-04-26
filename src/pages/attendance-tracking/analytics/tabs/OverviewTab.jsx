@@ -10,6 +10,7 @@ import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
+import ScopeBanner from '../shared/ScopeBanner';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -19,7 +20,7 @@ const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b',
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
 
 export default function OverviewTab() {
-    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch } = useAnalytics();
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate } = useAnalytics();
 
     // Defensive fallback: bulk endpoint başarısız olursa kendi başımıza çekelim
     const [fallbackData, setFallbackData] = useState(null);
@@ -147,6 +148,9 @@ export default function OverviewTab() {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
+            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            <ScopeBanner startDate={startDate} endDate={endDate} />
+
             {/* Fallback uyarısı: bulk endpoint başarısız oldu, tekil endpointlerden çekildi */}
             {isUsingFallback && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
