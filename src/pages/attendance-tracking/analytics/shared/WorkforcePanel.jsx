@@ -14,6 +14,7 @@ import ChartTooltip from './ChartTooltip';
 import TenureDetailModal from './TenureDetailModal';
 import SpanDetailModal from './SpanDetailModal';
 import LeaveBalanceDetailModal from './LeaveBalanceDetailModal';
+import ApprovalDelayDetailModal from './ApprovalDelayDetailModal';
 
 /**
  * WorkforcePanel — Tier 1 6 KPI'yi tek ekranda gösterir.
@@ -40,6 +41,7 @@ export default function WorkforcePanel() {
     const [tenureModalOpen, setTenureModalOpen] = useState(false);
     const [spanModalOpen, setSpanModalOpen] = useState(false);
     const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+    const [approvalModalOpen, setApprovalModalOpen] = useState(false);
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -355,6 +357,16 @@ export default function WorkforcePanel() {
                         <Tag color="blue" className="ml-auto">
                             {approval_delays?.total_decided || 0} karar
                         </Tag>
+                        <Tooltip title="Genişlet — karar bazlı detay tablo">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setApprovalModalOpen(true)}
+                                disabled={!approval_delays?.total_decided}
+                                className="text-slate-400 hover:text-blue-600"
+                            />
+                        </Tooltip>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5 mb-3 text-center">
                         <div>
@@ -492,6 +504,12 @@ export default function WorkforcePanel() {
             <LeaveBalanceDetailModal
                 open={leaveModalOpen}
                 onClose={() => setLeaveModalOpen(false)}
+            />
+
+            {/* Approval Delay detail modal — karar bazlı süre tablosu */}
+            <ApprovalDelayDetailModal
+                open={approvalModalOpen}
+                onClose={() => setApprovalModalOpen(false)}
             />
         </div>
     );
