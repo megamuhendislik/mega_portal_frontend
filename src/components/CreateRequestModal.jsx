@@ -670,15 +670,24 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
             const approverPayload = selectedApproverId ? { target_approver_id: selectedApproverId } : {};
 
+            // FIX (2026-04-27): Tüm formlar için ortak YYYY-MM-DD tarih validation helper
+            const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
             if (selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')) {
                 // Özel İzin — /special-leaves/ API'sine gönder
                 const specialCode = leaveForm.request_type.split(':')[1];
+                // FIX: start_date validation
+                if (!isYmd(leaveForm.start_date)) {
+                    setError('Lütfen başlangıç tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('leave_type', specialCode);
                 formData.append('start_date', leaveForm.start_date);
                 if (specialCode === 'UNPAID') {
-                    if (!leaveForm.end_date) {
-                        setError('Bitiş tarihi zorunlu.');
+                    if (!isYmd(leaveForm.end_date)) {
+                        setError('Bitiş tarihi zorunlu (YYYY-MM-DD).');
                         setLoading(false);
                         return;
                     }
@@ -692,7 +701,6 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 // FIX (2026-04-27): Date validation before submit — prevents
                 // "Tarih biçimi yanlış. YYYY-MM-DD biçimlerinden birini kullanın"
                 // backend error from blank/undefined dates being sent through.
-                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
                 if (!isYmd(leaveForm.start_date)) {
                     setError('Lütfen başlangıç tarihini seçin.');
                     setLoading(false);
@@ -722,6 +730,17 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 }
                 response = await api.post('/leave/requests/', leavePayload);
             } else if (selectedType === 'OVERTIME') {
+                // FIX (2026-04-27): Date validation
+                if (!isYmd(overtimeForm.date)) {
+                    setError('Lütfen mesai tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
+                if (!overtimeForm.start_time || !overtimeForm.end_time) {
+                    setError('Başlangıç ve bitiş saatlerini girin.');
+                    setLoading(false);
+                    return;
+                }
                 // Only manual entry uses the form submit
                 response = await api.post('/overtime-requests/manual-entry/', {
                     date: overtimeForm.date,
@@ -731,6 +750,12 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     ...approverPayload
                 });
             } else if (selectedType === 'MEAL') {
+                // FIX (2026-04-27): Date validation
+                if (!isYmd(mealForm.date)) {
+                    setError('Lütfen tarih seçin.');
+                    setLoading(false);
+                    return;
+                }
                 response = await api.post('/meal-requests/', mealForm);
             } else if (selectedType === 'EXTERNAL_DUTY') {
                 // Find the request type ID for External Duty
@@ -739,7 +764,6 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
 
                 // FIX (2026-04-27): Date validation before submit — same as LEAVE.
                 // SmartDatePicker mode='range' yarım seçildiğinde end_date '' kalabiliyor.
-                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
                 if (!isYmd(externalDutyForm.start_date) || !isYmd(externalDutyForm.end_date)) {
                     throw new Error('Lütfen görev tarih aralığını eksiksiz seçin.');
                 }
@@ -796,10 +820,20 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     ...approverPayload,
                 });
             } else if (selectedType === 'CARDLESS_ENTRY') {
+                // FIX (2026-04-27): Date + saat validation
+                if (!isYmd(cardlessEntryForm.date)) {
+                    setError('Lütfen kartsız giriş tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
+                if (!cardlessEntryForm.check_in_time || !cardlessEntryForm.check_out_time) {
+                    setError('Giriş ve çıkış saatlerini girin.');
+                    setLoading(false);
+                    return;
+                }
                 response = await api.post('/cardless-entry-requests/', { ...cardlessEntryForm, ...approverPayload });
             } else if (selectedType === 'HEALTH_REPORT') {
                 // FIX (2026-04-27): Date validation before submit
-                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
                 if (!isYmd(healthReportForm.start_date) || !isYmd(healthReportForm.end_date)) {
                     setError('Lütfen rapor tarih aralığını eksiksiz seçin.');
                     setLoading(false);
@@ -815,7 +849,6 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 });
             } else if (selectedType === 'HOSPITAL_VISIT') {
                 // FIX (2026-04-27): Date + saat validation before submit
-                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
                 if (!isYmd(hospitalVisitForm.date)) {
                     setError('Lütfen ziyaret tarihini seçin.');
                     setLoading(false);
