@@ -689,9 +689,25 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } else if (selectedType === 'LEAVE') {
+                // FIX (2026-04-27): Date validation before submit — prevents
+                // "Tarih biçimi yanlış. YYYY-MM-DD biçimlerinden birini kullanın"
+                // backend error from blank/undefined dates being sent through.
+                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+                if (!isYmd(leaveForm.start_date)) {
+                    setError('Lütfen başlangıç tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
+                const leaveTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
+                const isSingleDayLeave = leaveTypeObj?.code === 'EXCUSE_LEAVE' || leaveTypeObj?.code === 'BIRTHDAY_LEAVE';
+                if (!isSingleDayLeave && !isYmd(leaveForm.end_date)) {
+                    setError('Lütfen bitiş tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
+
                 const leavePayload = { ...leaveForm, ...approverPayload };
                 // Mazeret izni: end_date = start_date, include start_time/end_time
-                const leaveTypeObj = requestTypes.find(t => t.id == leaveForm.request_type);
                 if (leaveTypeObj?.code === 'EXCUSE_LEAVE') {
                     leavePayload.end_date = leavePayload.start_date;
                 }
@@ -720,6 +736,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 // Find the request type ID for External Duty
                 const typeObj = requestTypes.find(t => t.category === 'EXTERNAL_DUTY');
                 if (!typeObj) throw new Error('Dış Görev talep türü bulunamadı.');
+
+                // FIX (2026-04-27): Date validation before submit — same as LEAVE.
+                // SmartDatePicker mode='range' yarım seçildiğinde end_date '' kalabiliyor.
+                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+                if (!isYmd(externalDutyForm.start_date) || !isYmd(externalDutyForm.end_date)) {
+                    throw new Error('Lütfen görev tarih aralığını eksiksiz seçin.');
+                }
 
                 // Validate: ALL days must have times filled
                 const allSegs = externalDutyForm.date_segments || [];
@@ -775,6 +798,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             } else if (selectedType === 'CARDLESS_ENTRY') {
                 response = await api.post('/cardless-entry-requests/', { ...cardlessEntryForm, ...approverPayload });
             } else if (selectedType === 'HEALTH_REPORT') {
+                // FIX (2026-04-27): Date validation before submit
+                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+                if (!isYmd(healthReportForm.start_date) || !isYmd(healthReportForm.end_date)) {
+                    setError('Lütfen rapor tarih aralığını eksiksiz seçin.');
+                    setLoading(false);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('start_date', healthReportForm.start_date);
                 formData.append('end_date', healthReportForm.end_date);
@@ -784,6 +814,18 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } else if (selectedType === 'HOSPITAL_VISIT') {
+                // FIX (2026-04-27): Date + saat validation before submit
+                const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+                if (!isYmd(hospitalVisitForm.date)) {
+                    setError('Lütfen ziyaret tarihini seçin.');
+                    setLoading(false);
+                    return;
+                }
+                if (!hospitalVisitForm.start_time || !hospitalVisitForm.end_time) {
+                    setError('Başlangıç ve bitiş saatlerini girin.');
+                    setLoading(false);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('report_type', 'HOSPITAL_VISIT');
                 formData.append('start_date', hospitalVisitForm.date);
