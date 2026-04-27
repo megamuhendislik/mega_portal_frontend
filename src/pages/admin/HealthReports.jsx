@@ -195,6 +195,12 @@ const HealthReports = () => {
 
     const handleSaveEdit = async () => {
         if (!detailModal) return;
+        // FIX (2026-04-27): Date validation before submit
+        const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+        if (!isYmd(editData.start_date) || !isYmd(editData.end_date)) {
+            toast.error('Lütfen başlangıç ve bitiş tarihlerini geçerli formatta girin.');
+            return;
+        }
         setActionLoading(true);
         try {
             const formData = new FormData();

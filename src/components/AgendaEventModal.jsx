@@ -155,6 +155,23 @@ const AgendaEventModal = ({ onClose, onSuccess, onDelete, initialDate, initialDa
             return;
         }
 
+        // FIX (2026-04-27): Tarih + saat validation — boş değerler backend'de
+        // "Tarih biçimi yanlış" hatasına neden oluyordu (start='T09:00' gibi).
+        const isYmd = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+        const isHm = (s) => typeof s === 'string' && /^\d{2}:\d{2}$/.test(s);
+        if (!isYmd(formData.start_date) || !isYmd(formData.end_date)) {
+            toast.error("Başlangıç ve bitiş tarihlerini eksiksiz seçin.");
+            return;
+        }
+        if (!isHm(formData.start_time) || !isHm(formData.end_time)) {
+            toast.error("Başlangıç ve bitiş saatlerini eksiksiz girin.");
+            return;
+        }
+        if (recurrence !== 'NONE' && recurrenceEndDate && !isYmd(recurrenceEndDate)) {
+            toast.error("Tekrar bitiş tarihi geçersiz formatta.");
+            return;
+        }
+
         setLoading(true);
 
         try {

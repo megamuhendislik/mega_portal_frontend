@@ -304,6 +304,13 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             message.warning('Lütfen tüm alanları doldurun');
             return;
         }
+        // FIX (2026-04-27): dayjs object truthy ama isValid() false olabilir
+        // (örn. parse hatasıyla yaratılmış). Bu durumda format() "Invalid Date"
+        // string döner ve backend reddeder.
+        if (!leaveStart.isValid() || !leaveEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
         if (isBalanceTracked && !deductFromBalance && !noDeductReason.trim()) {
             message.warning('Bakiyeden düşürülmeme nedenini yazınız');
             return;
@@ -491,6 +498,11 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
 
     const handleCreateDuty = async () => {
         if (!newDutyStart || !newDutyEnd) { message.warning('Başlangıç ve bitiş tarihi gerekli'); return; }
+        // FIX (2026-04-27): isValid kontrolü — invalid dayjs format() "Invalid Date" döner
+        if (!newDutyStart.isValid() || !newDutyEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
         setDutyCreating(true);
         try {
             await api.post('/system-data/admin_create_external_duty/', {
