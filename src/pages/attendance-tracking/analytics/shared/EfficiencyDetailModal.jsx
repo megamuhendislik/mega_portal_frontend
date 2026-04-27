@@ -27,19 +27,32 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
 
     // Parse employees with their efficiency
     const parsed = useMemo(() => {
-        return employees.map(e => ({
-            id: e.id || e.employee_id,
-            name: e.name || e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
-            department: e.department_name || e.department || 'Bilinmiyor',
-            departmentId: e.department_id,
-            efficiency: e.efficiency_pct ?? e.avg_efficiency_pct ?? 0,
-            workedHours: e.total_worked_hours ?? e.worked_hours ?? 0,
-            targetHours: e.target_hours ?? 0,
-            overtimeHours: e.overtime_hours ?? e.total_overtime_hours ?? 0,
-            missingHours: e.missing_hours ?? e.total_missing_hours ?? 0,
-            attendanceRate: e.attendance_rate_pct ?? 0,
-            level: getLevel(e.efficiency_pct ?? e.avg_efficiency_pct ?? 0),
-        }));
+        return employees.map(e => {
+            const workedTotal = e.total_worked_hours ?? e.worked_hours ?? 0;
+            const otHours = e.overtime_hours ?? e.total_overtime_hours ?? e.ot_hours ?? 0;
+            const normalHours = e.normal_hours ?? Math.max(0, workedTotal - otHours);
+            const proratedTarget = e.prorated_target_hours ?? e.target_hours ?? 0;
+            const eff = e.efficiency_pct ?? e.avg_efficiency_pct ?? 0;
+            const pureEff = e.pure_efficiency_pct ?? eff;
+            const combinedEff = e.combined_efficiency_pct ?? eff;
+            return {
+                id: e.id || e.employee_id,
+                name: e.name || e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                department: e.department_name || e.department || 'Bilinmiyor',
+                departmentId: e.department_id,
+                efficiency: eff,
+                pureEfficiency: pureEff,
+                combinedEfficiency: combinedEff,
+                workedHours: workedTotal,
+                normalHours,
+                targetHours: e.target_hours ?? 0,
+                proratedTarget,
+                overtimeHours: otHours,
+                missingHours: e.missing_hours ?? e.total_missing_hours ?? 0,
+                attendanceRate: e.attendance_rate_pct ?? 0,
+                level: getLevel(eff),
+            };
+        });
     }, [employees]);
 
     // Filter by search
@@ -156,6 +169,11 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                     </div>
                 </div>
 
+                {/* Formula açıklaması */}
+                <div className="mx-6 mt-3 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-[10px] text-slate-500 leading-relaxed">
+                    <span className="font-bold text-slate-700">Formül:</span> Salt verimlilik = <span className="font-mono">net mesai / şu ana kadar olabilecek hedef</span> · OT verimliliği = <span className="font-mono">(net + OT) / şu ana kadar olabilecek hedef</span>. Devam eden dönemde hedef pro-rata; bitmiş dönemde tam target.
+                </div>
+
                 {/* Content */}
                 <div className="flex-1 overflow-auto px-6 pb-6">
                     {viewMode === 'all' ? (
@@ -166,11 +184,13 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                                     {[
                                         { key: 'name', label: 'Çalışan' },
                                         { key: 'department', label: 'Departman' },
-                                        { key: 'efficiency', label: 'Verimlilik' },
-                                        { key: 'workedHours', label: 'Çalışma (h)' },
-                                        { key: 'targetHours', label: 'Hedef (h)' },
+                                        { key: 'pureEfficiency', label: 'Salt Verim.' },
+                                        { key: 'combinedEfficiency', label: 'OT Dahil' },
+                                        { key: 'normalHours', label: 'Net Mesai' },
                                         { key: 'overtimeHours', label: 'OT (h)' },
-                                        { key: 'missingHours', label: 'Kayıp (h)' },
+                                        { key: 'proratedTarget', label: 'Hedef (Şimdiye)' },
+                                        { key: 'targetHours', label: 'Tam Hedef' },
+                                        { key: 'missingHours', label: 'Kayıp' },
                                     ].map(col => (
                                         <th key={col.key}
                                             onClick={() => toggleSort(col.key)}
@@ -186,22 +206,34 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                             <tbody>
                                 {sorted.map((e, i) => {
                                     const cfg = LEVEL_CONFIG[e.level];
+                                    const pureColor = e.pureEfficiency >= 95 ? '#10b981' : e.pureEfficiency >= 80 ? '#6366f1' : e.pureEfficiency >= 60 ? '#f59e0b' : '#ef4444';
+                                    const combinedColor = e.combinedEfficiency > e.pureEfficiency + 5 ? '#f97316' : pureColor;
                                     return (
                                         <tr key={e.id || i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                             <td className="py-2.5 px-3 font-bold text-slate-700">{e.name}</td>
                                             <td className="py-2.5 px-3 text-slate-500 text-xs">{e.department}</td>
                                             <td className="py-2.5 px-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                         <div className="h-full rounded-full transition-all"
-                                                            style={{ width: `${Math.min(e.efficiency, 100)}%`, backgroundColor: cfg.color }} />
+                                                            style={{ width: `${Math.min(e.pureEfficiency, 100)}%`, backgroundColor: pureColor }} />
                                                     </div>
-                                                    <span className={`text-xs font-black tabular-nums`} style={{ color: cfg.color }}>{e.efficiency}%</span>
+                                                    <span className="text-xs font-black tabular-nums" style={{ color: pureColor }}>{e.pureEfficiency}%</span>
                                                 </div>
                                             </td>
-                                            <td className="py-2.5 px-3 tabular-nums font-bold text-slate-600">{Math.round(e.workedHours)}</td>
-                                            <td className="py-2.5 px-3 tabular-nums text-slate-500">{Math.round(e.targetHours)}</td>
+                                            <td className="py-2.5 px-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div className="h-full rounded-full transition-all"
+                                                            style={{ width: `${Math.min(e.combinedEfficiency, 130)}%`, backgroundColor: combinedColor }} />
+                                                    </div>
+                                                    <span className="text-xs font-black tabular-nums" style={{ color: combinedColor }}>{e.combinedEfficiency}%</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-2.5 px-3 tabular-nums font-bold text-slate-600">{Math.round(e.normalHours)}</td>
                                             <td className="py-2.5 px-3 tabular-nums text-amber-600 font-bold">{Math.round(e.overtimeHours)}</td>
+                                            <td className="py-2.5 px-3 tabular-nums text-indigo-600 font-bold">{Math.round(e.proratedTarget)}</td>
+                                            <td className="py-2.5 px-3 tabular-nums text-slate-400">{Math.round(e.targetHours)}</td>
                                             <td className="py-2.5 px-3 tabular-nums text-red-500 font-bold">{Math.round(e.missingHours)}</td>
                                         </tr>
                                     );
@@ -235,16 +267,18 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                                                     <thead>
                                                         <tr className="border-b border-slate-50">
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Çalışan</th>
-                                                            <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-40">Verimlilik</th>
-                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Çalışma</th>
-                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Hedef</th>
+                                                            <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">Salt Verim.</th>
+                                                            <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">OT Dahil</th>
+                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Net</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">OT</th>
+                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Hedef (Şimdiye)</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Kayıp</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {group.employees.map((e, j) => {
-                                                            const ecfg = LEVEL_CONFIG[e.level];
+                                                            const pureColor = e.pureEfficiency >= 95 ? '#10b981' : e.pureEfficiency >= 80 ? '#6366f1' : e.pureEfficiency >= 60 ? '#f59e0b' : '#ef4444';
+                                                            const combinedColor = e.combinedEfficiency > e.pureEfficiency + 5 ? '#f97316' : pureColor;
                                                             return (
                                                                 <tr key={e.id || j} className="border-b border-slate-50/50 hover:bg-slate-50/30 transition-colors">
                                                                     <td className="py-2 px-4 font-medium text-slate-700">{e.name}</td>
@@ -252,14 +286,23 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                                                 <div className="h-full rounded-full transition-all"
-                                                                                    style={{ width: `${Math.min(e.efficiency, 100)}%`, backgroundColor: ecfg.color }} />
+                                                                                    style={{ width: `${Math.min(e.pureEfficiency, 100)}%`, backgroundColor: pureColor }} />
                                                                             </div>
-                                                                            <span className="text-xs font-black tabular-nums w-10 text-right" style={{ color: ecfg.color }}>{e.efficiency}%</span>
+                                                                            <span className="text-xs font-black tabular-nums w-10 text-right" style={{ color: pureColor }}>{e.pureEfficiency}%</span>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="py-2 px-4 text-center tabular-nums font-bold text-slate-600">{Math.round(e.workedHours)}h</td>
-                                                                    <td className="py-2 px-4 text-center tabular-nums text-slate-500">{Math.round(e.targetHours)}h</td>
+                                                                    <td className="py-2 px-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                                                <div className="h-full rounded-full transition-all"
+                                                                                    style={{ width: `${Math.min(e.combinedEfficiency, 130)}%`, backgroundColor: combinedColor }} />
+                                                                            </div>
+                                                                            <span className="text-xs font-black tabular-nums w-10 text-right" style={{ color: combinedColor }}>{e.combinedEfficiency}%</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-2 px-4 text-center tabular-nums font-bold text-slate-600">{Math.round(e.normalHours)}h</td>
                                                                     <td className="py-2 px-4 text-center tabular-nums text-amber-600 font-bold">{Math.round(e.overtimeHours)}h</td>
+                                                                    <td className="py-2 px-4 text-center tabular-nums text-indigo-600 font-bold">{Math.round(e.proratedTarget)}h</td>
                                                                     <td className="py-2 px-4 text-center tabular-nums text-red-500 font-bold">{Math.round(e.missingHours)}h</td>
                                                                 </tr>
                                                             );
