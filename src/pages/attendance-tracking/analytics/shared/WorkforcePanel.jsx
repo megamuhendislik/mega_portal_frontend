@@ -15,6 +15,8 @@ import TenureDetailModal from './TenureDetailModal';
 import SpanDetailModal from './SpanDetailModal';
 import LeaveBalanceDetailModal from './LeaveBalanceDetailModal';
 import ApprovalDelayDetailModal from './ApprovalDelayDetailModal';
+import DelegationDetailModal from './DelegationDetailModal';
+import MissingHoursDetailModal from './MissingHoursDetailModal';
 
 /**
  * WorkforcePanel — Tier 1 6 KPI'yi tek ekranda gösterir.
@@ -42,6 +44,8 @@ export default function WorkforcePanel() {
     const [spanModalOpen, setSpanModalOpen] = useState(false);
     const [leaveModalOpen, setLeaveModalOpen] = useState(false);
     const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+    const [delegationModalOpen, setDelegationModalOpen] = useState(false);
+    const [missingHoursModalOpen, setMissingHoursModalOpen] = useState(false);
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -407,6 +411,16 @@ export default function WorkforcePanel() {
                         <Tag color="purple" className="ml-auto">
                             {delegation?.active_count || 0} aktif
                         </Tag>
+                        <Tooltip title="Genişlet — vekalet kayıtları detay tablosu">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setDelegationModalOpen(true)}
+                                disabled={!delegation?.active_count}
+                                className="text-slate-400 hover:text-violet-600"
+                            />
+                        </Tooltip>
                     </div>
                     <div className="space-y-2 mb-3">
                         <div className="flex items-center justify-between text-xs">
@@ -448,6 +462,16 @@ export default function WorkforcePanel() {
                     <div className="flex items-center gap-2 mb-3">
                         <TrendingDown size={16} className="text-red-600" />
                         <h3 className="font-bold text-slate-800">Eksik Saat Trendi</h3>
+                        <Tooltip title="Genişlet — kişi bazlı + departman + 6 ay trend">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<Maximize2 size={13} />}
+                                onClick={() => setMissingHoursModalOpen(true)}
+                                disabled={!missing_hours?.cumulative_hours}
+                                className="ml-auto text-slate-400 hover:text-red-600"
+                            />
+                        </Tooltip>
                     </div>
                     <div className="text-3xl font-black text-red-700 tabular-nums mb-1">
                         {missing_hours?.cumulative_hours || 0}<span className="text-lg text-slate-500"> sa</span>
@@ -510,6 +534,18 @@ export default function WorkforcePanel() {
             <ApprovalDelayDetailModal
                 open={approvalModalOpen}
                 onClose={() => setApprovalModalOpen(false)}
+            />
+
+            {/* Delegation detail modal — vekalet kayıtları */}
+            <DelegationDetailModal
+                open={delegationModalOpen}
+                onClose={() => setDelegationModalOpen(false)}
+            />
+
+            {/* Missing Hours detail modal — kişi + departman + 6 ay trend */}
+            <MissingHoursDetailModal
+                open={missingHoursModalOpen}
+                onClose={() => setMissingHoursModalOpen(false)}
             />
         </div>
     );

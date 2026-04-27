@@ -197,23 +197,28 @@ export default function OverviewTab() {
                 </div>
             )}
 
-            {/* Main KPI Grid */}
+            {/* Main KPI Grid — clickable cards open EfficiencyDetailModal sorted by metric */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked}
-                    sparkline={sparklineWorked} info={METRIC_EXPLANATIONS.efficiency} />
+                    sparkline={sparklineWorked} info={METRIC_EXPLANATIONS.efficiency}
+                    onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="saat" icon={Clock}
                     gradient="blue" delta={isComparing ? deltas?.worked : null}
-                    subtitle={`Hedef: ${kpi.total_target_hours || '—'} saat`} info={METRIC_EXPLANATIONS.worked_hours} />
+                    subtitle={`Hedef: ${kpi.total_target_hours || '—'} saat`} info={METRIC_EXPLANATIONS.worked_hours}
+                    onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Ek Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="saat" icon={TrendingUp}
                     gradient="amber" delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
-                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime} />
+                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime}
+                    onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Kayıp Saat" value={Math.round(kpi.total_missing_hours || 0)} suffix="saat" icon={AlertCircle}
                     gradient="red" delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
-                    info={METRIC_EXPLANATIONS.missing_hours} />
+                    info={METRIC_EXPLANATIONS.missing_hours}
+                    onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
                     gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan"
-                    info={METRIC_EXPLANATIONS.health_score} />
+                    info={METRIC_EXPLANATIONS.health_score}
+                    onClick={() => setShowDetailModal(true)} />
             </div>
 
             {/* Secondary metrics */}

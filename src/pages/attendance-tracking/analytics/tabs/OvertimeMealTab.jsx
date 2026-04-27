@@ -145,6 +145,21 @@ export default function OvertimeMealTab() {
         }));
     }, [ot]);
 
+    // Full OT-Meal correlation for drill-down (no slicing, keeps full name + dept)
+    const otMealCorrelationFull = useMemo(() => {
+        if (!ot?.ot_meal_correlation) return [];
+        return ot.ot_meal_correlation.map((d, i) => ({
+            key: d.id || d.employee_id || i,
+            id: d.id || d.employee_id,
+            name: d.name || d.employee_name || '',
+            department: d.department || '—',
+            ot_days: d.ot_days || 0,
+            meal_days: d.meal_days_on_ot || 0,
+            match_rate: d.ot_days > 0 ? Math.round((d.meal_days_on_ot / d.ot_days) * 100) : 0,
+            unmatched: Math.max(0, (d.ot_days || 0) - (d.meal_days_on_ot || 0)),
+        })).sort((a, b) => b.ot_days - a.ot_days);
+    }, [ot]);
+
     // Break analysis
     const breakDistribution = useMemo(() => {
         if (!breakMeal?.break_distribution) return [];
@@ -319,7 +334,13 @@ export default function OvertimeMealTab() {
 
             {/* OT-Meal Correlation */}
             <SectionCard title="OT — Yemek Eşleştirme Analizi" icon={Utensils} iconGradient="from-orange-500 to-red-500"
-                subtitle="OT yapılan günlerde yemek alınma durumu — kişi bazlı korelasyon">
+                subtitle="OT yapılan günlerde yemek alınma durumu — kişi bazlı korelasyon"
+                headerExtra={otMealCorrelationFull.length > 0 ? (
+                    <button onClick={() => setDrilldown({ type: 'ot_meal_correlation' })}
+                        className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200/60">
+                        <ExternalLink size={10} /> Detayları Göster
+                    </button>
+                ) : null}>
                 {otMealCorrelation.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -440,6 +461,68 @@ export default function OvertimeMealTab() {
                         { title: 'Min (dk)', dataIndex: 'min_break_minutes', sorter: (a, b) => a.min_break_minutes - b.min_break_minutes, align: 'right' },
                         { title: 'Max (dk)', dataIndex: 'max_break_minutes', sorter: (a, b) => a.max_break_minutes - b.max_break_minutes, align: 'right' },
                         { title: 'Gün', dataIndex: 'days_count', sorter: (a, b) => a.days_count - b.days_count, align: 'right' },
+                    ]}
+                    groupBy="department"
+                    groupLabel="Departman"
+                    searchFields={['name', 'department']}
+                    rowKey="key"
+                    pageSize={25}
+                />
+            )}
+            {drilldown?.type === 'ot_meal_correlation' && (
+                <DrilldownModal
+                    open={true}
+                    onClose={() => setDrilldown(null)}
+                    title="OT-Yemek Eşleştirme Detayı"
+                    subtitle="Tüm çalışanlar — OT yapılan günlerde yemek siparişi oranları"
+                    data={otMealCorrelationFull}
+                    columns={[
+                        { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
+                        { title: 'Departman', dataIndex: 'department', sorter: (a, b) => (a.department || '').localeCompare(b.department || '', 'tr') },
+                        {
+                            title: 'OT Günleri',
+                            dataIndex: 'ot_days',
+                            sorter: (a, b) => a.ot_days - b.ot_days,
+                            defaultSortOrder: 'descend',
+                            align: 'right',
+                            render: (v) => <span className="font-bold tabular-nums">{v}</span>,
+                        },
+                        {
+                            title: 'Yemek Alınan',
+                            dataIndex: 'meal_days',
+                            sorter: (a, b) => a.meal_days - b.meal_days,
+                            align: 'right',
+                            render: (v) => <span className="tabular-nums text-orange-700">{v}</span>,
+                        },
+                        {
+                            title: 'Yemeksiz',
+                            dataIndex: 'unmatched',
+                            sorter: (a, b) => a.unmatched - b.unmatched,
+                            align: 'right',
+                            render: (v) => (
+                                <span className={`tabular-nums ${v > 5 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>{v}</span>
+                            ),
+                        },
+                        {
+                            title: 'Eşleşme',
+                            dataIndex: 'match_rate',
+                            sorter: (a, b) => a.match_rate - b.match_rate,
+                            align: 'right',
+                            render: (v) => (
+                                <div className="flex items-center gap-2 justify-end">
+                                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all"
+                                            style={{
+                                                width: `${v}%`,
+                                                backgroundColor: v >= 80 ? '#10b981' : v >= 50 ? '#f59e0b' : '#ef4444',
+                                            }} />
+                                    </div>
+                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${v >= 80 ? 'bg-emerald-50 text-emerald-700' : v >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                                        {v}%
+                                    </span>
+                                </div>
+                            ),
+                        },
                     ]}
                     groupBy="department"
                     groupLabel="Departman"

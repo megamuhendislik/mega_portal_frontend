@@ -18,14 +18,26 @@ export default function KPICard({
     gradient = 'slate', delta, deltaSuffix = '%',
     subtitle, sparkline, className = '', mini = false,
     info, // { title, content } for InfoTooltip
+    onClick, // optional click handler — adds cursor-pointer + hover ring
 }) {
     const isPositive = delta > 0;
     const isNegative = delta < 0;
     const grad = GRADIENTS[gradient] || gradient;
+    const clickable = typeof onClick === 'function';
+    const clickProps = clickable ? {
+        onClick,
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); } },
+    } : {};
+    const clickClass = clickable ? 'cursor-pointer hover:ring-2 hover:ring-white/40' : '';
 
     if (mini) {
         return (
-            <div className={`bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3 group hover:shadow-md hover:border-slate-300/80 transition-all duration-300 ${className}`}>
+            <div
+                {...clickProps}
+                className={`bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3 group hover:shadow-md hover:border-slate-300/80 transition-all duration-300 ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-200' : ''} ${className}`}
+            >
                 {Icon && (
                     <div className={`p-2 bg-gradient-to-br ${grad} rounded-xl text-white shadow-sm group-hover:scale-105 transition-transform`}>
                         <Icon size={16} />
@@ -52,7 +64,10 @@ export default function KPICard({
     }
 
     return (
-        <div className={`relative overflow-hidden bg-gradient-to-br ${grad} text-white p-5 rounded-2xl shadow-lg group hover:shadow-xl transition-all duration-300 ${className}`}>
+        <div
+            {...clickProps}
+            className={`relative overflow-hidden bg-gradient-to-br ${grad} text-white p-5 rounded-2xl shadow-lg group hover:shadow-xl transition-all duration-300 ${clickClass} ${className}`}
+        >
             {/* Decorative pattern */}
             <div className="absolute inset-0 opacity-[0.07]"
                 style={{ backgroundImage: 'radial-gradient(circle at 25% 25%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />

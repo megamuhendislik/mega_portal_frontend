@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Tag, Empty, Progress, Tooltip, Collapse } from 'antd';
-import { Clock, AlertTriangle, CheckCircle2, Target, Users, TrendingUp, Hourglass } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle2, Target, Users, TrendingUp, Hourglass, BarChart3 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard from '../shared/KPICard';
@@ -8,10 +8,19 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import ChartTooltip from '../shared/ChartTooltip';
 import ScopeBanner from '../shared/ScopeBanner';
+import ManagerDecisionDetailModal from '../shared/ManagerDecisionDetailModal';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
+
+const SLA_BUCKET_COLORS = {
+    '<24h': '#10b981',
+    '24-48h': '#6366f1',
+    '48-72h': '#f59e0b',
+    '72h-1w': '#f97316',
+    '>1w': '#ef4444',
+};
 
 const STATUS_COLORS = {
     on_target: { color: 'green', bg: '#10b981', label: 'Hedefte' },
@@ -48,6 +57,7 @@ export default function SLATab() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [managerModal, setManagerModal] = useState({ open: false, id: null, name: null });
 
     useEffect(() => {
         if (!queryParams?.start_date) return;
@@ -84,6 +94,17 @@ export default function SLATab() {
             color: TYPE_COLORS[key] || '#94a3b8',
         }));
     }, [data]);
+
+    // SLA bucket histogram data — backend's by_bucket veya summary'den hesapla
+    const slaBucketData = useMemo(() => {
+        const buckets = data?.summary?.by_bucket || data?.by_bucket || {};
+        return ['<24h', '24-48h', '48-72h', '72h-1w', '>1w'].map((b) => ({
+            name: b,
+            count: buckets[b] || 0,
+            color: SLA_BUCKET_COLORS[b],
+        }));
+    }, [data]);
+    const hasBucketData = slaBucketData.some((b) => b.count > 0);
 
     const managerColumns = [
         {
@@ -234,9 +255,29 @@ export default function SLATab() {
                 </SectionCard>
             </div>
 
-            {/* Manager performance */}
+            {/* SLA Bucket Histogram */}
+            {hasBucketData && (
+                <SectionCard title="SLA Süre Dağılımı" icon={BarChart3} iconGradient="from-blue-500 to-indigo-600"
+                    subtitle="Karar süresinin bant dağılımı — kaç karar hangi pencerede sonuçlandı">
+                    <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={slaBucketData} barSize={48}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
+                                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                                <RTooltip content={<ChartTooltip unit=" karar" />} />
+                                <Bar dataKey="count" name="Karar Sayısı" radius={[6, 6, 0, 0]}>
+                                    {slaBucketData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </SectionCard>
+            )}
+
+            {/* Manager performance — rows are clickable for drill-down */}
             <SectionCard title="Yönetici Onay Performansı" icon={Users} iconGradient="from-violet-500 to-purple-600"
-                subtitle={`${(data.by_manager || []).length} yönetici — ort. süre ve hedefte oranı`}>
+                subtitle={`${(data.by_manager || []).length} yönetici — ort. süre ve hedefte oranı (satıra tıkla → detay)`}>
                 {(data.by_manager || []).length > 0 ? (
                     <Table
                         columns={managerColumns}
@@ -244,6 +285,10 @@ export default function SLATab() {
                         rowKey="manager_id"
                         size="small"
                         pagination={data.by_manager.length > 10 ? { pageSize: 10 } : false}
+                        onRow={(row) => ({
+                            onClick: () => setManagerModal({ open: true, id: row.manager_id, name: row.manager_name }),
+                            style: { cursor: 'pointer' },
+                        })}
                     />
                 ) : <EmptyState message="Henüz onay kararı yok" />}
             </SectionCard>
@@ -270,6 +315,14 @@ export default function SLATab() {
                     </div>
                 )}
             </SectionCard>
+
+            {/* Manager decision detail modal — bir yöneticinin tüm kararları */}
+            <ManagerDecisionDetailModal
+                open={managerModal.open}
+                onClose={() => setManagerModal({ open: false, id: null, name: null })}
+                managerId={managerModal.id}
+                managerName={managerModal.name}
+            />
         </div>
     );
 }

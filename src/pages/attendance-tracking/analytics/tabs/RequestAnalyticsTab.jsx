@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import {
-    FileText, TrendingUp, PieChart as PieChartIcon, Users, AlertCircle,
-    CheckCircle2, Clock, XCircle, Calendar, ArrowRight, BarChart3, Hourglass
+    FileText, TrendingUp, PieChart as PieChartIcon, Users,
+    CheckCircle2, Clock, XCircle, Calendar, BarChart3, Hourglass, X as CloseIcon,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
@@ -11,23 +11,81 @@ import { LoadingSkeleton, EmptyState, ErrorState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import ChartTooltip from '../shared/ChartTooltip';
 import ScopeBanner from '../shared/ScopeBanner';
+import RequestDetailDrawer from '../shared/RequestDetailDrawer';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, PieChart, Pie, Cell, LineChart, Line, ComposedChart, Area,
 } from 'recharts';
 
+// Lazy-load — yalnızca bekleyen talep filtresi etkin olunca tablo render edilir
+const PendingRequestsTable = lazy(() => import('../shared/PendingRequestsTable'));
+
 const TYPE_COLORS = { leave: '#3B82F6', overtime: '#F59E0B', meal: '#10B981', cardless: '#8B5CF6', health_report: '#EC4899' };
 const TYPE_LABELS = { leave: 'İzin', overtime: 'Ek Mesai', meal: 'Yemek', cardless: 'Kartsız Giriş', health_report: 'Sağlık Raporu' };
 const STATUS_COLORS = { approved: '#10B981', rejected: '#EF4444', pending: '#F59E0B', cancelled: '#94A3B8' };
-const STATUS_LABELS = { APPROVED: 'Onaylı', REJECTED: 'Reddedildi', PENDING: 'Bekleyen', CANCELLED: 'İptal' };
+
+// Pie label (Turkish) -> backend type/status code mapping
+const TYPE_LABEL_TO_CODE = {
+    'İzin': 'leave',
+    'Ek Mesai': 'overtime',
+    'Yemek': 'meal',
+    'Kartsız Giriş': 'cardless',
+    'Sağlık Raporu': 'health_report',
+};
+const STATUS_LABEL_TO_CODE = {
+    'Onaylı': 'APPROVED',
+    'Onaylandı': 'APPROVED',
+    'Reddedildi': 'REJECTED',
+    'Bekleyen': 'PENDING',
+    'İptal': 'CANCELLED',
+    'Bekliyor': 'PENDING',
+};
+
+// Filter chip tile
+function FilterChip({ label, color = 'blue', onRemove }) {
+    const COLORS = {
+        blue: { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
+        amber: { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
+        violet: { bg: '#ede9fe', text: '#5b21b6', border: '#c4b5fd' },
+        emerald: { bg: '#d1fae5', text: '#065f46', border: '#6ee7b7' },
+        slate: { bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' },
+    };
+    const c = COLORS[color] || COLORS.blue;
+    return (
+        <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border"
+            style={{ background: c.bg, color: c.text, borderColor: c.border }}
+        >
+            {label}
+            {onRemove && (
+                <button
+                    onClick={onRemove}
+                    className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+                    aria-label="Filtreyi kaldır"
+                >
+                    <CloseIcon size={10} />
+                </button>
+            )}
+        </span>
+    );
+}
 
 export default function RequestAnalyticsTab() {
-    const { queryParams, startDate, endDate } = useAnalytics();
+    const { startDate, endDate } = useAnalytics();
     const [mode, setMode] = useState('personal');
     const [personalData, setPersonalData] = useState(null);
     const [teamData, setTeamData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+
+    // Tıklanabilir pie filter state'leri
+    const [selectedType, setSelectedType] = useState(null);   // 'leave'|'overtime'|'cardless'|'meal'|null
+    const [selectedStatus, setSelectedStatus] = useState(null); // 'PENDING'|'APPROVED'|'REJECTED'|'CANCELLED'|null
+    const [selectedMonth, setSelectedMonth] = useState(null); // 'YYYY-MM' | null
+
+    // Drawer state
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerRequest, setDrawerRequest] = useState(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -51,7 +109,19 @@ export default function RequestAnalyticsTab() {
         setLoading(false);
     }, [mode]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        // Effect body içinde sync setState yapmamak için microtask'a ertele
+        Promise.resolve().then(() => { fetchData(); });
+    }, [fetchData]);
+
+    // Mode değişince filtreleri resetle
+    useEffect(() => {
+        Promise.resolve().then(() => {
+            setSelectedType(null);
+            setSelectedStatus(null);
+            setSelectedMonth(null);
+        });
+    }, [mode]);
 
     const data = mode === 'team' ? teamData : personalData;
 
@@ -61,11 +131,13 @@ export default function RequestAnalyticsTab() {
         if (data.type_distribution) {
             return data.type_distribution.filter(d => d.count > 0).map(d => ({
                 name: d.type || d.name, value: d.count, color: d.color || TYPE_COLORS[d.key] || '#94A3B8',
+                key: d.key,
             }));
         }
         if (data.by_type) {
             return Object.entries(data.by_type).map(([key, val]) => ({
                 name: TYPE_LABELS[key] || key, value: val?.total || (typeof val === 'number' ? val : 0), color: TYPE_COLORS[key] || '#94A3B8',
+                key,
             })).filter(d => d.value > 0);
         }
         return [];
@@ -92,6 +164,7 @@ export default function RequestAnalyticsTab() {
         const TR_MONTHS = { Jan: 'Oca', Feb: 'Şub', Mar: 'Mar', Apr: 'Nis', May: 'May', Jun: 'Haz', Jul: 'Tem', Aug: 'Ağu', Sep: 'Eyl', Oct: 'Eki', Nov: 'Kas', Dec: 'Ara' };
         return data.monthly_trend.map(m => ({
             name: (m.label || '').replace(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/, match => TR_MONTHS[match] || match),
+            ym: m.ym || m.year_month || m.key || null, // backend "YYYY-MM"
             izin: m.leave || 0,
             ek_mesai: m.overtime || 0,
             yemek: m.meal || 0,
@@ -123,6 +196,37 @@ export default function RequestAnalyticsTab() {
     // Approval speed / bottleneck
     const avgDecisionHours = data?.avg_decision_hours || data?.avg_approval_time_hours;
 
+    // Pie chart click handlers
+    const handleTypePieClick = useCallback((entry) => {
+        if (!entry) return;
+        const code = entry.key || TYPE_LABEL_TO_CODE[entry.name] || null;
+        if (!code) return;
+        setSelectedType((prev) => (prev === code ? null : code));
+    }, []);
+
+    const handleStatusPieClick = useCallback((entry) => {
+        if (!entry) return;
+        const code = STATUS_LABEL_TO_CODE[entry.name] || null;
+        if (!code) return;
+        setSelectedStatus((prev) => (prev === code ? null : code));
+    }, []);
+
+    const handleTrendBarClick = useCallback((data) => {
+        if (!data || !data.ym) return;
+        setSelectedMonth((prev) => (prev === data.ym ? null : data.ym));
+    }, []);
+
+    const handleRowClick = useCallback((row) => {
+        setDrawerRequest(row);
+        setDrawerOpen(true);
+    }, []);
+
+    const clearAllFilters = useCallback(() => {
+        setSelectedType(null);
+        setSelectedStatus(null);
+        setSelectedMonth(null);
+    }, []);
+
     if (loading) return <LoadingSkeleton rows={4} />;
     if (error) return <ErrorState message="Talep analiz verisi yüklenemedi" onRetry={fetchData} />;
 
@@ -130,9 +234,15 @@ export default function RequestAnalyticsTab() {
     const approvalRate = data?.approval_rate || 0;
     const pendingCount = data?.pending_count || data?.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0;
 
+    const hasFilter = !!(selectedType || selectedStatus || selectedMonth);
+    // Tablo görünür mu? Team mode + en az bir filter aktif (varsayılan: status=PENDING'i type seçilince auto-aç)
+    // UX: type pie tıklanınca status'u 'PENDING'e zorla (kullanıcı farklı seçtiyse koru)
+    const showPendingTable = mode === 'team' && hasFilter;
+    const effectiveStatus = selectedStatus || (selectedType ? 'PENDING' : 'PENDING');
+
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
-            {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
+            {/* Kapsam göstergesi */}
             <ScopeBanner startDate={startDate} endDate={endDate} />
 
             {/* Mode toggle */}
@@ -145,12 +255,49 @@ export default function RequestAnalyticsTab() {
                 ))}
             </div>
 
+            {/* Filter chips (sadece team mode) */}
+            {mode === 'team' && hasFilter && (
+                <div className="flex items-center gap-2 flex-wrap bg-blue-50/40 border border-blue-200/60 rounded-xl px-4 py-3">
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-[0.15em]">
+                        Aktif Filtreler:
+                    </span>
+                    {selectedStatus && (
+                        <FilterChip
+                            label={`Durum: ${({ PENDING: 'Bekleyen', APPROVED: 'Onaylı', REJECTED: 'Reddedildi', CANCELLED: 'İptal' })[selectedStatus]}`}
+                            color={selectedStatus === 'PENDING' ? 'amber' : (selectedStatus === 'APPROVED' ? 'emerald' : (selectedStatus === 'REJECTED' ? 'blue' : 'slate'))}
+                            onRemove={() => setSelectedStatus(null)}
+                        />
+                    )}
+                    {selectedType && (
+                        <FilterChip
+                            label={`Tip: ${TYPE_LABELS[selectedType] || selectedType}`}
+                            color={selectedType === 'leave' ? 'blue' : (selectedType === 'overtime' ? 'amber' : (selectedType === 'cardless' ? 'violet' : 'emerald'))}
+                            onRemove={() => setSelectedType(null)}
+                        />
+                    )}
+                    {selectedMonth && (
+                        <FilterChip
+                            label={`Ay: ${selectedMonth}`}
+                            color="slate"
+                            onRemove={() => setSelectedMonth(null)}
+                        />
+                    )}
+                    <button
+                        onClick={clearAllFilters}
+                        className="ml-auto text-[11px] font-semibold text-blue-700 hover:text-blue-900 flex items-center gap-1"
+                    >
+                        <CloseIcon size={11} /> Tümünü Temizle
+                    </button>
+                </div>
+            )}
+
             {/* KPI row */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <KPICard title="Toplam Talep" value={totalRequests} icon={FileText} gradient="slate" />
                 <KPICard title="Onay Oranı" value={`${approvalRate}`} suffix="%" icon={CheckCircle2} gradient="emerald"
                     info={METRIC_EXPLANATIONS.approval_rate} />
-                <KPICard title="Bekleyen" value={pendingCount} icon={Hourglass} gradient="amber" />
+                <KPICard title="Bekleyen" value={pendingCount} icon={Hourglass} gradient="amber"
+                    onClick={mode === 'team' ? () => setSelectedStatus('PENDING') : undefined} />
                 <KPICard title="Reddedilen" value={data?.rejected_count || 0} icon={XCircle} gradient="red" />
                 <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'OT Saati'}
                     value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours || 0)}
@@ -161,15 +308,34 @@ export default function RequestAnalyticsTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Type distribution */}
-                <SectionCard title="Talep Türü Dağılımı" icon={PieChartIcon} iconGradient="from-indigo-500 to-indigo-600" collapsible={false}>
+                <SectionCard title="Talep Türü Dağılımı" icon={PieChartIcon} iconGradient="from-indigo-500 to-indigo-600"
+                    collapsible={false}
+                    subtitle={mode === 'team' ? 'Tıkla → tip filtresi' : null}
+                >
                     {typeDistData.length > 0 ? (
                         <div className="space-y-4">
                             <div className="h-52">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={typeDistData} cx="50%" cy="50%" outerRadius={80} innerRadius={45}
-                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
-                                            {typeDistData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}
+                                            onClick={mode === 'team' ? handleTypePieClick : undefined}
+                                            cursor={mode === 'team' ? 'pointer' : 'default'}
+                                        >
+                                            {typeDistData.map((e, i) => {
+                                                const isSelected = mode === 'team' && selectedType
+                                                    && (e.key === selectedType || TYPE_LABEL_TO_CODE[e.name] === selectedType);
+                                                const isFaded = mode === 'team' && selectedType && !isSelected;
+                                                return (
+                                                    <Cell
+                                                        key={i}
+                                                        fill={e.color}
+                                                        opacity={isFaded ? 0.35 : 1}
+                                                        stroke={isSelected ? '#0f172a' : '#fff'}
+                                                        strokeWidth={isSelected ? 3 : 2}
+                                                    />
+                                                );
+                                            })}
                                         </Pie>
                                         <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
@@ -187,15 +353,34 @@ export default function RequestAnalyticsTab() {
                 </SectionCard>
 
                 {/* Status distribution */}
-                <SectionCard title="Durum Dağılımı" icon={CheckCircle2} iconGradient="from-emerald-500 to-emerald-600" collapsible={false}>
+                <SectionCard title="Durum Dağılımı" icon={CheckCircle2} iconGradient="from-emerald-500 to-emerald-600"
+                    collapsible={false}
+                    subtitle={mode === 'team' ? 'Tıkla → durum filtresi' : null}
+                >
                     {statusDistData.length > 0 ? (
                         <div className="space-y-4">
                             <div className="h-52">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={statusDistData} cx="50%" cy="50%" outerRadius={80} innerRadius={45}
-                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}>
-                                            {statusDistData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                            dataKey="value" strokeWidth={2} stroke="#fff" paddingAngle={2}
+                                            onClick={mode === 'team' ? handleStatusPieClick : undefined}
+                                            cursor={mode === 'team' ? 'pointer' : 'default'}
+                                        >
+                                            {statusDistData.map((e, i) => {
+                                                const code = STATUS_LABEL_TO_CODE[e.name];
+                                                const isSelected = mode === 'team' && selectedStatus && code === selectedStatus;
+                                                const isFaded = mode === 'team' && selectedStatus && !isSelected;
+                                                return (
+                                                    <Cell
+                                                        key={i}
+                                                        fill={e.color}
+                                                        opacity={isFaded ? 0.35 : 1}
+                                                        stroke={isSelected ? '#0f172a' : '#fff'}
+                                                        strokeWidth={isSelected ? 3 : 2}
+                                                    />
+                                                );
+                                            })}
                                         </Pie>
                                         <Tooltip content={<ChartTooltip />} />
                                     </PieChart>
@@ -239,22 +424,53 @@ export default function RequestAnalyticsTab() {
                 </SectionCard>
             </div>
 
-            {/* Monthly trend */}
+            {/* Bekleyen Talepler Tablosu (lazy-loaded, sadece team mode + filter aktif) */}
+            {showPendingTable && (
+                <SectionCard
+                    title="Bekleyen Talepler"
+                    icon={Hourglass}
+                    iconGradient="from-amber-500 to-orange-600"
+                    subtitle="Filtreye göre canlı liste — satıra tıkla detay panelini aç"
+                    collapsible={false}
+                >
+                    <Suspense fallback={<div className="text-center py-10 text-slate-400">Tablo yükleniyor…</div>}>
+                        <PendingRequestsTable
+                            typeFilter={selectedType || ''}
+                            statusFilter={effectiveStatus}
+                            monthFilter={selectedMonth}
+                            onRowClick={handleRowClick}
+                        />
+                    </Suspense>
+                </SectionCard>
+            )}
+
+            {/* Monthly trend (bar tıklanabilir, sadece team mode) */}
             <SectionCard title="Aylık Talep Trendi" icon={TrendingUp} iconGradient="from-emerald-500 to-emerald-600"
-                subtitle="Talep türleri bazında aylık dağılım ve toplam çizgisi">
+                subtitle={mode === 'team' ? 'Bar tıkla → o ayın taleplerini listele' : 'Talep türleri bazında aylık dağılım'}
+            >
                 {trendData.length > 0 ? (
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={trendData} barGap={2}>
+                            <ComposedChart data={trendData} barGap={2}
+                                onClick={mode === 'team' ? (e) => {
+                                    if (e?.activePayload?.[0]?.payload) {
+                                        handleTrendBarClick(e.activePayload[0].payload);
+                                    }
+                                } : undefined}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
                                 <YAxis tick={{ fontSize: 10 }} />
                                 <Tooltip content={<ChartTooltip />} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                <Bar dataKey="izin" name="İzin" fill={TYPE_COLORS.leave} radius={[3, 3, 0, 0]} stackId="a" />
-                                <Bar dataKey="ek_mesai" name="Ek Mesai" fill={TYPE_COLORS.overtime} radius={[3, 3, 0, 0]} stackId="a" />
-                                <Bar dataKey="yemek" name="Yemek" fill={TYPE_COLORS.meal} radius={[3, 3, 0, 0]} stackId="a" />
-                                <Bar dataKey="kartsız" name="Kartsız" fill={TYPE_COLORS.cardless} radius={[3, 3, 0, 0]} stackId="a" />
+                                <Bar dataKey="izin" name="İzin" fill={TYPE_COLORS.leave} radius={[3, 3, 0, 0]} stackId="a"
+                                    cursor={mode === 'team' ? 'pointer' : 'default'} />
+                                <Bar dataKey="ek_mesai" name="Ek Mesai" fill={TYPE_COLORS.overtime} radius={[3, 3, 0, 0]} stackId="a"
+                                    cursor={mode === 'team' ? 'pointer' : 'default'} />
+                                <Bar dataKey="yemek" name="Yemek" fill={TYPE_COLORS.meal} radius={[3, 3, 0, 0]} stackId="a"
+                                    cursor={mode === 'team' ? 'pointer' : 'default'} />
+                                <Bar dataKey="kartsız" name="Kartsız" fill={TYPE_COLORS.cardless} radius={[3, 3, 0, 0]} stackId="a"
+                                    cursor={mode === 'team' ? 'pointer' : 'default'} />
                                 <Line type="monotone" dataKey="toplam" name="Toplam" stroke="#1e293b" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 3" />
                             </ComposedChart>
                         </ResponsiveContainer>
@@ -340,6 +556,13 @@ export default function RequestAnalyticsTab() {
                     </div>
                 </SectionCard>
             )}
+
+            {/* Detail Drawer */}
+            <RequestDetailDrawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                request={drawerRequest}
+            />
         </div>
     );
 }

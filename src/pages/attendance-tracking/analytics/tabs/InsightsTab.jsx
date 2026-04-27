@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Tag, Empty, Button, Tooltip, Segmented } from 'antd';
+import { Tag, Button, Segmented } from 'antd';
 import {
     Sparkles, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
     Calendar, AlertCircle, Hourglass, Lightbulb, RotateCw, Filter,
-    ArrowRight,
+    ArrowRight, Users,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
+import InsightDetailDrawer from '../shared/InsightDetailDrawer';
 
 /**
  * InsightsTab — Otomatik İçgörüler tam-ekran sekmesi.
@@ -20,8 +21,10 @@ import ScopeBanner from '../shared/ScopeBanner';
  *  - Manuel refresh butonu
  *  - Detaylı boş state mesajı
  *  - Generated_at zaman damgası
+ *  - Insight kartına click → InsightDetailDrawer (etkilenen kişiler + evidence + öneriler)
  *
  * Backend: GET /api/attendance-analytics/insights/
+ *          GET /api/attendance-analytics/insight-detail/?code=<CODE>
  */
 
 const ICON_MAP = {
@@ -40,21 +43,25 @@ const SEVERITY_CFG = {
         bg: 'bg-red-50', border: 'border-red-200',
         icon: 'text-red-600', title: 'text-red-800', text: 'text-red-700',
         tag: 'red', label: 'Aksiyon Gerekli',
+        cta: 'text-red-600 hover:text-red-800',
     },
     warning: {
         bg: 'bg-amber-50', border: 'border-amber-200',
         icon: 'text-amber-600', title: 'text-amber-800', text: 'text-amber-700',
         tag: 'gold', label: 'Uyarı',
+        cta: 'text-amber-600 hover:text-amber-800',
     },
     info: {
         bg: 'bg-blue-50', border: 'border-blue-200',
         icon: 'text-blue-600', title: 'text-blue-800', text: 'text-blue-700',
         tag: 'blue', label: 'Bilgi',
+        cta: 'text-blue-600 hover:text-blue-800',
     },
     positive: {
         bg: 'bg-emerald-50', border: 'border-emerald-200',
         icon: 'text-emerald-600', title: 'text-emerald-800', text: 'text-emerald-700',
         tag: 'green', label: 'Pozitif',
+        cta: 'text-emerald-600 hover:text-emerald-800',
     },
 };
 
@@ -73,6 +80,8 @@ export default function InsightsTab() {
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState('all');
     const [refreshKey, setRefreshKey] = useState(0);
+    const [selectedInsight, setSelectedInsight] = useState(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const fetchInsights = useCallback(async () => {
         if (!queryParams?.start_date) return;
@@ -115,6 +124,17 @@ export default function InsightsTab() {
         const order = { alert: 3, warning: 2, info: 1, positive: 0 };
         return [...filteredInsights].sort((a, b) => (order[b.severity] || 0) - (order[a.severity] || 0));
     }, [filteredInsights]);
+
+    const openDrawer = useCallback((insight) => {
+        setSelectedInsight(insight);
+        setDrawerOpen(true);
+    }, []);
+
+    const closeDrawer = useCallback(() => {
+        setDrawerOpen(false);
+        // Drawer animation süresi sonrası temizle
+        setTimeout(() => setSelectedInsight(null), 300);
+    }, []);
 
     if (loading) {
         return <LoadingSkeleton rows={5} />;
@@ -231,12 +251,15 @@ export default function InsightsTab() {
                     {sortedInsights.map((ins, idx) => {
                         const cfg = SEVERITY_CFG[ins.severity] || SEVERITY_CFG.info;
                         const Icon = ICON_MAP[ins.icon] || Lightbulb;
+                        const affectedCount = ins.affected_count
+                            ?? (Array.isArray(ins.affected_employees) ? ins.affected_employees.length : 0);
+                        const hasCode = Boolean(ins.code);
                         return (
                             <div
                                 key={`${ins.severity}-${idx}`}
-                                className={`rounded-xl border ${cfg.border} ${cfg.bg} p-5 shadow-sm hover:shadow-md transition-shadow`}
+                                className={`rounded-xl border ${cfg.border} ${cfg.bg} p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col`}
                             >
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-start gap-3 flex-1">
                                     <div className={`p-2 rounded-lg bg-white ${cfg.icon} flex-shrink-0`}>
                                         <Icon size={20} />
                                     </div>
@@ -250,10 +273,10 @@ export default function InsightsTab() {
                                         <p className={`text-sm leading-relaxed ${cfg.text} mb-3`}>
                                             {ins.message}
                                         </p>
-                                        {ins.action?.label && (
+                                        {ins.action?.label && !hasCode && (
                                             <a
                                                 href={ins.action.route}
-                                                className={`inline-flex items-center gap-1 text-xs font-semibold ${cfg.icon} hover:underline`}
+                                                className={`inline-flex items-center gap-1 text-xs font-semibold ${cfg.cta} hover:underline`}
                                             >
                                                 {ins.action.label}
                                                 <ArrowRight size={12} />
@@ -261,6 +284,32 @@ export default function InsightsTab() {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Card footer — affected count + detail CTA */}
+                                {hasCode && (
+                                    <div className={`mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between gap-2 flex-wrap`}>
+                                        {affectedCount > 0 ? (
+                                            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-white/60 px-2 py-1 rounded-full">
+                                                <Users size={11} className={cfg.icon} />
+                                                <span className="tabular-nums">{affectedCount}</span>
+                                                <span className="text-slate-400 font-medium">kişi etkileniyor</span>
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                                                <Users size={11} />
+                                                Genel ekip içgörüsü
+                                            </span>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => openDrawer(ins)}
+                                            className={`inline-flex items-center gap-1 text-xs font-bold ${cfg.cta} hover:underline transition-colors`}
+                                        >
+                                            Detayları Gör
+                                            <ArrowRight size={12} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -272,6 +321,13 @@ export default function InsightsTab() {
                 Bu içgörüler heuristic kurallar tarafından otomatik üretilir.
                 Aksiyon almadan önce ilgili kişiyle veya verilerle doğrulayın.
             </div>
+
+            {/* Detail Drawer */}
+            <InsightDetailDrawer
+                open={drawerOpen}
+                onClose={closeDrawer}
+                insight={selectedInsight}
+            />
         </div>
     );
 }
