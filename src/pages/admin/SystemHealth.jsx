@@ -80,6 +80,7 @@ import PostFixAuditTab from './system-health/PostFixAuditTab';
 import QuickGateFixTab from './system-health/QuickGateFixTab';
 import QuickReentryTestTab from './system-health/QuickReentryTestTab';
 import MissedOutTestTab from './system-health/MissedOutTestTab';
+import DuplicateAttendanceTab from './system-health/DuplicateAttendanceTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -129,6 +130,7 @@ export default function SystemHealth() {
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
+                        { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
                         { id: 'bugfix_verify', name: 'Canlı Bug Fix Doğrulama', icon: SparklesIcon },
                         { id: 'quick_reentry', name: 'Kısa Gap OUT+IN Fix (04-22)', icon: ShieldCheckIcon },
                         { id: 'missed_out', name: 'Kayıp OUT Self-Heal (04-23)', icon: ShieldCheckIcon },
@@ -202,6 +204,7 @@ export default function SystemHealth() {
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
+                {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
                 {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
                 {activeTab === 'quick_reentry' && <QuickReentryTestTab />}
                 {activeTab === 'missed_out' && <MissedOutTestTab />}
