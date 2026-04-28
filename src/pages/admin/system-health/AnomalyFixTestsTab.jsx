@@ -1,0 +1,420 @@
+/**
+ * AnomalyFixTestsTab — Yakın anomali fix'leri spec testleri tek tab.
+ *
+ * "Tam Yeniden Hesaplama" raporlarinda tespit edilen ve fix edilen anomalileri
+ * canli kodda tekrarlamadigini garanti eden 32 spec testi tek tikla calistirir.
+ *
+ * Backend domain: 'recent_fixes' → core.spec_tests.test_recent_fixes
+ *
+ * Test sınıfları:
+ * 1. SpecManualOtIntegrityTest (4) — Sema Melek 2026-03-10
+ * 2. SpecApplyApprovedDoubleCountTest (3) — Türkay Kuzey 2026-04-09
+ * 3. SpecWorkedBasedEfficiencyTest (9) — verimlilik formülü
+ * 4. SpecDataIntegrityAuditTest (4) — manual_ot_integrity audit
+ * 5. SpecAnalyticsDeepDiveTest (10) — 6 yeni endpoint smoke
+ * 6. SpecAnomalyE2ETest (2) — full recovery flow
+ */
+import { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  Card, Button, Tag, Space, Typography, Progress, Collapse,
+  Table, Row, Col, Statistic, Alert, Empty, Divider,
+} from 'antd';
+import {
+  PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
+  ClockCircleOutlined, LoadingOutlined,
+  ExclamationCircleOutlined, BugOutlined, CodeOutlined,
+} from '@ant-design/icons';
+import api from '../../../services/api';
+
+const { Text, Title, Paragraph } = Typography;
+
+const TEST_CLASSES = [
+  {
+    key: 'SpecManualOtIntegrityTest',
+    label: 'MANUAL_OT Bütünlüğü',
+    count: 4,
+    color: '#722ed1',
+    description: 'Sema Melek 2026-03-10: normal_seconds=0 invariant + DUTY+MANUAL_OT partial overlap fix.',
+    references: ['Sema Melek Yılmaztürk 2026-03-10'],
+  },
+  {
+    key: 'SpecApplyApprovedDoubleCountTest',
+    label: 'Çift Sayım Engeli',
+    count: 3,
+    color: '#fa541c',
+    description: 'Türkay Kuzey 2026-04-09: Onaylı Ek Mesai zaten MANUAL_OT\'da temsil ediliyorsa DUTY/CARD\'a tekrar yazma.',
+    references: ['Türkay Kuzey 2026-03-19', 'Türkay Kuzey 2026-04-09'],
+  },
+  {
+    key: 'SpecWorkedBasedEfficiencyTest',
+    label: 'Worked-Based Verimlilik',
+    count: 9,
+    color: '#1890ff',
+    description: 'compute_efficiency_pct formülü worked/prorated_target × 100. cap=True/False, edge cases, prorate_target.',
+    references: ['utils.py compute_efficiency_pct'],
+  },
+  {
+    key: 'SpecDataIntegrityAuditTest',
+    label: 'Veri Bütünlüğü Audit',
+    count: 4,
+    color: '#faad14',
+    description: 'manual_ot_integrity kategorisi: scan + fix mode, double-count tespit + recalc trigger.',
+    references: ['DataIntegrityAuditor manual_ot_integrity'],
+  },
+  {
+    key: 'SpecAnalyticsDeepDiveTest',
+    label: 'Analytics Deep-Dive',
+    count: 10,
+    color: '#13c2c2',
+    description: '6 yeni endpoint smoke: insight-detail, anomalies/employee-detail, sla/manager-detail, workforce/delegation-detail, workforce/missing-hours-detail, requests-pending-list.',
+    references: ['attendance_analytics deep-dive endpoints'],
+  },
+  {
+    key: 'SpecAnomalyE2ETest',
+    label: 'End-to-End Recovery',
+    count: 2,
+    color: '#52c41a',
+    description: 'Bozuk veri → recalc → auditor → 0 issue (hem Sema hem Türkay senaryosu).',
+    references: ['Full recovery flow'],
+  },
+];
+
+const TOTAL_TESTS = TEST_CLASSES.reduce((s, c) => s + c.count, 0);
+
+export default function AnomalyFixTestsTab() {
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [result, setResult] = useState(null);
+  const [runningOutput, setRunningOutput] = useState('');
+  const [runningDetails, setRunningDetails] = useState([]);
+  const [showLogs, setShowLogs] = useState(true);
+  const pollingRef = useRef(null);
+  const liveLogRef = useRef(null);
+
+  const pollStatus = useCallback((taskId) => {
+    const poll = async () => {
+      try {
+        const resp = await api.get(`/system/health-check/get-spec-test-status/?task_id=${taskId}`);
+        const data = resp.data;
+
+        if (data.status === 'PROGRESS') {
+          if (data.progress != null) setProgress(data.progress);
+          setRunningDetails(data.running_details || []);
+          setRunningOutput(data.running_output || '');
+          if (data.results && data.results.length > 0) {
+            const r = data.results.find(x => x.domain === 'recent_fixes');
+            if (r) setResult(r);
+          }
+          pollingRef.current = setTimeout(poll, 2000);
+        } else if (data.status === 'SUCCESS') {
+          const r = (data.results || []).find(x => x.domain === 'recent_fixes');
+          setResult(r || null);
+          setRunning(false);
+          setProgress(100);
+          setRunningDetails([]);
+          setRunningOutput('');
+        } else if (data.status === 'FAILURE') {
+          setErrorMessage(data.error || 'Celery task başarısız oldu.');
+          setRunning(false);
+        } else {
+          pollingRef.current = setTimeout(poll, 2000);
+        }
+      } catch (err) {
+        setErrorMessage(`Polling hatası: ${err?.message || 'Bilinmeyen hata'}`);
+        setRunning(false);
+      }
+    };
+    poll();
+  }, []);
+
+  const runTests = async () => {
+    try {
+      setErrorMessage(null);
+      setResult(null);
+      setRunning(true);
+      setProgress(0);
+      setRunningDetails([]);
+      setRunningOutput('');
+
+      const resp = await api.post('/system/health-check/run-spec-tests/', { domain: 'recent_fixes' });
+      if (resp.data.task_id) {
+        pollStatus(resp.data.task_id);
+      }
+    } catch (err) {
+      setErrorMessage(`Test başlatma hatası: ${err?.response?.data?.error || err?.message || 'Bilinmeyen hata'}`);
+      setRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    if (liveLogRef.current) liveLogRef.current.scrollTop = liveLogRef.current.scrollHeight;
+  }, [runningOutput, runningDetails]);
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+    };
+  }, []);
+
+  const detailColumns = [
+    {
+      title: 'Test',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name) => <Text code style={{ fontSize: 12 }}>{name}</Text>,
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (s) => (
+        <Tag color={s === 'PASS' ? 'success' : 'error'}>
+          {s === 'PASS' ? 'Geçti' : 'Başarısız'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Mesaj',
+      dataIndex: 'message',
+      key: 'message',
+      render: (m) => m ? <Text type="danger" style={{ fontSize: 12 }}>{m}</Text> : '-',
+    },
+  ];
+
+  const overallStatus = !result ? 'IDLE' : result.status;
+
+  return (
+    <div>
+      {/* Hero Header */}
+      <Card
+        style={{
+          marginBottom: 16,
+          borderLeft: '4px solid #a0522d',
+          background: 'linear-gradient(135deg, #fff7e6 0%, #ffffff 50%)',
+        }}
+      >
+        <Row align="middle" gutter={16}>
+          <Col flex="60px">
+            <div style={{
+              width: 56, height: 56, borderRadius: 12,
+              background: 'linear-gradient(135deg, #a0522d, #d4671d)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <BugOutlined style={{ fontSize: 28, color: '#fff' }} />
+            </div>
+          </Col>
+          <Col flex="auto">
+            <Title level={4} style={{ margin: 0 }}>Anomali Fix Testleri</Title>
+            <Text type="secondary">
+              Tam Yeniden Hesaplama raporlarında tespit edilen anomalilerin canlı kodda
+              tekrarlanmadığını garanti eden {TOTAL_TESTS} regresyon testi.
+            </Text>
+          </Col>
+          <Col>
+            <Space>
+              <Button
+                type={showLogs ? 'primary' : 'default'}
+                ghost={showLogs}
+                icon={<CodeOutlined />}
+                onClick={() => setShowLogs(v => !v)}
+                size="middle"
+              >
+                {showLogs ? 'Logları Gizle' : 'Logları Göster'}
+              </Button>
+              <Button
+                type="primary"
+                icon={running ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+                onClick={runTests}
+                disabled={running}
+                size="large"
+              >
+                {running ? 'Çalışıyor...' : `${TOTAL_TESTS} Test Çalıştır`}
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Error Alert */}
+      {errorMessage && (
+        <Alert
+          message="Test Hatası"
+          description={errorMessage}
+          type="error"
+          showIcon
+          closable
+          onClose={() => setErrorMessage(null)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {/* Running Progress */}
+      {running && (
+        <Card size="small" style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <LoadingOutlined spin style={{ fontSize: 18, color: '#1890ff' }} />
+            <Text strong>Spec testleri çalışıyor (Celery worker)</Text>
+          </div>
+          <Progress percent={progress} status="active" />
+          {showLogs && (runningDetails.length > 0 || runningOutput) && (
+            <div
+              ref={liveLogRef}
+              style={{
+                marginTop: 12,
+                background: '#0f172a', color: '#e2e8f0',
+                padding: 12, borderRadius: 6,
+                fontFamily: 'monospace', fontSize: 11,
+                maxHeight: 240, overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {runningDetails.map((d, i) => (
+                <div key={i} style={{ color: d.status === 'PASS' ? '#86efac' : d.status === 'FAIL' ? '#fca5a5' : '#cbd5e1' }}>
+                  {d.status === 'PASS' ? '✓' : d.status === 'FAIL' ? '✗' : '·'} {d.name}
+                </div>
+              ))}
+              {runningOutput && <div style={{ color: '#94a3b8', marginTop: 8 }}>{runningOutput}</div>}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Result Summary */}
+      {result && (
+        <Card style={{ marginBottom: 16, borderLeft: `4px solid ${result.status === 'PASS' ? '#52c41a' : '#f5222d'}` }}>
+          <Row gutter={16}>
+            <Col span={6}>
+              <Statistic
+                title="Toplam Test"
+                value={result.tests_ran || 0}
+                prefix={<ClockCircleOutlined />}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="Geçen"
+                value={result.passed || 0}
+                valueStyle={{ color: '#52c41a' }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="Başarısız"
+                value={(result.failed || 0) + (result.errors || 0)}
+                valueStyle={{ color: (result.failed || 0) + (result.errors || 0) > 0 ? '#f5222d' : '#999' }}
+                prefix={<CloseCircleOutlined />}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="Süre"
+                value={`${(result.duration || 0).toFixed(1)}s`}
+              />
+            </Col>
+          </Row>
+          {result.status === 'PASS' && (
+            <Alert
+              message="Tüm anomali fix'leri canlı kodda korunuyor"
+              description="Sema Melek + Türkay Kuzey anomali pattern'leri tekrarlamıyor. Bir sonraki Tam Yeniden Hesaplama raporunda bu kategoride 0 FAIL beklenir."
+              type="success"
+              showIcon
+              style={{ marginTop: 12 }}
+            />
+          )}
+          {result.status !== 'PASS' && (
+            <Alert
+              message={`${result.failed || 0} fail + ${result.errors || 0} error tespit edildi`}
+              description="Bir veya daha fazla anomali fix'i regresyona uğramış olabilir. Aşağıdaki test detaylarına bakın."
+              type="error"
+              showIcon
+              style={{ marginTop: 12 }}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* Test Class Cards */}
+      <Row gutter={[16, 16]}>
+        {TEST_CLASSES.map((cls) => (
+          <Col xs={24} md={12} lg={8} key={cls.key}>
+            <Card
+              size="small"
+              style={{
+                borderLeft: `4px solid ${cls.color}`,
+                height: '100%',
+              }}
+              title={
+                <Space>
+                  <Tag color={cls.color} style={{ margin: 0 }}>{cls.count} test</Tag>
+                  <Text strong>{cls.label}</Text>
+                </Space>
+              }
+            >
+              <Paragraph style={{ fontSize: 12, marginBottom: 8 }} type="secondary">
+                {cls.description}
+              </Paragraph>
+              <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                {cls.references.map((r) => (
+                  <div key={r}>📌 {r}</div>
+                ))}
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Test Details Table (after run) */}
+      {result && Array.isArray(result.test_details) && result.test_details.length > 0 && (
+        <>
+          <Divider />
+          <Title level={5}>Test Detayları</Title>
+          <Table
+            columns={detailColumns}
+            dataSource={result.test_details}
+            rowKey="name"
+            size="small"
+            pagination={{ pageSize: 25, showSizeChanger: true }}
+          />
+        </>
+      )}
+
+      {/* Raw Output (collapsible) */}
+      {result && result.raw_output && (
+        <>
+          <Divider />
+          <Collapse
+            items={[{
+              key: 'raw',
+              label: <Text type="secondary">Ham Çıktı (Django test runner)</Text>,
+              children: (
+                <pre style={{
+                  background: '#0f172a', color: '#e2e8f0',
+                  padding: 12, borderRadius: 6,
+                  fontSize: 11, maxHeight: 480, overflow: 'auto',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {result.raw_output}
+                </pre>
+              ),
+            }]}
+          />
+        </>
+      )}
+
+      {!result && !running && (
+        <Card style={{ marginTop: 16 }}>
+          <Empty
+            description={
+              <span>
+                Henüz test çalıştırılmadı. Yukarıdaki <strong>{TOTAL_TESTS} Test Çalıştır</strong> butonuna basın.
+              </span>
+            }
+          />
+        </Card>
+      )}
+    </div>
+  );
+}

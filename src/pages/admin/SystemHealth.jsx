@@ -76,11 +76,9 @@ import ExcuseLeaveAuditTab from './system-health/ExcuseLeaveAuditTab';
 import RequestInspectionTab from './system-health/RequestInspectionTab';
 import PotentialAuditTab from './system-health/PotentialAuditTab';
 import BugFixVerificationTab from './system-health/BugFixVerificationTab';
-import PostFixAuditTab from './system-health/PostFixAuditTab';
 import QuickGateFixTab from './system-health/QuickGateFixTab';
-import QuickReentryTestTab from './system-health/QuickReentryTestTab';
-import MissedOutTestTab from './system-health/MissedOutTestTab';
 import DuplicateAttendanceTab from './system-health/DuplicateAttendanceTab';
+import AnomalyFixTestsTab from './system-health/AnomalyFixTestsTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -131,10 +129,8 @@ export default function SystemHealth() {
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
+                        { id: 'anomaly_fix_tests', name: 'Anomali Fix Testleri', icon: BugAntIcon },
                         { id: 'bugfix_verify', name: 'Canlı Bug Fix Doğrulama', icon: SparklesIcon },
-                        { id: 'quick_reentry', name: 'Kısa Gap OUT+IN Fix (04-22)', icon: ShieldCheckIcon },
-                        { id: 'missed_out', name: 'Kayıp OUT Self-Heal (04-23)', icon: ShieldCheckIcon },
-                        { id: 'post_fix_audit', name: 'Fix Doğrulama (2026-04-19)', icon: ShieldCheckIcon },
                         { id: 'quick_gate_fix', name: 'Hızlı Kart Onarımı', icon: BoltIcon },
                         { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
                         { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
@@ -206,9 +202,7 @@ export default function SystemHealth() {
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
                 {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
                 {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
-                {activeTab === 'quick_reentry' && <QuickReentryTestTab />}
-                {activeTab === 'missed_out' && <MissedOutTestTab />}
-                {activeTab === 'post_fix_audit' && <PostFixAuditTab />}
+                {activeTab === 'anomaly_fix_tests' && <AnomalyFixTestsTab />}
                 {activeTab === 'quick_gate_fix' && <QuickGateFixTab />}
                 {activeTab === 'error_logs' && <ErrorLogsTab />}
                 {activeTab === 'permissions' && <PermissionsTab />}
