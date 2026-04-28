@@ -89,7 +89,7 @@ export default function DuplicateAttendanceTab() {
     const [endDate, setEndDate] = useState(getIstanbulToday());
     const [employeeId, setEmployeeId] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [minCount, setMinCount] = useState(2);
+    const [categoryFilter, setCategoryFilter] = useState('phantom');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
@@ -106,7 +106,7 @@ export default function DuplicateAttendanceTab() {
                 start_date: startDate,
                 end_date: endDate,
                 status: statusFilter,
-                min_count: minCount,
+                category: categoryFilter,
             };
             if (employeeId) params.employee_id = employeeId;
             const res = await api.get('/system/health-check/duplicate-attendance-scan/', { params });
@@ -162,7 +162,7 @@ export default function DuplicateAttendanceTab() {
                 start_date: startDate,
                 end_date: endDate,
                 status: statusFilter,
-                min_count: minCount,
+                category: categoryFilter,
             };
             if (employeeId) params.employee_id = employeeId;
             const res = await api.get('/system/health-check/duplicate-attendance-export/', {
@@ -198,8 +198,20 @@ export default function DuplicateAttendanceTab() {
             records: data.total_records,
             statuses: data.status_breakdown,
             sources: data.source_breakdown,
+            categories: data.category_breakdown,
         };
     }, [data]);
+
+    const CAT_COLORS = {
+        phantom: 'bg-rose-100 text-rose-800 border-rose-300',
+        overlap: 'bg-amber-100 text-amber-800 border-amber-300',
+        identical: 'bg-violet-100 text-violet-800 border-violet-300',
+    };
+    const CAT_LABELS = {
+        phantom: 'phantom',
+        overlap: 'overlap',
+        identical: 'identical',
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
@@ -210,9 +222,11 @@ export default function DuplicateAttendanceTab() {
                         Mükerrer Mesai Kayıtları (Duplicate Audit)
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                        Aynı çalışan + aynı gün için 2+ Attendance kaydı olan grupları tarar.
-                        Race condition / cleanup gap'lerini görmek için tüm metadata gösterilir.
-                        OT split kayıtları (is_overtime_record=True) hariç tutulur.
+                        Sadece <strong>gerçek</strong> duplicate kayıtları gösterir.
+                        Split shift'ler (aynı gün birden fazla giriş/çıkış) <em>duplicate sayılmaz</em>.
+                        Kategoriler: <strong>phantom</strong> (NULL check_in × 2 — race condition),
+                        {' '}<strong>overlap</strong> (zaman aralığı çakışması),
+                        {' '}<strong>identical</strong> (aynı source+saat).
                     </p>
                 </div>
             </div>
@@ -250,9 +264,14 @@ export default function DuplicateAttendanceTab() {
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Min. Sayı</label>
-                    <input type="number" min="2" value={minCount} onChange={e => setMinCount(parseInt(e.target.value) || 2)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Kategori</label>
+                    <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded">
+                        <option value="phantom">Phantom (race condition)</option>
+                        <option value="overlap">Overlap (zaman çakışma)</option>
+                        <option value="identical">Identical (aynı saat)</option>
+                        <option value="all">Tümü</option>
+                    </select>
                 </div>
                 <div className="flex items-end">
                     <button onClick={scan} disabled={loading}
@@ -291,17 +310,28 @@ export default function DuplicateAttendanceTab() {
 
             {/* Summary */}
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
                         <div className="text-2xl font-bold text-rose-700">{summary.groups}</div>
                         <div className="text-xs font-medium text-rose-700">Mükerrer Grup</div>
                     </div>
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                         <div className="text-2xl font-bold text-amber-700">{summary.records}</div>
-                        <div className="text-xs font-medium text-amber-700">Toplam Mükerrer Kayıt</div>
+                        <div className="text-xs font-medium text-amber-700">Toplam Kayıt</div>
                     </div>
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 col-span-2">
-                        <div className="text-[11px] font-medium text-gray-500 mb-1">Statü Dağılımı</div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 col-span-3">
+                        <div className="text-[11px] font-medium text-gray-500 mb-1">Kategori Dağılımı</div>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                            {Object.keys(summary.categories || {}).length === 0 && (
+                                <span className="text-[10px] text-gray-400 italic">yok</span>
+                            )}
+                            {Object.entries(summary.categories || {}).map(([k, v]) => (
+                                <span key={k} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${CAT_COLORS[k] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                                    {CAT_LABELS[k] || k}: {v}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="text-[11px] font-medium text-gray-500 mb-1">Statü</div>
                         <div className="flex flex-wrap gap-1">
                             {Object.entries(summary.statuses || {}).map(([k, v]) => (
                                 <span key={k} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${STATUS_COLORS[k] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
@@ -352,6 +382,11 @@ export default function DuplicateAttendanceTab() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                                        {(g.categories || []).map(c => (
+                                            <span key={c} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${CAT_COLORS[c] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                                                {CAT_LABELS[c] || c}
+                                            </span>
+                                        ))}
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-50 text-rose-700 border-rose-200">
                                             {g.count} kayıt
                                         </span>
