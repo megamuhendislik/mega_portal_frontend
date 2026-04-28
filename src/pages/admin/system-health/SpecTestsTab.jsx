@@ -15,7 +15,7 @@ import {
   FieldTimeOutlined, CalendarOutlined, FileTextOutlined,
   LockOutlined, ScheduleOutlined, TeamOutlined,
   SafetyCertificateOutlined, ExclamationCircleOutlined,
-  CodeOutlined, DownOutlined, RightOutlined,
+  CodeOutlined, DownOutlined, RightOutlined, BugOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -77,6 +77,13 @@ const DOMAINS = [
     icon: <SafetyCertificateOutlined />,
     color: '#faad14',
     description: 'MonthlyWorkSummary, overlap tespiti, data integrity audit',
+  },
+  {
+    key: 'recent_fixes',
+    label: 'Yakın Anomali Fix\'leri',
+    icon: <BugOutlined />,
+    color: '#a0522d',
+    description: 'MANUAL_OT integrity, double-count, worked-based verimlilik, deep-dive endpoints',
   },
 ];
 
