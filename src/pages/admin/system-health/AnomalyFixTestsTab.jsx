@@ -77,6 +77,14 @@ const TEST_CLASSES = [
     description: 'Bozuk veri → recalc → auditor → 0 issue (hem Sema hem Türkay senaryosu).',
     references: ['Full recovery flow'],
   },
+  {
+    key: 'SpecLiveFlowIntegrationTest',
+    label: 'Live Flow (Production Akışı)',
+    count: 7,
+    color: '#eb2f96',
+    description: 'Manager API onayı + signal dispatch + periodic recalc — recalc DİREKT çağrılmaz, gerçek production akışı test edilir. Gün içinde bug oluşmadığını garanti eder.',
+    references: ['POST /overtime-requests/<id>/approve_reject/', 'post_save signal → process_attendance_batch'],
+  },
 ];
 
 const TOTAL_TESTS = TEST_CLASSES.reduce((s, c) => s + c.count, 0);
@@ -270,11 +278,19 @@ export default function AnomalyFixTestsTab() {
                 whiteSpace: 'pre-wrap',
               }}
             >
-              {runningDetails.map((d, i) => (
-                <div key={i} style={{ color: d.status === 'PASS' ? '#86efac' : d.status === 'FAIL' ? '#fca5a5' : '#cbd5e1' }}>
-                  {d.status === 'PASS' ? '✓' : d.status === 'FAIL' ? '✗' : '·'} {d.name}
-                </div>
-              ))}
+              {runningDetails.map((d, i) => {
+                let icon = '·';
+                let color = '#94a3b8';
+                if (d.status === 'PASS') { icon = '✓'; color = '#86efac'; }
+                else if (d.status === 'FAIL') { icon = '✗'; color = '#fca5a5'; }
+                else if (d.status === 'ERROR') { icon = '⚠'; color = '#fcd34d'; }
+                else if (d.status === 'RUNNING') { icon = '⟳'; color = '#93c5fd'; }
+                return (
+                  <div key={i} style={{ color }}>
+                    {icon} {d.name}
+                  </div>
+                );
+              })}
               {runningOutput && <div style={{ color: '#94a3b8', marginTop: 8 }}>{runningOutput}</div>}
             </div>
           )}
