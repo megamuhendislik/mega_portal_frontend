@@ -31,14 +31,6 @@ const { Text, Title, Paragraph } = Typography;
 
 const TEST_CLASSES = [
   {
-    key: 'SpecManualOtIntegrityTest',
-    label: 'MANUAL_OT Bütünlüğü',
-    count: 1,
-    color: '#722ed1',
-    description: 'Sema Melek: MANUAL_OT.normal_seconds=0 invariant.',
-    references: ['Sema Melek Yılmaztürk 2026-03-10'],
-  },
-  {
     key: 'SpecApplyApprovedDoubleCountTest',
     label: 'Çift Sayım Engeli',
     count: 1,
