@@ -23,6 +23,7 @@ import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
   ClockCircleOutlined, LoadingOutlined,
   ExclamationCircleOutlined, BugOutlined, CodeOutlined,
+  DownloadOutlined, StopOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -101,8 +102,13 @@ export default function AnomalyFixTestsTab() {
   const [runningOutput, setRunningOutput] = useState('');
   const [runningDetails, setRunningDetails] = useState([]);
   const [showLogs, setShowLogs] = useState(true);
+  const [taskId, setTaskId] = useState(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [cancelling, setCancelling] = useState(false);
   const pollingRef = useRef(null);
   const liveLogRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const elapsedTimerRef = useRef(null);
 
   const pollStatus = useCallback((taskId) => {
     const poll = async () => {
@@ -126,15 +132,18 @@ export default function AnomalyFixTestsTab() {
           setProgress(100);
           setRunningDetails([]);
           setRunningOutput('');
+          if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
         } else if (data.status === 'FAILURE') {
           setErrorMessage(data.error || 'Celery task başarısız oldu.');
           setRunning(false);
+          if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
         } else {
           pollingRef.current = setTimeout(poll, 2000);
         }
       } catch (err) {
         setErrorMessage(`Polling hatası: ${err?.message || 'Bilinmeyen hata'}`);
         setRunning(false);
+        if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
       }
     };
     poll();
@@ -148,15 +157,110 @@ export default function AnomalyFixTestsTab() {
       setProgress(0);
       setRunningDetails([]);
       setRunningOutput('');
+      setTaskId(null);
+      setElapsedSec(0);
+      startTimeRef.current = Date.now();
+      // Elapsed timer
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = setInterval(() => {
+        if (startTimeRef.current) {
+          setElapsedSec(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }
+      }, 1000);
 
       const resp = await api.post('/system/health-check/run-spec-tests/', { domain: 'recent_fixes' });
       if (resp.data.task_id) {
+        setTaskId(resp.data.task_id);
         pollStatus(resp.data.task_id);
       }
     } catch (err) {
       setErrorMessage(`Test başlatma hatası: ${err?.response?.data?.error || err?.message || 'Bilinmeyen hata'}`);
       setRunning(false);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     }
+  };
+
+  const cancelTests = async () => {
+    if (!taskId) return;
+    setCancelling(true);
+    try {
+      await api.post('/system/health-check/cancel-spec-tests/', { task_id: taskId });
+      // Stop polling
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+      setRunning(false);
+      setErrorMessage(`Test iptal edildi (${elapsedSec}s sonra). Detay log aşağıda.`);
+    } catch (err) {
+      setErrorMessage(`İptal hatası: ${err?.response?.data?.error || err?.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const downloadLogs = () => {
+    const lines = [];
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('  ANOMALİ FİX TESTLERİ — LOG DOSYASI');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push(`  Tarih: ${new Date().toLocaleString('tr-TR')}`);
+    if (taskId) lines.push(`  Task ID: ${taskId}`);
+    lines.push(`  Süre: ${elapsedSec}s`);
+    if (result) {
+      lines.push(`  Durum: ${result.status}`);
+      lines.push(`  Toplam Test: ${result.tests_ran || 0}`);
+      lines.push(`  Geçen: ${result.passed || 0}`);
+      lines.push(`  Başarısız: ${(result.failed || 0) + (result.errors || 0)}`);
+    }
+    lines.push('');
+
+    // Test details
+    if (result?.test_details?.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('  TEST DETAYLARI');
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      result.test_details.forEach((d) => {
+        const icon = d.status === 'PASS' ? '✓' : d.status === 'FAIL' ? '✗' : '?';
+        lines.push(`  ${icon} ${d.name}${d.message ? ' — ' + d.message : ''}`);
+      });
+      lines.push('');
+    }
+
+    // Running details (during run)
+    if (runningDetails.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('  CANLI ÇALIŞMA İZİ');
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      runningDetails.forEach((d) => {
+        const icon = d.status === 'PASS' ? '✓' : d.status === 'FAIL' ? '✗' : d.status === 'RUNNING' ? '⟳' : '·';
+        lines.push(`  ${icon} ${d.name}`);
+      });
+      lines.push('');
+    }
+
+    // Raw output
+    if (result?.raw_output) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('  HAM ÇIKTI (Django test runner)');
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push(result.raw_output);
+    } else if (runningOutput) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('  KISMI ÇIKTI (henüz tamamlanmamış)');
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push(runningOutput);
+    }
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `anomali-fix-testleri-${ts}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -166,6 +270,7 @@ export default function AnomalyFixTestsTab() {
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearTimeout(pollingRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     };
   }, []);
 
@@ -225,7 +330,7 @@ export default function AnomalyFixTestsTab() {
             </Text>
           </Col>
           <Col>
-            <Space>
+            <Space wrap>
               <Button
                 type={showLogs ? 'primary' : 'default'}
                 ghost={showLogs}
@@ -235,6 +340,26 @@ export default function AnomalyFixTestsTab() {
               >
                 {showLogs ? 'Logları Gizle' : 'Logları Göster'}
               </Button>
+              {(result || runningDetails.length > 0 || runningOutput) && (
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={downloadLogs}
+                  size="middle"
+                >
+                  Logları İndir (TXT)
+                </Button>
+              )}
+              {running && taskId && (
+                <Button
+                  danger
+                  icon={cancelling ? <LoadingOutlined spin /> : <StopOutlined />}
+                  onClick={cancelTests}
+                  disabled={cancelling}
+                  size="middle"
+                >
+                  {cancelling ? 'İptal ediliyor...' : 'İptal Et'}
+                </Button>
+              )}
               <Button
                 type="primary"
                 icon={running ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
@@ -264,12 +389,25 @@ export default function AnomalyFixTestsTab() {
 
       {/* Running Progress */}
       {running && (
-        <Card size="small" style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <LoadingOutlined spin style={{ fontSize: 18, color: '#1890ff' }} />
+        <Card size="small" style={{ marginBottom: 16, borderLeft: `4px solid ${elapsedSec > 120 ? '#fa541c' : '#1890ff'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+            <LoadingOutlined spin style={{ fontSize: 18, color: elapsedSec > 120 ? '#fa541c' : '#1890ff' }} />
             <Text strong>Spec testleri çalışıyor (Celery worker)</Text>
+            <Tag color={elapsedSec > 120 ? 'orange' : elapsedSec > 60 ? 'gold' : 'blue'} style={{ marginLeft: 'auto' }}>
+              <ClockCircleOutlined /> {Math.floor(elapsedSec / 60)}:{String(elapsedSec % 60).padStart(2, '0')}
+            </Tag>
           </div>
-          <Progress percent={progress} status="active" />
+          {elapsedSec > 120 && (
+            <Alert
+              message={`Test ${elapsedSec}s sürüyor — beklenenden uzun`}
+              description="Subprocess hung olabilir veya migration yapıyor olabilir. İptal edebilir veya beklemeye devam edebilirsiniz. Backend timeout: 300s."
+              type="warning"
+              icon={<WarningOutlined />}
+              showIcon
+              style={{ marginBottom: 8 }}
+            />
+          )}
+          <Progress percent={progress} status={elapsedSec > 120 ? 'exception' : 'active'} />
           {showLogs && (runningDetails.length > 0 || runningOutput) && (
             <div
               ref={liveLogRef}
