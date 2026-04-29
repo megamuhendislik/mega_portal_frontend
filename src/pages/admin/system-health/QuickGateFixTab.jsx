@@ -14,7 +14,7 @@ import {
 import {
   ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined,
   LoadingOutlined, SyncOutlined, InfoCircleOutlined,
-  PlusOutlined, EditOutlined, DeleteOutlined,
+  PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../../services/api';
@@ -60,6 +60,111 @@ export default function QuickGateFixTab() {
       setLoading(false);
     }
   }, [date, employeeId, dryRun]);
+
+  const downloadTxt = useCallback(() => {
+    if (!data) return;
+    const lines = [];
+    const istanbul = (d) => new Date(d).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
+
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('  HIZLI KART ONARIMI — DETAYLI RAPOR');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push(`  Rapor Tarihi: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`);
+    lines.push(`  Hedef Gün: ${data.work_date}`);
+    lines.push(`  Mod: ${data.dry_run ? 'KONTROL (Dry-Run)' : 'UYGULA (Apply)'}`);
+    lines.push(`  Süre: ${data.elapsed_seconds}s`);
+    lines.push('');
+
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('  ÖZET');
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push(`  Çalışan tarama: ${data.employees_processed}`);
+    lines.push(`  Yeni kayıt: ${data.total_new_records}`);
+    lines.push(`  Güncellenen: ${data.total_updated_records}`);
+    lines.push(`  Silinen stale: ${data.total_deleted_stale}`);
+    lines.push(`  Yeniden hesaplanan: ${data.total_recalculated}`);
+    lines.push(`  Hata sayısı: ${(data.errors || []).length}`);
+    lines.push('');
+
+    const okList = (data.employees || []).filter((e) => e.status === 'OK');
+    const fixList = (data.employees || []).filter((e) => e.status !== 'OK');
+
+    if (fixList.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push(`  ONARIM GEREKLİ / ONARILDI (${fixList.length})`);
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      fixList.forEach((e) => {
+        lines.push(`  [${e.employee_code || e.employee_id}] ${e.employee_name} — ${e.status}`);
+        lines.push(`    Gate event: ${e.gate_events} | Pair: ${e.pairs_found} | Mevcut card: ${e.existing_cards} | Split: ${e.existing_splits}`);
+        if (e.raw_events?.length > 0) {
+          lines.push(`    Ham event'ler:`);
+          e.raw_events.forEach((ev) => {
+            lines.push(`      ${ev.timestamp ? istanbul(ev.timestamp) : '—'}  ${ev.direction.padEnd(4)}  ${ev.status}  (${ev.event_id || '—'})`);
+          });
+        }
+        if (e.pairs?.length > 0) {
+          lines.push(`    Pair'ler:`);
+          e.pairs.forEach((p) => {
+            lines.push(`      IN: ${p.check_in ? istanbul(p.check_in) : '—'}  →  OUT: ${p.check_out ? istanbul(p.check_out) : 'AÇIK'}`);
+          });
+        }
+        if (e.changes?.length > 0) {
+          lines.push(`    Değişiklikler:`);
+          e.changes.forEach((c) => {
+            if (c.action === 'CREATE') {
+              lines.push(`      CREATE  ${c.check_in} → ${c.check_out}`);
+            } else if (c.action === 'UPDATE') {
+              lines.push(`      UPDATE  #${c.record_id}: ${c.old_check_out} → ${c.new_check_out}`);
+            } else {
+              lines.push(`      ${c.action}`);
+            }
+          });
+        }
+        if (e.recalc_error) lines.push(`    HATA: ${e.recalc_error}`);
+        lines.push('');
+      });
+    }
+
+    if (okList.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push(`  UYUMLU (${okList.length}) — gate event'leri Attendance ile eşleşiyor`);
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      okList.forEach((e) => {
+        lines.push(`  [${e.employee_code || e.employee_id}] ${e.employee_name}`);
+        lines.push(`    Gate event: ${e.gate_events} | Pair: ${e.pairs_found} | Mevcut card: ${e.existing_cards} | Split: ${e.existing_splits}`);
+        if (e.raw_events?.length > 0) {
+          e.raw_events.forEach((ev) => {
+            lines.push(`      ${ev.timestamp ? istanbul(ev.timestamp) : '—'}  ${ev.direction.padEnd(4)}  ${ev.status}  (${ev.event_id || '—'})`);
+          });
+        }
+        lines.push('');
+      });
+    }
+
+    if (data.errors?.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push(`  HATALAR (${data.errors.length})`);
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      data.errors.forEach((e) => {
+        lines.push(`  [${e.employee_id}] ${e.employee_name}: ${e.error}`);
+      });
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Istanbul',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).format(new Date()).replace(' ', 'T').replace(/:/g, '-');
+    a.href = url;
+    a.download = `hizli-kart-onarimi-${data.work_date}-${ts}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [data]);
 
   const pairColumns = [
     { title: 'Giriş', dataIndex: 'check_in', width: 80,
@@ -155,16 +260,27 @@ export default function QuickGateFixTab() {
             </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              size="large"
-              icon={loading ? <LoadingOutlined /> : (dryRun ? <SyncOutlined /> : <ThunderboltOutlined />)}
-              onClick={runFix}
-              loading={loading}
-              danger={!dryRun}
-            >
-              {loading ? 'Çalışıyor...' : (dryRun ? 'Kontrol Et' : 'Onar ve Hesapla')}
-            </Button>
+            <Space>
+              <Button
+                type="primary"
+                size="large"
+                icon={loading ? <LoadingOutlined /> : (dryRun ? <SyncOutlined /> : <ThunderboltOutlined />)}
+                onClick={runFix}
+                loading={loading}
+                danger={!dryRun}
+              >
+                {loading ? 'Çalışıyor...' : (dryRun ? 'Kontrol Et' : 'Onar ve Hesapla')}
+              </Button>
+              {data && (
+                <Button
+                  size="large"
+                  icon={<DownloadOutlined />}
+                  onClick={downloadTxt}
+                >
+                  TXT İndir
+                </Button>
+              )}
+            </Space>
           </Col>
         </Row>
 
@@ -230,6 +346,26 @@ export default function QuickGateFixTab() {
               expandedRowRender: (record) => (
                 <div style={{ padding: 8 }}>
                   <Row gutter={16}>
+                    {record.raw_events?.length > 0 && (
+                      <Col xs={24} md={12}>
+                        <Text strong>Ham Event'ler ({record.raw_events.length}):</Text>
+                        <Table
+                          size="small"
+                          rowKey={(r, i) => `${r.event_id}-${i}`}
+                          dataSource={record.raw_events}
+                          columns={[
+                            { title: 'Saat', dataIndex: 'timestamp', width: 80,
+                              render: (v) => v ? new Date(v).toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' }) : '—' },
+                            { title: 'Yön', dataIndex: 'direction', width: 60,
+                              render: (v) => <Tag color={v === 'IN' ? 'green' : v === 'OUT' ? 'orange' : 'default'}>{v}</Tag> },
+                            { title: 'Status', dataIndex: 'status',
+                              render: (v) => <Tag color={v === 'PROCESSED' ? 'green' : v?.startsWith('IGNORED') ? 'orange' : 'red'}>{v}</Tag> },
+                          ]}
+                          pagination={false}
+                          style={{ marginTop: 8 }}
+                        />
+                      </Col>
+                    )}
                     <Col xs={24} md={12}>
                       <Text strong>GateEventLog Pair'leri:</Text>
                       <Table
@@ -242,7 +378,7 @@ export default function QuickGateFixTab() {
                       />
                     </Col>
                     {record.changes?.length > 0 && (
-                      <Col xs={24} md={12}>
+                      <Col xs={24}>
                         <Text strong>Yapılan/Yapılacak Değişiklikler:</Text>
                         <Table
                           size="small"
@@ -266,7 +402,7 @@ export default function QuickGateFixTab() {
                 </div>
               ),
               rowExpandable: (record) =>
-                (record.pairs?.length > 0) || (record.changes?.length > 0),
+                (record.raw_events?.length > 0) || (record.pairs?.length > 0) || (record.changes?.length > 0),
             }}
           />
         </Card>
