@@ -80,10 +80,14 @@ const TEST_CLASSES = [
   {
     key: 'SpecLiveFlowIntegrationTest',
     label: 'Live Flow (Production Akışı)',
-    count: 7,
+    count: 8,
     color: '#eb2f96',
-    description: 'Manager API onayı + signal dispatch + periodic recalc — recalc DİREKT çağrılmaz, gerçek production akışı test edilir. Gün içinde bug oluşmadığını garanti eder.',
-    references: ['POST /overtime-requests/<id>/approve_reject/', 'post_save signal → process_attendance_batch'],
+    description: 'Production endpoint\'leri ve Celery task\'ı doğrudan çalıştırır — recalc DİREKT çağrılmaz. test_40 saf API E2E (manual-entry → approve_reject) — hipotetik recalc yok.',
+    references: [
+      'POST /api/overtime-requests/manual-entry/',
+      'POST /api/overtime-requests/<id>/approve_reject/',
+      'process_attendance_batch (gerçek Celery task)',
+    ],
   },
 ];
 
