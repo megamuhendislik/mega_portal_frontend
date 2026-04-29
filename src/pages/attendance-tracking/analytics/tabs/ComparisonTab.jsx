@@ -217,10 +217,13 @@ export default function ComparisonTab() {
         if (!snap.length) return null;
 
         const metrics = [
-            { key: 'efficiency_pct', label: 'Mesai Doluluğu %', color: '#6366f1' },
-            { key: 'worked_hours', label: 'Çalışma (sa)', color: '#10b981' },
-            { key: 'overtime_hours', label: 'Ek Mesai (sa)', color: '#f59e0b' },
-            { key: 'missing_hours', label: 'Eksik (sa)', color: '#ef4444' },
+            { key: 'efficiency_pct', label: 'Normal Doluluk %', color: '#6366f1' },
+            { key: 'total_completion_pct', label: 'Toplam Doluluk %', color: '#10b981' },
+            { key: 'ot_to_target_pct', label: 'OT/Y %', color: '#f59e0b' },
+            { key: 'missing_to_target_pct', label: 'Eksik/Y %', color: '#ef4444' },
+            { key: 'normal_hours', label: 'Normal (sa)', color: '#0ea5e9' },
+            { key: 'overtime_hours', label: 'OT (sa)', color: '#d97706' },
+            { key: 'missing_hours', label: 'Eksik (sa)', color: '#dc2626' },
         ];
 
         const barData = snap.map((s) => ({
@@ -351,8 +354,11 @@ export default function ComparisonTab() {
         if (!data || data.mode !== 'periods') return null;
         const deltas = data.deltas || {};
         const cards = [
-            { label: 'Mesai Doluluğu', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
-            { label: 'Çalışma', key: 'worked_hours', suffix: 'sa', betterIsHigher: true },
+            { label: 'Normal Doluluk', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
+            { label: 'Toplam Doluluk', key: 'total_completion_pct', suffix: '%', betterIsHigher: true },
+            { label: 'OT/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
+            { label: 'Eksik/Yükümlülük', key: 'missing_to_target_pct', suffix: '%', betterIsHigher: false },
+            { label: 'Normal Mesai', key: 'normal_hours', suffix: 'sa', betterIsHigher: true },
             { label: 'Ek Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
             { label: 'Eksik Saat', key: 'missing_hours', suffix: 'sa', betterIsHigher: false },
         ];

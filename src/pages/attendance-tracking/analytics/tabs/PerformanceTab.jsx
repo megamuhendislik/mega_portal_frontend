@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     User, Clock, AlarmClock, Coffee, TrendingUp, Calendar, Award, Target, BarChart3,
     Users, ChevronLeft, Trophy, AlertTriangle, ArrowUpDown, Search, Building2,
-    Activity, Crown, ChevronRight, Zap, Minus,
+    Activity, Crown, ChevronRight, ChevronDown, Zap, Minus, ExternalLink, Maximize2,
 } from 'lucide-react';
 import { Segmented, Empty, Tag } from 'antd';
 import api from '../../../../services/api';
@@ -80,6 +80,148 @@ function intensityColor(pct) {
 const fmtPct = (v) => (v == null ? '—' : `${Math.round(v)}%`);
 const fmtHrs = (v) => `${Math.round(v || 0)}sa`;
 
+// ────────────────────────────────────────────────────────────
+// Row Detail Panel — tablo satırı expand'ında açılan detay
+// ────────────────────────────────────────────────────────────
+function MetricBar({ label, value, max = 100, color, suffix = '%', tip }) {
+    const pct = Math.min(100, Math.max(0, (value / max) * 100));
+    return (
+        <div className="space-y-1" title={tip}>
+            <div className="flex items-baseline justify-between text-[10px]">
+                <span className="font-bold text-slate-600 uppercase tracking-wider">{label}</span>
+                <span className="text-[14px] font-black tabular-nums" style={{ color }}>
+                    {value == null ? '—' : `${value}${suffix}`}
+                </span>
+            </div>
+            <div className="h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
+                <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${pct}%`, backgroundColor: color }}
+                />
+            </div>
+        </div>
+    );
+}
+
+function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
+    const nDol = e.normal_completion_pct ?? e.efficiency_pct ?? 0;
+    const tDol = e.total_completion_pct ?? 0;
+    const otY = e.ot_to_target_pct ?? 0;
+    const eksY = e.missing_to_target_pct ?? 0;
+    const otN = e.ot_to_normal_pct;
+    const noTarget = !(e.has_target ?? (e.target_hours > 0));
+
+    // Saat dağılımı stacked bar için yüzde
+    const normalPct = totalParts > 0 ? ((e.normal_hours || 0) / totalParts) * 100 : 0;
+    const otPct = totalParts > 0 ? ((e.ot_hours || 0) / totalParts) * 100 : 0;
+    const missingPct = totalParts > 0 ? ((e.missing_hours || 0) / totalParts) * 100 : 0;
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* SOL: 5 metrik bar */}
+            <div className="lg:col-span-5 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-slate-200/60">
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                    <Activity size={12} className="text-indigo-500" />
+                    <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-[0.15em]">Mesai Karnesi</h4>
+                </div>
+                {noTarget ? (
+                    <div className="text-[11px] text-slate-400 text-center py-6">Bu çalışan için bu dönemde ölçülebilir hedef yok.</div>
+                ) : (
+                    <div className="space-y-3">
+                        <MetricBar label="Normal Doluluk" value={nDol} color={levelColor(nDol)} tip="(min(W, Y-M)) / Y" />
+                        <MetricBar label="Toplam Doluluk" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + OT) / Y" />
+                        <MetricBar label="OT / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="OT / Y" />
+                        <MetricBar label="Eksik / Yükümlülük" value={eksY} color={intensityColor(eksY)} tip="M / Y" />
+                        <MetricBar label="OT / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="OT / Normal mesai" />
+                    </div>
+                )}
+            </div>
+
+            {/* ORTA: Saat dağılımı stacked bar */}
+            <div className="lg:col-span-4 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-slate-200/60">
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                    <BarChart3 size={12} className="text-emerald-500" />
+                    <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-[0.15em]">Saat Dağılımı</h4>
+                </div>
+                {totalParts === 0 ? (
+                    <div className="text-[11px] text-slate-400 text-center py-6">Henüz kayıt yok.</div>
+                ) : (
+                    <>
+                        <div className="h-3 rounded-full overflow-hidden flex bg-slate-100 mb-3">
+                            <div className="h-full bg-indigo-500" style={{ width: `${normalPct}%` }} title={`Normal: ${fmtHrs(e.normal_hours)}`} />
+                            <div className="h-full bg-amber-500" style={{ width: `${otPct}%` }} title={`OT: ${fmtHrs(e.ot_hours)}`} />
+                            <div className="h-full bg-red-400" style={{ width: `${missingPct}%` }} title={`Eksik: ${fmtHrs(e.missing_hours)}`} />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                                    <span className="text-slate-600 font-medium">Normal</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="font-black text-slate-800 tabular-nums">{fmtHrs(e.normal_hours)}</span>
+                                    <span className="text-slate-400 ml-1.5">{Math.round(normalPct)}%</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                    <span className="text-slate-600 font-medium">Fazla Mesai</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="font-black text-amber-700 tabular-nums">{fmtHrs(e.ot_hours)}</span>
+                                    <span className="text-slate-400 ml-1.5">{Math.round(otPct)}%</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                                    <span className="text-slate-600 font-medium">Eksik</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="font-black text-red-600 tabular-nums">{fmtHrs(e.missing_hours)}</span>
+                                    <span className="text-slate-400 ml-1.5">{Math.round(missingPct)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* SAĞ: Yükümlülük özet + Tam Detay */}
+            <div className="lg:col-span-3 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-slate-200/60 flex flex-col justify-between gap-3">
+                <div>
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                        <Target size={12} className="text-violet-500" />
+                        <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-[0.15em]">Yükümlülük</h4>
+                    </div>
+                    <div className="space-y-2 text-[11px]">
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Pro-rata (geçen)</span>
+                            <span className="font-black tabular-nums text-slate-800">{fmtHrs(e.prorated_target_hours)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Tam aylık</span>
+                            <span className="font-bold tabular-nums text-slate-600">{fmtHrs(e.target_hours)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-slate-100">
+                            <span className="text-slate-500">Toplam çalışma</span>
+                            <span className="font-black tabular-nums text-emerald-700">{fmtHrs(e.worked_hours)}</span>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    onClick={(ev) => { ev.stopPropagation(); onOpenFullDetail?.(); }}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-lg shadow-sm transition-all"
+                >
+                    <Maximize2 size={11} /> Tam Kişisel Detay
+                    <ExternalLink size={10} className="opacity-70" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ════════════════════════════════════════════════════════════════════
 // EKİP MODE — Tüm ekibe genel bakış
 // ════════════════════════════════════════════════════════════════════
@@ -94,6 +236,7 @@ function TeamOverviewMode({ onSelectPerson }) {
     const [pageSize, setPageSize] = useState(25);
     const [page, setPage] = useState(1);
     const [deptChartMetric, setDeptChartMetric] = useState('normal_completion');
+    const [expandedRowId, setExpandedRowId] = useState(null);
 
     // work-hours endpoint'inden detaylı çalışan listesi (bulk'ta da var)
     const workHoursFromBulk = data?.work_hours?.employee_hours;
@@ -514,17 +657,18 @@ function TeamOverviewMode({ onSelectPerson }) {
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 overflow-x-auto">
-                        <table className="w-full text-sm min-w-[1100px]">
+                        <table className="w-full text-sm min-w-[1140px]">
                             <thead className="bg-slate-50/80">
                                 <tr className="border-b border-slate-200">
+                                    <th className="py-2.5 px-2 w-8" />
                                     {[
                                         { key: 'name', label: 'Çalışan', align: 'left' },
                                         { key: 'department', label: 'Departman', align: 'left' },
                                         { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (OT hariç)' },
                                         { key: 'ot', label: 'OT', align: 'right', tip: 'Fazla mesai' },
                                         { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
-                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük' },
-                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Normal+OT) / Yükümlülük' },
+                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük (missing-aware)' },
+                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Effective + OT) / Yükümlülük' },
                                         { key: 'ot_to_target', label: 'OT/Y', align: 'right', tip: 'OT / Yükümlülük' },
                                         { key: 'missing_to_target', label: 'Eksik/Y', align: 'right', tip: 'Eksik / Yükümlülük' },
                                         { key: 'target', label: 'Hedef', align: 'right', tip: 'Aylık tam hedef' },
@@ -545,66 +689,87 @@ function TeamOverviewMode({ onSelectPerson }) {
                                     const tDol = e.total_completion_pct ?? 0;
                                     const otY = e.ot_to_target_pct ?? 0;
                                     const eksY = e.missing_to_target_pct ?? 0;
+                                    const otN = e.ot_to_normal_pct;
                                     const noTarget = !(e.has_target ?? (e.target_hours > 0));
+                                    const isExpanded = expandedRowId === e.employee_id;
+                                    const totalParts = (e.normal_hours || 0) + (e.ot_hours || 0) + (e.missing_hours || 0);
                                     return (
-                                        <tr
-                                            key={e.employee_id}
-                                            onClick={() => onSelectPerson?.(e.employee_id)}
-                                            className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/30 cursor-pointer transition-colors group"
-                                        >
-                                            <td className="py-2.5 px-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
-                                                        <span className="text-[10px] font-black">{initials(e.name)}</span>
-                                                    </div>
-                                                    <span className="font-bold text-slate-800 text-[12px] group-hover:text-indigo-700">{e.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-2.5 px-3 text-slate-500 text-[11px]">{e.department || '—'}</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{fmtHrs(e.normal_hours)}</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{fmtHrs(e.ot_hours)}</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{fmtHrs(e.missing_hours)}</td>
-                                            <td className="py-2.5 px-3">
-                                                {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
+                                        <React.Fragment key={e.employee_id}>
+                                            <tr
+                                                onClick={() => setExpandedRowId(isExpanded ? null : e.employee_id)}
+                                                className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors group ${isExpanded ? 'bg-indigo-50/40' : 'hover:bg-indigo-50/30'}`}
+                                            >
+                                                <td className="py-2.5 px-2 text-center">
+                                                    <ChevronDown
+                                                        size={14}
+                                                        className={`text-slate-400 group-hover:text-indigo-600 transition-transform inline-block ${isExpanded ? 'rotate-180 text-indigo-600' : ''}`}
+                                                    />
+                                                </td>
+                                                <td className="py-2.5 px-3">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                                                            <div
-                                                                className="h-full rounded-full transition-all"
-                                                                style={{ width: `${Math.min(100, nDol)}%`, backgroundColor: levelColor(nDol) }}
-                                                            />
+                                                        <div className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
+                                                            <span className="text-[10px] font-black">{initials(e.name)}</span>
                                                         </div>
-                                                        <span className="text-[11px] font-black tabular-nums" style={{ color: levelColor(nDol), minWidth: '32px' }}>
-                                                            %{nDol}
-                                                        </span>
+                                                        <span className="font-bold text-slate-800 text-[12px] group-hover:text-indigo-700">{e.name}</span>
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                                {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                                                            <div
-                                                                className="h-full rounded-full transition-all"
-                                                                style={{
-                                                                    width: `${Math.min(100, tDol)}%`,
-                                                                    backgroundColor: tDol >= 100 ? '#7c3aed' : levelColor(tDol),
-                                                                }}
-                                                            />
+                                                </td>
+                                                <td className="py-2.5 px-3 text-slate-500 text-[11px]">{e.department || '—'}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{fmtHrs(e.normal_hours)}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{fmtHrs(e.ot_hours)}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{fmtHrs(e.missing_hours)}</td>
+                                                <td className="py-2.5 px-3">
+                                                    {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                                                                <div
+                                                                    className="h-full rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(100, nDol)}%`, backgroundColor: levelColor(nDol) }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-[11px] font-black tabular-nums" style={{ color: levelColor(nDol), minWidth: '32px' }}>
+                                                                %{nDol}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-[11px] font-black tabular-nums" style={{ color: tDol >= 100 ? '#7c3aed' : levelColor(tDol), minWidth: '32px' }}>
-                                                            %{tDol}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(otY) }}>
-                                                {noTarget ? '—' : `%${otY}`}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(eksY) }}>
-                                                {noTarget ? '—' : `%${eksY}`}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-slate-500 text-[12px]">{fmtHrs(e.target_hours)}</td>
-                                        </tr>
+                                                    )}
+                                                </td>
+                                                <td className="py-2.5 px-3">
+                                                    {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                                                                <div
+                                                                    className="h-full rounded-full transition-all"
+                                                                    style={{
+                                                                        width: `${Math.min(100, tDol)}%`,
+                                                                        backgroundColor: tDol >= 100 ? '#7c3aed' : levelColor(tDol),
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-[11px] font-black tabular-nums" style={{ color: tDol >= 100 ? '#7c3aed' : levelColor(tDol), minWidth: '32px' }}>
+                                                                %{tDol}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(otY) }}>
+                                                    {noTarget ? '—' : `%${otY}`}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(eksY) }}>
+                                                    {noTarget ? '—' : `%${eksY}`}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-500 text-[12px]">{fmtHrs(e.target_hours)}</td>
+                                            </tr>
+                                            {isExpanded && (
+                                                <tr className="bg-gradient-to-br from-indigo-50/40 to-slate-50/40 border-b border-indigo-100">
+                                                    <td colSpan={11} className="py-4 px-4">
+                                                        <RowDetailPanel
+                                                            employee={e}
+                                                            totalParts={totalParts}
+                                                            onOpenFullDetail={() => onSelectPerson?.(e.employee_id)}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
@@ -833,7 +998,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                 gradient="indigo" delta={kpi.vs_prev?.worked} info={METRIC_EXPLANATIONS.worked_hours}
                             />
                             <KPICard
-                                title="Verimlilik" value={`${kpi.efficiency_pct}`} suffix="%" icon={Target}
+                                title="Mesai Doluluğu" value={`${kpi.efficiency_pct}`} suffix="%" icon={Target}
                                 gradient="emerald" delta={kpi.vs_prev?.efficiency} info={METRIC_EXPLANATIONS.efficiency}
                             />
                             <KPICard
