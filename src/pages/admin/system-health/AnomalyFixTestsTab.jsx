@@ -90,6 +90,17 @@ const TEST_CLASSES = [
       'process_attendance_batch (gerçek Celery task)',
     ],
   },
+  {
+    key: 'SpecDailyCorrectionTest',
+    label: 'Günlük Düzeltme',
+    count: 4,
+    color: '#fa8c16',
+    description: 'POST /api/system/health-check/daily-correction/ endpoint testleri: bugün mid-day (cascade=0), geçmiş gün cascade, fiscal lock 423, employee filter.',
+    references: [
+      'POST /api/system/health-check/daily-correction/',
+      'docs/plans/2026-04-29-gunluk-duzeltme-design.md',
+    ],
+  },
 ];
 
 const TOTAL_TESTS = TEST_CLASSES.reduce((s, c) => s + c.count, 0);
