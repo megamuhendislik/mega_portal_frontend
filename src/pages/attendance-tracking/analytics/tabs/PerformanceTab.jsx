@@ -992,28 +992,72 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
 
                     {/* 5 KPI cards */}
                     {kpi && (
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                            <KPICard
-                                title="Çalışma" value={kpi.total_worked_hours} suffix="saat" icon={Clock}
-                                gradient="indigo" delta={kpi.vs_prev?.worked} info={METRIC_EXPLANATIONS.worked_hours}
-                            />
-                            <KPICard
-                                title="Mesai Doluluğu" value={`${kpi.efficiency_pct}`} suffix="%" icon={Target}
-                                gradient="emerald" delta={kpi.vs_prev?.efficiency} info={METRIC_EXPLANATIONS.efficiency}
-                            />
-                            <KPICard
-                                title="Ek Mesai" value={kpi.overtime_hours} suffix="saat" icon={TrendingUp}
-                                gradient="amber" delta={kpi.vs_prev?.ot} info={METRIC_EXPLANATIONS.overtime}
-                            />
-                            <KPICard
-                                title="Kayıp" value={kpi.missing_hours} suffix="saat" icon={BarChart3}
-                                gradient="red" delta={kpi.vs_prev?.missing} info={METRIC_EXPLANATIONS.missing_hours}
-                            />
-                            <KPICard
-                                title="Ort. Mola" value={kpi.avg_break_minutes} suffix="dk" icon={Coffee}
-                                gradient="cyan" info={METRIC_EXPLANATIONS.break_minutes}
-                            />
-                        </div>
+                        <>
+                            {/* 5 missing-aware Doluluk metriği (yüzde) */}
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                <KPICard
+                                    title="Normal Doluluk"
+                                    value={kpi.normal_completion_pct ?? kpi.efficiency_pct ?? 0}
+                                    suffix="%" icon={Target}
+                                    gradient="indigo" delta={kpi.vs_prev?.efficiency}
+                                    subtitle="Normal / Yükümlülük (cap 100)"
+                                    info={METRIC_EXPLANATIONS.efficiency}
+                                />
+                                <KPICard
+                                    title="Toplam Doluluk"
+                                    value={kpi.total_completion_pct ?? 0}
+                                    suffix="%" icon={TrendingUp}
+                                    gradient="emerald"
+                                    subtitle="(Normal+OT) / Yükümlülük"
+                                />
+                                <KPICard
+                                    title="OT / Yükümlülük"
+                                    value={kpi.ot_to_target_pct ?? 0}
+                                    suffix="%" icon={Activity}
+                                    gradient="amber"
+                                    subtitle="Fazla mesai oranı"
+                                />
+                                <KPICard
+                                    title="Eksik / Yükümlülük"
+                                    value={kpi.missing_to_target_pct ?? 0}
+                                    suffix="%" icon={BarChart3}
+                                    gradient="red"
+                                    subtitle="Eksik mesai oranı"
+                                />
+                                <KPICard
+                                    title="OT / Normal"
+                                    value={kpi.ot_to_normal_pct == null ? '—' : kpi.ot_to_normal_pct}
+                                    suffix={kpi.ot_to_normal_pct == null ? '' : '%'}
+                                    icon={TrendingUp}
+                                    gradient="violet"
+                                    subtitle="OT yoğunluğu"
+                                />
+                            </div>
+
+                            {/* 4 saat-bazlı mini KPI */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <KPICard mini
+                                    title="Normal Mesai" value={kpi.normal_hours ?? Math.max(0, (kpi.total_worked_hours || 0) - (kpi.overtime_hours || 0))}
+                                    suffix="sa" icon={Clock} gradient="indigo"
+                                    subtitle={`Yükümlülük: ${kpi.prorated_target_hours || 0}sa`}
+                                />
+                                <KPICard mini
+                                    title="Toplam Çalışma" value={kpi.total_worked_hours}
+                                    suffix="sa" icon={Clock} gradient="blue"
+                                    delta={kpi.vs_prev?.worked} info={METRIC_EXPLANATIONS.worked_hours}
+                                />
+                                <KPICard mini
+                                    title="Ek Mesai (OT)" value={kpi.overtime_hours}
+                                    suffix="sa" icon={TrendingUp} gradient="amber"
+                                    delta={kpi.vs_prev?.ot} info={METRIC_EXPLANATIONS.overtime}
+                                />
+                                <KPICard mini
+                                    title="Eksik Mesai" value={kpi.missing_hours}
+                                    suffix="sa" icon={BarChart3} gradient="red"
+                                    delta={kpi.vs_prev?.missing} info={METRIC_EXPLANATIONS.missing_hours}
+                                />
+                            </div>
+                        </>
                     )}
 
                     {/* 4 mini summary KPI */}
