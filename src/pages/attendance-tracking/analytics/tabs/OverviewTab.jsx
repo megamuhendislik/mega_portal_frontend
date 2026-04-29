@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink, RotateCw } from 'lucide-react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink, RotateCw, Zap, Minus } from 'lucide-react';
 import { Button } from 'antd';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
@@ -197,23 +197,23 @@ export default function OverviewTab() {
                 </div>
             )}
 
-            {/* Main KPI Grid — clickable cards open EfficiencyDetailModal sorted by metric */}
+            {/* ── Mesai Doluluk Metrikleri (5 kart) ── */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPICard title="Mesai Doluluğu" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
-                    gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked}
-                    sparkline={sparklineWorked} info={METRIC_EXPLANATIONS.efficiency}
+                <KPICard title="Normal Doluluk" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
+                    gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
+                    subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => setShowDetailModal(true)} />
-                <KPICard title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="saat" icon={Clock}
-                    gradient="blue" delta={isComparing ? deltas?.worked : null}
-                    subtitle={`Hedef: ${kpi.total_target_hours || '—'} saat`} info={METRIC_EXPLANATIONS.worked_hours}
+                <KPICard title="Toplam Doluluk" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
+                    gradient="emerald"
+                    subtitle="(Normal + OT) / Yükümlülük"
                     onClick={() => setShowDetailModal(true)} />
-                <KPICard title="Ek Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="saat" icon={TrendingUp}
-                    gradient="amber" delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
-                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime}
+                <KPICard title="OT / Yükümlülük" value={`${kpi.avg_ot_to_target_pct ?? 0}`} suffix="%" icon={Zap}
+                    gradient="amber"
+                    subtitle="Fazla mesai oranı"
                     onClick={() => setShowDetailModal(true)} />
-                <KPICard title="Kayıp Saat" value={Math.round(kpi.total_missing_hours || 0)} suffix="saat" icon={AlertCircle}
-                    gradient="red" delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
-                    info={METRIC_EXPLANATIONS.missing_hours}
+                <KPICard title="Eksik / Yükümlülük" value={`${kpi.avg_missing_to_target_pct ?? 0}`} suffix="%" icon={AlertCircle}
+                    gradient="red"
+                    subtitle="Eksik mesai oranı"
                     onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
                     gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan"
@@ -221,16 +221,31 @@ export default function OverviewTab() {
                     onClick={() => setShowDetailModal(true)} />
             </div>
 
-            {/* Secondary metrics */}
+            {/* ── Saat Bazlı Toplamlar (4 mini KPI) ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours ?? (kpi.total_worked_hours - kpi.total_overtime_hours) ?? 0)} suffix="sa" icon={Clock} gradient="indigo"
+                    subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`} />
+                <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
+                    delta={isComparing ? deltas?.worked : null}
+                    subtitle={`Hedef: ${Math.round(kpi.total_target_hours || 0)}sa`} info={METRIC_EXPLANATIONS.worked_hours} />
+                <KPICard mini title="Ek Mesai (OT)" value={Math.round(kpi.total_overtime_hours || 0)} suffix="sa" icon={Zap} gradient="amber"
+                    delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
+                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime} />
+                <KPICard mini title="Eksik Mesai" value={Math.round(kpi.total_missing_hours || 0)} suffix="sa" icon={AlertCircle} gradient="red"
+                    delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
+                    info={METRIC_EXPLANATIONS.missing_hours} />
+            </div>
+
+            {/* ── Diğer ekip metrikleri (mini KPI) ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
                 <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
                     delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
                 <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald"
                     info={METRIC_EXPLANATIONS.punctuality} />
+                <KPICard mini title="OT/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
                     info={METRIC_EXPLANATIONS.meal_rate} />
-                <KPICard mini title="İzin Kullanımı" value={kpi.total_leave_days || 0} suffix="gün" icon={CalendarCheck} gradient="violet" />
                 <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"
                     info={METRIC_EXPLANATIONS.break_minutes} />
             </div>
