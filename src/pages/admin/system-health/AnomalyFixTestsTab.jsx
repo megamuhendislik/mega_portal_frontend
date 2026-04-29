@@ -388,26 +388,40 @@ export default function AnomalyFixTestsTab() {
       )}
 
       {/* Running Progress */}
-      {running && (
+      {running && (() => {
+        // Per-test progress (backend coarse domain progress 1-domain modda hep 0%)
+        const testsDone = runningDetails.filter(d => d.status === 'PASS' || d.status === 'FAIL' || d.status === 'ERROR').length;
+        const livePercent = TOTAL_TESTS > 0
+          ? Math.min(99, Math.round((testsDone / TOTAL_TESTS) * 100))
+          : progress;
+        const displayPercent = Math.max(progress, livePercent);
+        return (
         <Card size="small" style={{ marginBottom: 16, borderLeft: `4px solid ${elapsedSec > 120 ? '#fa541c' : '#1890ff'}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
             <LoadingOutlined spin style={{ fontSize: 18, color: elapsedSec > 120 ? '#fa541c' : '#1890ff' }} />
             <Text strong>Spec testleri çalışıyor (Celery worker)</Text>
+            <Tag color="purple">
+              {testsDone} / {TOTAL_TESTS} test
+            </Tag>
             <Tag color={elapsedSec > 120 ? 'orange' : elapsedSec > 60 ? 'gold' : 'blue'} style={{ marginLeft: 'auto' }}>
               <ClockCircleOutlined /> {Math.floor(elapsedSec / 60)}:{String(elapsedSec % 60).padStart(2, '0')}
             </Tag>
           </div>
-          {elapsedSec > 120 && (
+          {elapsedSec > 180 && testsDone < TOTAL_TESTS && (
             <Alert
               message={`Test ${elapsedSec}s sürüyor — beklenenden uzun`}
-              description="Subprocess hung olabilir veya migration yapıyor olabilir. İptal edebilir veya beklemeye devam edebilirsiniz. Backend timeout: 300s."
+              description={`${testsDone}/${TOTAL_TESTS} test tamamlandı. Subprocess yavaş çalışıyor olabilir veya hung olmuş olabilir. İptal edebilir veya beklemeye devam edebilirsiniz. Backend hard timeout: 300s.`}
               type="warning"
               icon={<WarningOutlined />}
               showIcon
               style={{ marginBottom: 8 }}
             />
           )}
-          <Progress percent={progress} status={elapsedSec > 120 ? 'exception' : 'active'} />
+          <Progress
+            percent={displayPercent}
+            status={elapsedSec > 240 ? 'exception' : 'active'}
+            format={(p) => `${p}% (${testsDone}/${TOTAL_TESTS})`}
+          />
           {showLogs && (runningDetails.length > 0 || runningOutput) && (
             <div
               ref={liveLogRef}
@@ -437,7 +451,8 @@ export default function AnomalyFixTestsTab() {
             </div>
           )}
         </Card>
-      )}
+        );
+      })()}
 
       {/* Result Summary */}
       {result && (
