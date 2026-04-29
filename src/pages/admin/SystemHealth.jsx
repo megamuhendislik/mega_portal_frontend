@@ -79,6 +79,7 @@ import BugFixVerificationTab from './system-health/BugFixVerificationTab';
 import QuickGateFixTab from './system-health/QuickGateFixTab';
 import DuplicateAttendanceTab from './system-health/DuplicateAttendanceTab';
 import AnomalyFixTestsTab from './system-health/AnomalyFixTestsTab';
+import DailyCorrectionTab from './system-health/DailyCorrectionTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -130,6 +131,7 @@ export default function SystemHealth() {
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
                         { id: 'anomaly_fix_tests', name: 'Anomali Fix Testleri', icon: BugAntIcon },
+                        { id: 'daily_correction', name: 'Günlük Düzeltme', icon: WrenchScrewdriverIcon },
                         { id: 'bugfix_verify', name: 'Canlı Bug Fix Doğrulama', icon: SparklesIcon },
                         { id: 'quick_gate_fix', name: 'Hızlı Kart Onarımı', icon: BoltIcon },
                         { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
@@ -203,6 +205,7 @@ export default function SystemHealth() {
                 {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
                 {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
                 {activeTab === 'anomaly_fix_tests' && <AnomalyFixTestsTab />}
+                {activeTab === 'daily_correction' && <DailyCorrectionTab />}
                 {activeTab === 'quick_gate_fix' && <QuickGateFixTab />}
                 {activeTab === 'error_logs' && <ErrorLogsTab />}
                 {activeTab === 'permissions' && <PermissionsTab />}
