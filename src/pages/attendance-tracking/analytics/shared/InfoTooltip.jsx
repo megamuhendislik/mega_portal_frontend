@@ -49,12 +49,12 @@ export default function InfoTooltip({ title, children, className = '' }) {
  */
 export const METRIC_EXPLANATIONS = {
     efficiency: {
-        title: 'Verimlilik',
+        title: 'Mesai Doluluğu (Normal)',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> (Toplam Çalışma Saati ÷ Hedef Saat) × 100</p>
-                <p className="text-slate-400">Hedef saat = Aylık çalışma takvimindeki planlanan toplam çalışma saati.</p>
-                <p className="text-slate-400">Ek mesai dahil edilir. %100 üstü = hedefin üzerinde çalışma.</p>
+                <p><strong className="text-white">Formül:</strong> Normal Mesai Saati ÷ Pro-rata Yükümlülük × 100, capped 100</p>
+                <p className="text-slate-400">OT HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
+                <p className="text-slate-400">"Toplam Doluluk" (N+OT) ve "OT/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
             </>
         ),
     },
@@ -94,7 +94,7 @@ export const METRIC_EXPLANATIONS = {
             <>
                 <p><strong className="text-white">Formül:</strong> Ağırlıklı ortalama (0-100)</p>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-400">
-                    <li>Verimlilik: %30</li>
+                    <li>Mesai Doluluğu: %30</li>
                     <li>Devam oranı: %30</li>
                     <li>Dakiklik: %20</li>
                     <li>Kayıp oranı: %20</li>

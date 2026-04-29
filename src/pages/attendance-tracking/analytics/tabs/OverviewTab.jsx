@@ -173,7 +173,7 @@ export default function OverviewTab() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         {[
-                            { label: 'Verimlilik', curr: `${kpi.avg_efficiency_pct || 0}%`, prev: `${cmpKpi.avg_efficiency_pct || 0}%`, delta: deltas?.efficiency },
+                            { label: 'Mesai Doluluğu', curr: `${kpi.avg_efficiency_pct || 0}%`, prev: `${cmpKpi.avg_efficiency_pct || 0}%`, delta: deltas?.efficiency },
                             { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
                             { label: 'Ek Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
                             { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
@@ -199,7 +199,7 @@ export default function OverviewTab() {
 
             {/* Main KPI Grid — clickable cards open EfficiencyDetailModal sorted by metric */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPICard title="Verimlilik" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
+                <KPICard title="Mesai Doluluğu" value={`${kpi.avg_efficiency_pct || 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : kpi.vs_prev?.worked}
                     sparkline={sparklineWorked} info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => setShowDetailModal(true)} />
@@ -237,7 +237,7 @@ export default function OverviewTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Efficiency Distribution */}
-                <SectionCard title="Verimlilik Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
+                <SectionCard title="Mesai Doluluk Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
                     subtitle={`${totalPeople} çalışan`} collapsible={false}
                     headerExtra={
                         <button onClick={() => setShowDetailModal(true)}
@@ -303,7 +303,7 @@ export default function OverviewTab() {
                 subtitle="Ekip performansını oluşturan bileşenler" collapsible defaultOpen={false}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                        <KPIProgressBar label="Verimlilik (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1"
+                        <KPIProgressBar label="Mesai Doluluğu (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1"
                             info={METRIC_EXPLANATIONS.efficiency} />
                         <KPIProgressBar label="Devam Oranı (30%)" value={kpi.attendance_rate_pct || 0} color="#3b82f6"
                             info={METRIC_EXPLANATIONS.attendance_rate} />

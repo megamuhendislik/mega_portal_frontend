@@ -88,7 +88,7 @@ export default function ScopeBanner({ startDate, endDate, className = '' }) {
                 </Tooltip>
             )}
             {periodInProgress && (
-                <Tooltip title="Bu dönem henüz tamamlanmadı. Verimlilik / hedef yüzdeleri geçen iş günleri kadar oransal hesaplandı.">
+                <Tooltip title="Bu dönem henüz tamamlanmadı. Doluluk / hedef yüzdeleri geçen iş günleri kadar oransal (pro-rata) hesaplandı.">
                     <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                         <Clock size={10} /> Devam Eden Dönem
                         <Info size={10} className="opacity-60" />

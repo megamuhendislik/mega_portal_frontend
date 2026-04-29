@@ -217,7 +217,7 @@ export default function ComparisonTab() {
         if (!snap.length) return null;
 
         const metrics = [
-            { key: 'efficiency_pct', label: 'Verimlilik %', color: '#6366f1' },
+            { key: 'efficiency_pct', label: 'Mesai Doluluğu %', color: '#6366f1' },
             { key: 'worked_hours', label: 'Çalışma (sa)', color: '#10b981' },
             { key: 'overtime_hours', label: 'Ek Mesai (sa)', color: '#f59e0b' },
             { key: 'missing_hours', label: 'Eksik (sa)', color: '#ef4444' },
@@ -284,7 +284,7 @@ export default function ComparisonTab() {
                             </div>
                             <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                                 <div>
-                                    <span className="text-slate-500">Verimlilik:</span>{' '}
+                                    <span className="text-slate-500">Doluluk:</span>{' '}
                                     <span className="font-bold tabular-nums">{s.metrics?.efficiency_pct}%</span>
                                 </div>
                                 <div>
@@ -319,7 +319,7 @@ export default function ComparisonTab() {
             ),
         }));
         return (
-            <SectionCard title="Verimlilik Trendi (Aylık %)" collapsible={false}>
+            <SectionCard title="Mesai Doluluğu Trendi (Aylık %)" collapsible={false}>
                 <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={lineData}>
@@ -351,7 +351,7 @@ export default function ComparisonTab() {
         if (!data || data.mode !== 'periods') return null;
         const deltas = data.deltas || {};
         const cards = [
-            { label: 'Verimlilik', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
+            { label: 'Mesai Doluluğu', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
             { label: 'Çalışma', key: 'worked_hours', suffix: 'sa', betterIsHigher: true },
             { label: 'Ek Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
             { label: 'Eksik Saat', key: 'missing_hours', suffix: 'sa', betterIsHigher: false },

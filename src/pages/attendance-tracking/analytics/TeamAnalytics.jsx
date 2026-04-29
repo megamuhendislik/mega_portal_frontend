@@ -24,7 +24,7 @@ const AnomaliesTab = React.lazy(() => import('./tabs/AnomaliesTab'));
 
 const TABS = [
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
-    { key: 'performance', label: 'Performans', icon: User, desc: 'Bireysel analiz' },
+    { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, OT ve eksik dağılımı' },
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
     { key: 'overtime_meal', label: 'OT & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
     { key: 'insights', label: 'İçgörüler', icon: Sparkles, desc: 'Otomatik öneriler' },

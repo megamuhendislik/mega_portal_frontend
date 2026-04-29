@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     User, Clock, AlarmClock, Coffee, TrendingUp, Calendar, Award, Target, BarChart3,
     Users, ChevronLeft, Trophy, AlertTriangle, ArrowUpDown, Search, Building2,
-    Activity, Crown, ChevronRight,
+    Activity, Crown, ChevronRight, Zap, Minus,
 } from 'lucide-react';
 import { Segmented, Empty, Tag } from 'antd';
 import api from '../../../../services/api';
@@ -68,6 +68,18 @@ function levelColor(eff) {
     return '#ef4444';
 }
 
+// Eksik/OT yoğunluk renk kodu (yüksek = kırmızı/mor, düşük = yeşil)
+function intensityColor(pct) {
+    if (pct >= 50) return '#ef4444';     // çok yüksek
+    if (pct >= 25) return '#f59e0b';     // yüksek
+    if (pct >= 10) return '#6366f1';     // orta
+    return '#10b981';                     // düşük
+}
+
+// Sayı formatı: null→"—", round
+const fmtPct = (v) => (v == null ? '—' : `${Math.round(v)}%`);
+const fmtHrs = (v) => `${Math.round(v || 0)}sa`;
+
 // ════════════════════════════════════════════════════════════════════
 // EKİP MODE — Tüm ekibe genel bakış
 // ════════════════════════════════════════════════════════════════════
@@ -78,9 +90,10 @@ function TeamOverviewMode({ onSelectPerson }) {
     const [whLoading, setWhLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [selectedDept, setSelectedDept] = useState(null);
-    const [sortBy, setSortBy] = useState('efficiency_desc');
+    const [sortBy, setSortBy] = useState('normal_completion_desc');
     const [pageSize, setPageSize] = useState(25);
     const [page, setPage] = useState(1);
+    const [deptChartMetric, setDeptChartMetric] = useState('normal_completion');
 
     // work-hours endpoint'inden detaylı çalışan listesi (bulk'ta da var)
     const workHoursFromBulk = data?.work_hours?.employee_hours;
@@ -108,17 +121,38 @@ function TeamOverviewMode({ onSelectPerson }) {
     // Departman bazlı performans (team-overview'dan)
     const deptComparison = data?.team_overview?.department_comparison || [];
 
-    // Verimlilik sıralaması (top/bottom 3 için)
-    const sortedByEff = useMemo(() => {
-        return [...employeeHours].sort((a, b) => (b.efficiency_pct || 0) - (a.efficiency_pct || 0));
+    // 4 sıralama paneli için ayrı ayrı top 3'ler
+    const eligibleEmployees = useMemo(() => {
+        // target_hours > 0 olan (ölçülebilir) çalışanlar
+        return employeeHours.filter((e) => (e.has_target ?? (e.target_hours > 0)));
     }, [employeeHours]);
 
-    const top3 = useMemo(() => sortedByEff.slice(0, 3), [sortedByEff]);
-    const bottom3 = useMemo(() => {
-        // En düşük 3 (worked > 0 olanlar — hiç çalışmayanlar verimliliği 0 olabilir)
-        const withWork = sortedByEff.filter((e) => e.worked_hours > 0 || e.target_hours > 0);
-        return withWork.slice(-3).reverse();
-    }, [sortedByEff]);
+    const topNormalDoluluk = useMemo(() => {
+        return [...eligibleEmployees]
+            .sort((a, b) => (b.normal_completion_pct ?? b.efficiency_pct ?? 0) - (a.normal_completion_pct ?? a.efficiency_pct ?? 0))
+            .slice(0, 3);
+    }, [eligibleEmployees]);
+
+    const topOT = useMemo(() => {
+        return [...eligibleEmployees]
+            .filter((e) => (e.ot_hours || 0) > 0)
+            .sort((a, b) => (b.ot_hours || 0) - (a.ot_hours || 0))
+            .slice(0, 3);
+    }, [eligibleEmployees]);
+
+    const topMissing = useMemo(() => {
+        return [...eligibleEmployees]
+            .filter((e) => (e.missing_hours || 0) > 0)
+            .sort((a, b) => (b.missing_hours || 0) - (a.missing_hours || 0))
+            .slice(0, 3);
+    }, [eligibleEmployees]);
+
+    const topOTRatio = useMemo(() => {
+        return [...eligibleEmployees]
+            .filter((e) => e.ot_to_normal_pct != null && (e.normal_hours || 0) > 0)
+            .sort((a, b) => (b.ot_to_normal_pct || 0) - (a.ot_to_normal_pct || 0))
+            .slice(0, 3);
+    }, [eligibleEmployees]);
 
     // Departman chip listesi
     const deptChips = useMemo(() => {
@@ -143,12 +177,15 @@ function TeamOverviewMode({ onSelectPerson }) {
             list = list.filter((e) => TR_NORM(e.name).includes(q) || TR_NORM(e.department).includes(q));
         }
         list.sort((a, b) => {
+            const aN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
+            const bN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
             switch (sortBy) {
-                case 'efficiency_desc': return (b.efficiency_pct || 0) - (a.efficiency_pct || 0);
-                case 'efficiency_asc': return (a.efficiency_pct || 0) - (b.efficiency_pct || 0);
-                case 'worked_desc': return (b.worked_hours || 0) - (a.worked_hours || 0);
+                case 'normal_completion_desc': return bN(b) - aN(a);
+                case 'total_completion_desc': return (b.total_completion_pct || 0) - (a.total_completion_pct || 0);
+                case 'normal_hours_desc': return (b.normal_hours || 0) - (a.normal_hours || 0);
                 case 'ot_desc': return (b.ot_hours || 0) - (a.ot_hours || 0);
                 case 'missing_desc': return (b.missing_hours || 0) - (a.missing_hours || 0);
+                case 'ot_ratio_desc': return (b.ot_to_normal_pct || 0) - (a.ot_to_normal_pct || 0);
                 case 'name': return String(a.name).localeCompare(String(b.name), 'tr');
                 default: return 0;
             }
@@ -173,147 +210,240 @@ function TeamOverviewMode({ onSelectPerson }) {
         return <EmptyState icon={Users} message="Bu dönem için ekip verisi bulunamadı" />;
     }
 
+    // Ranking panel renderer (her metrik için yeniden kullanılır)
+    const renderRanking = (items, valueKey, valueFmt, hintKey, hintFmt, palette) => {
+        if (!items || items.length === 0) return <Empty description="Veri yok" />;
+        const c = palette; // {border, bg, hover, text, badge}
+        return (
+            <div className="space-y-2">
+                {items.map((e, i) => (
+                    <button
+                        key={e.employee_id}
+                        onClick={() => onSelectPerson?.(e.employee_id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border ${c.border} bg-gradient-to-r ${c.bg} ${c.hover} hover:shadow-md transition-all text-left group`}
+                    >
+                        <div className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full ${c.badge} text-white font-black text-xs`}>
+                            {i + 1}
+                        </div>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
+                            <span className="text-xs font-black">{initials(e.name)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className={`font-bold text-slate-800 text-sm truncate group-hover:${c.text}`}>{e.name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{e.department || '—'}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                            <p className={`text-lg font-black ${c.text} tabular-nums leading-none`}>
+                                {valueFmt(e[valueKey])}
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                                {hintFmt(e[hintKey])}
+                            </p>
+                        </div>
+                        <ChevronRight size={14} className={`text-slate-300 group-hover:${c.text} flex-shrink-0`} />
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-5">
-            {/* TOP / BOTTOM 3 */}
+            {/* 4 SIRALAMA PANELİ — 2x2 grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <SectionCard
-                    title="En Yüksek 3 Performans"
+                    title="En Yüksek Mesai Doluluğu"
                     icon={Crown}
                     iconGradient="from-emerald-500 to-teal-600"
-                    subtitle="Verimlilik sıralamasına göre"
+                    subtitle="Normal mesai / Yükümlülük"
                     collapsible={false}
                 >
-                    {top3.length === 0 ? (
-                        <Empty description="Veri yok" />
-                    ) : (
-                        <div className="space-y-2">
-                            {top3.map((e, i) => (
-                                <button
-                                    key={e.employee_id}
-                                    onClick={() => onSelectPerson?.(e.employee_id)}
-                                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-white hover:border-emerald-300 hover:shadow-md transition-all text-left group"
-                                >
-                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-emerald-600 text-white font-black text-xs">
-                                        {i + 1}
-                                    </div>
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
-                                        <span className="text-xs font-black">{initials(e.name)}</span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-slate-800 text-sm truncate group-hover:text-emerald-700">{e.name}</p>
-                                        <p className="text-[10px] text-slate-500 truncate">{e.department || '—'}</p>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className="text-lg font-black text-emerald-700 tabular-nums leading-none">
-                                            %{e.efficiency_pct || 0}
-                                        </p>
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                                            {Math.round(e.worked_hours || 0)}sa çalışma
-                                        </p>
-                                    </div>
-                                    <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500 flex-shrink-0" />
-                                </button>
-                            ))}
-                        </div>
+                    {renderRanking(
+                        topNormalDoluluk,
+                        'normal_completion_pct',
+                        (v) => `%${v ?? 0}`,
+                        'normal_hours',
+                        (v) => `${Math.round(v || 0)}sa normal`,
+                        {
+                            border: 'border-emerald-200',
+                            bg: 'from-emerald-50/50 to-white',
+                            hover: 'hover:border-emerald-300',
+                            text: 'text-emerald-700',
+                            badge: 'bg-emerald-600',
+                        },
                     )}
                 </SectionCard>
 
                 <SectionCard
-                    title="Geliştirilmesi Gerekenler"
-                    icon={AlertTriangle}
-                    iconGradient="from-red-500 to-rose-600"
-                    subtitle="En düşük 3 verimlilik"
+                    title="En Çok Fazla Mesai"
+                    icon={Zap}
+                    iconGradient="from-amber-500 to-orange-600"
+                    subtitle="OT saat (mutlak)"
                     collapsible={false}
                 >
-                    {bottom3.length === 0 ? (
-                        <Empty description="Veri yok" />
-                    ) : (
-                        <div className="space-y-2">
-                            {bottom3.map((e) => (
-                                <button
-                                    key={e.employee_id}
-                                    onClick={() => onSelectPerson?.(e.employee_id)}
-                                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-red-200 bg-gradient-to-r from-red-50/50 to-white hover:border-red-300 hover:shadow-md transition-all text-left group"
-                                >
-                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white">
-                                        <AlertTriangle size={12} />
-                                    </div>
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
-                                        <span className="text-xs font-black">{initials(e.name)}</span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-slate-800 text-sm truncate group-hover:text-red-700">{e.name}</p>
-                                        <p className="text-[10px] text-slate-500 truncate">{e.department || '—'}</p>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className="text-lg font-black text-red-600 tabular-nums leading-none">
-                                            %{e.efficiency_pct || 0}
-                                        </p>
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                                            {Math.round(e.missing_hours || 0)}sa eksik
-                                        </p>
-                                    </div>
-                                    <ChevronRight size={14} className="text-slate-300 group-hover:text-red-500 flex-shrink-0" />
-                                </button>
-                            ))}
-                        </div>
+                    {renderRanking(
+                        topOT,
+                        'ot_hours',
+                        (v) => `${Math.round(v || 0)}sa`,
+                        'ot_to_normal_pct',
+                        (v) => (v == null ? 'Normal yok' : `OT/N: %${Math.round(v)}`),
+                        {
+                            border: 'border-amber-200',
+                            bg: 'from-amber-50/50 to-white',
+                            hover: 'hover:border-amber-300',
+                            text: 'text-amber-700',
+                            badge: 'bg-amber-600',
+                        },
+                    )}
+                </SectionCard>
+
+                <SectionCard
+                    title="En Çok Eksik Mesai"
+                    icon={AlertTriangle}
+                    iconGradient="from-red-500 to-rose-600"
+                    subtitle="Eksik saat (mutlak)"
+                    collapsible={false}
+                >
+                    {renderRanking(
+                        topMissing,
+                        'missing_hours',
+                        (v) => `${Math.round(v || 0)}sa`,
+                        'missing_to_target_pct',
+                        (v) => `Eksik/Y: ${fmtPct(v)}`,
+                        {
+                            border: 'border-red-200',
+                            bg: 'from-red-50/50 to-white',
+                            hover: 'hover:border-red-300',
+                            text: 'text-red-700',
+                            badge: 'bg-red-500',
+                        },
+                    )}
+                </SectionCard>
+
+                <SectionCard
+                    title="En Yüksek OT/Normal Oranı"
+                    icon={TrendingUp}
+                    iconGradient="from-violet-500 to-fuchsia-600"
+                    subtitle="OT yoğunluğu (Normal'e oranla)"
+                    collapsible={false}
+                >
+                    {renderRanking(
+                        topOTRatio,
+                        'ot_to_normal_pct',
+                        (v) => fmtPct(v),
+                        'ot_hours',
+                        (v) => `${Math.round(v || 0)}sa OT`,
+                        {
+                            border: 'border-violet-200',
+                            bg: 'from-violet-50/50 to-white',
+                            hover: 'hover:border-violet-300',
+                            text: 'text-violet-700',
+                            badge: 'bg-violet-600',
+                        },
                     )}
                 </SectionCard>
             </div>
 
-            {/* Departman Bazlı Verimlilik */}
-            {deptComparison.length > 0 && (
-                <SectionCard
-                    title="Departman Bazlı Verimlilik"
-                    icon={Building2}
-                    iconGradient="from-violet-500 to-purple-600"
-                    subtitle="Tıklayarak tabloyu filtreleyin"
-                    collapsible={false}
-                >
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                data={deptComparison.map((d) => ({
-                                    name: d.department_name || '—',
-                                    verimlilik: d.avg_efficiency_pct || 0,
-                                    'çalışma': Math.round(d.total_worked_hours || 0),
-                                    'ek mesai': Math.round(d.total_overtime_hours || 0),
-                                    employee_count: d.employee_count,
-                                }))}
-                                onClick={(state) => {
-                                    if (state?.activeLabel) setSelectedDept(state.activeLabel);
-                                }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
-                                <YAxis tick={{ fontSize: 10 }} unit="%" />
-                                <Tooltip content={<ChartTooltip unit="%" />} />
-                                <ReferenceLine y={80} stroke="#10b981" strokeDasharray="4 3" strokeWidth={1} />
-                                <Bar dataKey="verimlilik" name="Verimlilik" radius={[6, 6, 0, 0]} cursor="pointer">
-                                    {deptComparison.map((d, i) => (
-                                        <Cell key={i} fill={levelColor(d.avg_efficiency_pct || 0)} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <p className="text-[10px] text-slate-400 text-center mt-2">
-                        Çubuğa tıklayarak alttaki tabloyu o departmanla filtreleyebilirsiniz.
-                    </p>
-                </SectionCard>
-            )}
+            {/* Departman Kıyaslaması — 4 metrik segmented */}
+            {deptComparison.length > 0 && (() => {
+                const metricMap = {
+                    normal_completion: {
+                        key: 'avg_normal_completion_pct',
+                        legacy: 'avg_efficiency_pct',
+                        label: 'Normal Doluluk',
+                        unit: '%',
+                        color: levelColor,
+                        ref: 80,
+                    },
+                    total_completion: {
+                        key: 'avg_total_completion_pct',
+                        label: 'Toplam Doluluk (N+OT)',
+                        unit: '%',
+                        color: (v) => (v >= 100 ? '#7c3aed' : levelColor(v)),
+                        ref: 100,
+                    },
+                    ot_to_target: {
+                        key: 'avg_ot_to_target_pct',
+                        label: 'OT / Yükümlülük',
+                        unit: '%',
+                        color: intensityColor,
+                        ref: null,
+                    },
+                    missing_to_target: {
+                        key: 'avg_missing_to_target_pct',
+                        label: 'Eksik / Yükümlülük',
+                        unit: '%',
+                        color: intensityColor,
+                        ref: null,
+                    },
+                };
+                const m = metricMap[deptChartMetric];
+                const chartData = deptComparison.map((d) => ({
+                    name: d.department_name || '—',
+                    value: d[m.key] ?? d[m.legacy] ?? 0,
+                    employee_count: d.employee_count,
+                }));
+                return (
+                    <SectionCard
+                        title="Departman Kıyaslamaları"
+                        icon={Building2}
+                        iconGradient="from-violet-500 to-purple-600"
+                        subtitle="Metriği seç → çubuğa tıkla → tabloyu filtrele"
+                        collapsible={false}
+                    >
+                        <div className="mb-3">
+                            <Segmented
+                                size="small"
+                                value={deptChartMetric}
+                                onChange={setDeptChartMetric}
+                                options={[
+                                    { value: 'normal_completion', label: <span className="text-[10px] font-bold">Normal Doluluk</span> },
+                                    { value: 'total_completion', label: <span className="text-[10px] font-bold">Toplam Doluluk</span> },
+                                    { value: 'ot_to_target', label: <span className="text-[10px] font-bold">OT/Yükümlülük</span> },
+                                    { value: 'missing_to_target', label: <span className="text-[10px] font-bold">Eksik/Yükümlülük</span> },
+                                ]}
+                            />
+                        </div>
+                        <div className="h-72">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={chartData}
+                                    onClick={(state) => {
+                                        if (state?.activeLabel) setSelectedDept(state.activeLabel);
+                                    }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
+                                    <YAxis tick={{ fontSize: 10 }} unit={m.unit} />
+                                    <Tooltip content={<ChartTooltip unit={m.unit} />} />
+                                    {m.ref != null && (
+                                        <ReferenceLine y={m.ref} stroke="#10b981" strokeDasharray="4 3" strokeWidth={1} />
+                                    )}
+                                    <Bar dataKey="value" name={m.label} radius={[6, 6, 0, 0]} cursor="pointer">
+                                        {chartData.map((d, i) => (
+                                            <Cell key={i} fill={m.color(d.value || 0)} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <p className="text-[10px] text-slate-400 text-center mt-2">
+                            Metrikleri segment'le değiştir. Çubuğa tıklayarak alttaki tabloyu o departmanla filtreleyebilirsiniz.
+                        </p>
+                    </SectionCard>
+                );
+            })()}
 
-            {/* Tüm Ekip Tablosu */}
+            {/* Tüm Ekip Mesai Tablosu */}
             <SectionCard
-                title="Tüm Ekip Performansı"
+                title="Tüm Ekip Mesai Tablosu"
                 icon={Users}
                 iconGradient="from-indigo-500 to-blue-600"
                 subtitle={`${filtered.length} / ${employeeHours.length} çalışan`}
                 collapsible={false}
                 headerExtra={
                     <button
-                        onClick={() => { setSearch(''); setSelectedDept(null); setSortBy('efficiency_desc'); }}
+                        onClick={() => { setSearch(''); setSelectedDept(null); setSortBy('normal_completion_desc'); }}
                         className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-50"
                     >
                         Filtreleri Sıfırla
@@ -365,10 +495,12 @@ function TeamOverviewMode({ onSelectPerson }) {
                             value={sortBy}
                             onChange={setSortBy}
                             options={[
-                                { value: 'efficiency_desc', label: <span className="text-[10px]">Verimlilik ↓</span> },
-                                { value: 'worked_desc', label: <span className="text-[10px]">Çalışma ↓</span> },
+                                { value: 'normal_completion_desc', label: <span className="text-[10px]">N.Doluluk ↓</span> },
+                                { value: 'total_completion_desc', label: <span className="text-[10px]">T.Doluluk ↓</span> },
+                                { value: 'normal_hours_desc', label: <span className="text-[10px]">Normal ↓</span> },
                                 { value: 'ot_desc', label: <span className="text-[10px]">OT ↓</span> },
                                 { value: 'missing_desc', label: <span className="text-[10px]">Eksik ↓</span> },
+                                { value: 'ot_ratio_desc', label: <span className="text-[10px]">OT/N ↓</span> },
                                 { value: 'name', label: <span className="text-[10px]">A-Z</span> },
                             ]}
                         />
@@ -381,21 +513,25 @@ function TeamOverviewMode({ onSelectPerson }) {
                         <Empty description="Eşleşen çalışan yok" />
                     </div>
                 ) : (
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                        <table className="w-full text-sm">
+                    <div className="rounded-xl border border-slate-200 overflow-x-auto">
+                        <table className="w-full text-sm min-w-[1100px]">
                             <thead className="bg-slate-50/80">
                                 <tr className="border-b border-slate-200">
                                     {[
                                         { key: 'name', label: 'Çalışan', align: 'left' },
                                         { key: 'department', label: 'Departman', align: 'left' },
-                                        { key: 'efficiency', label: 'Verimlilik', align: 'left' },
-                                        { key: 'worked', label: 'Çalışma', align: 'right' },
-                                        { key: 'ot', label: 'OT', align: 'right' },
-                                        { key: 'missing', label: 'Eksik', align: 'right' },
-                                        { key: 'target', label: 'Hedef', align: 'right' },
+                                        { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (OT hariç)' },
+                                        { key: 'ot', label: 'OT', align: 'right', tip: 'Fazla mesai' },
+                                        { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
+                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük' },
+                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Normal+OT) / Yükümlülük' },
+                                        { key: 'ot_to_target', label: 'OT/Y', align: 'right', tip: 'OT / Yükümlülük' },
+                                        { key: 'missing_to_target', label: 'Eksik/Y', align: 'right', tip: 'Eksik / Yükümlülük' },
+                                        { key: 'target', label: 'Hedef', align: 'right', tip: 'Aylık tam hedef' },
                                     ].map((col) => (
                                         <th
                                             key={col.key}
+                                            title={col.tip}
                                             className={`py-2.5 px-3 text-[9px] text-slate-500 uppercase font-black tracking-wider text-${col.align}`}
                                         >
                                             {col.label}
@@ -405,8 +541,11 @@ function TeamOverviewMode({ onSelectPerson }) {
                             </thead>
                             <tbody>
                                 {pageItems.map((e) => {
-                                    const eff = e.efficiency_pct || 0;
-                                    const color = levelColor(eff);
+                                    const nDol = e.normal_completion_pct ?? e.efficiency_pct ?? 0;
+                                    const tDol = e.total_completion_pct ?? 0;
+                                    const otY = e.ot_to_target_pct ?? 0;
+                                    const eksY = e.missing_to_target_pct ?? 0;
+                                    const noTarget = !(e.has_target ?? (e.target_hours > 0));
                                     return (
                                         <tr
                                             key={e.employee_id}
@@ -422,23 +561,49 @@ function TeamOverviewMode({ onSelectPerson }) {
                                                 </div>
                                             </td>
                                             <td className="py-2.5 px-3 text-slate-500 text-[11px]">{e.department || '—'}</td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{fmtHrs(e.normal_hours)}</td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{fmtHrs(e.ot_hours)}</td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{fmtHrs(e.missing_hours)}</td>
                                             <td className="py-2.5 px-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                                                        <div
-                                                            className="h-full rounded-full transition-all"
-                                                            style={{ width: `${Math.min(100, eff)}%`, backgroundColor: color }}
-                                                        />
+                                                {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                                                            <div
+                                                                className="h-full rounded-full transition-all"
+                                                                style={{ width: `${Math.min(100, nDol)}%`, backgroundColor: levelColor(nDol) }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[11px] font-black tabular-nums" style={{ color: levelColor(nDol), minWidth: '32px' }}>
+                                                            %{nDol}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-[12px] font-black tabular-nums" style={{ color }}>
-                                                        {eff}%
-                                                    </span>
-                                                </div>
+                                                )}
                                             </td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{Math.round(e.worked_hours || 0)}sa</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{Math.round(e.ot_hours || 0)}sa</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{Math.round(e.missing_hours || 0)}sa</td>
-                                            <td className="py-2.5 px-3 text-right tabular-nums text-slate-500 text-[12px]">{Math.round(e.target_hours || 0)}sa</td>
+                                            <td className="py-2.5 px-3">
+                                                {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                                                            <div
+                                                                className="h-full rounded-full transition-all"
+                                                                style={{
+                                                                    width: `${Math.min(100, tDol)}%`,
+                                                                    backgroundColor: tDol >= 100 ? '#7c3aed' : levelColor(tDol),
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[11px] font-black tabular-nums" style={{ color: tDol >= 100 ? '#7c3aed' : levelColor(tDol), minWidth: '32px' }}>
+                                                            %{tDol}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(otY) }}>
+                                                {noTarget ? '—' : `%${otY}`}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]" style={{ color: intensityColor(eksY) }}>
+                                                {noTarget ? '—' : `%${eksY}`}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums text-slate-500 text-[12px]">{fmtHrs(e.target_hours)}</td>
                                         </tr>
                                     );
                                 })}
@@ -958,12 +1123,12 @@ export default function PerformanceTab() {
                 <div>
                     <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
                         <Activity size={16} className="text-indigo-600" />
-                        Performans Analizi
+                        Mesai Analizi
                     </h2>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                         {mode === 'team'
-                            ? 'Tüm ekibin verimlilik, çalışma saati ve devam dağılımı'
-                            : 'Seçili çalışanın detaylı performans verileri'}
+                            ? 'Normal mesai, fazla mesai (OT) ve eksik mesai dağılımı'
+                            : 'Seçili çalışanın detaylı mesai verileri'}
                     </p>
                 </div>
                 <Segmented

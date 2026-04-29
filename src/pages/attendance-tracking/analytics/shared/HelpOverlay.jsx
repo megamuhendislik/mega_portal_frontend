@@ -18,12 +18,14 @@ const SHORTCUTS = [
 ];
 
 const METRICS_GLOSSARY = [
-    { name: 'Verimlilik', formula: '(Toplam Çalışma / Hedef) × 100', desc: 'Hedef saate göre gerçekleşen çalışma yüzdesi.' },
+    { name: 'Normal Doluluk', formula: '(Normal Mesai / Pro-rata Yükümlülük) × 100, capped 100', desc: 'OT hariç. Ölçülebilir kapsam içindeki normal mesainin tamamlanma oranı.' },
+    { name: 'Toplam Doluluk', formula: '((Normal + OT) / Yükümlülük) × 100, uncapped', desc: 'OT dahil. Hedefin üstüne çıkanlar %100 üstünde görünür.' },
+    { name: 'OT/Normal Oranı', formula: '(OT / Normal) × 100', desc: 'Fazla mesainin normal mesaiye yoğunluk oranı. Normal=0 ise tanımsız.' },
+    { name: 'OT/Yükümlülük', formula: '(OT / Yükümlülük) × 100', desc: 'Fazla mesainin aylık yükümlülüğe oranı.' },
+    { name: 'Eksik/Yükümlülük', formula: '(Eksik / Yükümlülük) × 100, capped 100', desc: 'Eksik mesainin yükümlülüğe oranı.' },
     { name: 'Devam Oranı', formula: '(Gelinen Gün / İş Günü) × 100', desc: 'İzinli/devamsız günler hariç gelme yüzdesi.' },
     { name: 'Dakiklik', formula: '(Zamanında Giriş / İş Günü) × 100', desc: 'Tolerans penceresi içinde giren gün yüzdesi.' },
-    { name: 'Sağlık Skoru', formula: '%30 verimlilik + %30 devam + %20 dakiklik + %20 kayıp', desc: 'Ekip performansı için birleşik skor (0–100).' },
-    { name: 'Ek Mesai', formula: 'calculated_overtime_seconds / 3600', desc: 'Onaylanmış ek mesai saatleri toplamı.' },
-    { name: 'Kayıp Saat', formula: 'Σ (Hedef − Çalışılan)', desc: 'Hedefe ulaşamayan günlerin eksik saatleri.' },
+    { name: 'Sağlık Skoru', formula: '%30 doluluk + %30 devam + %20 dakiklik + %20 kayıp azaltma', desc: 'Ekip performansı için birleşik skor (0–100).' },
     { name: 'Mazeret İzni', formula: 'Yıllık 18 saat (max 4.5 sa/gün)', desc: 'Saatlik izin kontingenti (yıllık 1 Ocak sıfırlama).' },
 ];
 

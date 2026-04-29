@@ -117,7 +117,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <div>
-                        <h2 className="text-lg font-black text-slate-800">Verimlilik Dağılımı — Detay</h2>
+                        <h2 className="text-lg font-black text-slate-800">Mesai Doluluk Dağılımı — Detay</h2>
                         <p className="text-xs text-slate-400 mt-0.5">{parsed.length} çalışan · {grouped.length} departman</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-600">
@@ -171,7 +171,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
 
                 {/* Formula açıklaması */}
                 <div className="mx-6 mt-3 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-[10px] text-slate-500 leading-relaxed">
-                    <span className="font-bold text-slate-700">Formül:</span> Salt verimlilik = <span className="font-mono">net mesai / şu ana kadar olabilecek hedef</span> · OT verimliliği = <span className="font-mono">(net + OT) / şu ana kadar olabilecek hedef</span>. Devam eden dönemde hedef pro-rata; bitmiş dönemde tam target.
+                    <span className="font-bold text-slate-700">Formül:</span> Normal Doluluk = <span className="font-mono">net normal mesai / pro-rata yükümlülük</span> (capped 100) · Toplam Doluluk = <span className="font-mono">(normal + OT) / pro-rata yükümlülük</span> (uncapped). Devam eden dönemde yükümlülük geçen iş günleri kadar; bitmiş dönemde tam target.
                 </div>
 
                 {/* Content */}

@@ -154,7 +154,7 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <Target size={11} className="text-emerald-600" />
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Verimlilik</span>
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Doluluk</span>
                                 </div>
                                 <div className="text-2xl font-black text-emerald-800 tabular-nums">
                                     {efficiency}<span className="text-base text-slate-400 ml-0.5">%</span>
