@@ -121,7 +121,7 @@ function ResultPanel({ result }) {
             type="warning"
             message={`${summary.errors.length} hata`}
             description={summary.errors.slice(0, 5).map((e, i) => (
-              <div key={i}>[{e.employee_id}] {e.employee_name}: {e.error}</div>
+              <div key={`${e.employee_id}-${i}`}>[{e.employee_id}] {e.employee_name}: {e.error}</div>
             ))}
           />
         </>
@@ -133,12 +133,12 @@ function ResultPanel({ result }) {
           <Title level={5}>Değişen Kayıtlar ({changes_total})</Title>
           <Table
             dataSource={changes}
-            rowKey={(r) => r.employee_id}
+            rowKey={(r, idx) => `${r.employee_code}-${idx}`}
             columns={[
               { title: 'Sicil', dataIndex: 'employee_code', width: 100 },
               { title: 'Ad', dataIndex: 'employee_name' },
-              { title: 'Önce', render: (r) => <pre style={{ fontSize: 10 }}>{JSON.stringify(r.before, null, 1)}</pre> },
-              { title: 'Sonra', render: (r) => <pre style={{ fontSize: 10 }}>{JSON.stringify(r.after, null, 1)}</pre> },
+              { title: 'Önce', dataIndex: 'before', render: (v) => <pre style={{ fontSize: 10 }}>{JSON.stringify(v, null, 1)}</pre> },
+              { title: 'Sonra', dataIndex: 'after', render: (v) => <pre style={{ fontSize: 10 }}>{JSON.stringify(v, null, 1)}</pre> },
             ]}
             pagination={{ pageSize: 10 }}
             size="small"
@@ -221,7 +221,7 @@ export default function DailyCorrectionTab() {
           <Col span={8}>
             <Text strong>Personel (opsiyonel):</Text>
             <Input
-              placeholder="Sicil no veya ad"
+              placeholder="Sicil no (opsiyonel)"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
             />
