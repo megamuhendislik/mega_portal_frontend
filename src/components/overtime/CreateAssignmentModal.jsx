@@ -115,7 +115,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSuccess, teamMembers }) => {
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Calendar size={20} className="text-blue-500" />
-                        Çalışana Ek Mesai Ata
+                        Çalışana Fazla Mesai Ata
                     </h3>
                     <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X size={18} className="text-slate-400" /></button>
                 </div>

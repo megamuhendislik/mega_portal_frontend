@@ -133,7 +133,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         target_approver_id: selectedApproverId,
         send_to_substitute: manualForm.send_to_substitute,
       });
-      message.success('Manuel ek mesai talebi oluşturuldu');
+      message.success('Manuel fazla mesai talebi oluşturuldu');
       setManualForm({ date: getIstanbulToday(), start_time: '', end_time: '', reason: '', send_to_substitute: false });
       await fetchData();
       setView('categories');

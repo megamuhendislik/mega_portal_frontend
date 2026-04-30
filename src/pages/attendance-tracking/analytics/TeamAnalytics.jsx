@@ -24,11 +24,11 @@ const AnomaliesTab = React.lazy(() => import('./tabs/AnomaliesTab'));
 
 const TABS = [
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
-    { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, OT ve eksik dağılımı' },
+    { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, fazla mesai ve eksik dağılımı' },
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
-    { key: 'overtime_meal', label: 'OT & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
+    { key: 'overtime_meal', label: 'Fazla Mesai & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
     { key: 'insights', label: 'İçgörüler', icon: Sparkles, desc: 'Otomatik öneriler' },
-    { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'İzin, OT, yemek talepleri' },
+    { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'İzin, fazla mesai, yemek talepleri' },
     { key: 'sla', label: 'SLA Paneli', icon: Hourglass, desc: 'Onay süresi ve gecikmeler' },
     { key: 'anomalies', label: 'Anomaliler', icon: AlertTriangle, desc: 'Z-score sapma tespiti' },
 ];

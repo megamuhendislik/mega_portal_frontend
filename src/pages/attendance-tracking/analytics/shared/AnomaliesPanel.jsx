@@ -35,7 +35,7 @@ const SEVERITY_LABELS = {
 };
 
 const METRIC_LABELS = {
-    overtime_hours: 'Ek Mesai',
+    overtime_hours: 'Fazla Mesai',
     worked_hours: 'Çalışma Saati',
     absence_days: 'Devamsızlık',
     meal_count: 'Yemek Siparişi',

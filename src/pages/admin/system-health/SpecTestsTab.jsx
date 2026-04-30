@@ -27,11 +27,11 @@ const DOMAINS = [
     label: 'Devamsızlık & Giriş/Çıkış',
     icon: <ClockCircleOutlined />,
     color: '#1890ff',
-    description: 'Kart okuyucu, vardiya hesaplama, tolerans, mola, OT algılama',
+    description: 'Kart okuyucu, vardiya hesaplama, tolerans, mola, Fazla Mesai algılama',
   },
   {
     key: 'overtime',
-    label: 'Ek Mesai',
+    label: 'Fazla Mesai',
     icon: <FieldTimeOutlined />,
     color: '#722ed1',
     description: '3 yol (INTENDED/POTENTIAL/MANUAL), haftalık limit, onay akışı',

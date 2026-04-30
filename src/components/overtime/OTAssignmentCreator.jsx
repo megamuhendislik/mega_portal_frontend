@@ -833,7 +833,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                 Ana Ekip ({primaryTeam.length})
               </button>
             </Tooltip>
-            <Tooltip title="İkincil yönetici olarak atandığınız çalışanlar (sadece ek mesai)" placement="top">
+            <Tooltip title="İkincil yönetici olarak atandığınız çalışanlar (sadece fazla mesai)" placement="top">
               <button
                 onClick={() => { setTeamTab('secondary'); setSelectedEmployeeId(null); }}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -871,7 +871,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           <div>
             <FieldLabel
               text="Personel"
-              tooltip="Ek mesai atamak istediğiniz çalışanı seçin. Sadece ekibinizdeki çalışanları görebilirsiniz."
+              tooltip="Fazla mesai atamak istediğiniz çalışanı seçin. Sadece ekibinizdeki çalışanları görebilirsiniz."
             />
             <Select
               showSearch
@@ -899,7 +899,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
             <Users size={28} className="text-slate-400" />
           </div>
           <p className="text-sm font-bold text-slate-500">
-            Ek mesai atamak için bir personel seçin
+            Fazla mesai atamak için bir personel seçin
           </p>
           <p className="text-xs text-slate-400 mt-1">
             Yukarıdaki dropdown'dan bir çalışanı arayabilirsiniz
@@ -915,7 +915,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
           </div>
           <p className="text-lg font-bold text-slate-900">Atamalar kaydedildi!</p>
           <p className="text-sm text-slate-500 mt-1">
-            {selectedDates.length} gün için ek mesai atandı.
+            {selectedDates.length} gün için fazla mesai atandı.
           </p>
         </div>
       )}
@@ -945,9 +945,9 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           <div className="flex items-center gap-1.5">
                             <Clock size={12} className="text-slate-400" />
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Haftalık Ek Mesai
+                              Haftalık Fazla Mesai
                             </span>
-                            <Tooltip title="Çalışanın bu hafta için toplam ek mesai saati. Haftalık limit genellikle 30 saattir." placement="top">
+                            <Tooltip title="Çalışanın bu hafta için toplam fazla mesai saati. Haftalık limit genellikle 30 saattir." placement="top">
                               <Info size={11} className="text-slate-400 cursor-help" />
                             </Tooltip>
                           </div>
@@ -1094,7 +1094,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                     <div>
                       <FieldLabel
                         text={`Saat / Gün`}
-                        tooltip="Her gün için atanacak ek mesai süresi (saat). 0.5 ile 12 saat arasında."
+                        tooltip="Her gün için atanacak fazla mesai süresi (saat). 0.5 ile 12 saat arasında."
                       />
                       <input
                         type="number"
@@ -1214,7 +1214,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">Mevcut Atamalar ve Talepler</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Bu dönem için kayıtlı ek mesai işlemleri</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Bu dönem için kayıtlı fazla mesai işlemleri</p>
                   </div>
                 </div>
 
@@ -1788,7 +1788,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
               {/* Fallback: OT Request Status (when request_detail not available) */}
               {!detailModal.request_detail && detailModal.overtime_request_status && (
                 <div className="bg-slate-50 rounded-xl p-3">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ek Mesai Talebi</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Fazla Mesai Talebi</div>
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ${STATUS_STYLES[detailModal.overtime_request_status] || 'bg-slate-100 text-slate-500'}`}>
                     {STATUS_LABELS[detailModal.overtime_request_status] || detailModal.overtime_request_status}
                   </span>

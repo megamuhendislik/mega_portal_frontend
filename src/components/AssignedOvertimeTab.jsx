@@ -398,7 +398,7 @@ const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onRe
                                             <span className="text-slate-300">→</span>
                                             <LogOut size={11} className="text-red-400" />
                                             <span className="text-sm font-semibold text-slate-700">{entry.check_out || '—'}</span>
-                                            <span className="text-xs text-slate-500">(OT: {formatDuration(entry.overtime_seconds)})</span>
+                                            <span className="text-xs text-slate-500">(Fazla Mesai: {formatDuration(entry.overtime_seconds)})</span>
                                         </div>
                                         <div className="text-[11px] text-slate-400 mt-0.5">Toplam çalışma: {formatDuration(entry.total_seconds)}</div>
                                     </div>
@@ -1148,7 +1148,7 @@ const AssignedOvertimeTab = () => {
                 >
                     <span className="flex items-center gap-1.5">
                         <ClipboardList size={15} />
-                        Ek Mesailerim
+                        Fazla Mesailerim
                     </span>
                     {activeView === 'personal' && (
                         <div className="absolute bottom-0 left-3 right-3 h-[2px] bg-blue-500 rounded-full" />
@@ -1220,9 +1220,9 @@ const AssignedOvertimeTab = () => {
 
                     {/* ─── Talep Edilebilir Ek Mesailer (Birleşik Accordion) ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<CalendarCheck size={16} />} title="Talep Edilebilir Ek Mesailer" count={claimableDays.length} countColor="blue" />
+                        <SectionHeader icon={<CalendarCheck size={16} />} title="Talep Edilebilir Fazla Mesailer" count={claimableDays.length} countColor="blue" />
                         {claimableDays.length === 0
-                            ? <EmptyState text="Talep edilebilir ek mesai bulunmuyor." />
+                            ? <EmptyState text="Talep edilebilir fazla mesai bulunmuyor." />
                             : (
                                 <div className="space-y-3">
                                     {claimableDays.map((day) => (
@@ -1252,7 +1252,7 @@ const AssignedOvertimeTab = () => {
                             className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50/50 transition-colors">
                             <div className="flex items-center gap-2">
                                 <span className="text-slate-400"><PenLine size={16} /></span>
-                                <h3 className="font-bold text-slate-800 text-[15px] tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Manuel Ek Mesai Girişi</h3>
+                                <h3 className="font-bold text-slate-800 text-[15px] tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Manuel Fazla Mesai Girişi</h3>
                             </div>
                             <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${showManualForm ? 'rotate-180' : ''}`} />
                         </button>
@@ -1263,7 +1263,7 @@ const AssignedOvertimeTab = () => {
                                     {manualAssignment && (
                                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
                                             <p className="text-sm text-blue-800 font-medium">
-                                                Bu tarih için ek mesai ataması bulundu: <strong>{manualAssignment.task_description || 'Görev açıklaması yok'}</strong>
+                                                Bu tarih için fazla mesai ataması bulundu: <strong>{manualAssignment.task_description || 'Görev açıklaması yok'}</strong>
                                                 {manualAssignment.max_duration_hours && ` (Maks. ${manualAssignment.max_duration_hours} saat)`}
                                             </p>
                                             <div className="flex gap-3">
@@ -1353,7 +1353,7 @@ const AssignedOvertimeTab = () => {
 
                     {/* ─── Tüm Taleplerim ─── */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                        <SectionHeader icon={<ClipboardList size={16} />} title="Tüm Ek Mesai Taleplerim" count={filteredRequests.length}>
+                        <SectionHeader icon={<ClipboardList size={16} />} title="Tüm Fazla Mesai Taleplerim" count={filteredRequests.length}>
                             <select value={requestFilter.status} onChange={e => setRequestFilter(f => ({ ...f, status: e.target.value }))}
                                 className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 focus:ring-2 focus:ring-blue-100 outline-none">
                                 <option value="ALL">Tüm Durumlar</option>

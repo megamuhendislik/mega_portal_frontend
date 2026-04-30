@@ -167,13 +167,13 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                             <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <TrendingUp size={11} className="text-amber-600" />
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ek Mesai</span>
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Fazla Mesai</span>
                                 </div>
                                 <div className="text-2xl font-black text-amber-800 tabular-nums">
                                     {ot > 0 ? formatHours(ot) : '—'}
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {ot > 0 ? 'Onaylı OT' : 'Ek mesai yok'}
+                                    {ot > 0 ? 'Onaylı Fazla Mesai' : 'Fazla mesai yok'}
                                 </p>
                             </div>
 
@@ -213,7 +213,7 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                     <div
                                         className="h-full bg-amber-500 transition-all"
                                         style={{ width: `${Math.min(100, (ot / Math.max(target, worked)) * 100)}%` }}
-                                        title={`Ek Mesai: ${formatHours(ot)}`}
+                                        title={`Fazla Mesai: ${formatHours(ot)}`}
                                     />
                                 )}
                             </div>
@@ -223,7 +223,7 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 </span>
                                 {ot > 0 && (
                                     <span className="flex items-center gap-1 text-slate-500">
-                                        <span className="w-2 h-2 rounded-sm bg-amber-500" /> OT {formatHours(ot)}
+                                        <span className="w-2 h-2 rounded-sm bg-amber-500" /> Fazla Mesai {formatHours(ot)}
                                     </span>
                                 )}
                             </div>

@@ -362,7 +362,7 @@ const DurationCell = ({ req }) => {
                         <>
                             <span className="text-slate-300 mx-1">+</span>
                             <span className="font-bold text-amber-600">{formatMinutesLabel(otMin)}</span>
-                            <span className="text-amber-400 font-normal"> OT</span>
+                            <span className="text-amber-400 font-normal"> Fazla Mesai</span>
                         </>
                     )}
                 </span>

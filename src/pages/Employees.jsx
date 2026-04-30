@@ -647,8 +647,8 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
                     <div>
-                        <span className="text-sm font-medium text-slate-700">Haftalık Ek Mesai Limiti</span>
-                        <p className="text-xs text-slate-400">Pazartesi-Pazar takvim haftası içinde yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
+                        <span className="text-sm font-medium text-slate-700">Haftalık Fazla Mesai Limiti</span>
+                        <p className="text-xs text-slate-400">Pazartesi-Pazar takvim haftası içinde yapılabilecek maks. fazla mesai saati. 0 = sınırsız.</p>
                     </div>
                 </div>
                 <div className="max-w-xs">
@@ -1386,7 +1386,7 @@ const Employees = () => {
                         <p>Silinecek kayıtlar ({total} toplam):</p>
                         <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
                             {counts.attendance > 0 && <li>{counts.attendance} devam kaydı</li>}
-                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} ek mesai talebi</li>}
+                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} fazla mesai talebi</li>}
                             {counts.leave_requests > 0 && <li>{counts.leave_requests} izin talebi</li>}
                             {counts.meal_requests > 0 && <li>{counts.meal_requests} yemek talebi</li>}
                             {counts.health_reports > 0 && <li>{counts.health_reports} sağlık raporu</li>}

@@ -827,7 +827,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                         >
                             <UserCog size={14} />
                             İkincil Ekip
-                            <Tooltip title="İkincil yönetici olarak atandığınız çalışanların talepleri. İkincil yöneticiler sadece ek mesai işlemleri yapabilir.">
+                            <Tooltip title="İkincil yönetici olarak atandığınız çalışanların talepleri. İkincil yöneticiler sadece fazla mesai işlemleri yapabilir.">
                                 <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
                             </Tooltip>
                             {secondaryPendingCount > 0 && (

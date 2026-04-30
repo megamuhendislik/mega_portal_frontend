@@ -171,7 +171,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
 
                 {/* Formula açıklaması */}
                 <div className="mx-6 mt-3 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-[10px] text-slate-500 leading-relaxed">
-                    <span className="font-bold text-slate-700">Formül:</span> Normal Doluluk = <span className="font-mono">net normal mesai / pro-rata yükümlülük</span> (capped 100) · Toplam Doluluk = <span className="font-mono">(normal + OT) / pro-rata yükümlülük</span> (uncapped). Devam eden dönemde yükümlülük geçen iş günleri kadar; bitmiş dönemde tam target.
+                    <span className="font-bold text-slate-700">Formül:</span> Normal Doluluk = <span className="font-mono">net normal mesai / pro-rata yükümlülük</span> (capped 100) · Toplam Doluluk = <span className="font-mono">(normal + Fazla Mesai) / pro-rata yükümlülük</span> (uncapped). Devam eden dönemde yükümlülük geçen iş günleri kadar; bitmiş dönemde tam target.
                 </div>
 
                 {/* Content */}
@@ -185,9 +185,9 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                                         { key: 'name', label: 'Çalışan' },
                                         { key: 'department', label: 'Departman' },
                                         { key: 'pureEfficiency', label: 'Salt Verim.' },
-                                        { key: 'combinedEfficiency', label: 'OT Dahil' },
+                                        { key: 'combinedEfficiency', label: 'Fazla Mesai Dahil' },
                                         { key: 'normalHours', label: 'Net Mesai' },
-                                        { key: 'overtimeHours', label: 'OT (h)' },
+                                        { key: 'overtimeHours', label: 'Fazla Mesai (h)' },
                                         { key: 'proratedTarget', label: 'Hedef (Şimdiye)' },
                                         { key: 'targetHours', label: 'Tam Hedef' },
                                         { key: 'missingHours', label: 'Kayıp' },
@@ -268,9 +268,9 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                                                         <tr className="border-b border-slate-50">
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Çalışan</th>
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">Salt Verim.</th>
-                                                            <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">OT Dahil</th>
+                                                            <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">Fazla Mesai Dahil</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Net</th>
-                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">OT</th>
+                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Fazla Mesai</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Hedef (Şimdiye)</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Kayıp</th>
                                                         </tr>

@@ -123,7 +123,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
           icon={<Clock size={16} />}
         >
           Taleplerim
-          <Tooltip title="Kendi ek mesai taleplerinizi görüntüleyin, yeni talep oluşturun veya potansiyel mesaileri talep edin.">
+          <Tooltip title="Kendi fazla mesai taleplerinizi görüntüleyin, yeni talep oluşturun veya potansiyel mesaileri talep edin.">
             <Info size={13} className="text-slate-400 cursor-help" />
           </Tooltip>
         </SubTabButton>
@@ -134,7 +134,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
             icon={<CalendarPlus size={16} />}
           >
             Mesai Ata
-            <Tooltip title="Ekibinizdeki çalışanlara ek mesai atayın. Takvimden tarih seçerek toplu atama yapabilirsiniz.">
+            <Tooltip title="Ekibinizdeki çalışanlara fazla mesai atayın. Takvimden tarih seçerek toplu atama yapabilirsiniz.">
               <Info size={13} className="text-slate-400 cursor-help" />
             </Tooltip>
           </SubTabButton>
@@ -146,7 +146,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
             icon={<ArrowDownLeft size={16} />}
           >
             Gelen Talepler
-            <Tooltip title="Ekibinizden gelen ek mesai taleplerini inceleyin, onaylayın veya reddedin.">
+            <Tooltip title="Ekibinizden gelen fazla mesai taleplerini inceleyin, onaylayın veya reddedin.">
               <Info size={13} className="text-slate-400 cursor-help" />
             </Tooltip>
           </SubTabButton>
@@ -157,7 +157,7 @@ export default function OvertimeRequestsTab({ onDataChange, refreshTrigger, prim
           icon={<BarChart3 size={16} />}
         >
           Analiz
-          <Tooltip title="Ekibinizin ek mesai istatistiklerini ve performans göstergelerini inceleyin.">
+          <Tooltip title="Ekibinizin fazla mesai istatistiklerini ve performans göstergelerini inceleyin.">
             <Info size={13} className="text-slate-400 cursor-help" />
           </Tooltip>
         </SubTabButton>

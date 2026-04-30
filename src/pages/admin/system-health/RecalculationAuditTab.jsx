@@ -31,7 +31,7 @@ const ROOT_CAUSE_COLORS = {
     TOLERANCE_DIFF: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Tolerans Farki' },
     BREAK_DIFF: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Mola Farki' },
     SPLIT_CHANGE: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Kayit Bolme' },
-    OT_THRESHOLD: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'OT Esik' },
+    OT_THRESHOLD: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Fazla Mesai Esik' },
     DEFICIT_FILL: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Eksik Tamamlama' },
     STATUS_DRIFT: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Durum Farki' },
     RECORD_COUNT: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Kayit Sayisi' },
@@ -176,7 +176,7 @@ export default function RecalculationAuditTab() {
         if (mode === 'apply' && !window.confirm(
             'DIKKAT: Tum degisiklikler kalici olarak uygulanacak!\n\n' +
             'Dry-run raporundaki tum split duzeltmeleri, normal mesai yeniden hesaplamalari,\n' +
-            'OT ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
+            'Fazla Mesai ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
             'Bu islem geri alinamaz. Devam etmek istiyor musunuz?'
         )) return;
 
@@ -569,9 +569,9 @@ export default function RecalculationAuditTab() {
                                                 'bg-gray-100 text-gray-700'
                                             }`}>
                                                 {a.type === 'MULTI_REQUEST' ? 'Coklu Talep' :
-                                                 a.type === 'REJECTED_BUT_APPROVED_OT' ? 'RED AMA OT Var' :
-                                                 a.type === 'APPROVED_BUT_NO_OT' ? 'Onayli AMA OT Yok' :
-                                                 a.type === 'OT_DURATION_MISMATCH' ? (a.severity === 'INFO' ? 'OT Kaplama (Beklenen)' : 'OT Sure Uyumsuz') :
+                                                 a.type === 'REJECTED_BUT_APPROVED_OT' ? 'RED AMA Fazla Mesai Var' :
+                                                 a.type === 'APPROVED_BUT_NO_OT' ? 'Onayli AMA Fazla Mesai Yok' :
+                                                 a.type === 'OT_DURATION_MISMATCH' ? (a.severity === 'INFO' ? 'Fazla Mesai Kaplama (Beklenen)' : 'Fazla Mesai Sure Uyumsuz') :
                                                  a.type === 'MONTHLY_SUMMARY_MISMATCH' ? 'Aylik Ozet' :
                                                  a.type === 'NEGATIVE_MISSING' ? 'Negatif Eksik' :
                                                  a.type === 'EXTREME_MISSING' ? 'Asiri Eksik' : a.type}
@@ -696,7 +696,7 @@ export default function RecalculationAuditTab() {
                                                 {m.requests?.length > 0 && (
                                                     <div>
                                                         <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                                            Ek Mesai Talepleri ({m.requests.length})
+                                                            Fazla Mesai Talepleri ({m.requests.length})
                                                         </h5>
                                                         <div className="space-y-1">
                                                             {m.requests.map((r, k) => (
@@ -744,7 +744,7 @@ export default function RecalculationAuditTab() {
                                                             <span>Ogle: {m.day_rules.lunch_start} - {m.day_rules.lunch_end}</span>
                                                             <span>Tolerans: {m.day_rules.tolerance_minutes} dk</span>
                                                             <span>Servis Tol: {m.day_rules.service_tolerance_minutes} dk</span>
-                                                            <span>Min OT: {m.day_rules.minimum_overtime_minutes} dk</span>
+                                                            <span>Min Fazla Mesai: {m.day_rules.minimum_overtime_minutes} dk</span>
                                                             <span>Mola Ind: {m.day_rules.daily_break_allowance} dk</span>
                                                             <span>Hedef: {m.day_rules.target_formatted || '-'}</span>
                                                             <span>{m.day_rules.is_off_day ? 'TATIL' : 'Is gunu'}</span>
@@ -808,8 +808,8 @@ export default function RecalculationAuditTab() {
                                             {isFixMode && <th className="py-2 px-2 font-bold text-emerald-600 text-right">Duzeltilen</th>}
                                             <th className="py-2 px-2 font-bold text-amber-600 text-right">Hata</th>
                                             <th className="py-2 px-2 font-bold text-gray-600 text-right">Normal</th>
-                                            <th className="py-2 px-2 font-bold text-indigo-600 text-right">Hesap. OT</th>
-                                            <th className="py-2 px-2 font-bold text-purple-600 text-right">Onayli OT</th>
+                                            <th className="py-2 px-2 font-bold text-indigo-600 text-right">Hesap. FM</th>
+                                            <th className="py-2 px-2 font-bold text-purple-600 text-right">Onayli FM</th>
                                             <th className="py-2 px-2 font-bold text-orange-600 text-right">Eksik</th>
                                         </tr>
                                     </thead>
@@ -1473,7 +1473,7 @@ export default function RecalculationAuditTab() {
                     <div>
                         <h3 className="text-lg font-bold text-gray-800">Talep Bütünlüğü Denetimi</h3>
                         <p className="text-xs text-gray-500">
-                            Duplikat, stale, çakışan potansiyeller ve onaylı-ama-uygulanmamış OT talepleri
+                            Duplikat, stale, çakışan potansiyeller ve onaylı-ama-uygulanmamış Fazla Mesai talepleri
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -1549,7 +1549,7 @@ export default function RecalculationAuditTab() {
                                             {type === 'STALE_POTENTIAL' && 'Stale (Kart Yok)'}
                                             {type === 'MANUAL_ONLY_POTENTIAL' && 'Kartsız Giriş'}
                                             {type === 'REDUNDANT_POTENTIAL' && 'Gereksiz (Onaylı Var)'}
-                                            {type === 'APPROVED_NO_OT' && 'Onaylı OT=0'}
+                                            {type === 'APPROVED_NO_OT' && 'Onaylı Fazla Mesai=0'}
                                             {type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
                                             {type === 'DURATION_MISMATCH' && 'Süre Tutarsız'}
                                         </div>
@@ -1584,7 +1584,7 @@ export default function RecalculationAuditTab() {
                                                         {iss.type === 'STALE_POTENTIAL' && 'Stale'}
                                                         {iss.type === 'MANUAL_ONLY_POTENTIAL' && 'Kartsız'}
                                                         {iss.type === 'REDUNDANT_POTENTIAL' && 'Gereksiz'}
-                                                        {iss.type === 'APPROVED_NO_OT' && 'OT=0'}
+                                                        {iss.type === 'APPROVED_NO_OT' && 'FM=0'}
                                                         {iss.type === 'OVERLAPPING_POTENTIAL' && 'Çakışan'}
                                                         {iss.type === 'DURATION_MISMATCH' && 'Süre'}
                                                     </span>
@@ -1640,8 +1640,8 @@ function SnapshotBlock({ title, data, color }) {
             <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">{title}</h6>
             <div className="space-y-0.5 text-[11px]">
                 <Row label="Normal" value={fmtSeconds(data.normal_seconds)} />
-                <Row label="Hesap. OT" value={fmtSeconds(data.calculated_overtime_seconds)} />
-                <Row label="Onayli OT" value={fmtSeconds(data.overtime_seconds)} />
+                <Row label="Hesap. FM" value={fmtSeconds(data.calculated_overtime_seconds)} />
+                <Row label="Onayli FM" value={fmtSeconds(data.overtime_seconds)} />
                 <Row label="Eksik" value={fmtSeconds(data.missing_seconds)} />
                 <Row label="Toplam" value={fmtSeconds(data.total_seconds)} />
                 <Row label="Mola" value={fmtSeconds(data.break_seconds)} />

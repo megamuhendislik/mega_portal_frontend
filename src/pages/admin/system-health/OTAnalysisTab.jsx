@@ -383,7 +383,7 @@ export default function OTAnalysisTab() {
     { label: 'Tarih', render: (r) => formatDate(r.date) },
     { label: 'Saat', render: (r) => `${r.start_time} - ${r.end_time}` },
     { label: 'Süre', render: (r) => formatHours(r.hours) },
-    { label: 'OT Tipi', render: (r) => (
+    { label: 'Fazla Mesai Tipi', render: (r) => (
       <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
         {OT_TYPE_LABELS[r.ot_type] || r.ot_type}
       </span>
@@ -471,7 +471,7 @@ export default function OTAnalysisTab() {
     // Tablo 3: Potansiyeller
     if (data.potentials?.length) {
       txt += `── POTANSİYEL MESAİLER (${data.potentials.length}) ${'─'.repeat(50)}\n\n`;
-      txt += `  ${pad('Çalışan', 22)} ${pad('Departman', 16)} ${pad('Tarih', 10)} ${pad('Saat', 14)} ${pad('Süre', 10)} ${pad('OT Tipi', 16)} ${pad('Durum', 18)} Bloklanma Sebebi\n`;
+      txt += `  ${pad('Çalışan', 22)} ${pad('Departman', 16)} ${pad('Tarih', 10)} ${pad('Saat', 14)} ${pad('Süre', 10)} ${pad('Fazla Mesai Tipi', 16)} ${pad('Durum', 18)} Bloklanma Sebebi\n`;
       txt += `  ${line('─', 22)} ${line('─', 16)} ${line('─', 10)} ${line('─', 14)} ${line('─', 10)} ${line('─', 16)} ${line('─', 18)} ${line('─', 30)}\n`;
       for (const p of data.potentials) {
         const claimLabel = CLAIM_STATUS_CONFIG[p.claim_status]?.label || p.claim_status;
@@ -526,7 +526,7 @@ export default function OTAnalysisTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">Ek Mesai Analizi</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Fazla Mesai Analizi</h2>
           <p className="text-sm text-gray-500">{s.period_label || 'Mevcut mali ay'}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -643,7 +643,7 @@ export default function OTAnalysisTab() {
 
       {/* Table 1: Assignments */}
       <DataTable
-        title="Yönetici Ek Mesai Atamaları"
+        title="Yönetici Fazla Mesai Atamaları"
         count={filteredAssignments.length}
         columns={assignmentColumns}
         data={filteredAssignments}
@@ -669,7 +669,7 @@ export default function OTAnalysisTab() {
 
       {/* Table 2: Requests */}
       <DataTable
-        title="Ek Mesai Talepleri"
+        title="Fazla Mesai Talepleri"
         count={filteredRequests.length}
         columns={requestColumns}
         data={filteredRequests}

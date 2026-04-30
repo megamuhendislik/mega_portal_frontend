@@ -129,7 +129,7 @@ export default function DailyRecordAuditTab() {
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
                     Bir calisanin belirli bir gundeki tum veritabani kayitlarini goruntuleyin.
-                    Kart verisi, attendance, saglik raporu, ek mesai, izin ve kartsiz giris kayitlari tek ekranda.
+                    Kart verisi, attendance, saglik raporu, fazla mesai, izin ve kartsiz giris kayitlari tek ekranda.
                 </p>
 
                 <div className="flex flex-wrap items-end gap-4">
@@ -266,7 +266,7 @@ export default function DailyRecordAuditTab() {
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded">
                                     <span className="text-gray-500">Tolerans:</span>{' '}
-                                    <span className="font-medium">{result.day_rules.tolerance_minutes}dk / Min OT: {result.day_rules.minimum_overtime_minutes}dk</span>
+                                    <span className="font-medium">{result.day_rules.tolerance_minutes}dk / Min Fazla Mesai: {result.day_rules.minimum_overtime_minutes}dk</span>
                                 </div>
                             </div>
                         </div>
@@ -326,7 +326,7 @@ export default function DailyRecordAuditTab() {
                                             <span className="text-xs text-gray-400">ID:{att.id}</span>
                                             <span className={`px-2 py-0.5 rounded text-xs font-bold ${sourceColor(att.source)}`}>{att.source}</span>
                                             <span className={`px-2 py-0.5 rounded text-xs font-bold ${statusColor(att.status)}`}>{att.status}</span>
-                                            {att.is_overtime_record && <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-800">OT Record</span>}
+                                            {att.is_overtime_record && <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-800">FM Record</span>}
                                             {att.related_health_report_id && <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">HR#{att.related_health_report_id}</span>}
                                         </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -373,7 +373,7 @@ export default function DailyRecordAuditTab() {
                     {/* Overtime Requests */}
                     {result.overtime_requests?.length > 0 && (
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                            <h4 className="font-bold text-gray-800 mb-3">Ek Mesai Talepleri ({result.overtime_requests.length})</h4>
+                            <h4 className="font-bold text-gray-800 mb-3">Fazla Mesai Talepleri ({result.overtime_requests.length})</h4>
                             {result.overtime_requests.map((ot, i) => (
                                 <div key={i} className="p-3 border border-gray-200 rounded-lg mb-2 flex flex-wrap items-center gap-3">
                                     <span className="text-xs text-gray-400">ID:{ot.id}</span>

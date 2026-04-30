@@ -35,7 +35,7 @@ const TEST_CLASSES = [
     label: 'Çift Sayım Engeli',
     count: 1,
     color: '#fa541c',
-    description: 'Türkay Kuzey: DUTY+MANUAL_OT+onaylı OT → total OT 3.5h (çift sayım yok).',
+    description: 'Türkay Kuzey: DUTY+MANUAL_OT+onaylı Fazla Mesai → toplam Fazla Mesai 3.5h (çift sayım yok).',
     references: ['Türkay Kuzey 2026-04-09'],
   },
   {

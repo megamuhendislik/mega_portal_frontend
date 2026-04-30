@@ -816,7 +816,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                         </span>
                       </div>
                       <div className="bg-white p-2.5 rounded-lg border border-purple-100">
-                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Fazla Mesai</span>
                         <span className="block font-black text-amber-600 text-lg">
                           {request.duty_work_info.total_ot_minutes ? `${Math.floor(request.duty_work_info.total_ot_minutes / 60)}s ${request.duty_work_info.total_ot_minutes % 60}dk` : '0'}
                         </span>
@@ -857,7 +857,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     {/* OT Kayıtları */}
                     {request.duty_work_info.overtime_records?.length > 0 && (
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-amber-600 uppercase">Ek Mesai Kayıtları</span>
+                        <span className="text-[10px] font-bold text-amber-600 uppercase">Fazla Mesai Kayıtları</span>
                         {request.duty_work_info.overtime_records.map((ot, i) => (
                           <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-amber-100">
                             <span className="text-slate-600">{new Date(ot.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' })}</span>
@@ -893,7 +893,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                             </span>
                           </div>
                           <div className="bg-white p-2 rounded-lg border border-amber-100 text-center">
-                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">Fazla Mesai</span>
                             <span className="block font-black text-amber-600 text-lg">
                               {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
                             </span>
@@ -906,7 +906,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                           <span className="w-24 text-center">Çalışma</span>
                           <span className="w-24 text-center">Vardiya</span>
                           <span className="w-20 text-center">Normal</span>
-                          <span className="w-20 text-right">Ek Mesai</span>
+                          <span className="w-20 text-right">Fazla Mesai</span>
                         </div>
 
                         {/* Day rows */}
@@ -1064,7 +1064,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 <div className="bg-blue-50/80 rounded-xl p-4 border border-blue-200">
                   <div className="flex items-center gap-2 mb-2">
                     <BarChart3 size={16} className="text-blue-600" />
-                    <h4 className="text-sm font-bold text-blue-700">Haftalık Ek Mesai Durumu</h4>
+                    <h4 className="text-sm font-bold text-blue-700">Haftalık Fazla Mesai Durumu</h4>
                   </div>
                   {weeklyOtLoading ? (
                     <div className="h-8 bg-blue-100 rounded animate-pulse" />
@@ -1135,17 +1135,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-emerald-200 bg-emerald-50">
-                    <span className="block text-[10px] text-emerald-500 font-bold uppercase">Onaylı OT</span>
+                    <span className="block text-[10px] text-emerald-500 font-bold uppercase">Onaylı Fazla Mesai</span>
                     <span className="block font-bold text-sm text-emerald-700">{otApprovedHours} sa</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-amber-200 bg-amber-50">
-                    <span className="block text-[10px] text-amber-500 font-bold uppercase">Bekleyen OT</span>
+                    <span className="block text-[10px] text-amber-500 font-bold uppercase">Bekleyen Fazla Mesai</span>
                     <span className="block font-bold text-sm text-amber-700">{s.ot_requests_pending} talep</span>
                   </div>
                 </div>
                 {request.status === 'PENDING' && (
                   <div className="text-xs text-amber-700 font-bold bg-white/60 rounded-lg p-2 border border-amber-100">
-                    Bu talep onaylanırsa toplam onaylı OT: {round(otApprovedHours + thisReqHours, 1)} sa
+                    Bu talep onaylanırsa toplam onaylı Fazla Mesai: {round(otApprovedHours + thisReqHours, 1)} sa
                   </div>
                 )}
               </div>
@@ -1176,7 +1176,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                         </div>
                         <div className="flex-1 flex items-center gap-3 text-slate-500">
                           <span>Normal: <span className="font-bold text-slate-700">{round(log.normal_seconds / 3600, 1)}s</span></span>
-                          <span>OT: <span className="font-bold text-amber-700">{round(log.overtime_seconds / 3600, 1)}s</span></span>
+                          <span>Fazla Mesai: <span className="font-bold text-amber-700">{round(log.overtime_seconds / 3600, 1)}s</span></span>
                           <span>Mola: <span className="font-bold text-blue-700">{Math.round(log.break_seconds / 60)}dk</span></span>
                         </div>
                       </div>
@@ -1399,7 +1399,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               <span>
                 Onay ile birlikte <strong>
                 {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
-                </strong> ek mesai otomatik onaylanacaktır.
+                </strong> fazla mesai otomatik onaylanacaktır.
               </span>
             </div>
           )}

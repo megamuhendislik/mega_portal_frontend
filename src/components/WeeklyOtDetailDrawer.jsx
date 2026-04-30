@@ -106,7 +106,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       title={
         <div className="flex items-center gap-2">
           <Clock size={18} className="text-blue-500" />
-          <span className="text-sm font-semibold">Haftalık Ek Mesai Detayı</span>
+          <span className="text-sm font-semibold">Haftalık Fazla Mesai Detayı</span>
           {employeeName && <Tag color="blue" className="text-[10px] ml-1">{employeeName}</Tag>}
         </div>
       }
@@ -178,7 +178,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
             pagination={false}
             size="small"
             scroll={{ y: 340 }}
-            locale={{ emptyText: 'Bu hafta OT kaydı yok' }}
+            locale={{ emptyText: 'Bu hafta Fazla Mesai kaydı yok' }}
             className="mt-2"
           />
         </div>

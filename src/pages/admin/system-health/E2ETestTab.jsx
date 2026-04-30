@@ -102,7 +102,7 @@ export default function E2ETestTab() {
                         <h2 className="text-lg font-bold text-gray-800">E2E Sistem Testleri</h2>
                         <p className="text-sm text-gray-500 mt-1">
                             Gerçek API endpoint'lerini kullanarak tüm talep akışlarını test eder.
-                            10 kişilik sanal ekip oluşturur, OT/İzin/Mazeret/Kartsız tüm iş kurallarını doğrular.
+                            10 kişilik sanal ekip oluşturur, Fazla Mesai/İzin/Mazeret/Kartsız tüm iş kurallarını doğrular.
                         </p>
                     </div>
                     <div className="flex gap-3">

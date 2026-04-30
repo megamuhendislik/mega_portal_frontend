@@ -221,7 +221,7 @@ export default function RequestHealthTab() {
                         const attCount = dwi.attendance_records?.length || 0;
                         const normalMin = dwi.total_work_minutes || 0;
                         const otMin = dwi.total_ot_minutes || 0;
-                        issues.push(`OK — ${attCount} kayıt, ${Math.floor(normalMin/60)}s${normalMin%60}dk normal, ${Math.floor(otMin/60)}s${otMin%60}dk OT`);
+                        issues.push(`OK — ${attCount} kayıt, ${Math.floor(normalMin/60)}s${normalMin%60}dk normal, ${Math.floor(otMin/60)}s${otMin%60}dk Fazla Mesai`);
                     }
                 } catch (e) {
                     issues.push(`API HATA: ${e.response?.status || e.message}`);

@@ -235,7 +235,7 @@ export default function EmployeeDetailTab() {
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                         <CountBadge label="Devam" count={data.attendance_count} color="blue" />
                         <CountBadge label="Kart" count={data.gate_event_count} color="cyan" />
-                        <CountBadge label="Ek Mesai" count={data.overtime_request_count} color="amber" />
+                        <CountBadge label="Fazla Mesai" count={data.overtime_request_count} color="amber" />
                         <CountBadge label="Izin" count={data.leave_request_count} color="green" />
                         <CountBadge label="Rapor" count={data.health_report_count} color="red" />
                         <CountBadge label="Yemek" count={data.meal_request_count} color="orange" />
@@ -343,7 +343,7 @@ export default function EmployeeDetailTab() {
                     </SectionToggle>
 
                     {/* ═══ OT Requests ═══ */}
-                    <SectionToggle title="Ek Mesai Talepleri" icon={<DocumentTextIcon className="w-5 h-5" />}
+                    <SectionToggle title="Fazla Mesai Talepleri" icon={<DocumentTextIcon className="w-5 h-5" />}
                         count={data.overtime_request_count} sectionKey="ot"
                         expanded={expandedSections} toggle={toggleSection}>
                         <table className="w-full text-[11px]">
@@ -566,7 +566,7 @@ export default function EmployeeDetailTab() {
 
                     {/* ═══ OT Assignments ═══ */}
                     {data.overtime_assignment_count > 0 && (
-                        <SectionToggle title="Ek Mesai Atamalari" icon={<DocumentTextIcon className="w-5 h-5" />}
+                        <SectionToggle title="Fazla Mesai Atamalari" icon={<DocumentTextIcon className="w-5 h-5" />}
                             count={data.overtime_assignment_count} sectionKey="assignments"
                             expanded={expandedSections} toggle={toggleSection}>
                             <table className="w-full text-[11px]">

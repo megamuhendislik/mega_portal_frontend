@@ -53,8 +53,8 @@ export const METRIC_EXPLANATIONS = {
         content: (
             <>
                 <p><strong className="text-white">Formül:</strong> Normal Mesai Saati ÷ Pro-rata Yükümlülük × 100, capped 100</p>
-                <p className="text-slate-400">OT HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
-                <p className="text-slate-400">"Toplam Doluluk" (N+OT) ve "OT/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
+                <p className="text-slate-400">Fazla Mesai HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
+                <p className="text-slate-400">"Toplam Doluluk" (N+Fazla Mesai) ve "Fazla Mesai/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
             </>
         ),
     },
@@ -62,14 +62,14 @@ export const METRIC_EXPLANATIONS = {
         title: 'Toplam Çalışma',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> Σ (Normal Saat + Onaylı Ek Mesai Saati)</p>
+                <p><strong className="text-white">Formül:</strong> Σ (Normal Saat + Onaylı Fazla Mesai Saati)</p>
                 <p className="text-slate-400">Her günkü ilk giriş — son çıkış arasındaki net çalışma süresi.</p>
-                <p className="text-slate-400">Mola süreleri düşülür, ek mesai ayrıca eklenir.</p>
+                <p className="text-slate-400">Mola süreleri düşülür, fazla mesai ayrıca eklenir.</p>
             </>
         ),
     },
     overtime: {
-        title: 'Ek Mesai',
+        title: 'Fazla Mesai',
         content: (
             <>
                 <p><strong className="text-white">Formül:</strong> Σ (calculated_overtime_seconds ÷ 3600)</p>
@@ -142,11 +142,11 @@ export const METRIC_EXPLANATIONS = {
         ),
     },
     ot_meal_correlation: {
-        title: 'OT-Yemek Eşleştirmesi',
+        title: 'Fazla Mesai-Yemek Eşleştirmesi',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> (OT Günlerinde Yemek Alınan Gün ÷ Toplam OT Günü) × 100</p>
-                <p className="text-slate-400">Ek mesai yapılan günlerde yemek siparişi verip vermediğini gösterir.</p>
+                <p><strong className="text-white">Formül:</strong> (Fazla Mesai Günlerinde Yemek Alınan Gün ÷ Toplam Fazla Mesai Günü) × 100</p>
+                <p className="text-slate-400">Fazla mesai yapılan günlerde yemek siparişi verip vermediğini gösterir.</p>
                 <p className="text-slate-400">≥80% İyi, ≥50% Orta, &lt;50% Düşük.</p>
             </>
         ),

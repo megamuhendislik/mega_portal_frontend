@@ -250,7 +250,7 @@ export default function OvertimeAuditTab() {
         { header: 'Giriş', render: r => <span className="font-mono text-[10px]">{r.check_in?.slice(0,5) || '—'}</span> },
         { header: 'Çıkış', render: r => <span className="font-mono text-[10px]">{r.check_out?.slice(0,5) || '—'}</span> },
         { header: 'Uzatma', render: r => <span className="font-bold">{r.ext_hours}sa</span> },
-        { header: 'Ek Mesai', render: r => <span className="font-bold">{r.ot_hours}sa</span> },
+        { header: 'Fazla Mesai', render: r => <span className="font-bold">{r.ot_hours}sa</span> },
         { header: 'Toplam FM', render: r => <span className="font-bold text-indigo-700">{r.total_ot_hours}sa</span> },
         { header: 'Durum', render: r => <StatusPill status={r.status} /> },
         { header: 'Flags', render: r => r.flags?.length > 0 ? <div className="flex flex-wrap gap-1">{r.flags.map((f,i) => <FlagBadge key={i} flag={f} />)}</div> : '—' },
@@ -312,7 +312,7 @@ export default function OvertimeAuditTab() {
                             Mesai Veri Denetimi
                         </h2>
                         <p className="text-xs text-gray-500 mt-1">
-                            Tüm ek mesai talepleri, atamaları ve mesai kayıtlarını tarar, anomalileri tespit eder.
+                            Tüm fazla mesai talepleri, atamaları ve mesai kayıtlarını tarar, anomalileri tespit eder.
                         </p>
                     </div>
                     <button
@@ -336,7 +336,7 @@ export default function OvertimeAuditTab() {
                 <>
                     {/* Summary Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                        <StatCard label="Ek Mesai Talepleri" value={data.summary.total_ot_requests} color="bg-blue-50 border-blue-100 text-blue-700" />
+                        <StatCard label="Fazla Mesai Talepleri" value={data.summary.total_ot_requests} color="bg-blue-50 border-blue-100 text-blue-700" />
                         <StatCard label="Atamalar" value={data.summary.total_assignments} color="bg-indigo-50 border-indigo-100 text-indigo-700" />
                         <StatCard label="Mesai Kaydı (Fazla Mesai)" value={data.summary.total_attendance_ot} color="bg-purple-50 border-purple-100 text-purple-700" />
                         <StatCard
@@ -431,7 +431,7 @@ export default function OvertimeAuditTab() {
 
                     {/* OT Requests Section */}
                     <Section
-                        title="Ek Mesai Talepleri"
+                        title="Fazla Mesai Talepleri"
                         icon={ClockIcon}
                         count={filteredRequests.length}
                         expanded={showRequests}
@@ -451,7 +451,7 @@ export default function OvertimeAuditTab() {
 
                     {/* Assignments Section */}
                     <Section
-                        title="Ek Mesai Atamaları"
+                        title="Fazla Mesai Atamaları"
                         icon={ClockIcon}
                         count={filteredAssignments.length}
                         expanded={showAssignments}
@@ -486,7 +486,7 @@ export default function OvertimeAuditTab() {
                             <h3 className="text-sm font-bold text-gray-700 mb-3">Durum Dağılımı</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div>
-                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase mb-2">Ek Mesai Talepleri</h4>
+                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase mb-2">Fazla Mesai Talepleri</h4>
                                     <div className="space-y-1">
                                         {Object.entries(data.summary.ot_by_status).map(([k, v]) => (
                                             <div key={k} className="flex items-center justify-between text-xs">

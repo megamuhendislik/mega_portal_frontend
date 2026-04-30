@@ -789,7 +789,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                 <BarChart3 size={14} className="text-amber-500" />
-                                Ekip Haftalık OT Dağılımı
+                                Ekip Haftalık Fazla Mesai Dağılımı
                             </h3>
                             <div className="flex items-center gap-3">
                                 {/* Saat / Yüzde toggle */}
@@ -873,9 +873,9 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 title={otDistDrawerData ? (
                     <div className="flex items-center gap-2">
                         <BarChart3 size={16} className="text-amber-500" />
-                        <span className="text-sm font-semibold">OT Dağılımı: {otDistDrawerData.label}</span>
+                        <span className="text-sm font-semibold">Fazla Mesai Dağılımı: {otDistDrawerData.label}</span>
                     </div>
-                ) : 'OT Dağılımı'}
+                ) : 'Fazla Mesai Dağılımı'}
                 open={otDistDrawerOpen}
                 onClose={() => setOtDistDrawerOpen(false)}
                 width={480}
@@ -923,7 +923,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 className="text-[10px] text-indigo-600 font-semibold hover:underline"
                                                 onClick={() => { setWeeklyOtDrawerEmployeeId(m.id); setWeeklyOtDrawerEmployeeName(m.name); setWeeklyOtDrawerRefDate(null); setOtDistDrawerOpen(false); setWeeklyOtDrawerOpen(true); }}
                                             >
-                                                Haftalık OT Detayını Görüntüle →
+                                                Haftalık Fazla Mesai Detayını Görüntüle →
                                             </button>
                                         </div>
                                     </details>
@@ -978,7 +978,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                 </div>
             )}
 
-            {/* View Toggle: Liste / Ek Mesai
+            {/* View Toggle: Liste / Fazla Mesai
                 NOT: Analiz görünümü ayrı sayfaya tasindi -> /analytics
                 (Sidebar'da "Ekip Analizi" menusu, sadece PRIMARY ekibi olan kullanicilar gorur). */}
             {activeStats.length > 0 && (
@@ -1009,7 +1009,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         }`}
                     >
                         <Clock size={14} />
-                        Ek Mesai
+                        Fazla Mesai
                     </button>
                 </div>
             )}
@@ -1038,7 +1038,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         className="bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-600 py-1.5 pl-2 pr-6 cursor-pointer hover:border-indigo-300 transition-colors"
                     >
                         <option value="NAME">İsim (A-Z)</option>
-                        <option value="OT_DESC">En Çok Ek Mesai</option>
+                        <option value="OT_DESC">En Çok Fazla Mesai</option>
                         <option value="MISSING_DESC">En Çok Eksik</option>
                         <option value="NORMAL_DESC">En Çok Çalışma</option>
                         <option value="NET_WORST">Net: En Çok Eksik</option>
@@ -1117,7 +1117,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                     <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/40 flex items-center gap-2">
                         <AlertTriangle size={14} className="text-amber-500" />
                         <span className="text-xs font-bold text-amber-600">
-                            İkincil ekip üyeleri için sadece ek mesai bilgileri görüntülenir.
+                            İkincil ekip üyeleri için sadece fazla mesai bilgileri görüntülenir.
                         </span>
                     </div>
                     <div className="divide-y divide-amber-50">

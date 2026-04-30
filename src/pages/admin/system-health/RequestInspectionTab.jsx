@@ -89,7 +89,7 @@ export default function RequestInspectionTab() {
                         <select value={requestType} onChange={e => setRequestType(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                             <option value="">Tümü</option>
-                            <option value="OVERTIME">Ek Mesai</option>
+                            <option value="OVERTIME">Fazla Mesai</option>
                             <option value="LEAVE">İzin</option>
                             <option value="EXTERNAL_DUTY">Dış Görev</option>
                             <option value="CARDLESS">Kartsız Giriş</option>

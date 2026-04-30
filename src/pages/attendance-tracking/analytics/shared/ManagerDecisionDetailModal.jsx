@@ -21,7 +21,7 @@ const TYPE_COLORS = {
 };
 
 const TYPE_LABELS = {
-    OVERTIME: 'Ek Mesai',
+    OVERTIME: 'Fazla Mesai',
     LEAVE: 'İzin',
     CARDLESS: 'Kartsız',
 };
@@ -282,7 +282,7 @@ export default function ManagerDecisionDetailModal({ open, onClose, managerId, m
                                 size="small"
                                 options={[
                                     { value: 'ALL', label: <span className="text-[11px]">Tümü</span> },
-                                    { value: 'OVERTIME', label: <span className="text-[11px]">Ek Mesai</span> },
+                                    { value: 'OVERTIME', label: <span className="text-[11px]">Fazla Mesai</span> },
                                     { value: 'LEAVE', label: <span className="text-[11px]">İzin</span> },
                                     { value: 'CARDLESS', label: <span className="text-[11px]">Kartsız</span> },
                                 ]}

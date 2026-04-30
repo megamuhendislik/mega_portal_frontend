@@ -39,7 +39,7 @@ export default function PotentialAuditTab() {
   const exportTxt = () => {
     if (!result) return;
     const lines = [];
-    lines.push('=== POTENTIAL OT AUDIT REPORT ===');
+    lines.push('=== POTANSİYEL FAZLA MESAİ DENETİM RAPORU ===');
     lines.push(`Tarih: ${result.date_range.start} — ${result.date_range.end}`);
     lines.push(`Çalışan: ${result.employee_id || 'Tümü'}`);
     lines.push(`Toplam POTENTIAL: ${result.total_potentials}`);
@@ -67,7 +67,7 @@ export default function PotentialAuditTab() {
       if (r.card_entries && r.card_entries.length > 0) {
         lines.push('  Kart Kayıtları:');
         for (const ce of r.card_entries) {
-          lines.push(`    - Att#${ce.attendance_id}: ${ce.check_in || '?'}–${ce.check_out || '?'} | source=${ce.source} status=${ce.status} | ${Math.round((ce.total_seconds || 0) / 60)}dk çalışma, ${Math.round((ce.overtime_seconds || 0) / 60)}dk OT${ce.is_overtime_record ? ' [OT_RECORD]' : ''}`);
+          lines.push(`    - Att#${ce.attendance_id}: ${ce.check_in || '?'}–${ce.check_out || '?'} | source=${ce.source} status=${ce.status} | ${Math.round((ce.total_seconds || 0) / 60)}dk çalışma, ${Math.round((ce.overtime_seconds || 0) / 60)}dk Fazla Mesai${ce.is_overtime_record ? ' [FM_RECORD]' : ''}`);
         }
       } else {
         lines.push('  Kart Kayıtları: HİÇ YOK');
@@ -90,10 +90,10 @@ export default function PotentialAuditTab() {
       <div className="bg-white rounded-xl border p-5">
         <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-amber-500" />
-          Potansiyel Ek Mesai Denetimi
+          Potansiyel Fazla Mesai Denetimi
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          POTENTIAL statüsündeki ek mesai kayıtlarını gerçek kart okuyucu verileriyle karşılaştırır.
+          POTENTIAL statüsündeki fazla mesai kayıtlarını gerçek kart okuyucu verileriyle karşılaştırır.
           Hayalet (kart verisi olmayan) kayıtları tespit eder.
         </p>
         <div className="flex flex-wrap gap-3 items-end">
@@ -208,7 +208,7 @@ export default function PotentialAuditTab() {
                               <span className={ce.source === 'ADMIN_ENTRY' ? 'text-indigo-600 font-medium ml-1' : 'text-slate-400 ml-1'}>
                                 ({ce.source === 'ADMIN_ENTRY' ? 'Admin Girişi' : ce.source})
                               </span>
-                              {ce.is_overtime_record && <span className="text-amber-600 ml-1">[OT]</span>}
+                              {ce.is_overtime_record && <span className="text-amber-600 ml-1">[FM]</span>}
                             </div>
                           ))}
                         </div>

@@ -21,13 +21,13 @@ import {
 const PendingRequestsTable = lazy(() => import('../shared/PendingRequestsTable'));
 
 const TYPE_COLORS = { leave: '#3B82F6', overtime: '#F59E0B', meal: '#10B981', cardless: '#8B5CF6', health_report: '#EC4899' };
-const TYPE_LABELS = { leave: 'İzin', overtime: 'Ek Mesai', meal: 'Yemek', cardless: 'Kartsız Giriş', health_report: 'Sağlık Raporu' };
+const TYPE_LABELS = { leave: 'İzin', overtime: 'Fazla Mesai', meal: 'Yemek', cardless: 'Kartsız Giriş', health_report: 'Sağlık Raporu' };
 const STATUS_COLORS = { approved: '#10B981', rejected: '#EF4444', pending: '#F59E0B', cancelled: '#94A3B8' };
 
 // Pie label (Turkish) -> backend type/status code mapping
 const TYPE_LABEL_TO_CODE = {
     'İzin': 'leave',
-    'Ek Mesai': 'overtime',
+    'Fazla Mesai': 'overtime',
     'Yemek': 'meal',
     'Kartsız Giriş': 'cardless',
     'Sağlık Raporu': 'health_report',
@@ -299,7 +299,7 @@ export default function RequestAnalyticsTab() {
                 <KPICard title="Bekleyen" value={pendingCount} icon={Hourglass} gradient="amber"
                     onClick={mode === 'team' ? () => setSelectedStatus('PENDING') : undefined} />
                 <KPICard title="Reddedilen" value={data?.rejected_count || 0} icon={XCircle} gradient="red" />
-                <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'OT Saati'}
+                <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'Fazla Mesai Saati'}
                     value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours || 0)}
                     suffix={avgDecisionHours != null ? 'saat' : 'saat'}
                     icon={Clock} gradient="blue"
@@ -465,7 +465,7 @@ export default function RequestAnalyticsTab() {
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                 <Bar dataKey="izin" name="İzin" fill={TYPE_COLORS.leave} radius={[3, 3, 0, 0]} stackId="a"
                                     cursor={mode === 'team' ? 'pointer' : 'default'} />
-                                <Bar dataKey="ek_mesai" name="Ek Mesai" fill={TYPE_COLORS.overtime} radius={[3, 3, 0, 0]} stackId="a"
+                                <Bar dataKey="ek_mesai" name="Fazla Mesai" fill={TYPE_COLORS.overtime} radius={[3, 3, 0, 0]} stackId="a"
                                     cursor={mode === 'team' ? 'pointer' : 'default'} />
                                 <Bar dataKey="yemek" name="Yemek" fill={TYPE_COLORS.meal} radius={[3, 3, 0, 0]} stackId="a"
                                     cursor={mode === 'team' ? 'pointer' : 'default'} />
@@ -523,7 +523,7 @@ export default function RequestAnalyticsTab() {
                                     <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Çalışan</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Toplam</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">İzin</th>
-                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">OT</th>
+                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Fazla Mesai</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Onaylı</th>
                                     <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold w-32">Oran</th>
                                 </tr>

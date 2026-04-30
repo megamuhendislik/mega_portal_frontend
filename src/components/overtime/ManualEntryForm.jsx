@@ -42,7 +42,7 @@ export default function ManualEntryForm({
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
         <PenLine className="w-5 h-5 text-blue-600" />
-        <h3 className="font-bold text-slate-800">Manuel Ek Mesai Girişi</h3>
+        <h3 className="font-bold text-slate-800">Manuel Fazla Mesai Girişi</h3>
       </div>
 
       <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={durHours} />

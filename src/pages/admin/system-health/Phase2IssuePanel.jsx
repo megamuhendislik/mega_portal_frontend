@@ -182,7 +182,7 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                                     <span className="font-bold">{issue.total_normal_min || 0}dk</span>
                                 </div>
                                 <div className="p-2 bg-blue-50 border border-blue-200 rounded">
-                                    <span className="text-blue-500 block">OT</span>
+                                    <span className="text-blue-500 block">Fazla Mesai</span>
                                     <span className="font-bold text-blue-700">{issue.total_ot_min || 0}dk</span>
                                 </div>
                                 <div className="p-2 bg-white border border-gray-200 rounded">
@@ -197,7 +197,7 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                                     <span className="font-bold text-red-600">{issue.last_card_out || 'Yok'}</span>
                                 </div>
                                 <div className="p-2 bg-white border border-gray-200 rounded">
-                                    <span className="text-gray-500 block">OT Talep</span>
+                                    <span className="text-gray-500 block">Fazla Mesai Talep</span>
                                     <span className="font-bold">{issue.ot_duration_min || '?'}dk</span>
                                 </div>
                                 <div className="p-2 bg-white border border-gray-200 rounded">
@@ -208,13 +208,13 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                         )}
                         {issue.gap_min > 0 && (
                             <div className="p-2 bg-red-50 border border-red-200 rounded col-span-2">
-                                <span className="text-red-500 block">Bosluk (son cikis → OT baslangic)</span>
+                                <span className="text-red-500 block">Bosluk (son cikis → Fazla Mesai baslangic)</span>
                                 <span className="font-bold text-red-700">{Math.floor(issue.gap_min/60)}sa {issue.gap_min%60}dk</span>
                             </div>
                         )}
                         {issue.reason && (
                             <div className="p-2 bg-blue-50 border border-blue-200 rounded col-span-2">
-                                <span className="text-blue-500 block">OT Nedeni</span>
+                                <span className="text-blue-500 block">Fazla Mesai Nedeni</span>
                                 <span className="font-bold text-blue-700">{issue.reason}</span>
                             </div>
                         )}
@@ -223,11 +223,11 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                     {/* OT detay bilgileri */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                         <div className="p-2 bg-white border border-gray-200 rounded">
-                            <span className="text-gray-500 block">OT Turu</span>
+                            <span className="text-gray-500 block">Fazla Mesai Turu</span>
                             <span className="font-bold">{issue.source_label || issue.source || '-'}</span>
                         </div>
                         <div className="p-2 bg-white border border-gray-200 rounded">
-                            <span className="text-gray-500 block">OT Saatleri</span>
+                            <span className="text-gray-500 block">Fazla Mesai Saatleri</span>
                             <span className="font-bold">{issue.ot_start || '?'} - {issue.ot_end || '?'}</span>
                         </div>
                         <div className="p-2 bg-white border border-gray-200 rounded">
@@ -273,7 +273,7 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                                             <th className="p-1 border-b text-left">Cikis</th>
                                             <th className="p-1 border-b text-left">Kaynak</th>
                                             <th className="p-1 border-b text-right">Normal</th>
-                                            <th className="p-1 border-b text-right">OT</th>
+                                            <th className="p-1 border-b text-right">FM</th>
                                             <th className="p-1 border-b text-right">Eksik</th>
                                             <th className="p-1 border-b text-right">Mola</th>
                                             <th className="p-1 border-b text-left">Durum</th>
@@ -285,7 +285,7 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                                                 <td className="p-1 border-b font-mono">#{a.id}</td>
                                                 <td className="p-1 border-b font-mono">{a.check_in}</td>
                                                 <td className="p-1 border-b font-mono">{a.check_out}</td>
-                                                <td className="p-1 border-b">{a.source}{a.is_ot ? ' [OT]' : ''}</td>
+                                                <td className="p-1 border-b">{a.source}{a.is_ot ? ' [FM]' : ''}</td>
                                                 <td className="p-1 border-b text-right">{a.normal_min}dk</td>
                                                 <td className="p-1 border-b text-right text-blue-600">{a.ot_min}dk</td>
                                                 <td className="p-1 border-b text-right text-red-600">{a.missing_min}dk</td>
@@ -302,12 +302,12 @@ function IssueCard({ issue, issueKey, selected, onToggle, expanded, onExpand, on
                     {issue.type === 'SPLIT_CHECK' && issue.ot_requests?.length > 0 && (
                         <details className="bg-white border border-blue-200 rounded-lg">
                             <summary className="p-2 cursor-pointer text-[10px] font-bold text-blue-700 hover:bg-blue-50">
-                                OT Talepleri ({issue.ot_requests.length})
+                                Fazla Mesai Talepleri ({issue.ot_requests.length})
                             </summary>
                             <div className="p-2 space-y-1">
                                 {issue.ot_requests.map((o, i) => (
                                     <div key={i} className="flex items-center gap-2 text-[10px] p-1 bg-gray-50 rounded">
-                                        <span className="font-mono font-bold">OT#{o.id}</span>
+                                        <span className="font-mono font-bold">FM#{o.id}</span>
                                         <span className={`px-1 py-0.5 rounded font-bold ${
                                             o.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
                                             o.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
@@ -588,7 +588,7 @@ export default function Phase2IssuePanel({ phase2 }) {
                                     <th className="text-left p-1.5 border-b">Ay</th>
                                     <th className="text-right p-1.5 border-b">Hedef</th>
                                     <th className="text-right p-1.5 border-b">Normal</th>
-                                    <th className="text-right p-1.5 border-b">OT</th>
+                                    <th className="text-right p-1.5 border-b">Fazla Mesai</th>
                                     <th className="text-right p-1.5 border-b">Eksik</th>
                                     <th className="text-right p-1.5 border-b">Toplam</th>
                                     <th className="text-right p-1.5 border-b">Bakiye</th>

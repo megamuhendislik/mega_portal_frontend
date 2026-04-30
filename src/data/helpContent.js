@@ -11,7 +11,7 @@ const helpContent = [
         id: 'giris-cikis',
         title: 'Ana Sayfa ve Giriş/Çıkış',
         icon: Clock,
-        description: 'Kart okutma ile giriş/çıkış, canlı durum takibi, mola hesaplama, haftalık ek mesai limiti ve aylık performans özeti. (Tüm çalışanlar görebilir)',
+        description: 'Kart okutma ile giriş/çıkış, canlı durum takibi, mola hesaplama, haftalık fazla mesai limiti ve aylık performans özeti. (Tüm çalışanlar görebilir)',
         permission: null,
         link: '/',
         images: [
@@ -32,8 +32,8 @@ const helpContent = [
                 description: 'Ana sayfanın üst kısmında 5 özet kartı bulunur: Bugün Çalışma (toplam süre), Kalan Mola (kullanılan/hak), Fazla Mesai (onaylanan/bekleyen), İzin Durumu (yıllık ve mazeret bakiyesi), Doğum Günü İzni (sadece doğum ayınızda görünür). Veriler her 60 saniyede otomatik güncellenir.'
             },
             {
-                title: 'Haftalık Ek Mesai Limiti',
-                description: 'Özet kartlarının altında haftalık ek mesai limit çubuğu yer alır. Pazartesi-Pazar takvim haftası içinde onaylanmış ve bekleyen mesai toplamını gösterir. Her Pazartesi sıfırlanır. Renk kodları: yeşil (%0-70), turuncu (%70-90), kırmızı (%90-100). Limit dolduğunda yeni talep oluşturulamaz.'
+                title: 'Haftalık Fazla Mesai Limiti',
+                description: 'Özet kartlarının altında haftalık fazla mesai limit çubuğu yer alır. Pazartesi-Pazar takvim haftası içinde onaylanmış ve bekleyen mesai toplamını gösterir. Her Pazartesi sıfırlanır. Renk kodları: yeşil (%0-70), turuncu (%70-90), kırmızı (%90-100). Limit dolduğunda yeni talep oluşturulamaz.'
             },
             {
                 title: 'Mola Takibi',
@@ -210,7 +210,7 @@ const helpContent = [
             { q: 'İzin bakiyem neden negatif?', a: 'Avans izin kullandiginizda bakiye negatife düşer. Henuz hak etmediginiz günleri önceden kullandiginizi gösterir.' },
             { q: 'Onaylanmış iznimi iptal edebilir miyim?', a: 'Kendiniz iptal edemezsiniz. Sistem yöneticisine başvurmaniz gerekir. İptal sonrası bakiye otomatik iade edilir.' },
             { q: 'Mazeret iznimin saat bakiyesini nerede görebilirim?', a: 'Ana sayfadaki turuncu izin kartında ve talepler sayfasında detayli olarak görürsünüz.' },
-            { q: 'İzin talebim kime gidiyor?', a: 'Birincil yöneticinize otomatik yönlendirilir. İkincil yönetici izin taleplerine yetkili değildir, sadece ek mesai işlemleri için yetkilidir.' }
+            { q: 'İzin talebim kime gidiyor?', a: 'Birincil yöneticinize otomatik yönlendirilir. İkincil yönetici izin taleplerine yetkili değildir, sadece fazla mesai işlemleri için yetkilidir.' }
         ]
     },
     {
@@ -256,7 +256,7 @@ const helpContent = [
     },
     {
         id: 'ek-mesai',
-        title: 'Ek Mesai',
+        title: 'Fazla Mesai',
         icon: Timer,
         description: '3 talep yolu (planli, algılanan, manuel), haftalık limit, talep durumları ve onay süreçleri. (Tüm çalışanlar görebilir)',
         permission: null,
@@ -267,7 +267,7 @@ const helpContent = [
         ],
         steps: [
             {
-                title: 'Ek Mesai Talep Yollari',
+                title: 'Fazla Mesai Talep Yollari',
                 description: 'Sistemde 3 farklı talep yolu vardır: (1) Planli — yönetiçinizin size atadigi mesai görevlerinden talep. (2) Algilanan — sistemin otomatik tespit ettigi potansiyel mesailerden talep. (3) Manuel — kendiniz giriş yaparak oluşturdugünüz talep.',
                 image: { src: '/help-images/help-talepler-03.png', caption: 'Ek mesai talep türleri' }
             },
@@ -285,7 +285,7 @@ const helpContent = [
             },
             {
                 title: 'Haftalık Limit Kontrolu',
-                description: 'Her çalışanın haftalık ek mesai limiti vardır (varsayılan 30 saat). Pazartesi-Pazar takvim haftası içindeki onaylanmış ve bekleyen mesai toplamı bu limiti aşamaz. Her Pazartesi sayaç sıfırlanır. Limit dolduğunda talep formları devre dışı kalır.'
+                description: 'Her çalışanın haftalık fazla mesai limiti vardır (varsayılan 30 saat). Pazartesi-Pazar takvim haftası içindeki onaylanmış ve bekleyen mesai toplamı bu limiti aşamaz. Her Pazartesi sayaç sıfırlanır. Limit dolduğunda talep formları devre dışı kalır.'
             },
             {
                 title: 'Talep Durumlari',
@@ -294,17 +294,17 @@ const helpContent = [
         ],
         tips: [
             { type: 'info', text: '3 talep yolu: Planli (yöneticinin atadigi görevden), Algilanan (sistemin otomatik tespit ettigi), Manuel (kendiniz girdiginiz). Her birinin kaynak rozeti farklı renkte gösterilir.' },
-            { type: 'warning', text: 'Haftalık ek mesai limiti (varsayılan 30 saat) dolduğunda yeni talep oluşturulamaz. İlerleme çubuğu kırmızıya donerse limitinizi kontrol edin.' },
+            { type: 'warning', text: 'Haftalık fazla mesai limiti (varsayılan 30 saat) dolduğunda yeni talep oluşturulamaz. İlerleme çubuğu kırmızıya donerse limitinizi kontrol edin.' },
             { type: 'info', text: 'Günlük toplam mesai süresi minimum eşiği (30 dk) gecmezse potansiyel kayıt oluşturulmaz.' },
             { type: 'success', text: 'Talepler 2 mali ay geriye dönük pencere içinde oluştürülabilir. Süresi geçen talepler otomatik olarak sonlandırılır.' }
         ],
         faq: [
             { q: 'Potansiyel mesai nedir?', a: 'Vardiya sonrası, öncesi veya tatil gününde çalıştığınızda sistem otomatik olarak algilar ve potansiyel mesai kaydı oluştürür. Bu kaydı talep ederek resmi mesai talebine donusturebilirsiniz.' },
             { q: 'Haftalık limit nasıl hesaplanıyor?', a: 'Pazartesi-Pazar takvim haftası içindeki onaylanmış ve bekleyen mesai toplamı hesaplanır. Her Pazartesi sayaç sıfırlanır. Varsayılan limit 30 saattir, çalışan bazında değişebilir.' },
-            { q: 'Planli mesaimi görmüyorum, neden?', a: 'Yönetiçiniz size mesai görevi atamış olmalidir. Atanan mesaileri "Ek Mesai" sekmesinden kontrol edin.' },
+            { q: 'Planli mesaimi görmüyorum, neden?', a: 'Yönetiçiniz size mesai görevi atamış olmalidir. Atanan mesaileri "Fazla Mesai" sekmesinden kontrol edin.' },
             { q: 'Manuel giriş ile potansiyel mesai farkı nedir?', a: 'Potansiyel mesai sistemin kart okutma verilerinizden otomatik tespit ettigi mesaidir. Manuel giriş ise siz kendiniz tarih ve saat girerek oluştürürsunuz.' },
-            { q: 'Mesai talebim kime gidiyor?', a: 'Birincil veya ikincil yöneticinize gider. İkincil yönetici sadece ek mesai işlemleri için yetkilidir. Talep oluşturma sırasında yönetici seçimi yapabilirsiniz.' },
-            { q: 'Planlı, algılanan ve manuel mesai arasındaki fark nedir?', a: 'Planlı mesai: Yöneticiniz size ek mesai ataması yaptığında oluşur, siz talep edersiniz. Algılanan mesai: Vardiya dışı çalışma algılandığında sistem otomatik potansiyel kayıt oluşturur, siz talep edersiniz. Manuel mesai: Geçmiş tarihler için kendiniz saat girerek talep oluşturursunuz. Her üç yol da aynı onay sürecinden geçer.' }
+            { q: 'Mesai talebim kime gidiyor?', a: 'Birincil veya ikincil yöneticinize gider. İkincil yönetici sadece fazla mesai işlemleri için yetkilidir. Talep oluşturma sırasında yönetici seçimi yapabilirsiniz.' },
+            { q: 'Planlı, algılanan ve manuel mesai arasındaki fark nedir?', a: 'Planlı mesai: Yöneticiniz size fazla mesai ataması yaptığında oluşur, siz talep edersiniz. Algılanan mesai: Vardiya dışı çalışma algılandığında sistem otomatik potansiyel kayıt oluşturur, siz talep edersiniz. Manuel mesai: Geçmiş tarihler için kendiniz saat girerek talep oluşturursunuz. Her üç yol da aynı onay sürecinden geçer.' }
         ]
     },
     {
@@ -338,7 +338,7 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Sipariş kesim saatinden sonra sipariş verilemez veya iptal edilemez. Kesim saatini takip edin.' },
-            { type: 'info', text: 'Yemek siparişleri ek mesai analizlerinde mesai-yemek iliskişi olarak değerlendirilir.' },
+            { type: 'info', text: 'Yemek siparişleri fazla mesai analizlerinde mesai-yemek iliskişi olarak değerlendirilir.' },
             { type: 'success', text: 'Ertesi gün için önceden sipariş verebilirsiniz.' }
         ],
         faq: [
@@ -352,7 +352,7 @@ const helpContent = [
         id: 'takvim',
         title: 'Takvim',
         icon: Calendar,
-        description: 'Kişisel ve ekip takvimi, izin/mesai/tatil görünümu, gündetayi ve ek mesai atama paneli. (Tüm çalışanlar görebilir)',
+        description: 'Kişisel ve ekip takvimi, izin/mesai/tatil görünümu, gündetayi ve fazla mesai atama paneli. (Tüm çalışanlar görebilir)',
         permission: null,
         link: '/calendar',
         images: [
@@ -381,9 +381,9 @@ const helpContent = [
         ],
         tips: [
             { type: 'info', text: 'Etkinlik renk kodları: kırmızı = resmi tatil, yeşil = onaylı izin, mor = mesai görevi, amber = bekleyen talep, pembe = sağlık raporu, mavi = kişisel etkinlik.' },
-            { type: 'success', text: 'Yöneticiler gündetay panelinden doğrudan ek mesai ataması yapabilir.' },
+            { type: 'success', text: 'Yöneticiler gündetay panelinden doğrudan fazla mesai ataması yapabilir.' },
             { type: 'info', text: 'Ardışık tatiller otomatik birlestirilir (ornegin "Ramazan Bayrami, 3 gun").' },
-            { type: 'info', text: 'Takvimde renk kodları: Yeşil = çalışma günü, Turuncu = izin/mazeret, Kırmızı = devamsızlık, Mor = ek mesai görevi, Pembe = sağlık raporu, Mavi = kişisel etkinlik, Gri çizgili = yarım gün tatil.' }
+            { type: 'info', text: 'Takvimde renk kodları: Yeşil = çalışma günü, Turuncu = izin/mazeret, Kırmızı = devamsızlık, Mor = fazla mesai görevi, Pembe = sağlık raporu, Mavi = kişisel etkinlik, Gri çizgili = yarım gün tatil.' }
         ],
         faq: [
             { q: 'Ekip takvimini nasıl görürum?', a: 'Yönetici yetkiniz varsa takvim sayfasında ekip görünümune gecebilirsiniz. Çalışanlarinizin izin ve mesai durumlarıni Gantt çubuğu olarak görürsünüz.' },
@@ -548,11 +548,11 @@ const helpContent = [
             },
             {
                 title: 'Birincil ve İkincil Yönetici Farkı',
-                description: 'Birincil yönetici: tüm talep türleri (izin, kartsız giriş, ek mesai) için onay yetkisine sahiptir. İkincil yönetici: SADECE ek mesai işlemleri (talep, onay, analiz) için yetkilidir. İzin ve kartsız giriş talepleri ikincil yöneticiye gitmez.'
+                description: 'Birincil yönetici: tüm talep türleri (izin, kartsız giriş, fazla mesai) için onay yetkisine sahiptir. İkincil yönetici: SADECE fazla mesai işlemleri (talep, onay, analiz) için yetkilidir. İzin ve kartsız giriş talepleri ikincil yöneticiye gitmez.'
             }
         ],
         tips: [
-            { type: 'info', text: 'Birincil yönetici tüm talep türleri için yetkilidir. İkincil yönetici sadece ek mesai işlemleri (talep oluşturma, onay/red, analiz görüntüleme) için yetkilidir.' },
+            { type: 'info', text: 'Birincil yönetici tüm talep türleri için yetkilidir. İkincil yönetici sadece fazla mesai işlemleri (talep oluşturma, onay/red, analiz görüntüleme) için yetkilidir.' },
             { type: 'warning', text: 'Kendi talebinizi kendiniz onaylayamazsınız. Sistem bu durumu engelleyerek üst yöneticiye eskalasyon yapar.' },
             { type: 'success', text: 'Onay sonrası ilgili kayıtlar otomatik güncellenir: izin bakiyesi düşülür, mesai kaydı oluşturulur, puantaj yeniden hesaplanır.' },
             { type: 'info', text: 'Yönetici değiştiğinde bekleyen talepler otomatik olarak yeni yöneticiye devredilir. Her iki yönetici ve çalışan bildirim alır.' }
@@ -584,7 +584,7 @@ const helpContent = [
             },
             {
                 title: 'Rapor Turu Seçimi',
-                description: 'Puantaj, ek mesai, izin kullanımı, devamsızlık ve diger rapor türlerinden birini seçin. Her rapor türü farklı veri setini içerir.'
+                description: 'Puantaj, fazla mesai, izin kullanımı, devamsızlık ve diger rapor türlerinden birini seçin. Her rapor türü farklı veri setini içerir.'
             },
             {
                 title: 'Tarih Araligi ve Suzgecler',
@@ -678,7 +678,7 @@ const helpContent = [
             },
             {
                 title: 'Tatillerin Puantaja Etkisi',
-                description: 'Resmi tatil günlerinde çalışma hedefi sıfırlanır. Çalışanlar o gün çalışmasa bile devamsız sayılmaz. Tatil günü çalışan personelin mesaisi otomatik olarak "Tatil Günü Mesaisi" olarak algılanır ve potansiyel ek mesai kaydı oluşturulur.'
+                description: 'Resmi tatil günlerinde çalışma hedefi sıfırlanır. Çalışanlar o gün çalışmasa bile devamsız sayılmaz. Tatil günü çalışan personelin mesaisi otomatik olarak "Tatil Günü Mesaisi" olarak algılanır ve potansiyel fazla mesai kaydı oluşturulur.'
             }
         ],
         tips: [
@@ -689,7 +689,7 @@ const helpContent = [
         faq: [
             { q: 'Resmi tatil eklediğimde mevcut puantajlar değişir mi?', a: 'Evet. Yeni tatil eklendiğinde, o tarihteki tüm çalışanların puantajları otomatik yeniden hesaplanır. Çalışma hedefi sıfırlanır, varsa devamsızlık kaydı kaldırılır.' },
             { q: 'Yarım gün tatil nasıl çalışır?', a: 'Yarım gün tatillerde günlük çalışma hedefi yarıya düşer (örn: 9 saat yerine 4.5 saat). Vardiya bitiş saati değişmez ama hedef süre yarılanır. Yarım gün sonrası çalışma normal mesai sayılır.' },
-            { q: 'Tatil günü çalışırsam ne olur?', a: 'Tatil günü kart okutup çalışırsanız, tüm çalışma süreniz "Tatil Günü Mesaisi" olarak algılanır ve potansiyel ek mesai kaydı oluşturulur. Bu kaydı talep ederek onaya gönderebilirsiniz.' },
+            { q: 'Tatil günü çalışırsam ne olur?', a: 'Tatil günü kart okutup çalışırsanız, tüm çalışma süreniz "Tatil Günü Mesaisi" olarak algılanır ve potansiyel fazla mesai kaydı oluşturulur. Bu kaydı talep ederek onaya gönderebilirsiniz.' },
             { q: 'Dini bayramlar otomatik ekleniyor mu?', a: 'Hayır. Tüm resmi tatiller manuel olarak eklenir. Her yılın başında sistem yöneticisi o yılın resmi tatillerini girmelidir. Geçmiş yıldan kopyalama özelliği mevcuttur.' }
         ]
     },
@@ -766,7 +766,7 @@ const helpContent = [
             },
             {
                 title: 'Yönetici Atama',
-                description: 'Çalışan detay sayfasında birincil ve ikincil yönetici ataması yapılır. Birincil yönetici tüm yetkilere sahiptir. İkincil yönetici sadece ek mesai işlemleri için yetkilidir.'
+                description: 'Çalışan detay sayfasında birincil ve ikincil yönetici ataması yapılır. Birincil yönetici tüm yetkilere sahiptir. İkincil yönetici sadece fazla mesai işlemleri için yetkilidir.'
             },
             {
                 title: 'Çalışan Deaktif Etme',
@@ -783,7 +783,7 @@ const helpContent = [
             { q: 'Bu sayfayı göremiyorum?', a: 'PAGE_EMPLOYEES yetkisi gereklidir. Bu yetki genellikle yönetici ve İK rollerine tanımlıdır.' },
             { q: 'Deaktif çalışan tekrar aktif edilebilir mi?', a: 'Evet, çalışan detay sayfasından "Aktif Et" düğmesiyle tekrar aktive edilebilir.' },
             { q: 'Yönetici değişimi bekleyen talepleri etkiler mi?', a: 'Evet. Birincil yönetici değiştiğinde bekleyen izin, mesai ve kartsız giriş talepleri otomatik yeni yöneticiye devredilir.' },
-            { q: 'Çalışanın haftalık mesai limitini değiştirebilir miyim?', a: 'Evet. Çalışan düzenleme sayfasında "Haftalık Ek Mesai Limiti" alanını güncelleyebilirsiniz. Varsayılan 30 saattir.' }
+            { q: 'Çalışanın haftalık mesai limitini değiştirebilir miyim?', a: 'Evet. Çalışan düzenleme sayfasında "Haftalık Fazla Mesai Limiti" alanını güncelleyebilirsiniz. Varsayılan 30 saattir.' }
         ]
     },
     {
@@ -1046,19 +1046,19 @@ const helpContent = [
         id: 'mesai-takibi',
         title: 'Mesai Takibi',
         icon: Timer,
-        description: 'Ekip puantaj tablosu, detayli analiz sekmeleri, katilim oranları, ek mesai dagilimi, yemek-mesai iliskişi, izin oranları, departman karşılaştırması ve kişi detay cekmecesi. (Yöneticiler ve sistem yöneticileri görebilir)',
+        description: 'Ekip puantaj tablosu, detayli analiz sekmeleri, katilim oranları, fazla mesai dagilimi, yemek-mesai iliskişi, izin oranları, departman karşılaştırması ve kişi detay cekmecesi. (Yöneticiler ve sistem yöneticileri görebilir)',
         permission: null,
         link: '/attendance',
         images: [
             { src: '/help-images/help-mesai-01.png', caption: 'Mesai takibi ekip tablosu — çalışan puantaj listesi, durum sütunları ve işlem düğmeleri' },
-            { src: '/help-images/help-mesai-02.png', caption: 'Mesai takibi tablo sağ sütunlar — ek mesai, mola, durum ve işlem detayları' },
+            { src: '/help-images/help-mesai-02.png', caption: 'Mesai takibi tablo sağ sütunlar — fazla mesai, mola, durum ve işlem detayları' },
             { src: '/help-images/help-mesai-03.png', caption: 'Mesai takibi analitik modu — katılım, mesai, yemek ve izin grafikleri' },
             { src: '/help-images/help-mesai-04.png', caption: 'Mesai takibi analitik detay — departman karşılaştırması ve sıralama tablosu' }
         ],
         steps: [
             {
                 title: 'Ekip Puantaj Tablosu',
-                description: 'Sol menüden "Mesai Takibi" seçeneğine tıklayın. Ekibinizdeki çalışanların günlük puantaj tablosu görürsünüz: giriş/çıkış saatleri, çalışma süresi, ek mesai, mola, durum ve işlemler.',
+                description: 'Sol menüden "Mesai Takibi" seçeneğine tıklayın. Ekibinizdeki çalışanların günlük puantaj tablosu görürsünüz: giriş/çıkış saatleri, çalışma süresi, fazla mesai, mola, durum ve işlemler.',
                 image: { src: '/help-images/help-mesai-01.png', caption: 'Ekip puantaj tablosu' }
             },
             {
@@ -1071,8 +1071,8 @@ const helpContent = [
                 description: 'Seçilen dönemdeki ekip katilim orani yuzde olarak hesaplanır. Günlük, haftalık ve aylık bazda katilim trendi grafiği gösterilir. Devamsiz, izinli ve raporlu çalışansayilari ayrica belirtilir.'
             },
             {
-                title: 'Ek Mesai Dagilim Analizi',
-                description: 'Hafta sonu ve hafta içi ek mesai analizi ayri ayri sunulur. Çalışan bazında mesai dagilimi çubuk grafikle, toplam mesai saatleri ile gösterilir. Planli, algılanan ve manuel mesai kaynaklari ayrimi yapılır.'
+                title: 'Fazla Mesai Dagilim Analizi',
+                description: 'Hafta sonu ve hafta içi fazla mesai analizi ayri ayri sunulur. Çalışan bazında mesai dagilimi çubuk grafikle, toplam mesai saatleri ile gösterilir. Planli, algılanan ve manuel mesai kaynaklari ayrimi yapılır.'
             },
             {
                 title: 'Yemek-Mesai Iliskişi',
@@ -1088,11 +1088,11 @@ const helpContent = [
             },
             {
                 title: 'Siralama Tablosu ve Kisi Detay Cekmecesi',
-                description: 'Çalışanlar performans metriklerine gore sıralanır. 3 ek sütun: katilim puani, mesai puani, genel puan. Herhangi bir satira tıklayarak kişi detay cekmecesini acin. Cekmecede katilim detayları, ek mesai geçmişi ve yemek siparişleri bölüm bölüm gösterilir.'
+                description: 'Çalışanlar performans metriklerine gore sıralanır. 3 ek sütun: katilim puani, mesai puani, genel puan. Herhangi bir satira tıklayarak kişi detay cekmecesini acin. Cekmecede katilim detayları, fazla mesai geçmişi ve yemek siparişleri bölüm bölüm gösterilir.'
             }
         ],
         tips: [
-            { type: 'info', text: 'Ekip analizleri yöneticinin doğrudan ve dolaylı olarak yönettiği tüm çalışanlari kapsar. İkincil yönetici olarak sadece ek mesai ile ilgili verileri görürsünüz.' },
+            { type: 'info', text: 'Ekip analizleri yöneticinin doğrudan ve dolaylı olarak yönettiği tüm çalışanlari kapsar. İkincil yönetici olarak sadece fazla mesai ile ilgili verileri görürsünüz.' },
             { type: 'success', text: 'Kisi detay cekmecesini acarak bir çalışanın aylık katilim, mesai ve yemek bilgilerini tek ekranda inceleyebilirsiniz.' },
             { type: 'info', text: 'Departman karşılaştırması ekibinizin şirket genelindeki konumunu gösterir. Sapma sütunu ortalamanin ne kadar üzerinde/altında oldugünüzu belirtir.' },
             { type: 'warning', text: 'Kilitli mali dönemlerdeki puantaj kayıtları düzenlenemez. Düzenleme gerektiren durumlarda sistem yöneticisine başvurun.' }
@@ -1101,8 +1101,8 @@ const helpContent = [
             { q: 'Bu sayfayı göremiyorum?', a: 'PAGE_ATTENDANCE yetkisi gereklidir. Bu yetki genellikle yönetici rollerine tanımlıdır.' },
             { q: 'Ekip analizlerinde hangi dönemi görüyorum?', a: 'Varsayılan olarak mevcut mali dönem gösterilir. Tarih süzgeçini kullanarak farklı dönemleri secebilirsiniz.' },
             { q: 'Departman karşılaştırması nasıl hesaplanıyor?', a: 'Her departmanin katilim orani, ortalama çalışma süresi ve mesai orani hesaplanır. Ekibinizin değerleri bu ortalamalara gore karşılaştırılır.' },
-            { q: 'Kisi detay cekmecesinde ne görüyorum?', a: 'Seçilen çalışanın 3 bölümu: katilim detayları (günlük giriş/çıkış), ek mesai geçmişi (onaylanan/bekleyen/reddedilen) ve yemek siparişleri.' },
-            { q: 'İkincil yönetici olarak neleri görebilirim?', a: 'İkincil yönetici olarak sadece ek mesai ile ilgili verileri görürsünüz. Katilim, izin ve diger analizler birincil yöneticiye özeldir.' },
+            { q: 'Kisi detay cekmecesinde ne görüyorum?', a: 'Seçilen çalışanın 3 bölümu: katilim detayları (günlük giriş/çıkış), fazla mesai geçmişi (onaylanan/bekleyen/reddedilen) ve yemek siparişleri.' },
+            { q: 'İkincil yönetici olarak neleri görebilirim?', a: 'İkincil yönetici olarak sadece fazla mesai ile ilgili verileri görürsünüz. Katilim, izin ve diger analizler birincil yöneticiye özeldir.' },
             { q: 'Puantaj kayıtlarıni düzenleyebilir miyim?', a: 'Kilitli olmayan dönemlerdeki kayıtlar üzerinde işlem yapabilirsiniz. Kilitli dönemlerin kayıtları değiştirilemez.' }
         ]
     },
@@ -1110,7 +1110,7 @@ const helpContent = [
         id: 'talep-analizleri',
         title: 'Talep Analizleri',
         icon: PieChart,
-        description: 'Tüm talep türlerinin istatistikleri, aylık eğilimler, departman karşılaştırmaları ve ek mesai-yemek ilişkisi analizi. (Rapor yetkisi olan yöneticiler ve sistem yöneticileri görebilir)',
+        description: 'Tüm talep türlerinin istatistikleri, aylık eğilimler, departman karşılaştırmaları ve fazla mesai-yemek ilişkisi analizi. (Rapor yetkisi olan yöneticiler ve sistem yöneticileri görebilir)',
         permission: 'PAGE_REPORTS',
         link: '/request-analytics',
         images: [
@@ -1124,7 +1124,7 @@ const helpContent = [
             },
             {
                 title: 'Aylık Eğilim Grafiği',
-                description: 'İzin, ek mesai, kartsız giriş ve sağlık raporu taleplerinin aylık dağılımını çizgi grafikte görebilirsiniz. Talep türlerine göre filtreleme yapabilirsiniz. Grafiğin üzerinde fare ile gezinerek ay bazlı detayları görüntüleyebilirsiniz.'
+                description: 'İzin, fazla mesai, kartsız giriş ve sağlık raporu taleplerinin aylık dağılımını çizgi grafikte görebilirsiniz. Talep türlerine göre filtreleme yapabilirsiniz. Grafiğin üzerinde fare ile gezinerek ay bazlı detayları görüntüleyebilirsiniz.'
             },
             {
                 title: 'Talep Türü Dağılımı',
@@ -1132,10 +1132,10 @@ const helpContent = [
             },
             {
                 title: 'Departman ve Kişi Bazlı Analiz',
-                description: 'Departman karşılaştırma tablosunda her departmanın talep sayısı, onay oranı ve ortalama süresi yan yana görülür. Kişi bazlı analizde en çok talep oluşturan, en yüksek ek mesai yapan çalışanları görebilirsiniz.'
+                description: 'Departman karşılaştırma tablosunda her departmanın talep sayısı, onay oranı ve ortalama süresi yan yana görülür. Kişi bazlı analizde en çok talep oluşturan, en yüksek fazla mesai yapan çalışanları görebilirsiniz.'
             },
             {
-                title: 'Ek Mesai ve Yemek İlişkisi',
+                title: 'Fazla Mesai ve Yemek İlişkisi',
                 description: 'Ek mesai yapılan günlerde yemek siparişi oranını gösteren korelasyon analizi. Bu veri, mesai günlerinde yemek ihtiyacı planlaması için kullanılabilir. Hafta sonu ve hafta içi ayrı ayrı gösterilir.'
             }
         ],
@@ -1146,7 +1146,7 @@ const helpContent = [
         ],
         faq: [
             { q: 'Talep analizleri hangi tarih aralığını kapsar?', a: 'Varsayılan olarak son 12 aylık veriyi gösterir. Sayfa üstündeki tarih seçici ile özel aralık belirleyebilirsiniz. Mali dönem bazlı filtreleme de yapılabilir.' },
-            { q: 'Departman karşılaştırmasında hangi metrikler var?', a: 'Toplam talep sayısı, onay oranı (yüzde), ortalama onay süresi (gün), en sık talep türü ve ek mesai toplamı (saat) gösterilir. Sütun başlıklarına tıklayarak sıralama yapabilirsiniz.' },
+            { q: 'Departman karşılaştırmasında hangi metrikler var?', a: 'Toplam talep sayısı, onay oranı (yüzde), ortalama onay süresi (gün), en sık talep türü ve fazla mesai toplamı (saat) gösterilir. Sütun başlıklarına tıklayarak sıralama yapabilirsiniz.' },
             { q: 'Ek mesai-yemek korelasyonu ne işe yarar?', a: 'Ek mesai yapılan günlerde yemek siparişi verme oranını gösterir. İnsan kaynakları ve mutfak planlaması için değerli bir veridir. Yüksek korelasyon, mesai günlerinde yemek ihtiyacının arttığını gösterir.' },
             { q: 'Bu sayfayı göremiyorum, ne yapmalıyım?', a: 'Talep analizleri sayfasını görmek için rapor yetkisine (PAGE_REPORTS) ihtiyacınız var. Bu yetki genellikle yönetici ve muhasebe rollerine tanımlıdır. Sistem yöneticinize başvurun.' }
         ]

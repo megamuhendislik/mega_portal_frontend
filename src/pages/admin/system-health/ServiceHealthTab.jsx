@@ -198,7 +198,7 @@ export default function ServiceHealthTab() {
                 <KpiCard label="Benzersiz Calisan" value={data.unique_employees} color="emerald" />
                 <KpiCard label="Ort. Kayit/Calisan" value={data.avg_per_employee} color={data.avg_per_employee > 5 ? 'red' : data.avg_per_employee > 3 ? 'amber' : 'emerald'} />
                 <KpiCard label="Normal Kayit" value={data.normal_records} color="slate" />
-                <KpiCard label="OT Kayit" value={data.ot_records} color="purple" />
+                <KpiCard label="Fazla Mesai Kayit" value={data.ot_records} color="purple" />
                 <KpiCard label="Son 1 Saat" value={data.recent_hour_count} color={data.recent_hour_count > 100 ? 'red' : 'blue'} />
             </div>
 
@@ -332,7 +332,7 @@ export default function ServiceHealthTab() {
                                                                 <th className="py-1 pr-2 text-left">Status</th>
                                                                 <th className="py-1 pr-2 text-left">Check-in</th>
                                                                 <th className="py-1 pr-2 text-left">Check-out</th>
-                                                                <th className="py-1 pr-2 text-left">OT?</th>
+                                                                <th className="py-1 pr-2 text-left">FM?</th>
                                                                 <th className="py-1 text-left">Olusturulma</th>
                                                             </tr>
                                                         </thead>

@@ -43,7 +43,7 @@ export default function OverrideConfirmModal({ visible, assignment, onClose, onS
       title={
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-orange-500" />
-          <span>Ek Mesai Ataması Override</span>
+          <span>Fazla Mesai Ataması Override</span>
         </div>
       }
       okText="Override Et"
@@ -57,7 +57,7 @@ export default function OverrideConfirmModal({ visible, assignment, onClose, onS
             <div className="text-sm text-orange-800">
               <p className="font-medium">
                 {assignment.assigned_by?.name || 'Bilinmeyen'} ({relationLabel})
-                tarafından atanmış ek mesaiyi iptal etmek üzeresiniz.
+                tarafından atanmış fazla mesaiyi iptal etmek üzeresiniz.
               </p>
               <p className="mt-1">
                 Bu işlem sonrasında hem ikincil yöneticiye hem de çalışana bildirim gönderilecektir.

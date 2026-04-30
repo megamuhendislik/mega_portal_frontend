@@ -250,7 +250,7 @@ export default function OTEmployeeAnalysisTab() {
             ),
         },
         {
-            title: 'Att. OT',
+            title: 'Att. Fazla Mesai',
             key: 'attendance_ot',
             width: 80,
             render: (_, r) => <span className="text-xs font-bold text-indigo-700">{fmtH(r.attendance_ot_hours || 0)}</span>,
@@ -290,7 +290,7 @@ export default function OTEmployeeAnalysisTab() {
             {/* OT Requests mini table */}
             {record.requests && record.requests.length > 0 ? (
                 <div>
-                    <h4 className="font-semibold text-sm text-gray-700 mb-2">OT Talepleri ({record.requests.length})</h4>
+                    <h4 className="font-semibold text-sm text-gray-700 mb-2">Fazla Mesai Talepleri ({record.requests.length})</h4>
                     <Table
                         size="small"
                         columns={requestColumns}
@@ -300,7 +300,7 @@ export default function OTEmployeeAnalysisTab() {
                     />
                 </div>
             ) : (
-                <p className="text-xs text-gray-400">Bu çalışan için OT talebi bulunamadı.</p>
+                <p className="text-xs text-gray-400">Bu çalışan için Fazla Mesai talebi bulunamadı.</p>
             )}
         </div>
     );
@@ -318,7 +318,7 @@ export default function OTEmployeeAnalysisTab() {
                     <div>
                         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                             <ExclamationTriangleIcon className="w-5 h-5 text-indigo-600" />
-                            OT Çalışan Analizi
+                            Fazla Mesai Çalışan Analizi
                         </h2>
                         {period && (
                             <p className="text-xs text-gray-500 mt-1">

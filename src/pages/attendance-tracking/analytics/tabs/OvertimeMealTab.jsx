@@ -199,20 +199,20 @@ export default function OvertimeMealTab() {
 
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPICard title="Toplam OT" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
+                <KPICard title="Toplam Fazla Mesai" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
                     info={METRIC_EXPLANATIONS.overtime} />
-                <KPICard title="Onaylı OT" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
+                <KPICard title="Onaylı Fazla Mesai" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
                     subtitle={`Onay oranı: ${approvalRate}%`}
-                    info={{ title: 'Onaylı OT', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan OT kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış ek mesai saatleri.</p></> }} />
-                <KPICard title="OT Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
-                <KPICard title="Ort. OT / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
+                    info={{ title: 'Onaylı Fazla Mesai', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan Fazla Mesai kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış fazla mesai saatleri.</p></> }} />
+                <KPICard title="Fazla Mesai Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
+                <KPICard title="Ort. Fazla Mesai / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
                 <KPICard title="Yemek Oranı" value={breakMeal?.meal_rate_pct || breakMeal?.overall_meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
                     subtitle="İş günlerinde yemek" info={METRIC_EXPLANATIONS.meal_rate} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* OT Source Pie — click-to-filter */}
-                <SectionCard title="OT Kaynak Dağılımı" icon={Zap} iconGradient="from-amber-500 to-amber-600" collapsible={false}
+                <SectionCard title="Fazla Mesai Kaynak Dağılımı" icon={Zap} iconGradient="from-amber-500 to-amber-600" collapsible={false}
                     headerExtra={sourceFilter ? (
                         <button onClick={() => setSourceFilter(null)}
                             className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors">
@@ -262,7 +262,7 @@ export default function OvertimeMealTab() {
                 </SectionCard>
 
                 {/* OT Day-of-week */}
-                <SectionCard title="Gün Bazlı OT Yoğunluğu" icon={Calendar} iconGradient="from-violet-500 to-purple-600" collapsible={false}>
+                <SectionCard title="Gün Bazlı Fazla Mesai Yoğunluğu" icon={Calendar} iconGradient="from-violet-500 to-purple-600" collapsible={false}>
                     {otDowData.length > 0 ? (
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
@@ -271,7 +271,7 @@ export default function OvertimeMealTab() {
                                     <XAxis dataKey="day" tick={{ fontSize: 12, fontWeight: 700 }} />
                                     <YAxis tick={{ fontSize: 10 }} unit="h" />
                                     <Tooltip content={<ChartTooltip />} />
-                                    <Bar dataKey="saat" name="OT Saati" radius={[8, 8, 0, 0]}>
+                                    <Bar dataKey="saat" name="Fazla Mesai Saati" radius={[8, 8, 0, 0]}>
                                         {otDowData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                     </Bar>
                                 </BarChart>
@@ -281,7 +281,7 @@ export default function OvertimeMealTab() {
                 </SectionCard>
 
                 {/* OT Trend */}
-                <SectionCard title="Aylık OT Trendi" icon={TrendingUp} iconGradient="from-emerald-500 to-emerald-600" collapsible={false}>
+                <SectionCard title="Aylık Fazla Mesai Trendi" icon={TrendingUp} iconGradient="from-emerald-500 to-emerald-600" collapsible={false}>
                     {otTrend.length > 0 ? (
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
@@ -297,8 +297,8 @@ export default function OvertimeMealTab() {
                                     <YAxis tick={{ fontSize: 10 }} />
                                     <Tooltip content={<ChartTooltip />} />
                                     <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                    <Area type="monotone" dataKey="toplam" name="Toplam OT" stroke="#f59e0b" fill="url(#otGrad)" strokeWidth={2.5} dot={{ r: 3 }} />
-                                    <Line type="monotone" dataKey="onaylı" name="Onaylı OT" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} />
+                                    <Area type="monotone" dataKey="toplam" name="Toplam Fazla Mesai" stroke="#f59e0b" fill="url(#otGrad)" strokeWidth={2.5} dot={{ r: 3 }} />
+                                    <Line type="monotone" dataKey="onaylı" name="Onaylı Fazla Mesai" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
@@ -307,8 +307,8 @@ export default function OvertimeMealTab() {
             </div>
 
             {/* OT per employee - horizontal bar */}
-            <SectionCard title="Kişi Bazlı Ek Mesai Sıralaması" icon={Award} iconGradient="from-amber-500 to-orange-600"
-                subtitle={sourceFilter ? `Filtrelendi: ${OT_LABELS[sourceFilter]}` : 'En çok ek mesai yapan çalışanlar — toplam vs onaylı'}
+            <SectionCard title="Kişi Bazlı Fazla Mesai Sıralaması" icon={Award} iconGradient="from-amber-500 to-orange-600"
+                subtitle={sourceFilter ? `Filtrelendi: ${OT_LABELS[sourceFilter]}` : 'En çok fazla mesai yapan çalışanlar — toplam vs onaylı'}
                 headerExtra={
                     <button onClick={() => setDrilldown({ type: 'ot_ranking' })}
                         className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200/60">
@@ -324,17 +324,17 @@ export default function OvertimeMealTab() {
                                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={100} />
                                 <Tooltip content={<ChartTooltip />} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                <Bar dataKey="toplam" name="Toplam OT" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="toplam" name="Toplam Fazla Mesai" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                                 <Bar dataKey="onaylı" name="Onaylı" fill="#10b981" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                ) : <EmptyState message="Kişi bazlı OT verisi yok" />}
+                ) : <EmptyState message="Kişi bazlı Fazla Mesai verisi yok" />}
             </SectionCard>
 
             {/* OT-Meal Correlation */}
-            <SectionCard title="OT — Yemek Eşleştirme Analizi" icon={Utensils} iconGradient="from-orange-500 to-red-500"
-                subtitle="OT yapılan günlerde yemek alınma durumu — kişi bazlı korelasyon"
+            <SectionCard title="Fazla Mesai — Yemek Eşleştirme Analizi" icon={Utensils} iconGradient="from-orange-500 to-red-500"
+                subtitle="Fazla mesai yapılan günlerde yemek alınma durumu — kişi bazlı korelasyon"
                 headerExtra={otMealCorrelationFull.length > 0 ? (
                     <button onClick={() => setDrilldown({ type: 'ot_meal_correlation' })}
                         className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200/60">
@@ -347,8 +347,8 @@ export default function OvertimeMealTab() {
                             <thead>
                                 <tr className="border-b-2 border-slate-100">
                                     <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Kişi</th>
-                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">OT Günleri</th>
-                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Yemek (OT)</th>
+                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Fazla Mesai Günleri</th>
+                                    <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Yemek (Fazla Mesai)</th>
                                     <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold w-48">Eşleşme Oranı</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Durum</th>
                                 </tr>
@@ -381,7 +381,7 @@ export default function OvertimeMealTab() {
                             </tbody>
                         </table>
                     </div>
-                ) : <EmptyState message="OT-Yemek eşleştirme verisi yok" />}
+                ) : <EmptyState message="Fazla Mesai-Yemek eşleştirme verisi yok" />}
             </SectionCard>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -473,14 +473,14 @@ export default function OvertimeMealTab() {
                 <DrilldownModal
                     open={true}
                     onClose={() => setDrilldown(null)}
-                    title="OT-Yemek Eşleştirme Detayı"
-                    subtitle="Tüm çalışanlar — OT yapılan günlerde yemek siparişi oranları"
+                    title="Fazla Mesai-Yemek Eşleştirme Detayı"
+                    subtitle="Tüm çalışanlar — Fazla mesai yapılan günlerde yemek siparişi oranları"
                     data={otMealCorrelationFull}
                     columns={[
                         { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
                         { title: 'Departman', dataIndex: 'department', sorter: (a, b) => (a.department || '').localeCompare(b.department || '', 'tr') },
                         {
-                            title: 'OT Günleri',
+                            title: 'Fazla Mesai Günleri',
                             dataIndex: 'ot_days',
                             sorter: (a, b) => a.ot_days - b.ot_days,
                             defaultSortOrder: 'descend',
@@ -535,8 +535,8 @@ export default function OvertimeMealTab() {
                 <DrilldownModal
                     open={true}
                     onClose={() => setDrilldown(null)}
-                    title="Ek Mesai Kişi Detayı"
-                    subtitle={sourceFilter ? `Filtre: ${OT_LABELS[sourceFilter]}` : 'Tüm OT kaynakları'}
+                    title="Fazla Mesai Kişi Detayı"
+                    subtitle={sourceFilter ? `Filtre: ${OT_LABELS[sourceFilter]}` : 'Tüm Fazla Mesai kaynakları'}
                     data={otPerEmployeeFull}
                     columns={[
                         { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },

@@ -645,7 +645,7 @@ export default function UnifiedRecordCheckTab() {
         { id: 'timeline', label: `Zaman Çizelgesi` },
         { id: 'attendance', label: `Devam (${attCount})` },
         { id: 'gates', label: `Geçiş (${gateCount})` },
-        { id: 'overtime', label: `Ek Mesai (${otCount})` },
+        { id: 'overtime', label: `Fazla Mesai (${otCount})` },
         { id: 'assignments', label: `Atamalar (${assignCount})` },
         { id: 'leave', label: `İzin (${leaveCount})` },
         { id: 'meal', label: `Yemek (${mealCount})` },
@@ -1040,7 +1040,7 @@ export default function UnifiedRecordCheckTab() {
                         {/* ============ OVERTIME TAB ============ */}
                         {drawerTab === 'overtime' && (
                             <CollapsibleSection
-                                title="Ek Mesai Talepleri"
+                                title="Fazla Mesai Talepleri"
                                 count={otCount}
                                 icon={DocumentTextIcon}
                                 defaultOpen={true}

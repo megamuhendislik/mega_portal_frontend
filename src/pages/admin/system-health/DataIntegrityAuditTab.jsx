@@ -29,10 +29,10 @@ const CATEGORY_LABELS = {
     missing_attendance: 'Eksik Mesai Kaydı',
     fiscal_integrity: 'Mali Dönem Bütünlüğü',
     timezone_diagnostics: 'Saat Dilimi Tanılama',
-    leave_ot_conflict: 'İzin-OT Konflikti',
+    leave_ot_conflict: 'İzin-Fazla Mesai Konflikti',
     multiple_primary_managers: 'Çoklu Birincil Yönetici',
     notification_gap: 'Eksik Bildirim',
-    ot_card_verification: 'OT-Kart Doğrulama',
+    ot_card_verification: 'Fazla Mesai-Kart Doğrulama',
     leave_credit_mismatch: 'İzin Kredi Uyumsuzluğu',
     excuse_leave_integrity: 'Mazeret İzni Bütünlüğü',
 };
@@ -191,7 +191,7 @@ const LogContent = ({ log }) => {
                 )) : <span className="text-gray-400">Kayıt yok</span>}
             </Section>
 
-            <Section title={`Ek Mesai Talepleri (${log.ot_count || 0})`}>
+            <Section title={`Fazla Mesai Talepleri (${log.ot_count || 0})`}>
                 {ot_requests && ot_requests.length > 0 ? ot_requests.map((ot, i) => (
                     <div key={i} className={`border rounded-lg p-3 mb-2 ${
                         ot.status === 'POTENTIAL' ? 'border-amber-300 bg-amber-50/50' :
@@ -200,7 +200,7 @@ const LogContent = ({ log }) => {
                         'border-gray-200 bg-gray-50/50'
                     }`}>
                         <div className="font-bold text-gray-700 mb-1">
-                            OT #{ot.ot_id} — {ot.status} ({ot.source_type})
+                            Fazla Mesai #{ot.ot_id} — {ot.status} ({ot.source_type})
                         </div>
                         <div className="grid grid-cols-2 gap-x-4">
                             <KV k="Başlangıç" v={ot.start_time} />

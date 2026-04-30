@@ -87,7 +87,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
         <Zap className="w-5 h-5 text-amber-600" />
-        <h3 className="font-bold text-slate-800">Planlanmamış Ek Mesailer</h3>
+        <h3 className="font-bold text-slate-800">Planlanmamış Fazla Mesailer</h3>
         <span className="text-xs text-slate-400 ml-auto">{dayGroups.length} gün</span>
       </div>
 

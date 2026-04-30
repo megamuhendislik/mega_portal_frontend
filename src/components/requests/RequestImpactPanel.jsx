@@ -451,7 +451,7 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             {dwi && (dwi.total_work_minutes > 0 || totalOtMin > 0) && (
                                 <>
                                     <InfoRow label="Normal Mesai" value={dwi.total_work_minutes > 0 ? `${Math.floor(dwi.total_work_minutes / 60)}s ${dwi.total_work_minutes % 60}dk` : '-'} />
-                                    <InfoRow label="Ek Mesai" value={totalOtMin > 0 ? `${Math.floor(totalOtMin / 60)}s ${totalOtMin % 60}dk` : '-'} />
+                                    <InfoRow label="Fazla Mesai" value={totalOtMin > 0 ? `${Math.floor(totalOtMin / 60)}s ${totalOtMin % 60}dk` : '-'} />
                                 </>
                             )}
 
@@ -503,8 +503,8 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             <ul className="list-disc pl-4 space-y-0.5">
                                 <li>Onaylandığında çalışanın mesai kaydına işlenecektir</li>
                                 <li>Öğle molası düşülmez, tüm görev süresi çalışma sayılır</li>
-                                <li>Mesai hedefini aşan süre otomatik onaylı ek mesai olarak kaydedilecektir</li>
-                                {totalOtMin > 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s {totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> ek mesai içermektedir</li>}
+                                <li>Mesai hedefini aşan süre otomatik onaylı fazla mesai olarak kaydedilecektir</li>
+                                {totalOtMin > 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s {totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir</li>}
                             </ul>
                         </div>
                     </>

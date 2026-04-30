@@ -104,7 +104,7 @@ const Requests = () => {
     const titles = {
         my_requests: { title: 'Kendi Taleplerim', subtitle: 'Tüm izin, mesai ve diğer taleplerinizi tek yerden yönetin. Yeni talep oluşturmak için "Yeni Talep" butonunu kullanın.' },
         incoming_requests: { title: 'Gelen Talepler', subtitle: 'Ekibinizden gelen talepleri inceleyin, onaylayın veya reddedin. Önceki kararları değiştirmek için "Değiştir" butonunu kullanabilirsiniz.' },
-        overtime_requests: { title: 'Ek Mesai Talepleri', subtitle: 'Ek mesai takvimini görüntüleyin, manuel talep oluşturun veya yöneticiyseniz ekibinize mesai atayın.' },
+        overtime_requests: { title: 'Fazla Mesai Talepleri', subtitle: 'Fazla mesai takvimini görüntüleyin, manuel talep oluşturun veya yöneticiyseniz ekibinize mesai atayın.' },
     };
     const { title, subtitle } = titles[activeTab] || titles.my_requests;
 
@@ -163,7 +163,7 @@ const Requests = () => {
                     onClick={() => handleTabChange('overtime_requests')}
                     icon={<CalendarCheck size={18} />}
                 >
-                    Ek Mesai
+                    Fazla Mesai
                 </TabButton>
 
 

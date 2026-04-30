@@ -101,7 +101,7 @@ function OTTrendChart({ evidence }) {
             <div className="flex items-center gap-1.5 mb-3">
                 <TrendingUp size={13} className="text-indigo-600" />
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                    Aylık OT Karşılaştırma
+                    Aylık Fazla Mesai Karşılaştırma
                 </span>
             </div>
             <ResponsiveContainer width="100%" height={200}>
@@ -116,7 +116,7 @@ function OTTrendChart({ evidence }) {
                         stroke="#6366f1"
                         strokeWidth={3}
                         dot={{ fill: '#6366f1', r: 5 }}
-                        name="OT Saati"
+                        name="Fazla Mesai Saati"
                     />
                 </LineChart>
             </ResponsiveContainer>
@@ -151,7 +151,7 @@ function OTDowChart({ evidence }) {
                 <div className="flex items-center gap-1.5">
                     <Calendar size={13} className="text-amber-600" />
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                        Gün Bazlı OT Dağılımı
+                        Gün Bazlı Fazla Mesai Dağılımı
                     </span>
                 </div>
                 {heaviest && (
@@ -166,7 +166,7 @@ function OTDowChart({ evidence }) {
                     <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 10 }} />
                     <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
                     <RTooltip content={<ChartTooltip unit="sa" />} cursor={{ fill: 'rgba(245,158,11,0.08)' }} />
-                    <Bar dataKey="hours" fill="#f59e0b" radius={[6, 6, 0, 0]} name="OT Saati" />
+                    <Bar dataKey="hours" fill="#f59e0b" radius={[6, 6, 0, 0]} name="Fazla Mesai Saati" />
                 </BarChart>
             </ResponsiveContainer>
         </div>
@@ -369,7 +369,7 @@ function EvidenceSection({ code, evidence }) {
 
 function AffectedEmployeesTable({ rows, code }) {
     const valueLabel = useMemo(() => {
-        if (code === 'OT_TREND_UP' || code === 'OT_TREND_DOWN' || code === 'OT_DOW_HEAVY') return 'OT (sa)';
+        if (code === 'OT_TREND_UP' || code === 'OT_TREND_DOWN' || code === 'OT_DOW_HEAVY') return 'Fazla Mesai (sa)';
         if (code === 'ABSENCE_UP' || code === 'ABSENCE_DOWN') return 'Gün';
         if (code === 'PENDING_OLD') return 'Bekleme (sa)';
         return 'Değer';

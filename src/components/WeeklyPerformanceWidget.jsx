@@ -92,7 +92,7 @@ const WeeklyPerformanceWidget = ({ summary, loading }) => {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-1">
                         <TrendingUp size={14} className="text-emerald-500" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">Ek Mesai</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Fazla Mesai</span>
                     </div>
                     <p className="text-lg font-bold text-slate-800">{fmtDecHours(overtime)}</p>
                 </div>

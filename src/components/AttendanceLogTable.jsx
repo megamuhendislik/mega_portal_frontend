@@ -27,7 +27,7 @@ const RECORD_TYPE_CONFIG = {
     health_report:  { icon: HeartPulse, label: 'S. Raporu',  bg: 'bg-red-50',     border: 'border-red-200',   text: 'text-red-600',     dot: 'bg-red-500'     },
     hospital_visit: { icon: Stethoscope,label: 'Hastane',    bg: 'bg-purple-50',  border: 'border-purple-200',text: 'text-purple-600',  dot: 'bg-purple-500'  },
     external_duty:  { icon: Briefcase,  label: 'Dış Görev',  bg: 'bg-violet-50',  border: 'border-violet-200',text: 'text-violet-600',  dot: 'bg-violet-500'  },
-    overtime:       { icon: Timer,      label: 'Ek Mesai',   bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' },
+    overtime:       { icon: Timer,      label: 'Fazla Mesai',   bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' },
     split:          { icon: Scissors,   label: 'Bölme',      bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
     system:         { icon: Settings,   label: 'Sistem',     bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
     admin_entry:    { icon: Settings,   label: 'Admin Girişi', bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', dot: 'bg-indigo-500' },

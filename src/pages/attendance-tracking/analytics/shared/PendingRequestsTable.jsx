@@ -18,7 +18,7 @@ import api from '../../../../services/api';
 
 const TYPE_CONFIG = {
     LEAVE: { label: 'İzin', color: '#3B82F6', bg: '#dbeafe', border: '#93c5fd', icon: CalendarIcon },
-    OVERTIME: { label: 'Ek Mesai', color: '#B45309', bg: '#fef3c7', border: '#fcd34d', icon: Briefcase },
+    OVERTIME: { label: 'Fazla Mesai', color: '#B45309', bg: '#fef3c7', border: '#fcd34d', icon: Briefcase },
     CARDLESS: { label: 'Kartsız Giriş', color: '#6D28D9', bg: '#ede9fe', border: '#c4b5fd', icon: AlertCircle },
 };
 

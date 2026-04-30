@@ -1433,7 +1433,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             )}
 
             {/* Yeni Ek Mesai Talebi */}
-            <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Ek Mesai Talebi</Divider>
+            <Divider orientation="left" style={{ fontSize: 13 }}>Yeni Fazla Mesai Talebi</Divider>
             <div className="space-y-2">
                 <div className="flex gap-2 items-center flex-wrap">
                     <TimePicker value={newOtStart} onChange={setNewOtStart} format="HH:mm" placeholder="Başlangıç" size="small" needConfirm={false} />
@@ -1450,7 +1450,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 <Input.TextArea rows={1} value={newOtReason} onChange={e => setNewOtReason(e.target.value)}
                     placeholder="Görev açıklaması (opsiyonel)" size="small" />
                 <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateOt} loading={otCreating}>
-                    OT Talebi Oluştur
+                    Fazla Mesai Talebi Oluştur
                 </Button>
             </div>
         </div>

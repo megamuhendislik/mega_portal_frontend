@@ -590,7 +590,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       {/* Top Bar: Action Buttons + Employee Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Tooltip title="Sistem tarafından algılanmayan ek mesai saatleriniz için manuel giriş yapabilirsiniz.">
+          <Tooltip title="Sistem tarafından algılanmayan fazla mesai saatleriniz için manuel giriş yapabilirsiniz.">
             <button
               onClick={() => setManualModal(true)}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2"
@@ -634,8 +634,8 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <CalendarCheck size={18} className="text-purple-600" />
-            <h3 className="font-bold text-purple-800 text-sm">Atanmış Ek Mesailer</h3>
-            <Tooltip title="Yöneticiniz tarafından size atanan ek mesai görevleri. Talep etmek için butona tıklayın.">
+            <h3 className="font-bold text-purple-800 text-sm">Atanmış Fazla Mesailer</h3>
+            <Tooltip title="Yöneticiniz tarafından size atanan fazla mesai görevleri. Talep etmek için butona tıklayın.">
               <Info size={14} className="text-purple-400 cursor-help" />
             </Tooltip>
             <span className="ml-auto bg-purple-200 text-purple-800 text-[10px] font-black px-2 py-0.5 rounded-full">
@@ -660,7 +660,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-bold text-slate-800 truncate">
-                        {item.task_description || 'Ek mesai görevi'}
+                        {item.task_description || 'Fazla mesai görevi'}
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                         <span>{item.hours_per_day || item.max_duration_hours} saat</span>
@@ -725,7 +725,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
             <div className="text-right">
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                 Haftalık Mesai
-                <Tooltip title="Bu hafta (Pzt-Paz) toplam ek mesai saatiniz. Onaylı + bekleyen talepler sayılır. Her Pazartesi sıfırlanır.">
+                <Tooltip title="Bu hafta (Pzt-Paz) toplam fazla mesai saatiniz. Onaylı + bekleyen talepler sayılır. Her Pazartesi sıfırlanır.">
                   <Info size={11} className="text-slate-400 cursor-help" />
                 </Tooltip>
               </div>
@@ -780,27 +780,27 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100">
-            <Tooltip title="Yöneticiniz tarafından onaylanmış ek mesai">
+            <Tooltip title="Yöneticiniz tarafından onaylanmış fazla mesai">
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Onaylı
               </div>
             </Tooltip>
-            <Tooltip title="Onay bekleyen ek mesai talebi">
+            <Tooltip title="Onay bekleyen fazla mesai talebi">
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Bekleyen
               </div>
             </Tooltip>
-            <Tooltip title="Sistem tarafından otomatik algılanmış potansiyel ek mesai. Henüz talep olarak oluşturulmamış.">
+            <Tooltip title="Sistem tarafından otomatik algılanmış potansiyel fazla mesai. Henüz talep olarak oluşturulmamış.">
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Algılanan
               </div>
             </Tooltip>
-            <Tooltip title="Yöneticiniz tarafından reddedilmiş ek mesai talebi">
+            <Tooltip title="Yöneticiniz tarafından reddedilmiş fazla mesai talebi">
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-400" /> Reddedilen
               </div>
             </Tooltip>
-            <Tooltip title="Yöneticiniz tarafından size atanan ek mesai görevi">
+            <Tooltip title="Yöneticiniz tarafından size atanan fazla mesai görevi">
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-help">
                 <div className="w-2.5 h-2.5 rounded-full bg-purple-400" /> Atanmış
               </div>
@@ -1001,7 +1001,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         title={
           <div className="flex items-center gap-2">
             <PenLine size={18} className="text-amber-500" />
-            <span>Manuel Ek Mesai Girişi</span>
+            <span>Manuel Fazla Mesai Girişi</span>
           </div>
         }
         okText="Talep Oluştur"

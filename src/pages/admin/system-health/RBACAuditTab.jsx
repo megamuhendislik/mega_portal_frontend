@@ -749,7 +749,7 @@ function RequestIntegritySection({ data }) {
                             )}
                             <div>
                                 <div className={`text-sm font-bold ${data.ot_planning_model_exists ? 'text-green-700' : 'text-red-700'}`}>
-                                    OT Planning Model
+                                    Fazla Mesai Planning Model
                                 </div>
                                 <div className={`text-xs ${data.ot_planning_model_exists ? 'text-green-600' : 'text-red-600'}`}>
                                     {data.ot_planning_model_exists ? 'Mevcut' : 'Bulunamadı'}

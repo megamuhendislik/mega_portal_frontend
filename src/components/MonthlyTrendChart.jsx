@@ -66,7 +66,7 @@ const MonthlyTrendChart = ({ logs }) => {
                 {/* Legend */}
                 <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 rounded-full bg-blue-500"></div>Normal</div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 rounded-full bg-emerald-500"></div>Ek Mesai</div>
+                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 rounded-full bg-emerald-500"></div>Fazla Mesai</div>
                 </div>
             </div>
 

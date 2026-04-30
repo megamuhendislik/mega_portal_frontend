@@ -490,7 +490,7 @@ const TeamTable = ({ teamData }) => {
                     <tr className="border-b border-slate-200">
                         <th className="text-left py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Personel</th>
                         <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">İzin</th>
-                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ek Mesai</th>
+                        <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fazla Mesai</th>
                         <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sağlık</th>
                         <th className="text-center py-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kartsız</th>
                     </tr>

@@ -188,7 +188,7 @@ export default function AttendanceDiagTab() {
                                                                     <div className="font-semibold text-gray-500">Ham Attendance</div>
                                                                     <div>Kayıt: <b className={md.raw_attendance_count === 0 ? 'text-red-600' : 'text-green-600'}>{md.raw_attendance_count}</b></div>
                                                                     <div>Normal: <b>{fmtH(md.raw_normal_hours)}</b></div>
-                                                                    <div>Ek Mesai: <b>{fmtH(md.raw_overtime_hours)}</b></div>
+                                                                    <div>Fazla Mesai: <b>{fmtH(md.raw_overtime_hours)}</b></div>
                                                                     <div>Mola: <b>{Math.round((md.raw_break_seconds || 0) / 60)}dk</b></div>
                                                                 </div>
                                                                 <div className="space-y-1">
@@ -200,14 +200,14 @@ export default function AttendanceDiagTab() {
                                                                     <div className="font-semibold text-gray-500">Hesaplama (Taze)</div>
                                                                     <div>Tamamlanan: <b className="text-blue-600">{fmtH(md.fresh_completed_h)}</b></div>
                                                                     <div>Eksik: <b className={md.fresh_missing_h > 0 ? 'text-red-600' : ''}>{fmtH(md.fresh_missing_h)}</b></div>
-                                                                    <div>Ek Mesai: <b className="text-emerald-600">{fmtH(md.fresh_overtime_h)}</b></div>
+                                                                    <div>Fazla Mesai: <b className="text-emerald-600">{fmtH(md.fresh_overtime_h)}</b></div>
                                                                     <div>Net Bakiye: <b className={md.fresh_net_balance_h < 0 ? 'text-red-600' : 'text-emerald-600'}>{fmtH(md.fresh_net_balance_h)}</b></div>
                                                                 </div>
                                                             </div>
                                                             {md.cached_completed_h !== null && (
                                                                 <div className="mt-2 p-2 bg-yellow-50 rounded text-xs">
                                                                     <span className="font-semibold text-yellow-700">Cache (DB): </span>
-                                                                    Tamamlanan: {fmtH(md.cached_completed_h)} | Eksik: {fmtH(md.cached_missing_h)} | Ek Mesai: {fmtH(md.cached_overtime_h)}
+                                                                    Tamamlanan: {fmtH(md.cached_completed_h)} | Eksik: {fmtH(md.cached_missing_h)} | Fazla Mesai: {fmtH(md.cached_overtime_h)}
                                                                     {md.mismatch && <span className="ml-2 text-red-600 font-bold">⚠ UYUMSUZ</span>}
                                                                 </div>
                                                             )}

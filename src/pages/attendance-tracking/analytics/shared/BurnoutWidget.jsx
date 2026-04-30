@@ -118,9 +118,9 @@ export default function BurnoutWidget() {
                             {/* Faktörler */}
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                                 {emp.factors?.continuous_ot >= 50 && (
-                                    <Tooltip title={`${emp.metrics?.high_ot_weeks || 0} haftalık yüksek OT`}>
+                                    <Tooltip title={`${emp.metrics?.high_ot_weeks || 0} haftalık yüksek Fazla Mesai`}>
                                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">
-                                            <TrendingUp size={10} /> Sürekli OT
+                                            <TrendingUp size={10} /> Sürekli Fazla Mesai
                                         </span>
                                     </Tooltip>
                                 )}

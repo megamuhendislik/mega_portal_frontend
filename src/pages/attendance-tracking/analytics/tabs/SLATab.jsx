@@ -37,7 +37,7 @@ const TYPE_COLORS = {
 };
 const TYPE_LABELS = {
     leave: 'İzin',
-    overtime: 'Ek Mesai',
+    overtime: 'Fazla Mesai',
     cardless: 'Kartsız Giriş',
 };
 

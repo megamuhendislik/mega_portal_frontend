@@ -81,12 +81,12 @@ export default function OverviewTab() {
             name: (m.label || '').replace(/\d{4}$/, '').trim(),
             çalışma: Math.round(m.worked_hours || m.total_worked_hours || 0),
             hedef: Math.round(m.target_hours || 0),
-            'ek mesai': Math.round(m.ot_hours || m.overtime_hours || 0),
+            'fazla mesai': Math.round(m.ot_hours || m.overtime_hours || 0),
         }));
     }, [trendData]);
 
     const sparklineWorked = useMemo(() => trendChartData.map(t => t.çalışma), [trendChartData]);
-    const sparklineOT = useMemo(() => trendChartData.map(t => t['ek mesai']), [trendChartData]);
+    const sparklineOT = useMemo(() => trendChartData.map(t => t['fazla mesai']), [trendChartData]);
 
     // Employee list for detail modal (from work_hours or entry_exit data)
     const employeeList = useMemo(() => {
@@ -175,7 +175,7 @@ export default function OverviewTab() {
                         {[
                             { label: 'Mesai Doluluğu', curr: `${kpi.avg_efficiency_pct || 0}%`, prev: `${cmpKpi.avg_efficiency_pct || 0}%`, delta: deltas?.efficiency },
                             { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
-                            { label: 'Ek Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
+                            { label: 'Fazla Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
                             { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
                             { label: 'Sağlık', curr: kpi.health_score || 0, prev: cmpKpi.health_score || 0, delta: deltas?.health, isSuffix: ' puan' },
                         ].map((item, i) => (
@@ -205,9 +205,9 @@ export default function OverviewTab() {
                     onClick={() => setShowDetailModal(true)} />
                 <KPICard title="Toplam Doluluk" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
                     gradient="emerald"
-                    subtitle="(Normal + OT) / Yükümlülük"
+                    subtitle="(Normal + Fazla Mesai) / Yükümlülük"
                     onClick={() => setShowDetailModal(true)} />
-                <KPICard title="OT / Yükümlülük" value={`${kpi.avg_ot_to_target_pct ?? 0}`} suffix="%" icon={Zap}
+                <KPICard title="Fazla Mesai / Yükümlülük" value={`${kpi.avg_ot_to_target_pct ?? 0}`} suffix="%" icon={Zap}
                     gradient="amber"
                     subtitle="Fazla mesai oranı"
                     onClick={() => setShowDetailModal(true)} />
@@ -228,7 +228,7 @@ export default function OverviewTab() {
                 <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
                     delta={isComparing ? deltas?.worked : null}
                     subtitle={`Hedef: ${Math.round(kpi.total_target_hours || 0)}sa`} info={METRIC_EXPLANATIONS.worked_hours} />
-                <KPICard mini title="Ek Mesai (OT)" value={Math.round(kpi.total_overtime_hours || 0)} suffix="sa" icon={Zap} gradient="amber"
+                <KPICard mini title="Fazla Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="sa" icon={Zap} gradient="amber"
                     delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
                     sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard mini title="Eksik Mesai" value={Math.round(kpi.total_missing_hours || 0)} suffix="sa" icon={AlertCircle} gradient="red"
@@ -243,7 +243,7 @@ export default function OverviewTab() {
                     delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
                 <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald"
                     info={METRIC_EXPLANATIONS.punctuality} />
-                <KPICard mini title="OT/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
+                <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
                     info={METRIC_EXPLANATIONS.meal_rate} />
                 <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"
@@ -289,7 +289,7 @@ export default function OverviewTab() {
                 {/* Monthly Trend */}
                 <div className="lg:col-span-2">
                     <SectionCard title="Aylık Performans Trendi" icon={BarChart3} iconGradient="from-blue-500 to-blue-600"
-                        subtitle="Çalışma vs hedef ve ek mesai" collapsible={false}>
+                        subtitle="Çalışma vs hedef ve fazla mesai" collapsible={false}>
                         {trendChartData.length > 0 ? (
                             <div className="h-72">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -300,7 +300,7 @@ export default function OverviewTab() {
                                         <Tooltip content={<ChartTooltip unit="sa" />} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                         <Bar dataKey="çalışma" name="Çalışma" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="ek mesai" name="Ek Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="fazla mesai" name="Fazla Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                                         <Line type="monotone" dataKey="hedef" name="Hedef" stroke="#ef4444" strokeWidth={2}
                                             strokeDasharray="6 3" dot={false} />
                                     </ComposedChart>

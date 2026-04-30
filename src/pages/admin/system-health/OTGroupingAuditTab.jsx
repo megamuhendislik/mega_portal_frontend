@@ -99,9 +99,9 @@ export default function OTGroupingAuditTab() {
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 mb-1">OT Gruplama Denetimi</h2>
+                <h2 className="text-lg font-bold text-gray-800 mb-1">Fazla Mesai Gruplama Denetimi</h2>
                 <p className="text-sm text-gray-500 mb-4">
-                    Ek mesai taleplerinde timezone uyumsuzluğu, gruplama hatası ve eksik POTENTIAL tespiti.
+                    Fazla mesai taleplerinde timezone uyumsuzluğu, gruplama hatası ve eksik POTENTIAL tespiti.
                 </p>
 
                 {/* Filters */}
@@ -243,7 +243,7 @@ export default function OTGroupingAuditTab() {
                                                     <span className="text-xs text-gray-400 font-mono">{issue.date}</span>
                                                     {issue.ot_id && (
                                                         <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-mono">
-                                                            OT #{issue.ot_id}
+                                                            Fazla Mesai #{issue.ot_id}
                                                         </span>
                                                     )}
                                                 </div>
@@ -253,7 +253,7 @@ export default function OTGroupingAuditTab() {
                                                 {catKey === 'TZ_MISMATCH' && (
                                                     <div className="mt-2 text-xs text-gray-500 space-y-0.5">
                                                         <p>Attendance #{issue.att_id}: check_in = <span className="font-bold text-red-600">{issue.att_check_in_utc} UTC</span> → <span className="font-bold text-green-600">{issue.att_check_in_istanbul} Istanbul</span></p>
-                                                        <p>OT start: <span className="font-bold text-red-600">{issue.ot_start}</span> (UTC ile eşleşiyor → hatalı)</p>
+                                                        <p>Fazla Mesai start: <span className="font-bold text-red-600">{issue.ot_start}</span> (UTC ile eşleşiyor → hatalı)</p>
                                                     </div>
                                                 )}
 
@@ -276,7 +276,7 @@ export default function OTGroupingAuditTab() {
                                                     <div className="mt-2 space-y-1">
                                                         {issue.ot_records?.map((o, i) => (
                                                             <p key={i} className="text-xs text-gray-500 font-mono">
-                                                                OT #{o.ot_id}: {o.start}-{o.end} ({Math.floor(o.duration_s / 60)}dk) [{o.status}] group={o.group_key}
+                                                                Fazla Mesai #{o.ot_id}: {o.start}-{o.end} ({Math.floor(o.duration_s / 60)}dk) [{o.status}] group={o.group_key}
                                                             </p>
                                                         ))}
                                                         {issue.pair_details?.map((pd, i) => (
@@ -290,7 +290,7 @@ export default function OTGroupingAuditTab() {
                                                     <div className="mt-2 space-y-1">
                                                         {issue.attendance_records.map((a, i) => (
                                                             <p key={i} className="text-xs text-gray-500 font-mono">
-                                                                ATT #{a.att_id}: {a.check_in}-{a.check_out} OT={Math.floor(a.ot_seconds / 60)}dk [{a.status}]
+                                                                ATT #{a.att_id}: {a.check_in}-{a.check_out} Fazla Mesai={Math.floor(a.ot_seconds / 60)}dk [{a.status}]
                                                             </p>
                                                         ))}
                                                     </div>

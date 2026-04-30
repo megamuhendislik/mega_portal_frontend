@@ -28,7 +28,7 @@ const TYPE_CONFIG = {
         endpoint: 'leave-requests', viewRoute: '/requests',
     },
     OVERTIME: {
-        label: 'Ek Mesai', color: '#F59E0B', bg: '#fef3c7', icon: Briefcase,
+        label: 'Fazla Mesai', color: '#F59E0B', bg: '#fef3c7', icon: Briefcase,
         endpoint: 'overtime-requests', viewRoute: '/requests',
     },
     CARDLESS: {

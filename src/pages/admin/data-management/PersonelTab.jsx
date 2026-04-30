@@ -343,7 +343,7 @@ export default function PersonelTab({ initialEmployee }) {
                                 <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
                                     <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Çalışılan</div>
                                     <div className="text-lg font-black text-indigo-700 mt-0.5">{fmtH(netWork)} <span className="text-xs text-indigo-400 font-medium">sa</span></div>
-                                    <div className="text-[10px] text-slate-500 mt-0.5">Normal: {fmtH(completed)} + OT: {fmtH(overtime)}</div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">Normal: {fmtH(completed)} + Fazla Mesai: {fmtH(overtime)}</div>
                                 </div>
                                 {/* Bu Ay Bakiye */}
                                 <div className={`p-3 rounded-lg border ${netBalance >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>

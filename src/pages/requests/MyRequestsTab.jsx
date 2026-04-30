@@ -560,7 +560,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label="İzin" value={counts.leave} icon={<Calendar size={20} />} color="bg-blue-500" tooltip="Bu mali dönemde oluşturduğunuz izin talepleri" />
-                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" tooltip="Bu mali dönemde oluşturduğunuz ek mesai talepleri" />
+                <StatCard label="Fazla Mesai" value={counts.overtime} icon={<Clock size={20} />} color="bg-amber-500" tooltip="Bu mali dönemde oluşturduğunuz fazla mesai talepleri" />
                 <StatCard label="Yemek" value={counts.meal} icon={<Utensils size={20} />} color="bg-emerald-500" tooltip="Bu mali dönemde oluşturduğunuz yemek talepleri" />
                 <StatCard label="Kartsız Giriş" value={counts.cardless} icon={<CreditCard size={20} />} color="bg-purple-500" tooltip="Bu mali dönemde oluşturduğunuz kartsız giriş talepleri" />
             </div>

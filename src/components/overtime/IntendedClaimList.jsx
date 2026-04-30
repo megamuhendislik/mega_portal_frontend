@@ -30,7 +30,7 @@ export default function IntendedClaimList({ items, weeklyStatus, onBack, onClaim
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
         <CalendarCheck className="w-5 h-5 text-emerald-600" />
-        <h3 className="font-bold text-slate-800">Planlanmış Ek Mesailer</h3>
+        <h3 className="font-bold text-slate-800">Planlanmış Fazla Mesailer</h3>
         <span className="text-xs text-slate-400 ml-auto">{claimable.length} adet</span>
       </div>
 

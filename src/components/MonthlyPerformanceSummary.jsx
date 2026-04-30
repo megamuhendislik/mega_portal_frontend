@@ -32,7 +32,7 @@ const EffortDetailPopover = ({ stats }) => {
         { label: 'Bugüne Kadar Hedef', value: stats.pastTargetDisplay },
         { type: 'divider' },
         { label: 'Normal Çalışma', value: stats.completedDisplay },
-        { label: 'Onaylı OT', value: stats.overtimeDisplay },
+        { label: 'Onaylı Fazla Mesai', value: stats.overtimeDisplay },
     ];
     if (stats._dutySec > 0) {
         rows.push({ label: 'Dış Görev', value: stats.dutyDisplay, color: 'text-indigo-600' });
@@ -59,10 +59,10 @@ const EffortDetailPopover = ({ stats }) => {
     if (stats._otPendingSec > 0 || stats._otPotentialSec > 0) {
         rows.push({ type: 'divider' });
         if (stats._otPendingSec > 0) {
-            rows.push({ label: 'Bekleyen OT', value: stats.otPendingDisplay, color: 'text-amber-600', muted: true });
+            rows.push({ label: 'Bekleyen Fazla Mesai', value: stats.otPendingDisplay, color: 'text-amber-600', muted: true });
         }
         if (stats._otPotentialSec > 0) {
-            rows.push({ label: 'Potansiyel OT', value: stats.otPotentialDisplay, color: 'text-slate-500', muted: true });
+            rows.push({ label: 'Potansiyel Fazla Mesai', value: stats.otPotentialDisplay, color: 'text-slate-500', muted: true });
         }
     }
     if (stats._remainingSec > 0) {
@@ -481,7 +481,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                         <div className="flex justify-between items-baseline mb-2">
                             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                                 Toplam Efor
-                                <Tooltip title="Normal + OT + İzin + Rapor. Eksik dahil değil."><Info className="w-3 h-3 text-slate-300 cursor-help" /></Tooltip>
+                                <Tooltip title="Normal + Fazla Mesai + İzin + Rapor. Eksik dahil değil."><Info className="w-3 h-3 text-slate-300 cursor-help" /></Tooltip>
                             </span>
                             <span className="text-[11px] font-bold text-slate-500 tabular-nums">{stats.displayTotalDisplay} <span className="text-slate-300">/ {stats.targetDisplay}</span></span>
                         </div>
@@ -502,7 +502,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                         {(stats._dutySec||0) > 0 && <Tooltip title={`Dış Görev: ${stats.dutyDisplay}`}><div className="bg-gradient-to-r from-violet-400 to-violet-500 h-full shrink-0" style={{ width: `${pct(stats._dutySec)}%` }} /></Tooltip>}
                                         {stats._leaveSec > 0 && <Tooltip title={`İzin: ${stats.leaveDisplay}`}><div className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full shrink-0" style={{ width: `${pct(stats._leaveSec)}%` }} /></Tooltip>}
                                         {stats._hrSec > 0 && <Tooltip title={`Rapor: ${stats.healthReportDisplay}`}><div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full shrink-0" style={{ width: `${pct(stats._hrSec)}%` }} /></Tooltip>}
-                                        {stats._overtimeSec > 0 && <Tooltip title={`Onaylı OT: ${stats.overtimeDisplay}`}><div className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full shrink-0" style={{ width: `${pct(stats._overtimeSec)}%` }} /></Tooltip>}
+                                        {stats._overtimeSec > 0 && <Tooltip title={`Onaylı Fazla Mesai: ${stats.overtimeDisplay}`}><div className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full shrink-0" style={{ width: `${pct(stats._overtimeSec)}%` }} /></Tooltip>}
                                         {potSec > 0 && <Tooltip title={`Potansiyel: ${stats.potentialOtDisplay || fmtSec(potSec)}`}><div className="h-full shrink-0 opacity-50" style={{ width: `${pct(potSec)}%`, background: 'repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px)' }} /></Tooltip>}
                                         {gapSec > 0 && <Tooltip title={`Hedefe kalan: ${fmtSec(gapSec)}`}><div className="h-full flex-1" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #e5e7eb 4px, #e5e7eb 5px)' }} /></Tooltip>}
                                     </div>
@@ -539,7 +539,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                             <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold ${isOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-700' : 'bg-rose-50/50 border-rose-100 text-rose-700'}`}>
                                 {isOk ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
                                 <span>Bugüne kadar: {isOk ? '+' : '-'}{fmtSec(Math.abs(bal))} {isOk ? 'ilerde' : 'geride'}</span>
-                                <span className="text-slate-400 font-medium ml-auto text-[10px]">OT dahil, bugüne kadar hedefe göre</span>
+                                <span className="text-slate-400 font-medium ml-auto text-[10px]">Fazla Mesai dahil, bugüne kadar hedefe göre</span>
                             </div>
                         );
                     })()}
@@ -548,9 +548,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                 {/* ── NET DURUM ── */}
                 <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
                     {[
-                        { label: 'OT Hariç', sec: stats._netDeficitSec, tip: 'Bugüne kadar hedef vs normal çalışma (OT hariç)' },
-                        { label: 'OT Dahil', sec: stats._netWithOtSec, tip: 'Bugüne kadar hedef vs toplam efor (OT dahil)' },
-                        { label: 'Potansiyel ile', sec: stats._netWithPotentialSec, tip: 'Potansiyel OT de eklenince' },
+                        { label: 'Fazla Mesai Hariç', sec: stats._netDeficitSec, tip: 'Bugüne kadar hedef vs normal çalışma (Fazla Mesai hariç)' },
+                        { label: 'Fazla Mesai Dahil', sec: stats._netWithOtSec, tip: 'Bugüne kadar hedef vs toplam efor (Fazla Mesai dahil)' },
+                        { label: 'Potansiyel ile', sec: stats._netWithPotentialSec, tip: 'Potansiyel Fazla Mesai de eklenince' },
                     ].map((c) => {
                         const v = c.sec ?? 0;
                         const ok = v >= 0; // pozitif = ilerde (past_target_balance bazlı)
@@ -857,7 +857,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                                 )}
                                                                 {(otApprovedSec > 0 || otPendingSec > 0 || otPotentialSec > 0) && (
                                                                     <div className="space-y-1.5 pt-1">
-                                                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ek Mesai Detayı</div>
+                                                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Fazla Mesai Detayı</div>
                                                                         {otApprovedSec > 0 && (
                                                                             <div className="flex justify-between">
                                                                                 <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span><span className="text-emerald-400">Onaylı:</span></span>
@@ -938,7 +938,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                     <th className="px-4 py-4 text-center">Hedef</th>
                                                     <th className="px-4 py-4 text-center">Toplam Efor</th>
                                                     <th className="px-4 py-4 text-center text-rose-500">Eksik</th>
-                                                    <th className="px-4 py-4 text-center text-emerald-500">Ek Mesai <span className="text-[8px] text-slate-400 font-normal">(O/B/P)</span></th>
+                                                    <th className="px-4 py-4 text-center text-emerald-500">Fazla Mesai <span className="text-[8px] text-slate-400 font-normal">(O/B/P)</span></th>
                                                     <th className="px-4 py-4 text-right">Net Fark</th>
                                                 </tr>
                                             </thead>

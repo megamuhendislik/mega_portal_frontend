@@ -219,10 +219,10 @@ export default function ComparisonTab() {
         const metrics = [
             { key: 'efficiency_pct', label: 'Normal Doluluk %', color: '#6366f1' },
             { key: 'total_completion_pct', label: 'Toplam Doluluk %', color: '#10b981' },
-            { key: 'ot_to_target_pct', label: 'OT/Y %', color: '#f59e0b' },
+            { key: 'ot_to_target_pct', label: 'Fazla Mesai/Y %', color: '#f59e0b' },
             { key: 'missing_to_target_pct', label: 'Eksik/Y %', color: '#ef4444' },
             { key: 'normal_hours', label: 'Normal (sa)', color: '#0ea5e9' },
-            { key: 'overtime_hours', label: 'OT (sa)', color: '#d97706' },
+            { key: 'overtime_hours', label: 'Fazla Mesai (sa)', color: '#d97706' },
             { key: 'missing_hours', label: 'Eksik (sa)', color: '#dc2626' },
         ];
 
@@ -295,7 +295,7 @@ export default function ComparisonTab() {
                                     <span className="font-bold tabular-nums">{s.metrics?.worked_hours}sa</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500">OT:</span>{' '}
+                                    <span className="text-slate-500">Fazla Mesai:</span>{' '}
                                     <span className="font-bold tabular-nums">{s.metrics?.overtime_hours}sa</span>
                                 </div>
                                 <div>
@@ -356,10 +356,10 @@ export default function ComparisonTab() {
         const cards = [
             { label: 'Normal Doluluk', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
             { label: 'Toplam Doluluk', key: 'total_completion_pct', suffix: '%', betterIsHigher: true },
-            { label: 'OT/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
+            { label: 'Fazla Mesai/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
             { label: 'Eksik/Yükümlülük', key: 'missing_to_target_pct', suffix: '%', betterIsHigher: false },
             { label: 'Normal Mesai', key: 'normal_hours', suffix: 'sa', betterIsHigher: true },
-            { label: 'Ek Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
+            { label: 'Fazla Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
             { label: 'Eksik Saat', key: 'missing_hours', suffix: 'sa', betterIsHigher: false },
         ];
         return (

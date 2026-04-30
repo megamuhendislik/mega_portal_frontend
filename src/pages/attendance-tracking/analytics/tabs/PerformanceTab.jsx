@@ -129,10 +129,10 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                 ) : (
                     <div className="space-y-3">
                         <MetricBar label="Normal Doluluk" value={nDol} color={levelColor(nDol)} tip="(min(W, Y-M)) / Y" />
-                        <MetricBar label="Toplam Doluluk" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + OT) / Y" />
-                        <MetricBar label="OT / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="OT / Y" />
+                        <MetricBar label="Toplam Doluluk" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + Fazla Mesai) / Y" />
+                        <MetricBar label="Fazla Mesai / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="Fazla Mesai / Y" />
                         <MetricBar label="Eksik / Yükümlülük" value={eksY} color={intensityColor(eksY)} tip="M / Y" />
-                        <MetricBar label="OT / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="OT / Normal mesai" />
+                        <MetricBar label="Fazla Mesai / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="Fazla Mesai / Normal mesai" />
                     </div>
                 )}
             </div>
@@ -149,7 +149,7 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                     <>
                         <div className="h-3 rounded-full overflow-hidden flex bg-slate-100 mb-3">
                             <div className="h-full bg-indigo-500" style={{ width: `${normalPct}%` }} title={`Normal: ${fmtHrs(e.normal_hours)}`} />
-                            <div className="h-full bg-amber-500" style={{ width: `${otPct}%` }} title={`OT: ${fmtHrs(e.ot_hours)}`} />
+                            <div className="h-full bg-amber-500" style={{ width: `${otPct}%` }} title={`Fazla Mesai: ${fmtHrs(e.ot_hours)}`} />
                             <div className="h-full bg-red-400" style={{ width: `${missingPct}%` }} title={`Eksik: ${fmtHrs(e.missing_hours)}`} />
                         </div>
                         <div className="space-y-2">
@@ -421,7 +421,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                     title="En Çok Fazla Mesai"
                     icon={Zap}
                     iconGradient="from-amber-500 to-orange-600"
-                    subtitle="OT saat (mutlak)"
+                    subtitle="Fazla mesai saati (mutlak)"
                     collapsible={false}
                 >
                     {renderRanking(
@@ -429,7 +429,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                         'ot_hours',
                         (v) => `${Math.round(v || 0)}sa`,
                         'ot_to_normal_pct',
-                        (v) => (v == null ? 'Normal yok' : `OT/N: %${Math.round(v)}`),
+                        (v) => (v == null ? 'Normal yok' : `FM/N: %${Math.round(v)}`),
                         {
                             border: 'border-amber-200',
                             bg: 'from-amber-50/50 to-white',
@@ -464,10 +464,10 @@ function TeamOverviewMode({ onSelectPerson }) {
                 </SectionCard>
 
                 <SectionCard
-                    title="En Yüksek OT/Normal Oranı"
+                    title="En Yüksek Fazla Mesai/Normal Oranı"
                     icon={TrendingUp}
                     iconGradient="from-violet-500 to-fuchsia-600"
-                    subtitle="OT yoğunluğu (Normal'e oranla)"
+                    subtitle="Fazla mesai yoğunluğu (Normal'e oranla)"
                     collapsible={false}
                 >
                     {renderRanking(
@@ -475,7 +475,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                         'ot_to_normal_pct',
                         (v) => fmtPct(v),
                         'ot_hours',
-                        (v) => `${Math.round(v || 0)}sa OT`,
+                        (v) => `${Math.round(v || 0)}sa Fazla Mesai`,
                         {
                             border: 'border-violet-200',
                             bg: 'from-violet-50/50 to-white',
@@ -500,14 +500,14 @@ function TeamOverviewMode({ onSelectPerson }) {
                     },
                     total_completion: {
                         key: 'avg_total_completion_pct',
-                        label: 'Toplam Doluluk (N+OT)',
+                        label: 'Toplam Doluluk (N+Fazla Mesai)',
                         unit: '%',
                         color: (v) => (v >= 100 ? '#7c3aed' : levelColor(v)),
                         ref: 100,
                     },
                     ot_to_target: {
                         key: 'avg_ot_to_target_pct',
-                        label: 'OT / Yükümlülük',
+                        label: 'Fazla Mesai / Yükümlülük',
                         unit: '%',
                         color: intensityColor,
                         ref: null,
@@ -542,7 +542,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                                 options={[
                                     { value: 'normal_completion', label: <span className="text-[10px] font-bold">Normal Doluluk</span> },
                                     { value: 'total_completion', label: <span className="text-[10px] font-bold">Toplam Doluluk</span> },
-                                    { value: 'ot_to_target', label: <span className="text-[10px] font-bold">OT/Yükümlülük</span> },
+                                    { value: 'ot_to_target', label: <span className="text-[10px] font-bold">Fazla Mesai/Yük.</span> },
                                     { value: 'missing_to_target', label: <span className="text-[10px] font-bold">Eksik/Yükümlülük</span> },
                                 ]}
                             />
@@ -641,9 +641,9 @@ function TeamOverviewMode({ onSelectPerson }) {
                                 { value: 'normal_completion_desc', label: <span className="text-[10px]">N.Doluluk ↓</span> },
                                 { value: 'total_completion_desc', label: <span className="text-[10px]">T.Doluluk ↓</span> },
                                 { value: 'normal_hours_desc', label: <span className="text-[10px]">Normal ↓</span> },
-                                { value: 'ot_desc', label: <span className="text-[10px]">OT ↓</span> },
+                                { value: 'ot_desc', label: <span className="text-[10px]">FM ↓</span> },
                                 { value: 'missing_desc', label: <span className="text-[10px]">Eksik ↓</span> },
-                                { value: 'ot_ratio_desc', label: <span className="text-[10px]">OT/N ↓</span> },
+                                { value: 'ot_ratio_desc', label: <span className="text-[10px]">FM/N ↓</span> },
                                 { value: 'name', label: <span className="text-[10px]">A-Z</span> },
                             ]}
                         />
@@ -664,12 +664,12 @@ function TeamOverviewMode({ onSelectPerson }) {
                                     {[
                                         { key: 'name', label: 'Çalışan', align: 'left' },
                                         { key: 'department', label: 'Departman', align: 'left' },
-                                        { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (OT hariç)' },
-                                        { key: 'ot', label: 'OT', align: 'right', tip: 'Fazla mesai' },
+                                        { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (Fazla Mesai hariç)' },
+                                        { key: 'ot', label: 'Fazla Mesai', align: 'right', tip: 'Fazla mesai' },
                                         { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
                                         { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük (missing-aware)' },
-                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Effective + OT) / Yükümlülük' },
-                                        { key: 'ot_to_target', label: 'OT/Y', align: 'right', tip: 'OT / Yükümlülük' },
+                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Effective + Fazla Mesai) / Yükümlülük' },
+                                        { key: 'ot_to_target', label: 'FM/Y', align: 'right', tip: 'Fazla Mesai / Yükümlülük' },
                                         { key: 'missing_to_target', label: 'Eksik/Y', align: 'right', tip: 'Eksik / Yükümlülük' },
                                         { key: 'target', label: 'Hedef', align: 'right', tip: 'Aylık tam hedef' },
                                     ].map((col) => (
@@ -1008,10 +1008,10 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     value={kpi.total_completion_pct ?? 0}
                                     suffix="%" icon={TrendingUp}
                                     gradient="emerald"
-                                    subtitle="(Normal+OT) / Yükümlülük"
+                                    subtitle="(Normal+Fazla Mesai) / Yükümlülük"
                                 />
                                 <KPICard
-                                    title="OT / Yükümlülük"
+                                    title="Fazla Mesai / Yükümlülük"
                                     value={kpi.ot_to_target_pct ?? 0}
                                     suffix="%" icon={Activity}
                                     gradient="amber"
@@ -1025,12 +1025,12 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     subtitle="Eksik mesai oranı"
                                 />
                                 <KPICard
-                                    title="OT / Normal"
+                                    title="Fazla Mesai / Normal"
                                     value={kpi.ot_to_normal_pct == null ? '—' : kpi.ot_to_normal_pct}
                                     suffix={kpi.ot_to_normal_pct == null ? '' : '%'}
                                     icon={TrendingUp}
                                     gradient="violet"
-                                    subtitle="OT yoğunluğu"
+                                    subtitle="Fazla mesai yoğunluğu"
                                 />
                             </div>
 
@@ -1047,7 +1047,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     delta={kpi.vs_prev?.worked} info={METRIC_EXPLANATIONS.worked_hours}
                                 />
                                 <KPICard mini
-                                    title="Ek Mesai (OT)" value={kpi.overtime_hours}
+                                    title="Fazla Mesai" value={kpi.overtime_hours}
                                     suffix="sa" icon={TrendingUp} gradient="amber"
                                     delta={kpi.vs_prev?.ot} info={METRIC_EXPLANATIONS.overtime}
                                 />
@@ -1077,7 +1077,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                     {/* Daily hours composed chart */}
                     <SectionCard
                         title="Günlük Çalışma Saatleri" icon={Clock} iconGradient="from-indigo-500 to-indigo-600"
-                        subtitle="Normal ve ek mesai saatleri — hedef çizgisi ile"
+                        subtitle="Normal ve fazla mesai saatleri — hedef çizgisi ile"
                     >
                         {dailyHours.length > 0 ? (
                             <div className="h-80">
@@ -1091,7 +1091,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                         <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
                                             label={{ value: 'Hedef 8h', position: 'right', style: { fontSize: 9, fill: '#ef4444' } }} />
                                         <Bar dataKey="normal" name="Normal" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
-                                        <Bar dataKey="ot" name="Ek Mesai" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                                        <Bar dataKey="ot" name="Fazla Mesai" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1336,7 +1336,7 @@ export default function PerformanceTab() {
                     </h2>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                         {mode === 'team'
-                            ? 'Normal mesai, fazla mesai (OT) ve eksik mesai dağılımı'
+                            ? 'Normal mesai, fazla mesai ve eksik mesai dağılımı'
                             : 'Seçili çalışanın detaylı mesai verileri'}
                     </p>
                 </div>

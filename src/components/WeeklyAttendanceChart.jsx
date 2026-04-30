@@ -123,7 +123,7 @@ const WeeklyAttendanceChart = ({ logs, dailyTarget = 9 }) => { // Default to 9h 
                         </div>
                         {dataPoint.overtime > 0 && (
                             <div className="flex justify-between items-center">
-                                <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Ek Mesai</span>
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Fazla Mesai</span>
                                 <span className="font-bold text-emerald-600">+{fmtH(dataPoint.overtime)}</span>
                             </div>
                         )}

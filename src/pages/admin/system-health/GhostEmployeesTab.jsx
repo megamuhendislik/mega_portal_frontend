@@ -153,7 +153,7 @@ export default function GhostEmployeesTab() {
             render: (_, r) => r.record_counts?.attendance || 0,
         },
         {
-            title: 'Ek Mesai',
+            title: 'Fazla Mesai',
             key: 'ot',
             align: 'center',
             render: (_, r) => r.record_counts?.overtime || 0,

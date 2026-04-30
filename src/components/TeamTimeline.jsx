@@ -18,7 +18,7 @@ const EVENT_COLORS = {
 const EVENT_LABELS = {
     LEAVE_REQUEST: 'İzin',
     EXTERNAL_DUTY: 'Dış Görev',
-    OVERTIME_REQUEST: 'Ek Mesai',
+    OVERTIME_REQUEST: 'Fazla Mesai',
     HEALTH_REPORT: 'Sağ. Rap.',
     CARDLESS_ENTRY: 'Kartsız',
     ABSENCE: 'Devamsız',
@@ -26,7 +26,7 @@ const EVENT_LABELS = {
 
 const FILTER_CONFIG = [
     { key: 'leaves', label: 'İzinler', activeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-    { key: 'overtime', label: 'Ek Mesai', activeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    { key: 'overtime', label: 'Fazla Mesai', activeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     { key: 'healthReports', label: 'Sağlık Raporu', activeClass: 'bg-pink-50 text-pink-700 border-pink-200' },
     { key: 'cardless', label: 'Kartsız Giriş', activeClass: 'bg-orange-50 text-orange-700 border-orange-200' },
     { key: 'absences', label: 'Devamsızlık', activeClass: 'bg-red-50 text-red-700 border-red-200' },

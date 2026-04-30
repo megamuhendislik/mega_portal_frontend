@@ -399,7 +399,7 @@ const EmployeeDetail = () => {
                         <p>Silinecek kayıtlar ({total} toplam):</p>
                         <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
                             {counts.attendance > 0 && <li>{counts.attendance} devam kaydı</li>}
-                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} ek mesai talebi</li>}
+                            {counts.overtime_requests > 0 && <li>{counts.overtime_requests} fazla mesai talebi</li>}
                             {counts.leave_requests > 0 && <li>{counts.leave_requests} izin talebi</li>}
                             {counts.meal_requests > 0 && <li>{counts.meal_requests} yemek talebi</li>}
                             {counts.health_reports > 0 && <li>{counts.health_reports} sağlık raporu</li>}
@@ -868,8 +868,8 @@ const EmployeeDetail = () => {
                                                     <Clock size={16} className="text-amber-600" />
                                                 </div>
                                                 <div>
-                                                    <span className="text-sm font-medium text-slate-700">Haftalık Ek Mesai Limiti</span>
-                                                    <p className="text-xs text-slate-400">Pazartesi-Pazar takvim haftası içinde yapılabilecek maks. ek mesai saati. 0 = sınırsız.</p>
+                                                    <span className="text-sm font-medium text-slate-700">Haftalık Fazla Mesai Limiti</span>
+                                                    <p className="text-xs text-slate-400">Pazartesi-Pazar takvim haftası içinde yapılabilecek maks. fazla mesai saati. 0 = sınırsız.</p>
                                                 </div>
                                             </div>
                                             <div className="max-w-xs">
@@ -1077,7 +1077,7 @@ const EmployeeDetail = () => {
                             <p className="font-medium text-amber-800">Etkilenecek kayıtlar:</p>
                             {Object.entries(deactivationPreview.pending_requests).map(([key, count]) => count > 0 && (
                                 <p key={key} className="text-amber-700">
-                                    {count} bekleyen {key === 'overtime' ? 'ek mesai' : key === 'leave' ? 'izin' : key === 'cardless' ? 'kartsız giriş' : key === 'health_report' ? 'sağlık raporu' : 'özel izin'} talebi iptal edilecek
+                                    {count} bekleyen {key === 'overtime' ? 'fazla mesai' : key === 'leave' ? 'izin' : key === 'cardless' ? 'kartsız giriş' : key === 'health_report' ? 'sağlık raporu' : 'özel izin'} talebi iptal edilecek
                                 </p>
                             ))}
                             {deactivationPreview.subordinates_with_pending > 0 && (

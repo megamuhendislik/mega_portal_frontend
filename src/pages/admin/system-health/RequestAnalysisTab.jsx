@@ -309,7 +309,7 @@ export default function RequestAnalysisTab() {
             {(ov.total_overtime_hours > 0 || ov.total_leave_days > 0 || ov.avg_response_hours) && (
                 <Section title="Özet İstatistikler" sectionKey="stats" expanded={expandedSection} toggle={toggleSection}>
                     <div className="grid grid-cols-3 gap-3">
-                        <StatBox label="Onaylı Ek Mesai" value={fmtHour(ov.total_overtime_hours)} />
+                        <StatBox label="Onaylı Fazla Mesai" value={fmtHour(ov.total_overtime_hours)} />
                         <StatBox label="Onaylı İzin" value={`${ov.total_leave_days || 0} gün`} />
                         <StatBox label="Ort. Yanıt Süresi" value={ov.avg_response_hours != null ? `${ov.avg_response_hours} saat` : '-'} />
                     </div>
@@ -318,7 +318,7 @@ export default function RequestAnalysisTab() {
 
             {/* Overtime Sources */}
             {data.overtime_sources && (
-                <Section title="Ek Mesai Kaynak Dağılımı" sectionKey="ot_src" expanded={expandedSection} toggle={toggleSection}>
+                <Section title="Fazla Mesai Kaynak Dağılımı" sectionKey="ot_src" expanded={expandedSection} toggle={toggleSection}>
                     <div className="grid grid-cols-3 gap-3">
                         <StatBox label="Planlı (Atama)" value={data.overtime_sources.intended || 0} />
                         <StatBox label="Algılanan (Potansiyel)" value={data.overtime_sources.potential || 0} />
@@ -544,7 +544,7 @@ export default function RequestAnalysisTab() {
 
             {/* Assignment Stats */}
             {data.assignment_stats && data.assignment_stats.total > 0 && (
-                <Section title="Ek Mesai Atama İstatistikleri" sectionKey="assign" expanded={expandedSection} toggle={toggleSection}>
+                <Section title="Fazla Mesai Atama İstatistikleri" sectionKey="assign" expanded={expandedSection} toggle={toggleSection}>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <StatBox label="Toplam Atama" value={data.assignment_stats.total} />
                         <StatBox label="Atandı" value={data.assignment_stats.assigned} />
@@ -557,7 +557,7 @@ export default function RequestAnalysisTab() {
 
             {/* OT-Meal Correlation */}
             {data.overtime_meal_correlation && data.overtime_meal_correlation.length > 0 && (
-                <Section title="Ek Mesai — Yemek Korelasyonu" sectionKey="ot_meal" expanded={expandedSection} toggle={toggleSection}>
+                <Section title="Fazla Mesai — Yemek Korelasyonu" sectionKey="ot_meal" expanded={expandedSection} toggle={toggleSection}>
                     <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
                         <table className="w-full text-sm">
                             <thead className="sticky top-0 z-10">
@@ -618,7 +618,7 @@ export default function RequestAnalysisTab() {
                         <select value={lcRequestType} onChange={e => setLcRequestType(e.target.value)}
                             className="px-2 py-1.5 border rounded-lg text-xs">
                             <option value="ALL">Hepsi</option>
-                            <option value="OVERTIME">Ek Mesai</option>
+                            <option value="OVERTIME">Fazla Mesai</option>
                             <option value="LEAVE">İzin</option>
                             <option value="CARDLESS_ENTRY">Kartsız Giriş</option>
                             <option value="HEALTH_REPORT">Sağlık Raporu</option>
@@ -701,7 +701,7 @@ export default function RequestAnalysisTab() {
                                             {lifecycleData.per_employee.filter(e => e.with_issues > 0).length} sorunlu
                                         </span>
                                         <span className="text-[10px] px-1.5 py-0.5 bg-amber-200 text-amber-700 rounded-full font-bold">
-                                            {lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length} talep edilmemiş OT
+                                            {lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length} talep edilmemiş Fazla Mesai
                                         </span>
                                         <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded-full font-bold">
                                             {lifecycleData.per_employee.filter(e => e.total === 0 && e.unclaimed_potentials === 0).length} hiç talebi yok
@@ -716,7 +716,7 @@ export default function RequestAnalysisTab() {
                                             {[
                                                 { key: 'all', label: 'Tümü', count: lifecycleData.per_employee.length },
                                                 { key: 'with_issues', label: 'Sorunlu', count: lifecycleData.per_employee.filter(e => e.with_issues > 0).length },
-                                                { key: 'unclaimed', label: 'Talep Edilmemiş OT', count: lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length },
+                                                { key: 'unclaimed', label: 'Talep Edilmemiş Fazla Mesai', count: lifecycleData.per_employee.filter(e => e.unclaimed_potentials > 0).length },
                                                 { key: 'no_requests', label: 'Hiç Talebi Yok', count: lifecycleData.per_employee.filter(e => e.total === 0 && e.unclaimed_potentials === 0).length },
                                             ].map(f => (
                                                 <button
@@ -741,14 +741,14 @@ export default function RequestAnalysisTab() {
                                                         <th className="px-2 py-2">Personel</th>
                                                         <th className="px-2 py-2">Departman</th>
                                                         <th className="px-2 py-2 text-center">Toplam</th>
-                                                        <th className="px-2 py-2 text-center">Ek Mesai</th>
+                                                        <th className="px-2 py-2 text-center">Fazla Mesai</th>
                                                         <th className="px-2 py-2 text-center">İzin</th>
                                                         <th className="px-2 py-2 text-center">Kartsız</th>
                                                         <th className="px-2 py-2 text-center">Sağlık R.</th>
                                                         <th className="px-2 py-2 text-center">Bekleyen</th>
                                                         <th className="px-2 py-2 text-center">Onaylanan</th>
                                                         <th className="px-2 py-2 text-center">Sorunlu</th>
-                                                        <th className="px-2 py-2 text-center">Talep Edilmemiş OT</th>
+                                                        <th className="px-2 py-2 text-center">Talep Edilmemiş Fazla Mesai</th>
                                                         <th className="px-2 py-2">Sorun Kodları</th>
                                                     </tr>
                                                 </thead>
@@ -958,7 +958,7 @@ export default function RequestAnalysisTab() {
                                     />
                                     <div>
                                         <span className="text-sm font-medium text-emerald-800">Yönetici atandıktan sonra otomatik onayla</span>
-                                        <p className="text-[10px] text-emerald-600">PENDING OT talepleri onaylanır + günlük/aylık hedefler güncellenir</p>
+                                        <p className="text-[10px] text-emerald-600">PENDING Fazla Mesai talepleri onaylanır + günlük/aylık hedefler güncellenir</p>
                                     </div>
                                 </label>
                             )}
@@ -1183,7 +1183,7 @@ function SummaryBadge({ label, count, color }) {
     );
 }
 
-const TYPE_LABELS = { OVERTIME: 'Ek Mesai', LEAVE: 'İzin', CARDLESS_ENTRY: 'Kartsız', HEALTH_REPORT: 'Sağlık R.' };
+const TYPE_LABELS = { OVERTIME: 'Fazla Mesai', LEAVE: 'İzin', CARDLESS_ENTRY: 'Kartsız', HEALTH_REPORT: 'Sağlık R.' };
 const TYPE_COLORS = { OVERTIME: 'bg-violet-100 text-violet-700', LEAVE: 'bg-blue-100 text-blue-700', CARDLESS_ENTRY: 'bg-teal-100 text-teal-700', HEALTH_REPORT: 'bg-pink-100 text-pink-700' };
 const STATUS_LABELS = { POTENTIAL: 'Potansiyel', PENDING: 'Bekliyor', APPROVED: 'Onaylı', REJECTED: 'Red', CANCELLED: 'İptal', ESCALATED: 'Üst Yön.' };
 const STATUS_COLORS = { POTENTIAL: 'bg-indigo-100 text-indigo-700', PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-emerald-100 text-emerald-700', REJECTED: 'bg-red-100 text-red-700', CANCELLED: 'bg-slate-100 text-slate-500', ESCALATED: 'bg-purple-100 text-purple-700' };

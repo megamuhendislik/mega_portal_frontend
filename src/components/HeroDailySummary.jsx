@@ -84,7 +84,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                         {onDuty ? 'GÖREV' : onLeave ? 'İZİN' : isOffDay ? 'TATİL' : 'PUANTAJ'}
                                     </p>
                                     <h3 className="text-base font-bold text-slate-700">
-                                        {onDuty ? 'Şirket Dışı Çalışma' : onLeave ? 'İzinli Gün' : isOffDayWithWork ? 'Ek Mesai Günü' : isOffDay ? 'Tatil Günü' : 'Normal Mesai'}
+                                        {onDuty ? 'Şirket Dışı Çalışma' : onLeave ? 'İzinli Gün' : isOffDayWithWork ? 'Fazla Mesai Günü' : isOffDay ? 'Tatil Günü' : 'Normal Mesai'}
                                     </h3>
                                 </div>
                             </div>
@@ -126,7 +126,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 ) : onLeave ? (
                                     <><span className="text-violet-600 font-bold">İzin kredisi</span> — Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
                                 ) : isOffDayWithWork ? (
-                                    <span className="text-orange-500 font-bold">Tüm çalışma ek mesai olarak sayılır</span>
+                                    <span className="text-orange-500 font-bold">Tüm çalışma fazla mesai olarak sayılır</span>
                                 ) : isOffDay ? (
                                     <span className="text-slate-400">Normal mesai hedefi yok</span>
                                 ) : (

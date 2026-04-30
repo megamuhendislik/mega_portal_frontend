@@ -160,9 +160,9 @@ export const EmployeeAttendanceRow = ({
                             {s.today_ot_assignment?.has_assignment && (
                                 <span className="group/ot relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200 shrink-0 cursor-default">
                                     <CalendarCheck size={11} />
-                                    Ek Mesai
+                                    Fazla Mesai
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/ot:block w-56 p-2.5 bg-slate-800 text-white text-[11px] font-medium rounded-lg shadow-xl z-50 pointer-events-none">
-                                        <span className="block font-bold text-orange-300 mb-1">Ek Mesai Ataması</span>
+                                        <span className="block font-bold text-orange-300 mb-1">Fazla Mesai Ataması</span>
                                         {s.today_ot_assignment.assigned_by_name && (
                                             <span className="block">Atayan: {s.today_ot_assignment.assigned_by_name}</span>
                                         )}
@@ -479,7 +479,7 @@ export const EmployeeDetailModal = ({ employee, onClose }) => {
                             title="Detay için tıklayın"
                         >
                             <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Ek Mesai (Pzt-Paz)</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Haftalık Fazla Mesai (Pzt-Paz)</span>
                                 <span className={`text-[10px] font-bold ${
                                     weeklyOtData.is_over_limit ? 'text-red-600' :
                                     (weeklyOtData.used_hours / (weeklyOtData.limit_hours || 1)) > 0.7 ? 'text-amber-600' :

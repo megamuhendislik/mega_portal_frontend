@@ -198,7 +198,7 @@ const AttendanceDebugger = () => {
                                         <th className="px-4 py-3">Tarih</th>
                                         <th className="px-4 py-3">Toplam Sn</th>
                                         <th className="px-4 py-3 text-emerald-600">Normal</th>
-                                        <th className="px-4 py-3 text-blue-600">Ek Mesai</th>
+                                        <th className="px-4 py-3 text-blue-600">Fazla Mesai</th>
                                         <th className="px-4 py-3 text-red-500">Eksik</th>
                                         <th className="px-4 py-3 text-amber-600">Mola</th>
                                     </tr>

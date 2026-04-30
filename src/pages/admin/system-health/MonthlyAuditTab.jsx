@@ -749,10 +749,10 @@ export default function MonthlyAuditTab() {
                                     <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Gun</th>
                                     <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Vardiya</th>
                                     <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB Normal</th>
-                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB OT</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB FM</th>
                                     <th className="text-right px-3 py-2.5 font-semibold text-gray-600">DB Eksik</th>
                                     <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC Normal</th>
-                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC OT</th>
+                                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC FM</th>
                                     <th className="text-right px-3 py-2.5 font-semibold text-gray-600">CALC Eksik</th>
                                     <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Durum</th>
                                     <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Bilgi</th>
@@ -827,8 +827,8 @@ export default function MonthlyAuditTab() {
                                                         )}
                                                         {day.approved_ot && (
                                                             <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-medium"
-                                                                title={`${day.approved_ot.count} OT`}>
-                                                                OT
+                                                                title={`${day.approved_ot.count} Fazla Mesai`}>
+                                                                FM
                                                             </span>
                                                         )}
                                                         {day.leave && (
@@ -892,7 +892,7 @@ function AnomalyBadge({ type, severity }) {
         CALC_MISMATCH: 'FARK',
         STALE_OPEN: 'ACIK',
         OVERFLOW: 'TASMA',
-        UNCLAIMED_OT: 'OT?',
+        UNCLAIMED_OT: 'FM?',
     };
     return (
         <span
@@ -1001,12 +1001,12 @@ function DayDetail({ day }) {
                                     <th className="text-left px-2 py-1 font-medium text-blue-700">Giris</th>
                                     <th className="text-left px-2 py-1 font-medium text-blue-700">Cikis</th>
                                     <th className="text-right px-2 py-1 font-medium text-blue-700">Normal</th>
-                                    <th className="text-right px-2 py-1 font-medium text-blue-700">OT</th>
+                                    <th className="text-right px-2 py-1 font-medium text-blue-700">FM</th>
                                     <th className="text-right px-2 py-1 font-medium text-blue-700">Eksik</th>
                                     <th className="text-right px-2 py-1 font-medium text-blue-700">Mola</th>
                                     <th className="text-left px-2 py-1 font-medium text-blue-700">Kaynak</th>
                                     <th className="text-left px-2 py-1 font-medium text-blue-700">Durum</th>
-                                    <th className="text-center px-2 py-1 font-medium text-blue-700">OT Kayit</th>
+                                    <th className="text-center px-2 py-1 font-medium text-blue-700">FM Kayit</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1025,7 +1025,7 @@ function DayDetail({ day }) {
                                         <td className="px-2 py-1"><StatusBadge status={rec.status} /></td>
                                         <td className="text-center px-2 py-1">
                                             {rec.is_overtime_record && (
-                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">OT</span>
+                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">FM</span>
                                             )}
                                         </td>
                                     </tr>
@@ -1048,12 +1048,12 @@ function DayDetail({ day }) {
                                     <th className="text-left px-2 py-1 font-medium text-emerald-700">Giris</th>
                                     <th className="text-left px-2 py-1 font-medium text-emerald-700">Cikis</th>
                                     <th className="text-right px-2 py-1 font-medium text-emerald-700">Normal</th>
-                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">OT</th>
+                                    <th className="text-right px-2 py-1 font-medium text-emerald-700">FM</th>
                                     <th className="text-right px-2 py-1 font-medium text-emerald-700">Eksik</th>
                                     <th className="text-right px-2 py-1 font-medium text-emerald-700">Mola</th>
                                     <th className="text-left px-2 py-1 font-medium text-emerald-700">Kaynak</th>
                                     <th className="text-left px-2 py-1 font-medium text-emerald-700">Durum</th>
-                                    <th className="text-center px-2 py-1 font-medium text-emerald-700">OT Kayit</th>
+                                    <th className="text-center px-2 py-1 font-medium text-emerald-700">FM Kayit</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1072,7 +1072,7 @@ function DayDetail({ day }) {
                                         <td className="px-2 py-1"><StatusBadge status={rec.status} /></td>
                                         <td className="text-center px-2 py-1">
                                             {rec.is_overtime_record && (
-                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">OT</span>
+                                                <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">FM</span>
                                             )}
                                         </td>
                                     </tr>
@@ -1093,7 +1093,7 @@ function DayDetail({ day }) {
             {/* Approved OT */}
             {day.approved_ot && (
                 <div>
-                    <h5 className="font-semibold text-gray-700 mb-1">Onayli Ek Mesai ({day.approved_ot.count})</h5>
+                    <h5 className="font-semibold text-gray-700 mb-1">Onayli Fazla Mesai ({day.approved_ot.count})</h5>
                     <div className="flex flex-wrap gap-2">
                         {day.approved_ot.items.map((item, i) => (
                             <div key={i} className="px-2 py-1 bg-purple-50 border border-purple-200 rounded text-[11px]">

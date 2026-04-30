@@ -49,7 +49,7 @@ const SEVERITY_CFG = {
 };
 
 const METRIC_LABELS = {
-    overtime_hours: 'Ek Mesai',
+    overtime_hours: 'Fazla Mesai',
     worked_hours: 'Çalışma Saati',
     absence_days: 'Devamsızlık',
     meal_count: 'Yemek Siparişi',
@@ -73,7 +73,7 @@ const SEV_FILTERS = [
 
 const METRIC_FILTERS = [
     { value: 'all', label: 'Tümü' },
-    { value: 'overtime_hours', label: 'OT' },
+    { value: 'overtime_hours', label: 'Fazla Mesai' },
     { value: 'worked_hours', label: 'Çalışma' },
     { value: 'absence_days', label: 'Devam' },
     { value: 'meal_count', label: 'Yemek' },

@@ -47,7 +47,7 @@ const ManagerAssignmentSection = ({
     const label = isPrimary ? 'Birincil Yöneticiler' : 'İkincil Yöneticiler';
     const helpText = isPrimary
         ? 'İzin ve mesai onayı verecek yöneticiler. Ekip listesinde görünür.'
-        : 'Sadece ek mesai onayı verebilir, ekip listesinde görünmez.';
+        : 'Sadece fazla mesai onayı verebilir, ekip listesinde görünmez.';
     const Icon = isPrimary ? UserPlus : Users;
 
     // Zorunlu ilk satır: primary + non-board → mount'ta boş satır ekle

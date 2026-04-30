@@ -355,12 +355,12 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
                         {preview.otCount > 0 && (
                             <div className="col-span-2 flex items-center gap-2 text-red-500">
                                 <WarningOutlined />
-                                <span className="font-medium">{preview.otCount} ek mesai talebi silinecek</span>
+                                <span className="font-medium">{preview.otCount} fazla mesai talebi silinecek</span>
                             </div>
                         )}
                     </div>
                     <div className="mt-2 text-xs text-gray-500">
-                        Düzeltme sonrası: snapping, mola, ek mesai otomatik hesaplanır. Tahmini saat kesin değildir.
+                        Düzeltme sonrası: snapping, mola, fazla mesai otomatik hesaplanır. Tahmini saat kesin değildir.
                     </div>
                     {onFix && (
                         <Button
@@ -477,7 +477,7 @@ const ExpandedRowContent = ({ record, onFix, fixing }) => {
                                 <span className="ml-2 font-semibold">{formatHours(record.sys_total_hours)}</span>
                             </div>
                             <div className="bg-gray-50 rounded p-2">
-                                <span className="text-gray-500">Ek Mesai:</span>
+                                <span className="text-gray-500">Fazla Mesai:</span>
                                 <span className="ml-2 font-semibold">{formatHours(record.sys_overtime_hours)}</span>
                             </div>
                             <div className="bg-gray-50 rounded p-2">
@@ -707,7 +707,7 @@ export default function PdksCompareTab() {
                         verileri güncellenecek ve mesai yeniden hesaplanacak.
                     </p>
                     <p className="mt-2 text-red-500 font-medium">
-                        İlgili tarihlerdeki TÜM ek mesai talepleri silinecek ve mesai yeniden hesaplanacaktır.
+                        İlgili tarihlerdeki TÜM fazla mesai talepleri silinecek ve mesai yeniden hesaplanacaktır.
                         Potansiyel mesai olarak yeniden oluşturulabilir.
                     </p>
                 </div>
@@ -815,7 +815,7 @@ export default function PdksCompareTab() {
                     </p>
                     {preview.otCount > 0 && (
                         <p className="text-red-500 font-medium">
-                            {preview.otCount} ek mesai talebi silinecek!
+                            {preview.otCount} fazla mesai talebi silinecek!
                         </p>
                     )}
                 </div>
@@ -856,7 +856,7 @@ export default function PdksCompareTab() {
             content: (
                 <div className="mt-2 text-sm">
                     <p>
-                        <strong>{employeeIds.length}</strong> çalışan ve TÜM ilişkili verileri (mesai, ek mesai, izin, yemek, kullanıcı hesabı) tamamen silinecek:
+                        <strong>{employeeIds.length}</strong> çalışan ve TÜM ilişkili verileri (mesai, fazla mesai, izin, yemek, kullanıcı hesabı) tamamen silinecek:
                     </p>
                     <ul className="list-disc pl-4 mt-2 text-gray-600">
                         {employeeNames.map((name, i) => (
@@ -1090,7 +1090,7 @@ export default function PdksCompareTab() {
                         type="warning"
                         showIcon
                         message="Reset öncesi duruma geri dönülecek"
-                        description="Tüm attendance ve ek mesai kayıtları reset öncesindeki haline geri yüklenecektir."
+                        description="Tüm attendance ve fazla mesai kayıtları reset öncesindeki haline geri yüklenecektir."
                     />
                 </div>
             ),
@@ -1105,7 +1105,7 @@ export default function PdksCompareTab() {
                     }, { timeout: 600000 });
                     const d = res.data;
                     if (d.status === 'success') {
-                        message.success(`Geri alma tamamlandı: ${d.restored_days} gün, ${d.restored_attendance} attendance, ${d.restored_ot} OT geri yüklendi.`);
+                        message.success(`Geri alma tamamlandı: ${d.restored_days} gün, ${d.restored_attendance} attendance, ${d.restored_ot} Fazla Mesai geri yüklendi.`);
                     } else {
                         message.warning(`Kısmi geri alma: ${d.restored_days} gün geri yüklendi, ${d.errors?.length || 0} hata.`);
                     }
@@ -1237,7 +1237,7 @@ export default function PdksCompareTab() {
                             }
                         }
                         if (b.potential_ot_count > 0) {
-                            lines.push(`    Potansiyel OT: ${b.potential_ot_count} adet`);
+                            lines.push(`    Potansiyel Fazla Mesai: ${b.potential_ot_count} adet`);
                             if (b.potential_ot_details?.length) {
                                 for (const pot of b.potential_ot_details) {
                                     lines.push(`      ${pot.start_time || '?'} — ${pot.end_time || '?'} (${formatSeconds(pot.duration_seconds)})`);
@@ -1264,7 +1264,7 @@ export default function PdksCompareTab() {
                             }
                         }
                         if (a.potential_ot_count > 0) {
-                            lines.push(`    Potansiyel OT: ${a.potential_ot_count} adet`);
+                            lines.push(`    Potansiyel Fazla Mesai: ${a.potential_ot_count} adet`);
                             if (a.potential_ot_details?.length) {
                                 for (const pot of a.potential_ot_details) {
                                     lines.push(`      ${pot.start_time || '?'} — ${pot.end_time || '?'} (${formatSeconds(pot.duration_seconds)})`);
@@ -1285,7 +1285,7 @@ export default function PdksCompareTab() {
                     // Preserved OT
                     if (day.preserved_ot_requests?.length > 0) {
                         lines.push('');
-                        lines.push(`  ── KORUNAN OT TALEPLERİ (${day.preserved_ot_count || day.preserved_ot_requests.length}) ──`);
+                        lines.push(`  ── KORUNAN FAZLA MESAİ TALEPLERİ (${day.preserved_ot_count || day.preserved_ot_requests.length}) ──`);
                         for (const ot of day.preserved_ot_requests) {
                             lines.push(`    #${ot.id} [${ot.status}] ${ot.start_time || '?'}-${ot.end_time || '?'} (${formatSeconds(ot.duration_seconds)}) — ${ot.reason || ''}`);
                         }
@@ -1294,7 +1294,7 @@ export default function PdksCompareTab() {
                     // Broken OT
                     if (day.broken_ot_requests?.length > 0) {
                         lines.push('');
-                        lines.push(`  ── BOZUK OT (İPTAL EDİLECEK) (${day.broken_ot_count || day.broken_ot_requests.length}) ──`);
+                        lines.push(`  ── BOZUK FAZLA MESAİ (İPTAL EDİLECEK) (${day.broken_ot_count || day.broken_ot_requests.length}) ──`);
                         for (const ot of day.broken_ot_requests) {
                             lines.push(`    #${ot.id} [${ot.status}] ${ot.start_time || '?'}-${ot.end_time || '?'} (${formatSeconds(ot.duration_seconds)}) — ${ot.reason || ''}`);
                         }
@@ -1305,7 +1305,7 @@ export default function PdksCompareTab() {
                         const changed = day.revised_ot_requests.filter(r => r.changed);
                         if (changed.length > 0) {
                             lines.push('');
-                            lines.push(`  ── REVİZE EDİLEN OT (${changed.length}) ──`);
+                            lines.push(`  ── REVİZE EDİLEN FAZLA MESAİ (${changed.length}) ──`);
                             for (const ot of changed) {
                                 lines.push(`    #${ot.id} [${ot.status}]`);
                                 lines.push(`      Eski: ${ot.old_start || '?'}-${ot.old_end || '?'} (${formatSeconds(ot.old_duration)})`);
@@ -1476,7 +1476,7 @@ export default function PdksCompareTab() {
 
                 // CSV vs System summary
                 lines.push(`  CSV Giriş : ${day.csv_check_in || '-'}  Çıkış: ${day.csv_check_out || '-'}  Toplam: ${formatHours(day.csv_total_hours || 0)}`);
-                lines.push(`  Sistem Giriş: ${day.sys_check_in || '-'}  Çıkış: ${day.sys_check_out || '-'}  Toplam: ${formatHours(day.sys_total_hours || 0)}  OT: ${formatHours(day.sys_overtime_hours || 0)}`);
+                lines.push(`  Sistem Giriş: ${day.sys_check_in || '-'}  Çıkış: ${day.sys_check_out || '-'}  Toplam: ${formatHours(day.sys_total_hours || 0)}  Fazla Mesai: ${formatHours(day.sys_overtime_hours || 0)}`);
                 lines.push(`  Oturum — CSV: ${day.csv_session_count || 0}, Sistem(Kart): ${day.card_session_count ?? day.sys_session_count ?? 0}${day.duty_session_count ? `, Görev: ${day.duty_session_count}` : ''}`);
 
                 // Source breakdown
@@ -1762,7 +1762,7 @@ export default function PdksCompareTab() {
                     if (!count || count === 0) return <span className="text-gray-300">-</span>;
                     const details = record.overtime_details || '';
                     return (
-                        <Tooltip title={details || `${count} ek mesai talebi`}>
+                        <Tooltip title={details || `${count} fazla mesai talebi`}>
                             <Badge
                                 count={count}
                                 style={{ backgroundColor: '#6366f1' }}
@@ -2942,7 +2942,7 @@ export default function PdksCompareTab() {
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.before.attendance_count}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatSeconds(record.before.total_seconds ?? record.before.total_hours * 3600)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatSeconds(record.before.normal_seconds ?? record.before.normal_hours * 3600)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatSeconds(record.before.overtime_seconds ?? record.before.overtime_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Fazla Mesai:</span><span className="font-mono">{formatSeconds(record.before.overtime_seconds ?? record.before.overtime_hours * 3600)}</span></div>
                                                                                     {(record.before.break_seconds || record.before.break_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{formatSeconds(record.before.break_seconds ?? record.before.break_minutes * 60)}</span></div>}
                                                                                     {(record.before.missing_seconds || record.before.missing_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{formatSeconds(record.before.missing_seconds ?? record.before.missing_minutes * 60)}</span></div>}
                                                                                     {record.before.sessions?.length > 0 && (
@@ -2964,7 +2964,7 @@ export default function PdksCompareTab() {
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Attendance:</span><span className="font-mono font-semibold">{record.after.attendance_count}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Toplam Saat:</span><span className="font-mono">{formatSeconds(record.after.total_seconds ?? record.after.total_hours * 3600)}</span></div>
                                                                                     <div className="flex justify-between"><span className="text-gray-600">Normal:</span><span className="font-mono">{formatSeconds(record.after.normal_seconds ?? record.after.normal_hours * 3600)}</span></div>
-                                                                                    <div className="flex justify-between"><span className="text-gray-600">Ek Mesai:</span><span className="font-mono">{formatSeconds(record.after.overtime_seconds ?? record.after.overtime_hours * 3600)}</span></div>
+                                                                                    <div className="flex justify-between"><span className="text-gray-600">Fazla Mesai:</span><span className="font-mono">{formatSeconds(record.after.overtime_seconds ?? record.after.overtime_hours * 3600)}</span></div>
                                                                                     {(record.after.break_seconds || record.after.break_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Mola:</span><span className="font-mono">{formatSeconds(record.after.break_seconds ?? record.after.break_minutes * 60)}</span></div>}
                                                                                     {(record.after.missing_seconds || record.after.missing_minutes) > 0 && <div className="flex justify-between"><span className="text-gray-600">Eksik:</span><span className="font-mono text-red-600">{formatSeconds(record.after.missing_seconds ?? record.after.missing_minutes * 60)}</span></div>}
                                                                                     {record.after.potential_ot_count > 0 && (

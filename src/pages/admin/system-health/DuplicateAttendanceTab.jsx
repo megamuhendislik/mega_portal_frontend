@@ -36,7 +36,7 @@ const SOURCE_LABELS = {
     SPLIT: 'Split',
     AUTO_SPLIT: 'AutoSplit',
     SYSTEM: 'Sistem',
-    MANUAL_OT: 'Manuel OT',
+    MANUAL_OT: 'Manuel Fazla Mesai',
     SPECIAL_LEAVE: 'Özel İzin',
 };
 
@@ -409,7 +409,7 @@ export default function DuplicateAttendanceTab() {
                                                     <th className="px-2 py-2 text-left">Check-in</th>
                                                     <th className="px-2 py-2 text-left">Check-out</th>
                                                     <th className="px-2 py-2 text-right">Normal</th>
-                                                    <th className="px-2 py-2 text-right">OT</th>
+                                                    <th className="px-2 py-2 text-right">FM</th>
                                                     <th className="px-2 py-2 text-right">Eksik</th>
                                                     <th className="px-2 py-2 text-left">Created</th>
                                                     <th className="px-2 py-2 text-left">Δ</th>

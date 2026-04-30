@@ -274,7 +274,7 @@ export default function ApprovalDelayDetailModal({ open, onClose }) {
                     Onay Süresi Detayı
                 </h2>
                 <p className="text-[12px] text-slate-500 max-w-2xl">
-                    Seçili dönemde sonuçlanan ek mesai ve izin taleplerinin onay süreleri.
+                    Seçili dönemde sonuçlanan fazla mesai ve izin taleplerinin onay süreleri.
                     Karar bazlı satırlar, bant dağılımı ve onaylayan bilgileri.
                 </p>
             </div>
@@ -414,7 +414,7 @@ export default function ApprovalDelayDetailModal({ open, onClose }) {
                                 size="small"
                                 options={[
                                     { value: 'ALL', label: <span className="text-[11px]">Tümü</span> },
-                                    { value: 'OVERTIME', label: <span className="text-[11px]">Ek Mesai</span> },
+                                    { value: 'OVERTIME', label: <span className="text-[11px]">Fazla Mesai</span> },
                                     { value: 'LEAVE', label: <span className="text-[11px]">İzin</span> },
                                 ]}
                             />

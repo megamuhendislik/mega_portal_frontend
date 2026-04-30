@@ -32,7 +32,7 @@ const SEVERITY_CFG = {
 };
 
 const METRIC_CFG = {
-    overtime_hours: { label: 'Ek Mesai', unit: 'sa', color: '#f59e0b', icon: TrendingUp },
+    overtime_hours: { label: 'Fazla Mesai', unit: 'sa', color: '#f59e0b', icon: TrendingUp },
     worked_hours: { label: 'Çalışma', unit: 'sa', color: '#6366f1', icon: Activity },
     absence_days: { label: 'Devamsızlık', unit: 'gün', color: '#ef4444', icon: AlertTriangle },
     meal_count: { label: 'Yemek', unit: '', color: '#10b981', icon: BarChart3 },

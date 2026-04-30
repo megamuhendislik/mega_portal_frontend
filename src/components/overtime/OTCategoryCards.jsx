@@ -53,7 +53,7 @@ export default function OTCategoryCards({ intendedCount, intendedRejCount, poten
     <div className="space-y-3">
       <CategoryCard
         label="Planlanmış"
-        description="Yönetici tarafından atanan ek mesailer"
+        description="Yönetici tarafından atanan fazla mesailer"
         icon={CalendarCheck}
         iconBg="bg-emerald-100"
         iconColor="text-emerald-600"

@@ -391,7 +391,7 @@ export const OvertimeRequestForm = ({
             <div>
                 <div className="flex items-center gap-2 mb-3">
                     <Zap size={18} className="text-amber-500" />
-                    <h3 className="text-sm font-bold text-slate-800">Talep Edilebilir Ek Mesailer</h3>
+                    <h3 className="text-sm font-bold text-slate-800">Talep Edilebilir Fazla Mesailer</h3>
                 </div>
 
                 {claimableLoading && (
@@ -404,7 +404,7 @@ export const OvertimeRequestForm = ({
                 {!claimableLoading && !hasClaimable && (
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 flex items-center gap-2">
                         <CalendarDays size={16} />
-                        Talep edilebilir ek mesai bulunamadı. Manuel giriş yapabilirsiniz.
+                        Talep edilebilir fazla mesai bulunamadı. Manuel giriş yapabilirsiniz.
                     </div>
                 )}
 
@@ -570,7 +570,7 @@ export const OvertimeRequestForm = ({
                         <div>
                             <h4 className="text-sm font-bold text-blue-800">Talep Onayı</h4>
                             <p className="text-xs text-blue-700 mt-1">
-                                <strong>{formatDate(claimConfirm.date)}</strong> tarihli ek mesaiyi talep etmek istediğinize emin misiniz?
+                                <strong>{formatDate(claimConfirm.date)}</strong> tarihli fazla mesaiyi talep etmek istediğinize emin misiniz?
                             </p>
                         </div>
                     </div>
@@ -767,7 +767,7 @@ export const OvertimeRequestForm = ({
                                 value={overtimeForm.reason}
                                 onChange={e => setOvertimeForm({ ...overtimeForm, reason: e.target.value })}
                                 className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition-all resize-none font-medium text-slate-700"
-                                placeholder="Manuel ek mesai gerekçenizi ayrıntılı belirtiniz..."
+                                placeholder="Manuel fazla mesai gerekçenizi ayrıntılı belirtiniz..."
                             />
                         </div>
 
@@ -1064,7 +1064,7 @@ export const ExternalDutyForm = ({
                     <AlertCircle className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Mesai Hesaplama</h4>
-                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Vardiya saatleri içindeki süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>ek mesai</strong> olarak değerlendirilir. Tatil/hafta sonu günlerinde tüm süre ek mesai sayılır.</p>
+                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Vardiya saatleri içindeki süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>fazla mesai</strong> olarak değerlendirilir. Tatil/hafta sonu günlerinde tüm süre fazla mesai sayılır.</p>
                     </div>
                 </div>
                 <div>
@@ -1150,7 +1150,7 @@ export const ExternalDutyForm = ({
                                                 )}
                                                 {dayPreview.overtime_minutes > 0 && (
                                                     <span className="text-amber-600 font-bold">
-                                                        Ek Mesai: {Math.floor(dayPreview.overtime_minutes / 60)}s {dayPreview.overtime_minutes % 60}dk
+                                                        Fazla Mesai: {Math.floor(dayPreview.overtime_minutes / 60)}s {dayPreview.overtime_minutes % 60}dk
                                                     </span>
                                                 )}
                                                 {dayPreview.overtime_segments?.length > 0 && (
@@ -1162,7 +1162,7 @@ export const ExternalDutyForm = ({
                                                     <span className="text-[10px] text-slate-400">Hedef: {Math.floor(dayPreview.shift_target_minutes / 60)}s {dayPreview.shift_target_minutes % 60}dk</span>
                                                 )}
                                                 {dayPreview?.is_off_day && (
-                                                    <span className="text-[10px] text-red-400 font-medium">Tatil / hafta sonu — tümü ek mesai</span>
+                                                    <span className="text-[10px] text-red-400 font-medium">Tatil / hafta sonu — tümü fazla mesai</span>
                                                 )}
                                                 {dayPreview?.existing_card_minutes > 0 && (
                                                     <div className="w-full mt-1 pt-1 border-t border-dashed border-slate-200 flex items-center gap-3 flex-wrap">
@@ -1171,7 +1171,7 @@ export const ExternalDutyForm = ({
                                                         </span>
                                                         <span className="text-[10px] text-purple-600 font-bold">
                                                             Birleşik → Normal: {Math.floor(dayPreview.combined_normal_minutes / 60)}s {dayPreview.combined_normal_minutes % 60}dk
-                                                            {dayPreview.combined_ot_minutes > 0 && ` + OT: ${Math.floor(dayPreview.combined_ot_minutes / 60)}s ${dayPreview.combined_ot_minutes % 60}dk`}
+                                                            {dayPreview.combined_ot_minutes > 0 && ` + Fazla Mesai: ${Math.floor(dayPreview.combined_ot_minutes / 60)}s ${dayPreview.combined_ot_minutes % 60}dk`}
                                                         </span>
                                                     </div>
                                                 )}
@@ -1192,7 +1192,7 @@ export const ExternalDutyForm = ({
                                         </span>
                                     </div>
                                     <div className="text-center">
-                                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Görev Ek Mesai</span>
+                                        <span className="block text-[10px] text-slate-400 font-bold uppercase">Görev Fazla Mesai</span>
                                         <span className="block font-black text-amber-600 text-lg">
                                             {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
                                         </span>
@@ -1215,7 +1215,7 @@ export const ExternalDutyForm = ({
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="block text-[10px] text-slate-400">Ek Mesai</span>
+                                                <span className="block text-[10px] text-slate-400">Fazla Mesai</span>
                                                 <span className="block font-bold text-amber-600">
                                                     {Math.floor(dutyHoursPreview.totals.combined_ot_minutes / 60)}s {dutyHoursPreview.totals.combined_ot_minutes % 60}dk
                                                 </span>
@@ -1239,9 +1239,9 @@ export const ExternalDutyForm = ({
                                             <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
                                                 <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
                                                 <li>Vardiya saatleri içindeki görev süresi <strong>normal mesai</strong> olarak yazılır</li>
-                                                <li>Vardiya saatleri dışındaki görev süresi <strong>ek mesai</strong> olarak değerlendirilir</li>
-                                                <li>Ek mesai, haftalık limit dahilinde otomatik onaylanır</li>
-                                                {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>ek mesai</strong> sayılır</li>}
+                                                <li>Vardiya saatleri dışındaki görev süresi <strong>fazla mesai</strong> olarak değerlendirilir</li>
+                                                <li>Fazla mesai, haftalık limit dahilinde otomatik onaylanır</li>
+                                                {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>fazla mesai</strong> sayılır</li>}
                                                 <li>Aynı gün kart verisi varsa birleştirilir</li>
                                             </ul>
                                         </div>
@@ -1562,7 +1562,7 @@ export const ExternalDutyForm = ({
                                 </span>
                             </div>
                             <div className="bg-white p-2.5 rounded-lg border border-amber-100 text-center">
-                                <span className="block text-[10px] text-slate-400 font-bold uppercase">Ek Mesai</span>
+                                <span className="block text-[10px] text-slate-400 font-bold uppercase">Fazla Mesai</span>
                                 <span className="block font-black text-amber-600 text-lg">
                                     {Math.floor(dutyHoursPreview.totals.total_overtime_minutes / 60)}s {dutyHoursPreview.totals.total_overtime_minutes % 60}dk
                                 </span>
@@ -1626,10 +1626,10 @@ export const ExternalDutyForm = ({
                                 onChange={(e) => setExternalDutyForm(prev => ({ ...prev, include_overtime: e.target.checked }))}
                                 className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
                             />
-                            <span className="text-sm font-medium text-amber-800">Ek mesai saatlerini talep et</span>
+                            <span className="text-sm font-medium text-amber-800">Fazla mesai saatlerini talep et</span>
                         </label>
                         <div className="text-xs text-amber-600 mt-1 ml-6">
-                            Toplam OT: {Math.round(dutyHoursPreview.totals.total_overtime_minutes / 60 * 10) / 10} saat
+                            Toplam Fazla Mesai: {Math.round(dutyHoursPreview.totals.total_overtime_minutes / 60 * 10) / 10} saat
                         </div>
                         {weeklyOtForDuty && !weeklyOtForDuty.is_unlimited && (
                             <div className="text-xs mt-1 ml-6">
@@ -1638,7 +1638,7 @@ export const ExternalDutyForm = ({
                                 </span>
                                 {weeklyOtForDuty.remaining_hours < dutyHoursPreview.totals.total_overtime_minutes / 60 && (
                                     <div className="text-red-600 font-medium mt-0.5">
-                                        Haftalık limit aşılacak — OT kısmı potansiyel olarak kalacak
+                                        Haftalık limit aşılacak — Fazla Mesai kısmı potansiyel olarak kalacak
                                     </div>
                                 )}
                             </div>
@@ -1660,8 +1660,8 @@ export const ExternalDutyForm = ({
                                         {shiftTargetMin > 0 && (
                                             <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
                                         )}
-                                        <li>Hedefi aşan süre <strong>ek mesai</strong> olarak otomatik onaylanır</li>
-                                        {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>ek mesai</strong> sayılır</li>}
+                                        <li>Hedefi aşan süre <strong>fazla mesai</strong> olarak otomatik onaylanır</li>
+                                        {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>fazla mesai</strong> sayılır</li>}
                                         <li>Aynı gün kart verisi varsa birleştirilir</li>
                                     </ul>
                                 </div>
