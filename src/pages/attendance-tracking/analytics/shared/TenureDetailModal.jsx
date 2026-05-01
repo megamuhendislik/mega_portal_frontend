@@ -3,7 +3,7 @@ import { Modal, Input, Table, Empty, Segmented } from 'antd';
 import {
     Search as SearchIcon, X as CloseIcon, Calendar, Users, Sparkles,
     SortAsc, SortDesc, Filter as FilterIcon, Building2, Layers,
-    Briefcase, CheckCircle2, MinusCircle,
+    Briefcase, CheckCircle2,
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
@@ -109,24 +109,19 @@ function deptColor(dept) {
     return DEPT_PALETTE[hash % DEPT_PALETTE.length];
 }
 
-// Include/exclude tabanlı facet filtre
-function applyFacetFilter(list, key, selected, mode) {
-    if (!selected || selected.length === 0) return list;
-    const set = new Set(selected);
-    if (mode === 'exclude') {
-        return list.filter((e) => !set.has(e[key] || '—'));
-    }
-    return list.filter((e) => set.has(e[key] || '—'));
+// Hariç tutulanları listeden çıkarır — boş set = filtre yok
+function applyExcludeFilter(list, key, excluded) {
+    if (!excluded || excluded.length === 0) return list;
+    const set = new Set(excluded);
+    return list.filter((e) => !set.has(e[key] || '—'));
 }
 
 export default function TenureDetailModal({ open, onClose, data }) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('months_desc');
     const [bandFilter, setBandFilter] = useState('all');
-    const [selectedDepts, setSelectedDepts] = useState([]); // boş = tümü
-    const [deptMode, setDeptMode] = useState('include'); // 'include' | 'exclude'
-    const [selectedPositions, setSelectedPositions] = useState([]);
-    const [positionMode, setPositionMode] = useState('include');
+    const [excludedDepts, setExcludedDepts] = useState([]); // boş = hepsi dahil
+    const [excludedPositions, setExcludedPositions] = useState([]);
     const [viewMode, setViewMode] = useState('combined'); // 'combined' | 'grouped'
 
     const allEmployees = useMemo(() => data?.all_employees || [], [data]);
@@ -156,13 +151,13 @@ export default function TenureDetailModal({ open, onClose, data }) {
     const showDeptFilter = departmentList.length > 1;
     const showPositionFilter = positionList.length > 1;
 
-    // Facet filtreleri uygulanmış kaynak liste — bant/total/stats hesabında kullanılır
+    // Hariç tutulanlar uygulanmış kaynak liste — bant/total/stats hesabında kullanılır
     const facetFilteredEmployees = useMemo(() => {
         let list = allEmployees;
-        if (showDeptFilter) list = applyFacetFilter(list, 'department', selectedDepts, deptMode);
-        if (showPositionFilter) list = applyFacetFilter(list, 'position', selectedPositions, positionMode);
+        if (showDeptFilter) list = applyExcludeFilter(list, 'department', excludedDepts);
+        if (showPositionFilter) list = applyExcludeFilter(list, 'position', excludedPositions);
         return list;
-    }, [allEmployees, selectedDepts, deptMode, selectedPositions, positionMode, showDeptFilter, showPositionFilter]);
+    }, [allEmployees, excludedDepts, excludedPositions, showDeptFilter, showPositionFilter]);
 
     // Filtreli liste — facet + search + band
     const filtered = useMemo(() => {
@@ -355,30 +350,20 @@ export default function TenureDetailModal({ open, onClose, data }) {
         },
     ];
 
-    // Departmanın tıklama handler'ı (toggle)
-    const toggleDept = (dept) => {
-        setSelectedDepts((prev) => {
-            if (prev.includes(dept)) {
-                return prev.filter((d) => d !== dept);
-            }
-            return [...prev, dept];
-        });
+    // Hariç tut/dahil et toggle — chip ✕'sine basıldığında
+    const toggleExcludeDept = (dept) => {
+        setExcludedDepts((prev) => prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]);
+    };
+    const toggleExcludePosition = (pos) => {
+        setExcludedPositions((prev) => prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]);
     };
 
-    const togglePosition = (pos) => {
-        setSelectedPositions((prev) => {
-            if (prev.includes(pos)) {
-                return prev.filter((p) => p !== pos);
-            }
-            return [...prev, pos];
-        });
-    };
-
-    // Reusable facet filter section (dept veya pozisyon)
+    // Reusable facet filter section — exclusion-first mantık
+    // Tüm chip'ler baştan dahil; sağdaki ✕'ye basıldığında üstü çizilir ve hariç tutulur.
     const renderFacetFilter = ({
-        label, icon: Icon, items, selected, onToggle, mode, onModeChange, onReset, accentClass,
+        label, icon: Icon, items, excluded, onToggleExclude, onReset, accentClass,
     }) => {
-        const isExclude = mode === 'exclude';
+        const excludedCount = excluded.length;
         return (
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -387,65 +372,50 @@ export default function TenureDetailModal({ open, onClose, data }) {
                         {label}
                     </span>
                     <span className="text-[10px] text-slate-400">· {items.length} farklı</span>
-                    {selected.length > 0 && (
-                        <span
-                            className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${isExclude ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}
-                        >
-                            {isExclude ? `${selected.length} hariç` : `${selected.length} seçili`}
+                    {excludedCount > 0 && (
+                        <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded bg-rose-50 text-rose-600">
+                            {excludedCount} hariç
                         </span>
                     )}
-                    <div className="ml-auto flex items-center gap-2">
-                        {selected.length > 0 && (
-                            <button
-                                onClick={onReset}
-                                className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1"
-                            >
-                                <CloseIcon size={10} />
-                                Temizle
-                            </button>
-                        )}
-                        <Segmented
-                            value={mode}
-                            onChange={onModeChange}
-                            size="small"
-                            options={[
-                                { value: 'include', label: <span className="flex items-center gap-1 px-1 text-[11px]"><CheckCircle2 size={10} /> Sadece</span> },
-                                { value: 'exclude', label: <span className="flex items-center gap-1 px-1 text-[11px]"><MinusCircle size={10} /> Çıkar</span> },
-                            ]}
-                        />
-                    </div>
+                    {excludedCount > 0 && (
+                        <button
+                            onClick={onReset}
+                            className="ml-auto text-[10px] font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                        >
+                            <CloseIcon size={10} />
+                            Hepsini Geri Al
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                     {items.map((item) => {
-                        const isSelected = selected.includes(item.name);
-                        let cls;
-                        if (isSelected && isExclude) {
-                            cls = 'bg-rose-50 border-rose-300 text-rose-700 line-through';
-                        } else if (isSelected) {
-                            cls = 'bg-indigo-50 border-indigo-300 text-indigo-700';
-                        } else if (selected.length > 0 && !isExclude) {
-                            cls = 'bg-slate-50 border-slate-200 text-slate-500 opacity-50 hover:opacity-100';
-                        } else {
-                            cls = 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100';
-                        }
+                        const isExcluded = excluded.includes(item.name);
+                        const cls = isExcluded
+                            ? 'bg-rose-50 border-rose-300 text-rose-600 line-through opacity-70'
+                            : 'bg-emerald-50/60 border-emerald-200 text-emerald-800 hover:bg-emerald-50';
                         return (
-                            <button
+                            <span
                                 key={item.name}
-                                onClick={() => onToggle(item.name)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${cls}`}
+                                className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-[10px] font-semibold border transition-all ${cls}`}
                             >
-                                {item.name}
-                                <span className="ml-1.5 text-[9px] tabular-nums opacity-70">({item.count})</span>
-                            </button>
+                                <span>{item.name}</span>
+                                <span className="text-[9px] tabular-nums opacity-70">({item.count})</span>
+                                <button
+                                    onClick={() => onToggleExclude(item.name)}
+                                    title={isExcluded ? 'Analize geri ekle' : 'Analizden çıkar'}
+                                    className={`ml-0.5 flex h-4 w-4 items-center justify-center rounded-full transition-colors ${isExcluded
+                                        ? 'bg-rose-200 text-rose-700 hover:bg-rose-300'
+                                        : 'bg-white/80 text-slate-400 hover:bg-rose-100 hover:text-rose-600 border border-slate-200'
+                                    }`}
+                                >
+                                    {isExcluded ? <CheckCircle2 size={9} /> : <CloseIcon size={9} strokeWidth={3} />}
+                                </button>
+                            </span>
                         );
                     })}
                 </div>
                 <div className="mt-2 text-[10px] text-slate-400">
-                    {isExclude
-                        ? 'Seçili olanlar listeden çıkarılır (gri = listede kalır, kırmızı = hariç)'
-                        : (selected.length === 0
-                            ? 'Tıklayarak seç (boşken hepsi gösterilir)'
-                            : 'Sadece seçili olanlar gösterilir')}
+                    Sağdaki <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-100 text-rose-600 mx-0.5"><CloseIcon size={8} strokeWidth={3} /></span> ile analizden çıkar · üstü çizili olanları geri eklemek için <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-200 text-rose-700 mx-0.5"><CheckCircle2 size={8} /></span> ikonuna bas.
                 </div>
             </div>
         );
@@ -734,30 +704,26 @@ export default function TenureDetailModal({ open, onClose, data }) {
                     </div>
                 )}
 
-                {/* Departman Filtresi */}
-                {showDeptFilter && renderFacetFilter({
-                    label: 'Departman Filtresi',
-                    icon: Building2,
-                    items: departmentList,
-                    selected: selectedDepts,
-                    onToggle: toggleDept,
-                    mode: deptMode,
-                    onModeChange: setDeptMode,
-                    onReset: () => setSelectedDepts([]),
-                    accentClass: 'text-indigo-600',
-                })}
-
-                {/* Pozisyon Filtresi (Mühendis vs.) */}
+                {/* Pozisyon Filtresi (Mühendis vs.) — analizden çıkarılacaklar */}
                 {showPositionFilter && renderFacetFilter({
-                    label: 'Pozisyon Filtresi',
+                    label: 'Pozisyonlar',
                     icon: Briefcase,
                     items: positionList,
-                    selected: selectedPositions,
-                    onToggle: togglePosition,
-                    mode: positionMode,
-                    onModeChange: setPositionMode,
-                    onReset: () => setSelectedPositions([]),
+                    excluded: excludedPositions,
+                    onToggleExclude: toggleExcludePosition,
+                    onReset: () => setExcludedPositions([]),
                     accentClass: 'text-emerald-600',
+                })}
+
+                {/* Departman Filtresi — analizden çıkarılacaklar */}
+                {showDeptFilter && renderFacetFilter({
+                    label: 'Departmanlar',
+                    icon: Building2,
+                    items: departmentList,
+                    excluded: excludedDepts,
+                    onToggleExclude: toggleExcludeDept,
+                    onReset: () => setExcludedDepts([]),
+                    accentClass: 'text-indigo-600',
                 })}
 
                 {/* Hero Stats */}
