@@ -3,6 +3,7 @@ import { Modal, Input, Table, Empty, Segmented } from 'antd';
 import {
     Search as SearchIcon, X as CloseIcon, Calendar, Users, Sparkles,
     SortAsc, SortDesc, Filter as FilterIcon, Building2, Layers,
+    Briefcase, CheckCircle2, MinusCircle,
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
@@ -86,6 +87,16 @@ function computeStats(list) {
     return { avg, median };
 }
 
+// Bir liste için yaş ortalaması / medyanı (age=null olanlar hariç)
+function computeAgeStats(list) {
+    const ages = list.map((e) => e.age).filter((a) => a !== null && a !== undefined);
+    if (!ages.length) return { avg: 0, median: 0, count: 0 };
+    const avg = ages.reduce((a, b) => a + b, 0) / ages.length;
+    const sorted = [...ages].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return { avg, median, count: ages.length };
+}
+
 // Departman bazlı tutarlı renkler (hash bazlı)
 const DEPT_PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
 
@@ -98,16 +109,29 @@ function deptColor(dept) {
     return DEPT_PALETTE[hash % DEPT_PALETTE.length];
 }
 
+// Include/exclude tabanlı facet filtre
+function applyFacetFilter(list, key, selected, mode) {
+    if (!selected || selected.length === 0) return list;
+    const set = new Set(selected);
+    if (mode === 'exclude') {
+        return list.filter((e) => !set.has(e[key] || '—'));
+    }
+    return list.filter((e) => set.has(e[key] || '—'));
+}
+
 export default function TenureDetailModal({ open, onClose, data }) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('months_desc');
     const [bandFilter, setBandFilter] = useState('all');
     const [selectedDepts, setSelectedDepts] = useState([]); // boş = tümü
+    const [deptMode, setDeptMode] = useState('include'); // 'include' | 'exclude'
+    const [selectedPositions, setSelectedPositions] = useState([]);
+    const [positionMode, setPositionMode] = useState('include');
     const [viewMode, setViewMode] = useState('combined'); // 'combined' | 'grouped'
 
     const allEmployees = useMemo(() => data?.all_employees || [], [data]);
 
-    // Departman çeşitliliği — selectedDepts başlangıç değeri için
+    // Departman çeşitliliği
     const departmentList = useMemo(() => {
         const map = new Map();
         allEmployees.forEach((e) => {
@@ -118,32 +142,38 @@ export default function TenureDetailModal({ open, onClose, data }) {
             .sort((a, b) => b.count - a.count);
     }, [allEmployees]);
 
+    // Pozisyon çeşitliliği
+    const positionList = useMemo(() => {
+        const map = new Map();
+        allEmployees.forEach((e) => {
+            const pos = e.position || '—';
+            map.set(pos, (map.get(pos) || 0) + 1);
+        });
+        return Array.from(map.entries()).map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [allEmployees]);
+
     const showDeptFilter = departmentList.length > 1;
+    const showPositionFilter = positionList.length > 1;
 
-    // Initial selection: tümü
-    React.useEffect(() => {
-        if (selectedDepts.length === 0 && departmentList.length > 0) {
-            // Tümünü seçili tut (boş = tümü, ama görsel için listeyi de tutuyoruz)
-            // Kullanıcı tıkladığında değişir
-        }
-    }, [departmentList, selectedDepts.length]);
+    // Facet filtreleri uygulanmış kaynak liste — bant/total/stats hesabında kullanılır
+    const facetFilteredEmployees = useMemo(() => {
+        let list = allEmployees;
+        if (showDeptFilter) list = applyFacetFilter(list, 'department', selectedDepts, deptMode);
+        if (showPositionFilter) list = applyFacetFilter(list, 'position', selectedPositions, positionMode);
+        return list;
+    }, [allEmployees, selectedDepts, deptMode, selectedPositions, positionMode, showDeptFilter, showPositionFilter]);
 
-    // Filtreli liste — search + band + dept
+    // Filtreli liste — facet + search + band
     const filtered = useMemo(() => {
-        let list = [...allEmployees];
-
-        // Department filter
-        if (showDeptFilter && selectedDepts.length > 0) {
-            const set = new Set(selectedDepts);
-            list = list.filter((e) => set.has(e.department || '—'));
-        }
+        let list = [...facetFilteredEmployees];
 
         // Search
         if (search) {
             const tr = (s) => String(s || '').toLowerCase()
                 .replace(/[ışçöüğİ]/g, c => ({ ı: 'i', ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', İ: 'i' })[c] || c);
             const q = tr(search);
-            list = list.filter((e) => tr(e.name).includes(q) || tr(e.department).includes(q));
+            list = list.filter((e) => tr(e.name).includes(q) || tr(e.department).includes(q) || tr(e.position).includes(q));
         }
 
         // Band filter
@@ -157,15 +187,19 @@ export default function TenureDetailModal({ open, onClose, data }) {
             if (sortBy === 'months_desc') return (b.months || 0) - (a.months || 0);
             if (sortBy === 'name') return String(a.name || '').localeCompare(String(b.name || ''), 'tr');
             if (sortBy === 'department') {
-                // Önce departmana göre, sonra dept içinde kıdem desc
                 const dCmp = String(a.department || '').localeCompare(String(b.department || ''), 'tr');
                 if (dCmp !== 0) return dCmp;
+                return (b.months || 0) - (a.months || 0);
+            }
+            if (sortBy === 'position') {
+                const pCmp = String(a.position || '').localeCompare(String(b.position || ''), 'tr');
+                if (pCmp !== 0) return pCmp;
                 return (b.months || 0) - (a.months || 0);
             }
             return 0;
         });
         return list;
-    }, [allEmployees, search, bandFilter, sortBy, selectedDepts, showDeptFilter]);
+    }, [facetFilteredEmployees, search, bandFilter, sortBy]);
 
     // Chart datası — combined mode için
     const chartData = useMemo(() => filtered.map((e) => ({
@@ -173,6 +207,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
         fullName: e.name,
         department: e.department,
         months: e.months || 0,
+        age: e.age ?? null,
         band: getBand(e.months || 0),
         color: BAND_COLORS[getBand(e.months || 0)],
     })), [filtered]);
@@ -196,6 +231,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                     fullName: e.name,
                     department: e.department,
                     months: e.months || 0,
+                    age: e.age ?? null,
                     band: getBand(e.months || 0),
                     color: BAND_COLORS[getBand(e.months || 0)],
                 })),
@@ -203,29 +239,16 @@ export default function TenureDetailModal({ open, onClose, data }) {
             .sort((a, b) => b.count - a.count);
     }, [filtered]);
 
-    // Bant sayıları — overall
+    // Bant sayıları — facet filtreli
     const bandCounts = useMemo(() => {
         const counts = { '<1yr': 0, '1-5yr': 0, '5-10yr': 0, '10yr+': 0 };
-        const sourceList = (showDeptFilter && selectedDepts.length > 0)
-            ? allEmployees.filter((e) => selectedDepts.includes(e.department || '—'))
-            : allEmployees;
-        sourceList.forEach((e) => { counts[getBand(e.months || 0)]++; });
+        facetFilteredEmployees.forEach((e) => { counts[getBand(e.months || 0)]++; });
         return counts;
-    }, [allEmployees, selectedDepts, showDeptFilter]);
+    }, [facetFilteredEmployees]);
 
-    const totalCount = useMemo(() => {
-        if (showDeptFilter && selectedDepts.length > 0) {
-            return allEmployees.filter((e) => selectedDepts.includes(e.department || '—')).length;
-        }
-        return allEmployees.length;
-    }, [allEmployees, selectedDepts, showDeptFilter]);
-
-    const overallStats = useMemo(() => {
-        const sourceList = (showDeptFilter && selectedDepts.length > 0)
-            ? allEmployees.filter((e) => selectedDepts.includes(e.department || '—'))
-            : allEmployees;
-        return computeStats(sourceList);
-    }, [allEmployees, selectedDepts, showDeptFilter]);
+    const totalCount = facetFilteredEmployees.length;
+    const overallStats = useMemo(() => computeStats(facetFilteredEmployees), [facetFilteredEmployees]);
+    const ageStats = useMemo(() => computeAgeStats(facetFilteredEmployees), [facetFilteredEmployees]);
 
     const avgYears = overallStats.avg / 12;
     const medianYears = overallStats.median / 12;
@@ -263,6 +286,17 @@ export default function TenureDetailModal({ open, onClose, data }) {
             render: (v) => <span className="text-slate-500 text-[12px]">{v || '—'}</span>,
         },
         {
+            title: 'Pozisyon',
+            dataIndex: 'position',
+            sorter: (a, b) => String(a.position || '').localeCompare(String(b.position || ''), 'tr'),
+            render: (v) => (
+                <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+                    <Briefcase size={9} className="text-slate-400" />
+                    {v || '—'}
+                </span>
+            ),
+        },
+        {
             title: 'İşe Başlama',
             dataIndex: 'hired_date',
             sorter: (a, b) => String(a.hired_date || '').localeCompare(String(b.hired_date || '')),
@@ -279,6 +313,24 @@ export default function TenureDetailModal({ open, onClose, data }) {
                     {formatTenureLong(v || 0)}
                 </span>
             ),
+        },
+        {
+            title: <span className="font-semibold text-[12px]">Yaş</span>,
+            dataIndex: 'age',
+            sorter: (a, b) => {
+                const av = a.age == null ? -1 : a.age;
+                const bv = b.age == null ? -1 : b.age;
+                return av - bv;
+            },
+            align: 'right',
+            render: (v, row) => {
+                if (v == null) return <span className="text-slate-300 text-[12px]">—</span>;
+                return (
+                    <span className="font-bold tabular-nums text-rose-600 text-[13px]" title={row.birth_date ? `Doğum: ${row.birth_date}` : undefined}>
+                        {v}
+                    </span>
+                );
+            },
         },
         {
             title: 'Bant',
@@ -311,6 +363,92 @@ export default function TenureDetailModal({ open, onClose, data }) {
             }
             return [...prev, dept];
         });
+    };
+
+    const togglePosition = (pos) => {
+        setSelectedPositions((prev) => {
+            if (prev.includes(pos)) {
+                return prev.filter((p) => p !== pos);
+            }
+            return [...prev, pos];
+        });
+    };
+
+    // Reusable facet filter section (dept veya pozisyon)
+    const renderFacetFilter = ({
+        label, icon: Icon, items, selected, onToggle, mode, onModeChange, onReset, accentClass,
+    }) => {
+        const isExclude = mode === 'exclude';
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Icon size={13} className={accentClass} />
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+                        {label}
+                    </span>
+                    <span className="text-[10px] text-slate-400">· {items.length} farklı</span>
+                    {selected.length > 0 && (
+                        <span
+                            className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${isExclude ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}
+                        >
+                            {isExclude ? `${selected.length} hariç` : `${selected.length} seçili`}
+                        </span>
+                    )}
+                    <div className="ml-auto flex items-center gap-2">
+                        {selected.length > 0 && (
+                            <button
+                                onClick={onReset}
+                                className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                            >
+                                <CloseIcon size={10} />
+                                Temizle
+                            </button>
+                        )}
+                        <Segmented
+                            value={mode}
+                            onChange={onModeChange}
+                            size="small"
+                            options={[
+                                { value: 'include', label: <span className="flex items-center gap-1 px-1 text-[11px]"><CheckCircle2 size={10} /> Sadece</span> },
+                                { value: 'exclude', label: <span className="flex items-center gap-1 px-1 text-[11px]"><MinusCircle size={10} /> Çıkar</span> },
+                            ]}
+                        />
+                    </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    {items.map((item) => {
+                        const isSelected = selected.includes(item.name);
+                        let cls;
+                        if (isSelected && isExclude) {
+                            cls = 'bg-rose-50 border-rose-300 text-rose-700 line-through';
+                        } else if (isSelected) {
+                            cls = 'bg-indigo-50 border-indigo-300 text-indigo-700';
+                        } else if (selected.length > 0 && !isExclude) {
+                            cls = 'bg-slate-50 border-slate-200 text-slate-500 opacity-50 hover:opacity-100';
+                        } else {
+                            cls = 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100';
+                        }
+                        return (
+                            <button
+                                key={item.name}
+                                onClick={() => onToggle(item.name)}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${cls}`}
+                            >
+                                {item.name}
+                                <span className="ml-1.5 text-[9px] tabular-nums opacity-70">({item.count})</span>
+                            </button>
+                        );
+                    })}
+                </div>
+                <div className="mt-2 text-[10px] text-slate-400">
+                    {isExclude
+                        ? 'Seçili olanlar listeden çıkarılır (gri = listede kalır, kırmızı = hariç)'
+                        : (selected.length === 0
+                            ? 'Tıklayarak seç (boşken hepsi gösterilir)'
+                            : 'Sadece seçili olanlar gösterilir')}
+                </div>
+            </div>
+        );
     };
 
     // Çalışan adı tek satır Y-axis tick (sadece adı; dept yan panelden gelir)
@@ -372,6 +510,12 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                         <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
                                             <span className="text-slate-600 text-[11px]">Kıdem:</span>
                                             <span className="font-black text-slate-900 tabular-nums text-[11px]">{formatTenureLong(d.months)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between mt-0.5">
+                                            <span className="text-slate-600 text-[11px]">Yaş:</span>
+                                            <span className="font-black text-rose-600 tabular-nums text-[11px]">
+                                                {d.age != null ? `${d.age} yaş` : '—'}
+                                            </span>
                                         </div>
                                     </div>
                                 );
@@ -508,6 +652,12 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                             <span className="text-slate-600 text-[11px]">Kıdem:</span>
                                             <span className="font-black text-slate-900 tabular-nums text-[11px]">{formatTenureLong(d.months)}</span>
                                         </div>
+                                        <div className="flex items-center justify-between mt-0.5">
+                                            <span className="text-slate-600 text-[11px]">Yaş:</span>
+                                            <span className="font-black text-rose-600 tabular-nums text-[11px]">
+                                                {d.age != null ? `${d.age} yaş` : '—'}
+                                            </span>
+                                        </div>
                                     </div>
                                 );
                             }}
@@ -569,66 +719,49 @@ export default function TenureDetailModal({ open, onClose, data }) {
             </div>
 
             <div className="px-7 py-5 space-y-5">
-                {/* Departman Filtresi (sadece 2+ dept varsa) */}
+                {/* Görünüm modu (Birleşik / Gruplu) — dept filtresi varsa */}
                 {showDeptFilter && (
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                            <Building2 size={13} className="text-indigo-600" />
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                                Departman Filtresi
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                                · {departmentList.length} farklı departman
-                            </span>
-                            <div className="ml-auto flex items-center gap-2">
-                                {selectedDepts.length > 0 && (
-                                    <button
-                                        onClick={() => setSelectedDepts([])}
-                                        className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                                    >
-                                        <CloseIcon size={10} />
-                                        Tümünü Sıfırla
-                                    </button>
-                                )}
-                                <Segmented
-                                    value={viewMode}
-                                    onChange={setViewMode}
-                                    size="small"
-                                    options={[
-                                        { value: 'combined', label: <span className="flex items-center gap-1 px-1"><Layers size={10} /> Birleşik</span> },
-                                        { value: 'grouped', label: <span className="flex items-center gap-1 px-1"><Building2 size={10} /> Gruplu</span> },
-                                    ]}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            {departmentList.map((d) => {
-                                const isActive = selectedDepts.length === 0 || selectedDepts.includes(d.name);
-                                return (
-                                    <button
-                                        key={d.name}
-                                        onClick={() => toggleDept(d.name)}
-                                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${isActive
-                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                            : 'bg-slate-50 border-slate-200 text-slate-500 opacity-60 hover:opacity-100'
-                                        }`}
-                                    >
-                                        {d.name}
-                                        <span className="ml-1.5 text-[9px] tabular-nums opacity-70">({d.count})</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {selectedDepts.length > 0 && (
-                            <div className="mt-2 text-[10px] text-slate-400">
-                                Tıklayarak departman seç (hiçbiri seçili değilken hepsi gösterilir)
-                            </div>
-                        )}
+                    <div className="flex items-center justify-end">
+                        <Segmented
+                            value={viewMode}
+                            onChange={setViewMode}
+                            size="small"
+                            options={[
+                                { value: 'combined', label: <span className="flex items-center gap-1 px-1"><Layers size={10} /> Birleşik Görünüm</span> },
+                                { value: 'grouped', label: <span className="flex items-center gap-1 px-1"><Building2 size={10} /> Departmana Göre Grupla</span> },
+                            ]}
+                        />
                     </div>
                 )}
 
+                {/* Departman Filtresi */}
+                {showDeptFilter && renderFacetFilter({
+                    label: 'Departman Filtresi',
+                    icon: Building2,
+                    items: departmentList,
+                    selected: selectedDepts,
+                    onToggle: toggleDept,
+                    mode: deptMode,
+                    onModeChange: setDeptMode,
+                    onReset: () => setSelectedDepts([]),
+                    accentClass: 'text-indigo-600',
+                })}
+
+                {/* Pozisyon Filtresi (Mühendis vs.) */}
+                {showPositionFilter && renderFacetFilter({
+                    label: 'Pozisyon Filtresi',
+                    icon: Briefcase,
+                    items: positionList,
+                    selected: selectedPositions,
+                    onToggle: togglePosition,
+                    mode: positionMode,
+                    onModeChange: setPositionMode,
+                    onReset: () => setSelectedPositions([]),
+                    accentClass: 'text-emerald-600',
+                })}
+
                 {/* Hero Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="absolute -right-3 -top-3 h-20 w-20 rounded-full bg-gradient-to-br from-indigo-100 to-blue-50 blur-2xl opacity-60" />
                         <div className="relative">
@@ -670,6 +803,34 @@ export default function TenureDetailModal({ open, onClose, data }) {
                                 </span>
                                 <span className="text-[11px] text-slate-400 font-semibold">yıl</span>
                             </div>
+                        </div>
+                    </div>
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="absolute -right-3 -top-3 h-20 w-20 rounded-full bg-gradient-to-br from-rose-100 to-pink-50 blur-2xl opacity-60" />
+                        <div className="relative">
+                            <div className="flex items-center gap-1.5 mb-2">
+                                <Users size={11} className="text-rose-500" />
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ortalama Yaş</span>
+                            </div>
+                            {ageStats.count > 0 ? (
+                                <>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">
+                                            {ageStats.avg.toFixed(1)}
+                                        </span>
+                                        <span className="text-[11px] text-slate-400 font-semibold">
+                                            yaş · medyan {Math.round(ageStats.median)}
+                                        </span>
+                                    </div>
+                                    {ageStats.count < totalCount && (
+                                        <div className="text-[9px] text-slate-400 mt-0.5">
+                                            {ageStats.count}/{totalCount} kişide doğum tarihi kayıtlı
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-[11px] text-slate-400 italic">Doğum tarihi yok</div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -730,7 +891,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                         <FilterIcon size={11} /> Filtre
                     </div>
                     <Input
-                        placeholder="Ad veya departman ara..."
+                        placeholder="Ad, departman veya pozisyon ara..."
                         prefix={<SearchIcon size={12} className="text-slate-400" />}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -747,6 +908,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
                             { value: 'months_asc', label: <span className="flex items-center gap-1 text-[11px]"><SortAsc size={10} /> Kıdem</span> },
                             { value: 'name', label: <span className="text-[11px]">Ad</span> },
                             { value: 'department', label: <span className="text-[11px]">Dept</span> },
+                            { value: 'position', label: <span className="text-[11px]">Pozisyon</span> },
                         ]}
                     />
                     <span className="ml-auto text-[10px] text-slate-500">

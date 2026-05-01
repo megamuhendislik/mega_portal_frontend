@@ -136,9 +136,30 @@ export default function WorkforcePanel() {
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-                                <span>Ort. <span className="font-bold text-slate-700">{Math.round((tenure?.avg_months || 0) / 12 * 10) / 10}</span> yıl</span>
-                                <span>Medyan <span className="font-bold text-slate-700">{Math.round((tenure?.median_months || 0) / 12 * 10) / 10}</span> yıl</span>
+                            <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+                                <div className="text-[11px] text-slate-500 flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Kıdem</span>
+                                    <span className="flex items-center gap-2">
+                                        <span>Ort. <span className="font-bold text-slate-700 tabular-nums">{Math.round((tenure?.avg_months || 0) / 12 * 10) / 10}</span> yıl</span>
+                                        <span className="text-slate-300">·</span>
+                                        <span>Medyan <span className="font-bold text-slate-700 tabular-nums">{Math.round((tenure?.median_months || 0) / 12 * 10) / 10}</span> yıl</span>
+                                    </span>
+                                </div>
+                                {tenure?.employees_with_birth_date > 0 && (
+                                    <div className="text-[11px] text-slate-500 flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Yaş</span>
+                                        <span className="flex items-center gap-2">
+                                            <span>Ort. <span className="font-bold text-slate-700 tabular-nums">{tenure?.avg_age || 0}</span></span>
+                                            <span className="text-slate-300">·</span>
+                                            <span>Medyan <span className="font-bold text-slate-700 tabular-nums">{tenure?.median_age || 0}</span></span>
+                                            {tenure?.employees_with_birth_date < tenure?.total && (
+                                                <Tooltip title={`${tenure.employees_with_birth_date}/${tenure.total} kişide doğum tarihi kayıtlı`}>
+                                                    <span className="text-[9px] text-slate-400 cursor-help">({tenure.employees_with_birth_date}/{tenure.total})</span>
+                                                </Tooltip>
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : <Empty description="Veri yok" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
