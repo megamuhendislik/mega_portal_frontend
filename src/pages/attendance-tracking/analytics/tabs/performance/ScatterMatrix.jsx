@@ -3,7 +3,7 @@ import {
     ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList,
 } from 'recharts';
-import { Segmented } from 'antd';
+import { Segmented, Tooltip as AntTooltip } from 'antd';
 import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIcon, Bug, Download, Maximize2, Minimize2 } from 'lucide-react';
 import SectionCard from '../../shared/SectionCard';
 import api from '../../../../../services/api';
@@ -635,47 +635,88 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                             <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
                                 {[...filteredPoints]
                                     .sort((a, b) => {
-                                        // Once quadrant (sag-ust onde), sonra Yap. Mesai DESC
-                                        const qOrder = { leader: 0, healthy: 1, inconsistent: 2, underperform: 3 };
-                                        const qd = (qOrder[a.quadrant] ?? 9) - (qOrder[b.quadrant] ?? 9);
-                                        if (qd !== 0) return qd;
+                                        // Yapilan Normal Mesai DESC (en yuksek tamamlama uste)
                                         return (b.normal_completion || 0) - (a.normal_completion || 0);
                                     })
                                     .map((p) => {
                                         const isHovered = hoveredEmpId === p.id;
                                         const color = levelColor(p.normal_completion);
-                                        return (
-                                            <button
-                                                key={p.id}
-                                                onMouseEnter={() => setHoveredEmpId(p.id)}
-                                                onMouseLeave={() => setHoveredEmpId(null)}
-                                                onClick={() => p.type === 'employee' && onSelectPerson?.(p.id)}
-                                                className={`w-full flex items-center gap-2 px-2 py-1 rounded text-left transition-all ${
-                                                    isHovered
-                                                        ? 'bg-white shadow-sm ring-1 ring-indigo-300'
-                                                        : 'hover:bg-white'
-                                                }`}
-                                                title={`${p.name} · ${p.department || '—'}`}
-                                            >
-                                                <span
-                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-white"
-                                                    style={{ backgroundColor: color }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-[10px] font-bold text-slate-800 truncate leading-tight">
-                                                        {p.name}
-                                                    </div>
-                                                    <div className="text-[9px] text-slate-400 truncate leading-tight">
-                                                        {p.department || '—'}
-                                                    </div>
+                                        const q = QUADRANT_META[p.quadrant];
+                                        const tooltipContent = (
+                                            <div className="text-xs space-y-1.5 min-w-[180px]">
+                                                <div className="font-bold text-white border-b border-white/20 pb-1.5">
+                                                    {p.name}
+                                                    {p.type === 'employee' && (
+                                                        <div className="text-[10px] text-white/60 font-normal">{p.department || '—'}</div>
+                                                    )}
                                                 </div>
-                                                <span
-                                                    className="text-[10px] font-black tabular-nums flex-shrink-0"
-                                                    style={{ color }}
+                                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+                                                    <span className="text-white/60">Normal:</span>
+                                                    <span className="text-right font-bold">{fmtHrs(p.normal_h)}</span>
+                                                    <span className="text-white/60">Fazla Mesai:</span>
+                                                    <span className="text-right font-bold text-amber-300">{fmtHrs(p.ot_h)}</span>
+                                                    <span className="text-white/60">Eksik:</span>
+                                                    <span className="text-right font-bold text-red-300">{fmtHrs(p.missing_h)}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums border-t border-white/20 pt-1.5">
+                                                    <span className="text-white/60">Yap. Mesai:</span>
+                                                    <span className="text-right font-black" style={{ color }}>%{Math.round(p.normal_completion)}</span>
+                                                    <span className="text-white/60">FM/Y:</span>
+                                                    <span className="text-right font-bold">%{Math.round(p.y_raw || 0)}</span>
+                                                    {p.type === 'department' && p.employee_count != null && (
+                                                        <>
+                                                            <span className="text-white/60">Kişi:</span>
+                                                            <span className="text-right font-bold">{p.employee_count}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="pt-1.5 border-t border-white/20 flex items-center gap-1.5">
+                                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: q.color }} />
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: q.color }}>
+                                                        {q.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                        return (
+                                            <AntTooltip
+                                                key={p.id}
+                                                title={tooltipContent}
+                                                placement="left"
+                                                mouseEnterDelay={0.05}
+                                                mouseLeaveDelay={0}
+                                                overlayInnerStyle={{ background: '#1e293b', padding: '10px 12px' }}
+                                            >
+                                                <button
+                                                    onMouseEnter={() => setHoveredEmpId(p.id)}
+                                                    onMouseLeave={() => setHoveredEmpId(null)}
+                                                    onClick={() => p.type === 'employee' && onSelectPerson?.(p.id)}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1 rounded text-left transition-all ${
+                                                        isHovered
+                                                            ? 'bg-white shadow-sm ring-1 ring-indigo-300'
+                                                            : 'hover:bg-white'
+                                                    }`}
                                                 >
-                                                    %{Math.round(p.normal_completion)}
-                                                </span>
-                                            </button>
+                                                    <span
+                                                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-white"
+                                                        style={{ backgroundColor: color }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] font-bold text-slate-800 truncate leading-tight">
+                                                            {p.name}
+                                                        </div>
+                                                        <div className="text-[9px] text-slate-400 truncate leading-tight">
+                                                            {p.department || '—'}
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className="text-[10px] font-black tabular-nums flex-shrink-0"
+                                                        style={{ color }}
+                                                    >
+                                                        %{Math.round(p.normal_completion)}
+                                                    </span>
+                                                </button>
+                                            </AntTooltip>
                                         );
                                     })}
                             </div>
