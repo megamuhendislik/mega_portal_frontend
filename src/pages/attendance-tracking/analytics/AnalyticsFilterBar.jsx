@@ -118,7 +118,7 @@ export default function AnalyticsFilterBar() {
                             onChange={e => ctx.setMinAttendanceEnabled(e.target.checked)}
                             className="w-3 h-3 rounded border-amber-300 text-amber-500 focus:ring-amber-200" />
                         <UserX size={11} className="text-amber-600" />
-                        <span className="text-[10px] font-bold text-amber-700">%{ctx.minAttendancePct} altı hariç</span>
+                        <span className="text-[10px] font-bold text-amber-700" title="Yapılan Normal Mesai / Yükümlülük">Yap.M. %{ctx.minAttendancePct} altı hariç</span>
                     </label>
 
                     {/* Filters */}
@@ -230,7 +230,7 @@ export default function AnalyticsFilterBar() {
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                            <UserX size={10} /> Min. Devam %
+                            <UserX size={10} /> Min. Yap. Mesai % (W/Y)
                         </label>
                         <div className="flex items-center gap-2">
                             <input type="range" min={0} max={100} step={5} value={ctx.minAttendancePct}
@@ -238,6 +238,38 @@ export default function AnalyticsFilterBar() {
                                 className="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-amber-500" />
                             <span className="text-sm font-bold text-slate-600 tabular-nums w-10 text-right">%{ctx.minAttendancePct}</span>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ Haric Tut paneli — Filter expand altinda gorunur ═══ */}
+            {showFilters && (
+                <div className="px-4 py-3 border-t border-slate-100 bg-rose-50/30 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-rose-500 uppercase flex items-center gap-1">
+                            <X size={10} /> Hariç Tutulacak Departmanlar
+                        </label>
+                        <MultiSelect
+                            value={ctx.excludeDepartmentIds || []}
+                            onChange={(vals) => ctx.setExcludeDepartmentIds(vals.map((v) => typeof v === 'string' ? parseInt(v, 10) : v).filter((v) => !isNaN(v)))}
+                            options={deptOptions}
+                            placeholder="Hariç tutulacak departmanlar"
+                            className="w-full"
+                            size="small"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-rose-500 uppercase flex items-center gap-1">
+                            <X size={10} /> Hariç Tutulacak Çalışanlar
+                        </label>
+                        <MultiSelect
+                            value={ctx.excludeEmployeeIds || []}
+                            onChange={(vals) => ctx.setExcludeEmployeeIds(vals.map((v) => typeof v === 'string' ? parseInt(v, 10) : v).filter((v) => !isNaN(v)))}
+                            options={(ctx.employees || []).map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
+                            placeholder="Hariç tutulacak kişiler"
+                            className="w-full"
+                            size="small"
+                        />
                     </div>
                 </div>
             )}

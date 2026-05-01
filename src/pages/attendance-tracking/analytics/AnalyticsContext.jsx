@@ -141,6 +141,9 @@ export function AnalyticsProvider({ children }) {
         const raw = searchParams.get('min_att_on');
         return raw === null ? true : raw === '1';
     });
+    // Exclude (Hariç Tut): nav-bar'dan multi-select departman/calisan
+    const [excludeDepartmentIds, setExcludeDepartmentIds] = useState(() => parseIntList(searchParams.get('ex_dept')));
+    const [excludeEmployeeIds, setExcludeEmployeeIds] = useState(() => parseIntList(searchParams.get('ex_emp')));
 
     // ─── Lookups ───
     const [departments, setDepartments] = useState([]);
@@ -287,18 +290,22 @@ export function AnalyticsProvider({ children }) {
         const p = { start_date: startDate, end_date: endDate };
         if (departmentIds.length) p.department_ids = departmentIds.join(',');
         if (positionIds.length) p.position_ids = positionIds.join(',');
-        if (minAttendanceEnabled && minAttendancePct > 0) p.min_attendance_pct = minAttendancePct;
+        if (minAttendanceEnabled && minAttendancePct > 0) p.min_normal_completion_pct = minAttendancePct;
+        if (excludeDepartmentIds.length) p.exclude_department_ids = excludeDepartmentIds.join(',');
+        if (excludeEmployeeIds.length) p.exclude_employee_ids = excludeEmployeeIds.join(',');
         return p;
-    }, [startDate, endDate, departmentIds, positionIds, minAttendancePct, minAttendanceEnabled]);
+    }, [startDate, endDate, departmentIds, positionIds, minAttendancePct, minAttendanceEnabled, excludeDepartmentIds, excludeEmployeeIds]);
 
     const compareQueryParams = useMemo(() => {
         if (!compareStartDate || !compareEndDate) return null;
         const p = { start_date: compareStartDate, end_date: compareEndDate };
         if (departmentIds.length) p.department_ids = departmentIds.join(',');
         if (positionIds.length) p.position_ids = positionIds.join(',');
-        if (minAttendanceEnabled && minAttendancePct > 0) p.min_attendance_pct = minAttendancePct;
+        if (minAttendanceEnabled && minAttendancePct > 0) p.min_normal_completion_pct = minAttendancePct;
+        if (excludeDepartmentIds.length) p.exclude_department_ids = excludeDepartmentIds.join(',');
+        if (excludeEmployeeIds.length) p.exclude_employee_ids = excludeEmployeeIds.join(',');
         return p;
-    }, [compareStartDate, compareEndDate, departmentIds, positionIds, minAttendancePct, minAttendanceEnabled]);
+    }, [compareStartDate, compareEndDate, departmentIds, positionIds, minAttendancePct, minAttendanceEnabled, excludeDepartmentIds, excludeEmployeeIds]);
 
     // Fetch lookups once
     useEffect(() => {
@@ -402,6 +409,8 @@ export function AnalyticsProvider({ children }) {
         positionIds, setPositionIds,
         minAttendancePct, setMinAttendancePct,
         minAttendanceEnabled, setMinAttendanceEnabled,
+        excludeDepartmentIds, setExcludeDepartmentIds,
+        excludeEmployeeIds, setExcludeEmployeeIds,
         // Lookups
         departments, positions, employees, employeesLoading,
         // Data
@@ -413,6 +422,7 @@ export function AnalyticsProvider({ children }) {
         compareMode, compareStartDate, compareEndDate, setCompareCustomRange, compareLabel,
         compareData, compareLoading, deltas,
         departmentIds, positionIds, minAttendancePct, minAttendanceEnabled,
+        excludeDepartmentIds, excludeEmployeeIds,
         departments, positions, employees, employeesLoading,
         data, loading, lastFetchedAt, sectionLastFetchedAt, queryParams, compareQueryParams,
         error, sectionErrors, setSectionError, clearSectionError,
