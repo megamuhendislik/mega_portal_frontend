@@ -289,7 +289,7 @@ export default function ComparisonTab() {
                             <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                                 <div>
                                     <span className="text-slate-500">Doluluk:</span>{' '}
-                                    <span className="font-bold tabular-nums">{s.metrics?.efficiency_pct}%</span>
+                                    <span className="font-bold tabular-nums">%{s.metrics?.efficiency_pct}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500">Çalışma:</span>{' '}
@@ -448,7 +448,7 @@ export default function ComparisonTab() {
                                     <TrendIcon size={14} />
                                     {d.diff >= 0 ? '+' : ''}{d.diff}{c.suffix}
                                     <span className="text-[10px] text-slate-400 ml-auto">
-                                        ({d.pct_change >= 0 ? '+' : ''}{d.pct_change}%)
+                                        ({d.pct_change >= 0 ? '+' : ''}%{d.pct_change})
                                     </span>
                                 </div>
                             </div>

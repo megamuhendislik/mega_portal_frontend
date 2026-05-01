@@ -1,6 +1,7 @@
 // Performance v3 — ortak yardimci fonksiyonlar.
 
-export const fmtPct = (v) => (v == null ? '—' : `${Math.round(v)}%`);
+// Turkce standardi: yuzde isareti onde (%85, "85%" degil)
+export const fmtPct = (v) => (v == null ? '—' : `%${Math.round(v)}`);
 export const fmtHrs = (v) => `${Math.round(v || 0)}sa`;
 
 export function levelColor(eff) {

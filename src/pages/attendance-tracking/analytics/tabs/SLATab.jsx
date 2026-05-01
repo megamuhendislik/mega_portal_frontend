@@ -151,7 +151,7 @@ export default function SLATab() {
                 <div className="flex items-center gap-2 justify-end">
                     <Progress percent={v} size="small" style={{ width: 80 }}
                         strokeColor={v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'} />
-                    <span className="tabular-nums font-bold w-12 text-right">{v}%</span>
+                    <span className="tabular-nums font-bold w-12 text-right">%{v}</span>
                 </div>
             ),
         },
@@ -299,7 +299,7 @@ export default function SLATab() {
                                 />
                                 <span className="w-20 text-right text-sm font-bold tabular-nums">{t.ortSaat}sa</span>
                                 <Tag color={t.hedefteYüzde >= 75 ? 'green' : t.hedefteYüzde >= 50 ? 'gold' : 'red'}>
-                                    {t.hedefteYüzde}% hedefte
+                                    %{t.hedefteYüzde} hedefte
                                 </Tag>
                             </div>
                         ))}

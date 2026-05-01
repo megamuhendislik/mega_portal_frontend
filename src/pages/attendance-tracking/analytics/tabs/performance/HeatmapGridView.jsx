@@ -52,7 +52,7 @@ export default function HeatmapGridView({ points, onCellClick }) {
                 <div className="grid grid-cols-5 gap-1">
                     {Array.from({ length: X_BINS }).map((_, i) => (
                         <div key={i} className="text-center text-[9px] text-slate-400 font-bold">
-                            {Math.round(((i + 1) / X_BINS) * X_MAX)}%
+                            %{Math.round(((i + 1) / X_BINS) * X_MAX)}
                         </div>
                     ))}
                 </div>
@@ -95,7 +95,7 @@ export default function HeatmapGridView({ points, onCellClick }) {
                                             backgroundColor: m.color,
                                             opacity: 0.25 + intensity * 0.6,
                                         }}
-                                        title={`${cell.count} kişi · Avg N.Dol: ${Math.round(avgNormal)}% · ${m.label}`}
+                                        title={`${cell.count} kişi · Avg N.Dol: %${Math.round(avgNormal)} · ${m.label}`}
                                     >
                                         <span
                                             className="font-black text-white tabular-nums leading-none drop-shadow"
@@ -107,7 +107,7 @@ export default function HeatmapGridView({ points, onCellClick }) {
                                             className="text-[9px] font-bold text-white/90 tabular-nums drop-shadow mt-0.5"
                                             style={{ color: levelColor(avgNormal) === '#10b981' ? '#fff' : '#fff' }}
                                         >
-                                            {Math.round(avgNormal)}%
+                                            %{Math.round(avgNormal)}
                                         </span>
                                     </button>
                                 );

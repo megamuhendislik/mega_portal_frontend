@@ -447,7 +447,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                         <div>Normal: <b>{fmtHrs(p.normal_h)}</b></div>
                                                         <div>FM: <b className="text-amber-600">{fmtHrs(p.ot_h)}</b></div>
                                                         <div>Eksik: <b className="text-red-600">{fmtHrs(p.missing_h)}</b></div>
-                                                        <div>{p.type === 'department' ? 'Avg ' : ''}N.Doluluk: <b style={{ color: levelColor(p.normal_completion) }}>{Math.round(p.normal_completion)}%</b></div>
+                                                        <div>{p.type === 'department' ? 'Avg ' : ''}N.Doluluk: <b style={{ color: levelColor(p.normal_completion) }}>%{Math.round(p.normal_completion)}</b></div>
                                                     </div>
                                                     <div className="mt-2 pt-2 border-t border-slate-100">
                                                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: q.color }}>

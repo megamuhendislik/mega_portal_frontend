@@ -92,12 +92,16 @@ const fmtHrs = (v) => `${Math.round(v || 0)}sa`;
 // ────────────────────────────────────────────────────────────
 function MetricBar({ label, value, max = 100, color, suffix = '%', tip }) {
     const pct = Math.min(100, Math.max(0, (value / max) * 100));
+    // Turkce yuzde formati: % onde
+    const display = value == null
+        ? '—'
+        : (suffix === '%' ? `%${value}` : `${value}${suffix}`);
     return (
         <div className="space-y-1" title={tip}>
             <div className="flex items-baseline justify-between text-[10px]">
                 <span className="font-bold text-slate-600 uppercase tracking-wider">{label}</span>
                 <span className="text-[14px] font-black tabular-nums" style={{ color }}>
-                    {value == null ? '—' : `${value}${suffix}`}
+                    {display}
                 </span>
             </div>
             <div className="h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
@@ -167,7 +171,7 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                                 </div>
                                 <div className="text-right">
                                     <span className="font-black text-slate-800 tabular-nums">{fmtHrs(e.normal_hours)}</span>
-                                    <span className="text-slate-400 ml-1.5">{Math.round(normalPct)}%</span>
+                                    <span className="text-slate-400 ml-1.5">%{Math.round(normalPct)}</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px]">
@@ -177,7 +181,7 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                                 </div>
                                 <div className="text-right">
                                     <span className="font-black text-amber-700 tabular-nums">{fmtHrs(e.ot_hours)}</span>
-                                    <span className="text-slate-400 ml-1.5">{Math.round(otPct)}%</span>
+                                    <span className="text-slate-400 ml-1.5">%{Math.round(otPct)}</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px]">
@@ -187,7 +191,7 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                                 </div>
                                 <div className="text-right">
                                     <span className="font-black text-red-600 tabular-nums">{fmtHrs(e.missing_hours)}</span>
-                                    <span className="text-slate-400 ml-1.5">{Math.round(missingPct)}%</span>
+                                    <span className="text-slate-400 ml-1.5">%{Math.round(missingPct)}</span>
                                 </div>
                             </div>
                         </div>
@@ -858,7 +862,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                             {[
                                 { label: 'Ort. Giriş', value: summary.avg_check_in || '—', icon: AlarmClock, color: 'emerald' },
                                 { label: 'Ort. Çıkış', value: summary.avg_check_out || '—', icon: AlarmClock, color: 'indigo' },
-                                { label: 'Dakiklik', value: `${summary.punctuality_pct || 0}%`, icon: Award, color: 'amber' },
+                                { label: 'Dakiklik', value: `%${summary.punctuality_pct || 0}`, icon: Award, color: 'amber' },
                                 { label: 'Yemek Oranı', value: `${summary.meal_orders || 0}/${summary.meal_working_days || 0}`, icon: Coffee, color: 'cyan' },
                             ].map((item, i) => (
                                 <KPICard key={i} mini title={item.label} value={item.value} icon={item.icon} gradient={item.color} />

@@ -208,7 +208,7 @@ export default function OverviewTab() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         {[
-                            { label: 'Mesai Doluluğu', curr: `${kpi.avg_efficiency_pct || 0}%`, prev: `${cmpKpi.avg_efficiency_pct || 0}%`, delta: deltas?.efficiency },
+                            { label: 'Mesai Doluluğu', curr: `%${kpi.avg_efficiency_pct || 0}`, prev: `%${cmpKpi.avg_efficiency_pct || 0}`, delta: deltas?.efficiency },
                             { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
                             { label: 'Fazla Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
                             { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },

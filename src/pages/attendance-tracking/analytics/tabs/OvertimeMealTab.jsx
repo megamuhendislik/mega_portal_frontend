@@ -234,7 +234,7 @@ export default function OvertimeMealTab() {
                 <KPICard title="Toplam Fazla Mesai" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
                     info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard title="Onaylı Fazla Mesai" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
-                    subtitle={`Onay oranı: ${approvalRate}%`}
+                    subtitle={`Onay oranı: %${approvalRate}`}
                     info={{ title: 'Onaylı Fazla Mesai', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan Fazla Mesai kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış fazla mesai saatleri.</p></> }} />
                 <KPICard title="Fazla Mesai Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
                 <KPICard title="Ort. Fazla Mesai / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
@@ -400,7 +400,7 @@ export default function OvertimeMealTab() {
                                                             backgroundColor: row.oran >= 80 ? '#10b981' : row.oran >= 50 ? '#f59e0b' : '#ef4444',
                                                         }} />
                                                 </div>
-                                                <span className="text-xs font-black tabular-nums w-10 text-right">{row.oran}%</span>
+                                                <span className="text-xs font-black tabular-nums w-10 text-right">%{row.oran}</span>
                                             </div>
                                         </td>
                                         <td className="py-2.5 px-4 text-center">
@@ -550,7 +550,7 @@ export default function OvertimeMealTab() {
                                             }} />
                                     </div>
                                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${v >= 80 ? 'bg-emerald-50 text-emerald-700' : v >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
-                                        {v}%
+                                        %{v}
                                     </span>
                                 </div>
                             ),
@@ -602,7 +602,7 @@ export default function OvertimeMealTab() {
                             align: 'right',
                             render: (v) => (
                                 <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${v >= 80 ? 'bg-emerald-50 text-emerald-700' : v >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
-                                    {v}%
+                                    %{v}
                                 </span>
                             ),
                         },

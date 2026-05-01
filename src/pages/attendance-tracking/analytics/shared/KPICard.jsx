@@ -49,8 +49,10 @@ export default function KPICard({
                         {info && <InfoTooltip title={info.title}>{info.content}</InfoTooltip>}
                     </p>
                     <div className="flex items-baseline gap-1">
+                        {/* Turkce yuzde formati: % onde gosterilir */}
+                        {suffix === '%' && <span className="text-[11px] font-bold text-slate-400">%</span>}
                         <span className="text-lg font-black text-slate-800 tabular-nums">{value}</span>
-                        {suffix && <span className="text-[11px] font-bold text-slate-400">{suffix}</span>}
+                        {suffix && suffix !== '%' && <span className="text-[11px] font-bold text-slate-400">{suffix}</span>}
                     </div>
                 </div>
                 {delta != null && (
@@ -87,8 +89,10 @@ export default function KPICard({
                 </div>
 
                 <div className="flex items-baseline gap-1.5 mb-1">
+                    {/* Turkce yuzde formati: % onde */}
+                    {suffix === '%' && <span className="text-sm font-bold text-white/60">%</span>}
                     <h3 className="text-3xl font-black tabular-nums tracking-tight">{value}</h3>
-                    {suffix && <span className="text-sm font-bold text-white/60">{suffix}</span>}
+                    {suffix && suffix !== '%' && <span className="text-sm font-bold text-white/60">{suffix}</span>}
                 </div>
 
                 {delta != null && delta !== undefined && (
@@ -128,7 +132,9 @@ export function KPIProgressBar({ label, value, max = 100, suffix = '%', color = 
                     {label}
                     {info && <InfoTooltip title={info.title}>{info.content}</InfoTooltip>}
                 </span>
-                <span className="font-black text-slate-700 tabular-nums">{value}{suffix}</span>
+                <span className="font-black text-slate-700 tabular-nums">
+                    {suffix === '%' ? `%${value}` : `${value}${suffix}`}
+                </span>
             </div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700 ease-out"

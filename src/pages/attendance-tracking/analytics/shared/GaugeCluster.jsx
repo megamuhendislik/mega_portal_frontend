@@ -88,9 +88,11 @@ function GaugeItem({ label, value, max = 100, color = '#6366f1', target, suffix 
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                     {Icon && <Icon size={14} style={{ color }} className="mb-0.5" />}
                     <span className="text-[22px] font-black tabular-nums leading-none" style={{ color }}>
-                        {Math.round(safeVal)}
+                        {suffix === '%' ? `%${Math.round(safeVal)}` : Math.round(safeVal)}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-500 tabular-nums">{suffix}</span>
+                    {suffix && suffix !== '%' && (
+                        <span className="text-[10px] font-bold text-slate-500 tabular-nums">{suffix}</span>
+                    )}
                 </div>
             </div>
             {subtitle && (
