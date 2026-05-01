@@ -34,23 +34,28 @@ export function heatmapColor(normalized, invert = false) {
 export const TR_NORM = (s) => String(s || '').toLocaleLowerCase('tr')
     .replace(/[şçöüğıİ]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i', İ: 'i' })[c]);
 
-// 4 quadrant ScatterMatrix isimleri (eksik/y vs ot/y)
-export function quadrantOf(missingPct, otPct) {
-    const HIGH_MISSING = 15;  // %
-    const HIGH_OT = 25;  // %
-    const isHighMiss = missingPct >= HIGH_MISSING;
-    const isHighOt = otPct >= HIGH_OT;
-    if (isHighOt && isHighMiss) return 'risk';      // sag-ust
-    if (isHighOt && !isHighMiss) return 'intense';  // sol-ust
-    if (!isHighOt && isHighMiss) return 'underfill'; // sag-alt
-    return 'healthy';                                  // sol-alt
+// 4 quadrant ScatterMatrix isimleri (X = N.Doluluk, Y = FM/Y)
+// Sag-ust = yuksek N.Dol + yuksek FM = "Lider"
+// Sag-alt = yuksek N.Dol + dusuk FM = "Saglikli"
+// Sol-ust = dusuk N.Dol + yuksek FM = "Tutarsiz"
+// Sol-alt = dusuk N.Dol + dusuk FM = "Yetersiz"
+export const HIGH_NORMAL_THRESHOLD = 80;  // N.Doluluk %80 ust limit
+export const HIGH_OT_THRESHOLD = 25;       // FM/Y %25 ust limit
+
+export function quadrantOf(normalPct, otPct) {
+    const isHighN = (normalPct || 0) >= HIGH_NORMAL_THRESHOLD;
+    const isHighOt = (otPct || 0) >= HIGH_OT_THRESHOLD;
+    if (isHighN && isHighOt) return 'leader';      // sag-ust
+    if (isHighN && !isHighOt) return 'healthy';    // sag-alt
+    if (!isHighN && isHighOt) return 'inconsistent'; // sol-ust
+    return 'underperform';                          // sol-alt
 }
 
 export const QUADRANT_META = {
-    healthy: { label: 'Saglikli', color: '#10b981', bg: 'bg-emerald-50' },
-    intense: { label: 'Yogun', color: '#f59e0b', bg: 'bg-amber-50' },
-    underfill: { label: 'Yetersiz', color: '#f97316', bg: 'bg-orange-50' },
-    risk: { label: 'Riskli', color: '#ef4444', bg: 'bg-red-50' },
+    leader: { label: 'Lider', color: '#10b981', bg: 'bg-emerald-50' },
+    healthy: { label: 'Saglikli', color: '#3b82f6', bg: 'bg-blue-50' },
+    inconsistent: { label: 'Tutarsiz', color: '#f59e0b', bg: 'bg-amber-50' },
+    underperform: { label: 'Yetersiz', color: '#ef4444', bg: 'bg-red-50' },
 };
 
 // Smart filter preset'leri — frontend-only

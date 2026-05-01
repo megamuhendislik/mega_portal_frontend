@@ -169,28 +169,28 @@ export default function OverviewTab() {
             {employeeList.length > 0 && (
                 <RiskMatrixCard
                     title="Risk Haritası"
-                    subtitle="Eksik × Fazla Mesai · 4 risk bölgesi · daha derin analiz için Mesai Analizi tabını kullan"
+                    subtitle="Normal Doluluk × Fazla Mesai · Sağ-üst = ideal tempo · daha derin analiz için Mesai Analizi tabını kullan"
                     data={employeeList
                         .filter((e) => e.has_target ?? (e.target_hours > 0))
                         .map((e) => ({
                             id: e.employee_id,
                             name: e.name,
                             label: e.name?.split(' ')[0] || '?',
-                            x: Math.min(100, e.missing_to_target_pct || 0),
+                            x: Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0),
                             y: e.ot_to_target_pct || 0,
                             z: Math.max(40, Math.min(800, (e.normal_hours || 1) * 8)),
                             color: levelColorFn(e.normal_completion_pct ?? e.efficiency_pct ?? 0),
-                            tooltipExtra: `Normal: ${Math.round(e.normal_hours || 0)}sa · FM: ${Math.round(e.ot_hours || 0)}sa · N.Dol: ${Math.round(e.normal_completion_pct ?? 0)}%`,
+                            tooltipExtra: `Normal: ${Math.round(e.normal_hours || 0)}sa · FM: ${Math.round(e.ot_hours || 0)}sa · Eksik: ${Math.round(e.missing_hours || 0)}sa`,
                         }))}
-                    xLabel="Eksik / Yükümlülük (%)"
+                    xLabel="Normal Doluluk — Gerçekleşen Normal / Yükümlülük (%)"
                     yLabel="Fazla Mesai / Yükümlülük (%)"
                     xMax={100} yMax={50}
-                    thresholds={{ x: 15, y: 25 }}
+                    thresholds={{ x: 80, y: 25 }}
                     quadrantLabels={{
-                        bl: { label: 'Sağlıklı', color: QUADRANT_META.healthy.color, bg: '#d1fae5' },
-                        tl: { label: 'Yoğun', color: QUADRANT_META.intense.color, bg: '#fef3c7' },
-                        br: { label: 'Yetersiz', color: QUADRANT_META.underfill.color, bg: '#fed7aa' },
-                        tr: { label: 'Riskli', color: QUADRANT_META.risk.color, bg: '#fee2e2' },
+                        bl: { label: 'Yetersiz', color: QUADRANT_META.underperform.color, bg: '#fee2e2' },
+                        tl: { label: 'Tutarsız', color: QUADRANT_META.inconsistent.color, bg: '#fef3c7' },
+                        br: { label: 'Sağlıklı', color: QUADRANT_META.healthy.color, bg: '#dbeafe' },
+                        tr: { label: 'Lider', color: QUADRANT_META.leader.color, bg: '#d1fae5' },
                     }}
                     sizeRange={[40, 800]}
                     height={340}

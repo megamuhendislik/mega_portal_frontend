@@ -8,7 +8,11 @@ import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIc
 import SectionCard from '../../shared/SectionCard';
 import api from '../../../../../services/api';
 import { useAnalytics } from '../../AnalyticsContext';
-import { quadrantOf, QUADRANT_META, levelColor, fmtHrs, addJitter, pruneLabelCollisions } from './helpers';
+import {
+    quadrantOf, QUADRANT_META, levelColor, fmtHrs,
+    addJitter, pruneLabelCollisions,
+    HIGH_NORMAL_THRESHOLD, HIGH_OT_THRESHOLD,
+} from './helpers';
 import HeatmapGridView from './HeatmapGridView';
 import DrillDownGroupModal from './DrillDownGroupModal';
 
@@ -23,8 +27,8 @@ const DISPLAY_MODES = [
     { value: 'heatmap', label: 'Isı Haritası', icon: Grid3x3 },
 ];
 
-const HIGH_MISSING = 15;
-const HIGH_OT = 25;
+// X ekseni = N.Doluluk (Normal/Yukumluluk %), Y = FM/Y (%)
+// Esikler helpers.js'tan import edilir
 
 /**
  * Risk Haritasi v2 — 3 view mode + 2 display mode.
@@ -115,9 +119,10 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => e.has_target ?? (e.target_hours > 0))
                 .map((e) => {
-                    const x_raw = Math.min(100, e.missing_to_target_pct || 0);
+                    // X = N.Doluluk (Normal/Yukumluluk %), Y = FM/Yukumluluk (%)
+                    const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
-                    // Jitter — Y=0 ve X=0'da yiginlanmayi onler
+                    // Jitter — yiginlanmayi onler
                     const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
                     return {
                         id: e.employee_id,
@@ -127,7 +132,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                         department: e.department || '—',
                         x: j.x, y: j.y,
                         x_raw, y_raw,
-                        // BUYUK BALON: 50-1200 (eski 20-400)
+                        // BUYUK BALON: 50-1200
                         z: Math.max(50, Math.min(1200, (e.normal_hours || 1) * 12)),
                         normal_h: e.normal_hours || 0,
                         ot_h: e.ot_hours || 0,
@@ -140,7 +145,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
         }
         if (viewMode === 'department') {
             return deptGroups.map((g) => {
-                const x = Math.min(100, g.avg_missing_to_target_pct || 0);
+                const x = Math.min(100, g.avg_normal_completion_pct || 0);
                 const y = g.avg_ot_to_target_pct || 0;
                 return {
                     id: g.group_id,
@@ -149,7 +154,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                     label: g.group_name,
                     department: g.group_name,
                     x, y,
-                    // dept boyutu kisi sayisi ile orantili — cok buyuk
+                    x_raw: x, y_raw: y,
                     z: Math.max(200, Math.min(3000, (g.employee_count || 1) * 250)),
                     normal_h: g.total_normal_hours || 0,
                     ot_h: g.total_ot_hours || 0,
@@ -169,7 +174,8 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => idSet.has(e.employee_id) && (e.has_target ?? (e.target_hours > 0)))
                 .map((e) => {
-                    const x_raw = Math.min(100, e.missing_to_target_pct || 0);
+                    // X = N.Doluluk, Y = FM/Y
+                    const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
                     const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
                     return {
@@ -207,7 +213,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
     }, [points]);
 
     const quadCounts = useMemo(() => {
-        const c = { healthy: 0, intense: 0, underfill: 0, risk: 0 };
+        const c = { leader: 0, healthy: 0, inconsistent: 0, underperform: 0 };
         points.forEach((p) => { c[p.quadrant] = (c[p.quadrant] || 0) + 1; });
         return c;
     }, [points]);
@@ -272,10 +278,10 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
     };
 
     const subtitle = viewMode === 'individual'
-        ? 'Her nokta bir kişi · Boyut = Normal saat · Renk = N.Doluluk'
+        ? 'X = Normal/Yükümlülük, Y = FM/Yükümlülük · Boyut = Normal saat · Renk = N.Doluluk · Sağ-üst = ideal tempo'
         : viewMode === 'department'
-            ? 'Her nokta bir departman · Boyut = kişi sayısı · Renk = avg N.Doluluk'
-            : 'Seçilen yöneticinin transitif ekibi';
+            ? 'Departman ortalaması · X = avg N.Doluluk, Y = avg FM/Y · Boyut = kişi sayısı'
+            : 'Seçilen yöneticinin transitif ekibi · X = Normal Doluluk, Y = FM/Y';
 
     return (
         <SectionCard
@@ -396,18 +402,22 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                         <div className="h-[480px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 25, right: 35, bottom: 45, left: 35 }}>
-                                    {/* 4 quadrant arka plan */}
-                                    <ReferenceArea x1={0} x2={HIGH_MISSING} y1={0} y2={HIGH_OT} fill="#10b981" fillOpacity={0.10} />
-                                    <ReferenceArea x1={HIGH_MISSING} x2={100} y1={0} y2={HIGH_OT} fill="#f97316" fillOpacity={0.10} />
-                                    <ReferenceArea x1={0} x2={HIGH_MISSING} y1={HIGH_OT} y2={yMax} fill="#f59e0b" fillOpacity={0.10} />
-                                    <ReferenceArea x1={HIGH_MISSING} x2={100} y1={HIGH_OT} y2={yMax} fill="#ef4444" fillOpacity={0.10} />
+                                    {/* 4 quadrant arka plan — Sag-ust = Lider (yesil) */}
+                                    {/* Sol-alt: Yetersiz (kirmizi) */}
+                                    <ReferenceArea x1={0} x2={HIGH_NORMAL_THRESHOLD} y1={0} y2={HIGH_OT_THRESHOLD} fill="#ef4444" fillOpacity={0.08} />
+                                    {/* Sol-ust: Tutarsiz (sari) */}
+                                    <ReferenceArea x1={0} x2={HIGH_NORMAL_THRESHOLD} y1={HIGH_OT_THRESHOLD} y2={yMax} fill="#f59e0b" fillOpacity={0.08} />
+                                    {/* Sag-alt: Saglikli (mavi) */}
+                                    <ReferenceArea x1={HIGH_NORMAL_THRESHOLD} x2={100} y1={0} y2={HIGH_OT_THRESHOLD} fill="#3b82f6" fillOpacity={0.08} />
+                                    {/* Sag-ust: Lider (yesil) */}
+                                    <ReferenceArea x1={HIGH_NORMAL_THRESHOLD} x2={100} y1={HIGH_OT_THRESHOLD} y2={yMax} fill="#10b981" fillOpacity={0.12} />
 
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis
-                                        type="number" dataKey="x" name="Eksik/Y"
+                                        type="number" dataKey="x" name="N.Doluluk"
                                         domain={[0, 100]}
                                         tick={{ fontSize: 11, fontWeight: 600 }}
-                                        label={{ value: 'Eksik / Yükümlülük (%)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
+                                        label={{ value: 'Normal Doluluk — Gerçekleşen Normal / Yükümlülük (%)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
                                     />
                                     <YAxis
                                         type="number" dataKey="y" name="FM/Y"
@@ -416,8 +426,8 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                         label={{ value: 'Fazla Mesai / Yükümlülük (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
                                     />
                                     <ZAxis type="number" dataKey="z" range={[50, 1500]} />
-                                    <ReferenceLine x={HIGH_MISSING} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
-                                    <ReferenceLine y={HIGH_OT} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
+                                    <ReferenceLine x={HIGH_NORMAL_THRESHOLD} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
+                                    <ReferenceLine y={HIGH_OT_THRESHOLD} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
                                     <Tooltip
                                         cursor={{ strokeDasharray: '3 3' }}
                                         content={({ active, payload }) => {
