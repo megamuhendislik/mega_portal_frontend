@@ -1,0 +1,194 @@
+import React, { useMemo } from 'react';
+import {
+    ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList,
+} from 'recharts';
+import { LayoutGrid } from 'lucide-react';
+import SectionCard from './SectionCard';
+
+/**
+ * Generic 4-quadrant risk haritasi (kompakt). Diger tablar tarafindan
+ * kullanilmak uzere yazildi. PerformanceTab.ScatterMatrix daha gelismis.
+ *
+ * Props:
+ *   data: [{ id, name, x, y, z?, color?, label? }]
+ *   xLabel/yLabel: eksen baslıkları
+ *   xMax/yMax: domain (default 100)
+ *   thresholds: { x: number, y: number } — quadrant cizgileri
+ *   quadrantLabels: { tl, tr, bl, br } — opsiyonel
+ *   onPointClick(point)
+ *   colorFn(point) -> hex (default mavi)
+ *   sizeRange: [min, max] (default [40, 800])
+ *   height: px (default 320)
+ *   showLabels: boolean — top N nokta etiketi
+ */
+export default function RiskMatrixCard({
+    title = 'Risk Haritası',
+    subtitle,
+    icon = LayoutGrid,
+    iconGradient = 'from-purple-500 to-pink-600',
+    data = [],
+    xLabel = 'X', yLabel = 'Y',
+    xMax = 100, yMax = 100,
+    thresholds = { x: 50, y: 50 },
+    quadrantLabels = {
+        tl: { label: 'Sol-Üst', color: '#f59e0b', bg: '#fef3c7' },
+        tr: { label: 'Sağ-Üst', color: '#ef4444', bg: '#fee2e2' },
+        bl: { label: 'Sol-Alt', color: '#10b981', bg: '#d1fae5' },
+        br: { label: 'Sağ-Alt', color: '#f97316', bg: '#fed7aa' },
+    },
+    onPointClick,
+    colorFn,
+    sizeRange = [40, 800],
+    height = 360,
+    showLabels = true,
+    collapsible = true,
+    defaultOpen = true,
+}) {
+    const points = useMemo(() => {
+        return data.map((d) => {
+            const x = Math.min(xMax, Math.max(0, d.x || 0));
+            const y = Math.min(yMax, Math.max(0, d.y || 0));
+            const isHighX = x >= thresholds.x;
+            const isHighY = y >= thresholds.y;
+            const quad = isHighY && !isHighX ? 'tl' : isHighY && isHighX ? 'tr' : !isHighY && !isHighX ? 'bl' : 'br';
+            return { ...d, x, y, quad };
+        });
+    }, [data, xMax, yMax, thresholds]);
+
+    const counts = useMemo(() => {
+        const c = { tl: 0, tr: 0, bl: 0, br: 0 };
+        points.forEach((p) => { c[p.quad] = (c[p.quad] || 0) + 1; });
+        return c;
+    }, [points]);
+
+    const labeledIds = useMemo(() => {
+        if (!showLabels) return new Set();
+        const sorted = [...points].sort((a, b) => {
+            const aS = Math.abs(a.x - thresholds.x) + Math.abs(a.y - thresholds.y);
+            const bS = Math.abs(b.x - thresholds.x) + Math.abs(b.y - thresholds.y);
+            return bS - aS;
+        });
+        return new Set(sorted.slice(0, 5).map((p) => p.id));
+    }, [points, showLabels, thresholds]);
+
+    return (
+        <SectionCard
+            title={title}
+            subtitle={subtitle || `${points.length} kayıt`}
+            icon={icon}
+            iconGradient={iconGradient}
+            collapsible={collapsible}
+            defaultOpen={defaultOpen}
+        >
+            {/* Quadrant ozet */}
+            <div className="grid grid-cols-4 gap-2 mb-3">
+                {[
+                    { k: 'bl', side: 'sol' }, { k: 'tl', side: 'sol' },
+                    { k: 'br', side: 'sag' }, { k: 'tr', side: 'sag' },
+                ].slice(0, 4).map(({ k }) => {
+                    const m = quadrantLabels[k];
+                    return (
+                        <div
+                            key={k}
+                            className="flex items-center justify-between gap-1 px-2 py-1.5 rounded-md"
+                            style={{ backgroundColor: m.bg }}
+                        >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: m.color }} />
+                                <span className="text-[10px] font-bold text-slate-700 truncate">{m.label}</span>
+                            </div>
+                            <span className="text-[14px] font-black tabular-nums flex-shrink-0" style={{ color: m.color }}>
+                                {counts[k]}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {points.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-sm">Veri yok</div>
+            ) : (
+                <div style={{ height }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ScatterChart margin={{ top: 20, right: 25, bottom: 35, left: 25 }}>
+                            <ReferenceArea x1={0} x2={thresholds.x} y1={0} y2={thresholds.y} fill={quadrantLabels.bl.color} fillOpacity={0.08} />
+                            <ReferenceArea x1={thresholds.x} x2={xMax} y1={0} y2={thresholds.y} fill={quadrantLabels.br.color} fillOpacity={0.08} />
+                            <ReferenceArea x1={0} x2={thresholds.x} y1={thresholds.y} y2={yMax} fill={quadrantLabels.tl.color} fillOpacity={0.08} />
+                            <ReferenceArea x1={thresholds.x} x2={xMax} y1={thresholds.y} y2={yMax} fill={quadrantLabels.tr.color} fillOpacity={0.08} />
+
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                            <XAxis
+                                type="number" dataKey="x"
+                                domain={[0, xMax]}
+                                tick={{ fontSize: 10, fontWeight: 600 }}
+                                label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fontSize: 11, fontWeight: 700, fill: '#475569' } }}
+                            />
+                            <YAxis
+                                type="number" dataKey="y"
+                                domain={[0, yMax]}
+                                tick={{ fontSize: 10, fontWeight: 600 }}
+                                label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fontWeight: 700, fill: '#475569' } }}
+                            />
+                            <ZAxis type="number" dataKey="z" range={sizeRange} />
+                            <ReferenceLine x={thresholds.x} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
+                            <ReferenceLine y={thresholds.y} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
+                            <Tooltip
+                                cursor={{ strokeDasharray: '3 3' }}
+                                content={({ active, payload }) => {
+                                    if (!active || !payload || !payload[0]) return null;
+                                    const p = payload[0].payload;
+                                    return (
+                                        <div className="rounded-lg bg-white shadow-xl border border-slate-200 px-3 py-2 text-xs">
+                                            <div className="font-bold text-slate-800">{p.name || p.label}</div>
+                                            <div className="text-[10px] text-slate-500 mt-1 tabular-nums">
+                                                {xLabel}: <b>{Math.round(p.x)}</b>
+                                                {' · '}
+                                                {yLabel.split('/')[0]}: <b>{Math.round(p.y)}</b>
+                                            </div>
+                                            {p.tooltipExtra && <div className="text-[10px] text-slate-600 mt-1">{p.tooltipExtra}</div>}
+                                        </div>
+                                    );
+                                }}
+                            />
+                            <Scatter
+                                data={points}
+                                onClick={(d) => d && onPointClick?.(d)}
+                                cursor={onPointClick ? 'pointer' : 'default'}
+                            >
+                                {points.map((p, idx) => (
+                                    <Cell
+                                        key={idx}
+                                        fill={p.color || (colorFn ? colorFn(p) : quadrantLabels[p.quad].color)}
+                                        fillOpacity={0.78}
+                                        stroke="#fff"
+                                        strokeWidth={1.5}
+                                    />
+                                ))}
+                                {showLabels && (
+                                    <LabelList
+                                        dataKey="label"
+                                        content={({ x, y, value, index }) => {
+                                            const p = points[index];
+                                            if (!p || !labeledIds.has(p.id)) return null;
+                                            return (
+                                                <text
+                                                    x={x} y={y - 6}
+                                                    fontSize={10} fontWeight={700}
+                                                    fill="#1e293b" textAnchor="middle"
+                                                    style={{ pointerEvents: 'none' }}
+                                                >
+                                                    {value?.length > 12 ? `${value.slice(0, 10)}…` : value}
+                                                </text>
+                                            );
+                                        }}
+                                    />
+                                )}
+                            </Scatter>
+                        </ScatterChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
+        </SectionCard>
+    );
+}

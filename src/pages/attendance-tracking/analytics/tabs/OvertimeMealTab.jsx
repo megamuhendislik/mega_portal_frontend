@@ -10,6 +10,7 @@ import ChartTooltip from '../shared/ChartTooltip';
 import DrilldownModal from '../shared/DrilldownModal';
 import BurnoutWidget from '../shared/BurnoutWidget';
 import ScopeBanner from '../shared/ScopeBanner';
+import RiskMatrixCard from '../shared/RiskMatrixCard';
 import { ExternalLink, X as XIcon } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -181,6 +182,36 @@ export default function OvertimeMealTab() {
             oran: m.order_rate_pct || 0,
         }));
     }, [breakMeal]);
+
+    // Risk Haritasi: Mola dakika x FM saat — yorgunluk gostergesi
+    // (early return'lerden ONCE — hooks rules)
+    const fatigueScatterData = useMemo(() => {
+        const otMap = {};
+        (ot?.per_employee || []).forEach((e) => {
+            const id = e.id || e.employee_id;
+            if (id != null) otMap[id] = e;
+        });
+        return (breakMeal?.break_distribution || [])
+            .map((d) => {
+                const id = d.id;
+                const o = otMap[id];
+                if (!id) return null;
+                const otHrs = o?.total_hours || 0;
+                const breakMin = d.avg_break_minutes || 0;
+                if (otHrs === 0 && breakMin === 0) return null;
+                return {
+                    id,
+                    name: d.name || d.employee_name || '—',
+                    label: (d.name || '').split(' ')[0] || '?',
+                    department: d.department || '—',
+                    x: Math.min(120, breakMin),
+                    y: Math.min(120, otHrs),
+                    z: Math.max(40, Math.min(800, otHrs * 25)),
+                    tooltipExtra: `Mola: ${Math.round(breakMin)}dk · FM: ${Math.round(otHrs)}sa`,
+                };
+            })
+            .filter(Boolean);
+    }, [ot, breakMeal]);
 
     const isLoading = (loading || bulkLoading) && !ot;
     if (isLoading) return <LoadingSkeleton rows={4} />;
@@ -580,6 +611,28 @@ export default function OvertimeMealTab() {
                     searchFields={['name', 'department']}
                     rowKey="key"
                     pageSize={25}
+                />
+            )}
+
+            {/* ═══ Risk Haritası: Mola × Fazla Mesai (yorgunluk göstergesi) ═══ */}
+            {fatigueScatterData.length > 0 && (
+                <RiskMatrixCard
+                    title="Yorgunluk Risk Haritası"
+                    subtitle="Mola süresi (X) × Fazla Mesai (Y) · Sağ-üst = uzun mola + yüksek FM"
+                    data={fatigueScatterData}
+                    xLabel="Ortalama Mola (dakika)"
+                    yLabel="Toplam Fazla Mesai (saat)"
+                    xMax={120} yMax={120}
+                    thresholds={{ x: 60, y: 30 }}
+                    quadrantLabels={{
+                        bl: { label: 'Sağlıklı', color: '#10b981', bg: '#d1fae5' },
+                        tl: { label: 'Yoğun (FM)', color: '#f59e0b', bg: '#fef3c7' },
+                        br: { label: 'Uzun Mola', color: '#6366f1', bg: '#e0e7ff' },
+                        tr: { label: 'Yorgun', color: '#ef4444', bg: '#fee2e2' },
+                    }}
+                    sizeRange={[40, 800]}
+                    height={340}
+                    collapsible defaultOpen={false}
                 />
             )}
         </div>

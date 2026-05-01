@@ -11,6 +11,8 @@ import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
+import RiskMatrixCard from '../shared/RiskMatrixCard';
+import { levelColor as levelColorFn, QUADRANT_META } from '../tabs/performance/helpers';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend, ComposedChart, Line,
@@ -85,7 +87,7 @@ export default function OverviewTab() {
         }));
     }, [trendData]);
 
-    const sparklineWorked = useMemo(() => trendChartData.map(t => t.çalışma), [trendChartData]);
+    // sparklineWorked is reserved for future KPI sparklines
     const sparklineOT = useMemo(() => trendChartData.map(t => t['fazla mesai']), [trendChartData]);
 
     // Employee list for detail modal (from work_hours or entry_exit data)
@@ -163,6 +165,39 @@ export default function OverviewTab() {
                 "Anomaliler" ve "İçgörüler" tab'larından erişin. */}
             <WorkforcePanel />
 
+            {/* ═══ Risk Haritası (Eksik × FM) — kompakt scatter ═══ */}
+            {employeeList.length > 0 && (
+                <RiskMatrixCard
+                    title="Risk Haritası"
+                    subtitle="Eksik × Fazla Mesai · 4 risk bölgesi · daha derin analiz için Mesai Analizi tabını kullan"
+                    data={employeeList
+                        .filter((e) => e.has_target ?? (e.target_hours > 0))
+                        .map((e) => ({
+                            id: e.employee_id,
+                            name: e.name,
+                            label: e.name?.split(' ')[0] || '?',
+                            x: Math.min(100, e.missing_to_target_pct || 0),
+                            y: e.ot_to_target_pct || 0,
+                            z: Math.max(40, Math.min(800, (e.normal_hours || 1) * 8)),
+                            color: levelColorFn(e.normal_completion_pct ?? e.efficiency_pct ?? 0),
+                            tooltipExtra: `Normal: ${Math.round(e.normal_hours || 0)}sa · FM: ${Math.round(e.ot_hours || 0)}sa · N.Dol: ${Math.round(e.normal_completion_pct ?? 0)}%`,
+                        }))}
+                    xLabel="Eksik / Yükümlülük (%)"
+                    yLabel="Fazla Mesai / Yükümlülük (%)"
+                    xMax={100} yMax={50}
+                    thresholds={{ x: 15, y: 25 }}
+                    quadrantLabels={{
+                        bl: { label: 'Sağlıklı', color: QUADRANT_META.healthy.color, bg: '#d1fae5' },
+                        tl: { label: 'Yoğun', color: QUADRANT_META.intense.color, bg: '#fef3c7' },
+                        br: { label: 'Yetersiz', color: QUADRANT_META.underfill.color, bg: '#fed7aa' },
+                        tr: { label: 'Riskli', color: QUADRANT_META.risk.color, bg: '#fee2e2' },
+                    }}
+                    sizeRange={[40, 800]}
+                    height={340}
+                    collapsible defaultOpen={false}
+                />
+            )}
+
             {/* ═══ Comparison Summary Banner ═══ */}
             {isComparing && cmpKpi && (
                 <div className="bg-gradient-to-r from-violet-50/80 to-indigo-50/80 rounded-2xl border border-violet-200/60 p-4 shadow-sm">
@@ -223,7 +258,7 @@ export default function OverviewTab() {
 
             {/* ── Saat Bazlı Toplamlar (4 mini KPI) ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours ?? (kpi.total_worked_hours - kpi.total_overtime_hours) ?? 0)} suffix="sa" icon={Clock} gradient="indigo"
+                <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours ?? Math.max(0, (kpi.total_worked_hours || 0) - (kpi.total_overtime_hours || 0)))} suffix="sa" icon={Clock} gradient="indigo"
                     subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`} />
                 <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
                     delta={isComparing ? deltas?.worked : null}
