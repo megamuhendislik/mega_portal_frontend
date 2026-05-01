@@ -10,7 +10,7 @@ import api from '../../../../../services/api';
 import { useAnalytics } from '../../AnalyticsContext';
 import {
     quadrantOf, QUADRANT_META, levelColor, fmtHrs,
-    addJitter, pruneLabelCollisions,
+    addJitter,
     HIGH_NORMAL_THRESHOLD, HIGH_OT_THRESHOLD,
 } from './helpers';
 import HeatmapGridView from './HeatmapGridView';
@@ -224,31 +224,25 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
         return points.filter((p) => p.quadrant === hoveredQuad);
     }, [points, hoveredQuad]);
 
-    // En uc 8 aday + cakisma onleme -> max 4-5 etiket (sıkı pruning)
-    const labeledPointIds = useMemo(() => {
-        const sorted = [...points].sort((a, b) => {
-            const aScore = Math.abs(50 - (a.normal_completion || 0)) + (a.missing_h || 0) + (a.ot_h || 0);
-            const bScore = Math.abs(50 - (b.normal_completion || 0)) + (b.missing_h || 0) + (b.ot_h || 0);
-            return bScore - aScore;
-        });
-        const candidates = new Set(sorted.slice(0, 8).map((p) => p.id));
-        // Daha sıkı min mesafe — etiketler asla çakışmasın
-        const minX = 14;  // x domain 0-100, %14 min mesafe
-        const minY = Math.max(3, yMax * 0.14); // y domain, %14 min mesafe
-        return pruneLabelCollisions(points, candidates, minX, minY);
-    }, [points, yMax]);
+    // Tum kisilerin etiketi gorunsun — cakisma kabul, kullanici istegi
+    // (eskiden pruneLabelCollisions ile 4-5 etiket gosteriliyordu)
+    const labeledPointIds = useMemo(() => new Set(points.map((p) => p.id)), [points]);
 
     // Etiket pozisyon listesi — sirayla atanir, leader line ile cizilir.
-    // 8 yön: N, NE, E, SE, S, SW, W, NW (saat yonu)
+    // 12 yön (saat) — daha fazla cesit, daha az ortusme
     const LABEL_OFFSETS = [
-        { dx: 0,   dy: -28, anchor: 'middle' },  // N (yukari)
-        { dx: 32,  dy: -18, anchor: 'start' },   // NE (sag-ust)
-        { dx: 32,  dy: 18,  anchor: 'start' },   // SE (sag-alt)
-        { dx: -32, dy: -18, anchor: 'end' },     // NW (sol-ust)
-        { dx: -32, dy: 18,  anchor: 'end' },     // SW (sol-alt)
-        { dx: 0,   dy: 28,  anchor: 'middle' },  // S (asagi)
-        { dx: 38,  dy: 0,   anchor: 'start' },   // E (sag)
-        { dx: -38, dy: 0,   anchor: 'end' },     // W (sol)
+        { dx: 0,    dy: -22, anchor: 'middle' }, // 12
+        { dx: 18,   dy: -20, anchor: 'start' },  // 1
+        { dx: 28,   dy: -10, anchor: 'start' },  // 2
+        { dx: 30,   dy: 4,   anchor: 'start' },  // 3
+        { dx: 28,   dy: 18,  anchor: 'start' },  // 4
+        { dx: 18,   dy: 24,  anchor: 'start' },  // 5
+        { dx: 0,    dy: 24,  anchor: 'middle' }, // 6
+        { dx: -18,  dy: 24,  anchor: 'end' },    // 7
+        { dx: -28,  dy: 18,  anchor: 'end' },    // 8
+        { dx: -30,  dy: 4,   anchor: 'end' },    // 9
+        { dx: -28,  dy: -10, anchor: 'end' },    // 10
+        { dx: -18,  dy: -20, anchor: 'end' },    // 11
     ];
     const labeledIdsArray = useMemo(() => Array.from(labeledPointIds), [labeledPointIds]);
 
@@ -540,31 +534,35 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                     );
                                                 }
 
-                                                // Bireysel/subtree: leader-line + offset etiket
+                                                // Bireysel/subtree: KOMPAKT etiket — ilk ad, kucuk font
                                                 const labelIdx = labeledIdsArray.indexOf(p.id);
                                                 const offset = LABEL_OFFSETS[labelIdx % LABEL_OFFSETS.length] || LABEL_OFFSETS[0];
                                                 const lx = x + offset.dx;
                                                 const ly = y + offset.dy;
-                                                const display = value?.length > 12 ? `${value.slice(0, 10)}…` : value;
+                                                const display = value?.length > 8 ? `${value.slice(0, 7)}…` : value;
                                                 const fillBg = levelColor(p.normal_completion);
-                                                // Etiket arkasinda yari saydam beyaz arka plan + leader line
-                                                const padX = 4;
-                                                const charW = 6.2;
+                                                const isHovered = hoveredEmpId === p.id;
+                                                // Hover durumunda buyuk + on plan, diger durumda kompakt
+                                                const fontSize = isHovered ? 11 : 8;
+                                                const padX = isHovered ? 4 : 2;
+                                                const charW = isHovered ? 6.2 : 4.8;
                                                 const w = (display?.length || 0) * charW + padX * 2;
-                                                const h = 14;
+                                                const h = isHovered ? 14 : 11;
                                                 const rectX = offset.anchor === 'start' ? lx - padX
                                                     : offset.anchor === 'end' ? lx - w + padX
                                                     : lx - w / 2;
+                                                // Diger noktalar hover ediliyorsa bu etiketi sönukleştir
+                                                const opacity = !hoveredEmpId ? 0.92 : (isHovered ? 1 : 0.18);
                                                 return (
-                                                    <g style={{ pointerEvents: 'none' }}>
+                                                    <g style={{ pointerEvents: 'none', opacity }}>
                                                         {/* Leader line nokta -> etiket */}
                                                         <line
                                                             x1={x} y1={y}
                                                             x2={lx} y2={ly}
                                                             stroke={fillBg}
-                                                            strokeWidth={1.2}
-                                                            strokeDasharray="2 2"
-                                                            opacity={0.7}
+                                                            strokeWidth={isHovered ? 1.5 : 0.6}
+                                                            strokeDasharray={isHovered ? '0' : '2 2'}
+                                                            opacity={0.6}
                                                         />
                                                         {/* Beyaz arka plan rect */}
                                                         <rect
@@ -572,18 +570,18 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                             y={ly - h / 2 - 1}
                                                             width={w}
                                                             height={h}
-                                                            rx={3}
+                                                            rx={2.5}
                                                             fill="white"
                                                             stroke={fillBg}
-                                                            strokeWidth={1}
-                                                            opacity={0.95}
+                                                            strokeWidth={isHovered ? 1.2 : 0.6}
+                                                            opacity={0.93}
                                                         />
                                                         {/* Etiket metni */}
                                                         <text
                                                             x={lx}
-                                                            y={ly + 3}
-                                                            fontSize={10}
-                                                            fontWeight={700}
+                                                            y={ly + (isHovered ? 3 : 2.5)}
+                                                            fontSize={fontSize}
+                                                            fontWeight={isHovered ? 800 : 600}
                                                             fill="#1e293b"
                                                             textAnchor={offset.anchor}
                                                         >
