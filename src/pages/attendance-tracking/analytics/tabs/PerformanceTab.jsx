@@ -23,6 +23,14 @@ import {
     Cell,
 } from 'recharts';
 
+// v3 grafik-odakli redesign komponentleri
+import KPIStrip from './performance/KPIStrip';
+import SmartFilters from './performance/SmartFilters';
+import ScatterMatrix from './performance/ScatterMatrix';
+import GroupingPanel from './performance/GroupingPanel';
+import HeatmapView from './performance/HeatmapView';
+import { applyPresets, TR_NORM as TR_NORM_HELPER } from './performance/helpers';
+
 // HH:MM formatter — "s:dd"
 const hoursFormatter = (value, name) => {
     if (typeof value === 'number' && value % 1 !== 0) {
@@ -77,7 +85,6 @@ function intensityColor(pct) {
 }
 
 // Sayı formatı: null→"—", round
-const fmtPct = (v) => (v == null ? '—' : `${Math.round(v)}%`);
 const fmtHrs = (v) => `${Math.round(v || 0)}sa`;
 
 // ────────────────────────────────────────────────────────────
@@ -232,10 +239,10 @@ function TeamOverviewMode({ onSelectPerson }) {
     const [whLoading, setWhLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [selectedDept, setSelectedDept] = useState(null);
+    const [activePresets, setActivePresets] = useState([]);
     const [sortBy, setSortBy] = useState('normal_completion_desc');
     const [pageSize, setPageSize] = useState(25);
     const [page, setPage] = useState(1);
-    const [deptChartMetric, setDeptChartMetric] = useState('normal_completion');
     const [expandedRowId, setExpandedRowId] = useState(null);
 
     // work-hours endpoint'inden detaylı çalışan listesi (bulk'ta da var)
@@ -261,42 +268,6 @@ function TeamOverviewMode({ onSelectPerson }) {
 
     useEffect(() => { fetchWorkHours(); }, [fetchWorkHours]);
 
-    // Departman bazlı performans (team-overview'dan)
-    const deptComparison = data?.team_overview?.department_comparison || [];
-
-    // 4 sıralama paneli için ayrı ayrı top 3'ler
-    const eligibleEmployees = useMemo(() => {
-        // target_hours > 0 olan (ölçülebilir) çalışanlar
-        return employeeHours.filter((e) => (e.has_target ?? (e.target_hours > 0)));
-    }, [employeeHours]);
-
-    const topNormalDoluluk = useMemo(() => {
-        return [...eligibleEmployees]
-            .sort((a, b) => (b.normal_completion_pct ?? b.efficiency_pct ?? 0) - (a.normal_completion_pct ?? a.efficiency_pct ?? 0))
-            .slice(0, 3);
-    }, [eligibleEmployees]);
-
-    const topOT = useMemo(() => {
-        return [...eligibleEmployees]
-            .filter((e) => (e.ot_hours || 0) > 0)
-            .sort((a, b) => (b.ot_hours || 0) - (a.ot_hours || 0))
-            .slice(0, 3);
-    }, [eligibleEmployees]);
-
-    const topMissing = useMemo(() => {
-        return [...eligibleEmployees]
-            .filter((e) => (e.missing_hours || 0) > 0)
-            .sort((a, b) => (b.missing_hours || 0) - (a.missing_hours || 0))
-            .slice(0, 3);
-    }, [eligibleEmployees]);
-
-    const topOTRatio = useMemo(() => {
-        return [...eligibleEmployees]
-            .filter((e) => e.ot_to_normal_pct != null && (e.normal_hours || 0) > 0)
-            .sort((a, b) => (b.ot_to_normal_pct || 0) - (a.ot_to_normal_pct || 0))
-            .slice(0, 3);
-    }, [eligibleEmployees]);
-
     // Departman chip listesi
     const deptChips = useMemo(() => {
         const map = new Map();
@@ -309,7 +280,7 @@ function TeamOverviewMode({ onSelectPerson }) {
             .sort((a, b) => b.count - a.count);
     }, [employeeHours]);
 
-    // Filtre + sırala
+    // Filtre + preset + sirala — yeni v3 mantigi
     const filtered = useMemo(() => {
         let list = [...employeeHours];
         if (selectedDept) {
@@ -319,6 +290,7 @@ function TeamOverviewMode({ onSelectPerson }) {
             const q = TR_NORM(search);
             list = list.filter((e) => TR_NORM(e.name).includes(q) || TR_NORM(e.department).includes(q));
         }
+        list = applyPresets(list, activePresets);
         list.sort((a, b) => {
             const aN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
             const bN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
@@ -334,7 +306,14 @@ function TeamOverviewMode({ onSelectPerson }) {
             }
         });
         return list;
-    }, [employeeHours, search, selectedDept, sortBy]);
+    }, [employeeHours, search, selectedDept, sortBy, activePresets]);
+
+    // Drill-down ve scatter point click icin employee_id -> full row map
+    const employeeIndex = useMemo(() => {
+        const m = {};
+        employeeHours.forEach((e) => { m[e.employee_id] = e; });
+        return m;
+    }, [employeeHours]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const pageItems = useMemo(() => {
@@ -343,7 +322,15 @@ function TeamOverviewMode({ onSelectPerson }) {
     }, [filtered, page, pageSize]);
 
     const resetPage = useCallback(() => { setPage(1); }, []);
-    useEffect(() => { resetPage(); }, [search, selectedDept, sortBy, pageSize, resetPage]);
+    useEffect(() => { resetPage(); }, [search, selectedDept, sortBy, pageSize, activePresets, resetPage]);
+
+    const togglePreset = useCallback((k) => {
+        setActivePresets((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
+    }, []);
+
+    const resetFilters = useCallback(() => {
+        setSearch(''); setSelectedDept(null); setActivePresets([]);
+    }, []);
 
     if (whLoading && employeeHours.length === 0) {
         return <LoadingSkeleton rows={4} />;
@@ -353,236 +340,42 @@ function TeamOverviewMode({ onSelectPerson }) {
         return <EmptyState icon={Users} message="Bu dönem için ekip verisi bulunamadı" />;
     }
 
-    // Ranking panel renderer (her metrik için yeniden kullanılır)
-    const renderRanking = (items, valueKey, valueFmt, hintKey, hintFmt, palette) => {
-        if (!items || items.length === 0) return <Empty description="Veri yok" />;
-        const c = palette; // {border, bg, hover, text, badge}
-        return (
-            <div className="space-y-2">
-                {items.map((e, i) => (
-                    <button
-                        key={e.employee_id}
-                        onClick={() => onSelectPerson?.(e.employee_id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl border ${c.border} bg-gradient-to-r ${c.bg} ${c.hover} hover:shadow-md transition-all text-left group`}
-                    >
-                        <div className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full ${c.badge} text-white font-black text-xs`}>
-                            {i + 1}
-                        </div>
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${gradientFor(e.employee_id)} text-white shadow-sm flex-shrink-0`}>
-                            <span className="text-xs font-black">{initials(e.name)}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className={`font-bold text-slate-800 text-sm truncate group-hover:${c.text}`}>{e.name}</p>
-                            <p className="text-[10px] text-slate-500 truncate">{e.department || '—'}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                            <p className={`text-lg font-black ${c.text} tabular-nums leading-none`}>
-                                {valueFmt(e[valueKey])}
-                            </p>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                                {hintFmt(e[hintKey])}
-                            </p>
-                        </div>
-                        <ChevronRight size={14} className={`text-slate-300 group-hover:${c.text} flex-shrink-0`} />
-                    </button>
-                ))}
-            </div>
-        );
-    };
-
     return (
         <div className="space-y-5">
-            {/* 4 SIRALAMA PANELİ — 2x2 grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <SectionCard
-                    title="En Yüksek Mesai Doluluğu"
-                    icon={Crown}
-                    iconGradient="from-emerald-500 to-teal-600"
-                    subtitle="Normal mesai / Yükümlülük"
-                    collapsible={false}
-                >
-                    {renderRanking(
-                        topNormalDoluluk,
-                        'normal_completion_pct',
-                        (v) => `%${v ?? 0}`,
-                        'normal_hours',
-                        (v) => `${Math.round(v || 0)}sa normal`,
-                        {
-                            border: 'border-emerald-200',
-                            bg: 'from-emerald-50/50 to-white',
-                            hover: 'hover:border-emerald-300',
-                            text: 'text-emerald-700',
-                            badge: 'bg-emerald-600',
-                        },
-                    )}
-                </SectionCard>
+            {/* v3 grafik-odakli yeni dizilim */}
+            <KPIStrip employees={employeeHours} />
 
-                <SectionCard
-                    title="En Çok Fazla Mesai"
-                    icon={Zap}
-                    iconGradient="from-amber-500 to-orange-600"
-                    subtitle="Fazla mesai saati (mutlak)"
-                    collapsible={false}
-                >
-                    {renderRanking(
-                        topOT,
-                        'ot_hours',
-                        (v) => `${Math.round(v || 0)}sa`,
-                        'ot_to_normal_pct',
-                        (v) => (v == null ? 'Normal yok' : `FM/N: %${Math.round(v)}`),
-                        {
-                            border: 'border-amber-200',
-                            bg: 'from-amber-50/50 to-white',
-                            hover: 'hover:border-amber-300',
-                            text: 'text-amber-700',
-                            badge: 'bg-amber-600',
-                        },
-                    )}
-                </SectionCard>
+            <SmartFilters
+                activePresets={activePresets}
+                onPresetToggle={togglePreset}
+                search={search}
+                onSearchChange={setSearch}
+                departments={deptChips}
+                selectedDept={selectedDept}
+                onDeptChange={setSelectedDept}
+                onReset={resetFilters}
+                employeeCount={filtered.length}
+                totalCount={employeeHours.length}
+            />
 
-                <SectionCard
-                    title="En Çok Eksik Mesai"
-                    icon={AlertTriangle}
-                    iconGradient="from-red-500 to-rose-600"
-                    subtitle="Eksik saat (mutlak)"
-                    collapsible={false}
-                >
-                    {renderRanking(
-                        topMissing,
-                        'missing_hours',
-                        (v) => `${Math.round(v || 0)}sa`,
-                        'missing_to_target_pct',
-                        (v) => `Eksik/Y: ${fmtPct(v)}`,
-                        {
-                            border: 'border-red-200',
-                            bg: 'from-red-50/50 to-white',
-                            hover: 'hover:border-red-300',
-                            text: 'text-red-700',
-                            badge: 'bg-red-500',
-                        },
-                    )}
-                </SectionCard>
+            <ScatterMatrix employees={filtered} onSelectPerson={onSelectPerson} />
 
-                <SectionCard
-                    title="En Yüksek Fazla Mesai/Normal Oranı"
-                    icon={TrendingUp}
-                    iconGradient="from-violet-500 to-fuchsia-600"
-                    subtitle="Fazla mesai yoğunluğu (Normal'e oranla)"
-                    collapsible={false}
-                >
-                    {renderRanking(
-                        topOTRatio,
-                        'ot_to_normal_pct',
-                        (v) => fmtPct(v),
-                        'ot_hours',
-                        (v) => `${Math.round(v || 0)}sa Fazla Mesai`,
-                        {
-                            border: 'border-violet-200',
-                            bg: 'from-violet-50/50 to-white',
-                            hover: 'hover:border-violet-300',
-                            text: 'text-violet-700',
-                            badge: 'bg-violet-600',
-                        },
-                    )}
-                </SectionCard>
-            </div>
+            <GroupingPanel
+                employeeIndex={employeeIndex}
+                employees={filtered}
+                onSelectPerson={onSelectPerson}
+            />
 
-            {/* Departman Kıyaslaması — 4 metrik segmented */}
-            {deptComparison.length > 0 && (() => {
-                const metricMap = {
-                    normal_completion: {
-                        key: 'avg_normal_completion_pct',
-                        legacy: 'avg_efficiency_pct',
-                        label: 'Normal Doluluk',
-                        unit: '%',
-                        color: levelColor,
-                        ref: 80,
-                    },
-                    total_completion: {
-                        key: 'avg_total_completion_pct',
-                        label: 'Toplam Doluluk (N+Fazla Mesai)',
-                        unit: '%',
-                        color: (v) => (v >= 100 ? '#7c3aed' : levelColor(v)),
-                        ref: 100,
-                    },
-                    ot_to_target: {
-                        key: 'avg_ot_to_target_pct',
-                        label: 'Fazla Mesai / Yükümlülük',
-                        unit: '%',
-                        color: intensityColor,
-                        ref: null,
-                    },
-                    missing_to_target: {
-                        key: 'avg_missing_to_target_pct',
-                        label: 'Eksik / Yükümlülük',
-                        unit: '%',
-                        color: intensityColor,
-                        ref: null,
-                    },
-                };
-                const m = metricMap[deptChartMetric];
-                const chartData = deptComparison.map((d) => ({
-                    name: d.department_name || '—',
-                    value: d[m.key] ?? d[m.legacy] ?? 0,
-                    employee_count: d.employee_count,
-                }));
-                return (
-                    <SectionCard
-                        title="Departman Kıyaslamaları"
-                        icon={Building2}
-                        iconGradient="from-violet-500 to-purple-600"
-                        subtitle="Metriği seç → çubuğa tıkla → tabloyu filtrele"
-                        collapsible={false}
-                    >
-                        <div className="mb-3">
-                            <Segmented
-                                size="small"
-                                value={deptChartMetric}
-                                onChange={setDeptChartMetric}
-                                options={[
-                                    { value: 'normal_completion', label: <span className="text-[10px] font-bold">Normal Doluluk</span> },
-                                    { value: 'total_completion', label: <span className="text-[10px] font-bold">Toplam Doluluk</span> },
-                                    { value: 'ot_to_target', label: <span className="text-[10px] font-bold">Fazla Mesai/Yük.</span> },
-                                    { value: 'missing_to_target', label: <span className="text-[10px] font-bold">Eksik/Yükümlülük</span> },
-                                ]}
-                            />
-                        </div>
-                        <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    data={chartData}
-                                    onClick={(state) => {
-                                        if (state?.activeLabel) setSelectedDept(state.activeLabel);
-                                    }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
-                                    <YAxis tick={{ fontSize: 10 }} unit={m.unit} />
-                                    <Tooltip content={<ChartTooltip unit={m.unit} />} />
-                                    {m.ref != null && (
-                                        <ReferenceLine y={m.ref} stroke="#10b981" strokeDasharray="4 3" strokeWidth={1} />
-                                    )}
-                                    <Bar dataKey="value" name={m.label} radius={[6, 6, 0, 0]} cursor="pointer">
-                                        {chartData.map((d, i) => (
-                                            <Cell key={i} fill={m.color(d.value || 0)} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <p className="text-[10px] text-slate-400 text-center mt-2">
-                            Metrikleri segment'le değiştir. Çubuğa tıklayarak alttaki tabloyu o departmanla filtreleyebilirsiniz.
-                        </p>
-                    </SectionCard>
-                );
-            })()}
+            <HeatmapView employees={filtered} onSelectPerson={onSelectPerson} />
 
-            {/* Tüm Ekip Mesai Tablosu */}
+            {/* Detay Tablosu — default kapali */}
             <SectionCard
-                title="Tüm Ekip Mesai Tablosu"
+                title="Detay Tablosu"
                 icon={Users}
-                iconGradient="from-indigo-500 to-blue-600"
-                subtitle={`${filtered.length} / ${employeeHours.length} çalışan`}
+                iconGradient="from-slate-500 to-slate-700"
+                subtitle={`${filtered.length} / ${employeeHours.length} çalışan · 10 sütunlu satır-bazlı tablo`}
+                collapsible={true}
+                defaultOpen={false}
                 collapsible={false}
                 headerExtra={
                     <button
@@ -689,7 +482,6 @@ function TeamOverviewMode({ onSelectPerson }) {
                                     const tDol = e.total_completion_pct ?? 0;
                                     const otY = e.ot_to_target_pct ?? 0;
                                     const eksY = e.missing_to_target_pct ?? 0;
-                                    const otN = e.ot_to_normal_pct;
                                     const noTarget = !(e.has_target ?? (e.target_hours > 0));
                                     const isExpanded = expandedRowId === e.employee_id;
                                     const totalParts = (e.normal_hours || 0) + (e.ot_hours || 0) + (e.missing_hours || 0);
