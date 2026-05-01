@@ -123,7 +123,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                     const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
                     // Jitter — yiginlanmayi onler
-                    const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
+                    const j = addJitter(x_raw, y_raw, e.employee_id, 2.5);
                     return {
                         id: e.employee_id,
                         type: 'employee',
@@ -177,7 +177,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                     // X = N.Doluluk, Y = FM/Y
                     const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
-                    const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
+                    const j = addJitter(x_raw, y_raw, e.employee_id, 2.5);
                     return {
                         id: e.employee_id,
                         type: 'employee',
@@ -223,19 +223,33 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
         return points.filter((p) => p.quadrant === hoveredQuad);
     }, [points, hoveredQuad]);
 
-    // En uc 8 aday + cakisma onleme -> max 6 etiket
+    // En uc 8 aday + cakisma onleme -> max 4-5 etiket (sıkı pruning)
     const labeledPointIds = useMemo(() => {
         const sorted = [...points].sort((a, b) => {
             const aScore = Math.abs(50 - (a.normal_completion || 0)) + (a.missing_h || 0) + (a.ot_h || 0);
             const bScore = Math.abs(50 - (b.normal_completion || 0)) + (b.missing_h || 0) + (b.ot_h || 0);
             return bScore - aScore;
         });
-        const candidates = new Set(sorted.slice(0, 10).map((p) => p.id));
-        // X dünyası 100, Y dünyası yMax - oransal min mesafe hesapla
-        const minX = 8;  // x domain 0-100, %8 min mesafe
-        const minY = Math.max(2, yMax * 0.08); // y domain 0-yMax, %8 min mesafe
+        const candidates = new Set(sorted.slice(0, 8).map((p) => p.id));
+        // Daha sıkı min mesafe — etiketler asla çakışmasın
+        const minX = 14;  // x domain 0-100, %14 min mesafe
+        const minY = Math.max(3, yMax * 0.14); // y domain, %14 min mesafe
         return pruneLabelCollisions(points, candidates, minX, minY);
     }, [points, yMax]);
+
+    // Etiket pozisyon listesi — sirayla atanir, leader line ile cizilir.
+    // 8 yön: N, NE, E, SE, S, SW, W, NW (saat yonu)
+    const LABEL_OFFSETS = [
+        { dx: 0,   dy: -28, anchor: 'middle' },  // N (yukari)
+        { dx: 32,  dy: -18, anchor: 'start' },   // NE (sag-ust)
+        { dx: 32,  dy: 18,  anchor: 'start' },   // SE (sag-alt)
+        { dx: -32, dy: -18, anchor: 'end' },     // NW (sol-ust)
+        { dx: -32, dy: 18,  anchor: 'end' },     // SW (sol-alt)
+        { dx: 0,   dy: 28,  anchor: 'middle' },  // S (asagi)
+        { dx: 38,  dy: 0,   anchor: 'start' },   // E (sag)
+        { dx: -38, dy: 0,   anchor: 'end' },     // W (sol)
+    ];
+    const labeledIdsArray = useMemo(() => Array.from(labeledPointIds), [labeledPointIds]);
 
     const handlePointClick = (p) => {
         if (p.type === 'employee') {
@@ -452,7 +466,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                         tick={{ fontSize: 11, fontWeight: 600 }}
                                         label={{ value: 'Fazla Mesai / Yükümlülük (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
                                     />
-                                    <ZAxis type="number" dataKey="z" range={[50, 1500]} />
+                                    <ZAxis type="number" dataKey="z" range={[40, 250]} />
                                     <ReferenceLine x={HIGH_NORMAL_THRESHOLD} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
                                     <ReferenceLine y={HIGH_OT_THRESHOLD} stroke="#475569" strokeDasharray="4 3" strokeWidth={1.5} />
                                     <Tooltip
@@ -495,32 +509,85 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                             <Cell
                                                 key={idx}
                                                 fill={levelColor(p.normal_completion)}
-                                                fillOpacity={0.78}
+                                                fillOpacity={0.85}
                                                 stroke="#fff"
-                                                strokeWidth={2}
+                                                strokeWidth={1}
                                             />
                                         ))}
+                                        {/* Leader-line etiketler — nokta yaninda ok ile */}
                                         <LabelList
                                             dataKey="label"
-                                            position="top"
-                                            offset={8}
                                             content={({ x, y, value, index }) => {
                                                 const p = filteredPoints[index];
                                                 if (!p) return null;
-                                                // Departman modu: hep göster · diğer mod: sadece labeled set
+                                                // Departman modu: hepsini göster · diğer mod: pruned set
                                                 const showLabel = viewMode === 'department' || labeledPointIds.has(p.id);
                                                 if (!showLabel) return null;
+
+                                                // Departman modunda klasik (uzerinde) etiket — kisa adlar
+                                                if (viewMode === 'department') {
+                                                    return (
+                                                        <text
+                                                            x={x} y={y - 8}
+                                                            fontSize={11} fontWeight={700}
+                                                            fill="#1e293b" textAnchor="middle"
+                                                            style={{ pointerEvents: 'none' }}
+                                                        >
+                                                            {value?.length > 14 ? `${value.slice(0, 12)}…` : value}
+                                                        </text>
+                                                    );
+                                                }
+
+                                                // Bireysel/subtree: leader-line + offset etiket
+                                                const labelIdx = labeledIdsArray.indexOf(p.id);
+                                                const offset = LABEL_OFFSETS[labelIdx % LABEL_OFFSETS.length] || LABEL_OFFSETS[0];
+                                                const lx = x + offset.dx;
+                                                const ly = y + offset.dy;
+                                                const display = value?.length > 12 ? `${value.slice(0, 10)}…` : value;
+                                                const fillBg = levelColor(p.normal_completion);
+                                                // Etiket arkasinda yari saydam beyaz arka plan + leader line
+                                                const padX = 4;
+                                                const charW = 6.2;
+                                                const w = (display?.length || 0) * charW + padX * 2;
+                                                const h = 14;
+                                                const rectX = offset.anchor === 'start' ? lx - padX
+                                                    : offset.anchor === 'end' ? lx - w + padX
+                                                    : lx - w / 2;
                                                 return (
-                                                    <text
-                                                        x={x} y={y - 6}
-                                                        fontSize={viewMode === 'department' ? 11 : 10}
-                                                        fontWeight={700}
-                                                        fill="#1e293b"
-                                                        textAnchor="middle"
-                                                        style={{ pointerEvents: 'none' }}
-                                                    >
-                                                        {value?.length > 14 ? `${value.slice(0, 12)}…` : value}
-                                                    </text>
+                                                    <g style={{ pointerEvents: 'none' }}>
+                                                        {/* Leader line nokta -> etiket */}
+                                                        <line
+                                                            x1={x} y1={y}
+                                                            x2={lx} y2={ly}
+                                                            stroke={fillBg}
+                                                            strokeWidth={1.2}
+                                                            strokeDasharray="2 2"
+                                                            opacity={0.7}
+                                                        />
+                                                        {/* Beyaz arka plan rect */}
+                                                        <rect
+                                                            x={rectX}
+                                                            y={ly - h / 2 - 1}
+                                                            width={w}
+                                                            height={h}
+                                                            rx={3}
+                                                            fill="white"
+                                                            stroke={fillBg}
+                                                            strokeWidth={1}
+                                                            opacity={0.95}
+                                                        />
+                                                        {/* Etiket metni */}
+                                                        <text
+                                                            x={lx}
+                                                            y={ly + 3}
+                                                            fontSize={10}
+                                                            fontWeight={700}
+                                                            fill="#1e293b"
+                                                            textAnchor={offset.anchor}
+                                                        >
+                                                            {display}
+                                                        </text>
+                                                    </g>
                                                 );
                                             }}
                                         />

@@ -40,7 +40,7 @@ export default function RiskMatrixCard({
     },
     onPointClick,
     colorFn,
-    sizeRange = [40, 800],
+    sizeRange = [30, 180],
     height = 360,
     showLabels = true,
     collapsible = true,
@@ -84,12 +84,22 @@ export default function RiskMatrixCard({
             const bS = Math.abs(b.x_raw - thresholds.x) + Math.abs(b.y_raw - thresholds.y);
             return bS - aS;
         });
-        const candidates = new Set(sorted.slice(0, 8).map((p) => p.id));
-        // Cakisma onleme — orantili min mesafe
-        const minX = xMax * 0.08;
-        const minY = adaptiveYMax * 0.10;
+        const candidates = new Set(sorted.slice(0, 6).map((p) => p.id));
+        // Daha siki cakisma onleme
+        const minX = xMax * 0.14;
+        const minY = adaptiveYMax * 0.14;
         return pruneLabelCollisions(points, candidates, minX, minY);
     }, [points, showLabels, thresholds, xMax, adaptiveYMax]);
+
+    const labeledIdsArray = useMemo(() => Array.from(labeledIds), [labeledIds]);
+    const LABEL_OFFSETS = [
+        { dx: 0,   dy: -24, anchor: 'middle' },
+        { dx: 28,  dy: -14, anchor: 'start' },
+        { dx: 28,  dy: 14,  anchor: 'start' },
+        { dx: -28, dy: -14, anchor: 'end' },
+        { dx: -28, dy: 14,  anchor: 'end' },
+        { dx: 0,   dy: 24,  anchor: 'middle' },
+    ];
 
     return (
         <SectionCard
@@ -179,9 +189,9 @@ export default function RiskMatrixCard({
                                     <Cell
                                         key={idx}
                                         fill={p.color || (colorFn ? colorFn(p) : quadrantLabels[p.quad].color)}
-                                        fillOpacity={0.78}
+                                        fillOpacity={0.85}
                                         stroke="#fff"
-                                        strokeWidth={1.5}
+                                        strokeWidth={1}
                                     />
                                 ))}
                                 {showLabels && (
@@ -190,15 +200,28 @@ export default function RiskMatrixCard({
                                         content={({ x, y, value, index }) => {
                                             const p = points[index];
                                             if (!p || !labeledIds.has(p.id)) return null;
+                                            const labelIdx = labeledIdsArray.indexOf(p.id);
+                                            const offset = LABEL_OFFSETS[labelIdx % LABEL_OFFSETS.length] || LABEL_OFFSETS[0];
+                                            const lx = x + offset.dx;
+                                            const ly = y + offset.dy;
+                                            const display = value?.length > 12 ? `${value.slice(0, 10)}…` : value;
+                                            const fillBg = p.color || (colorFn ? colorFn(p) : quadrantLabels[p.quad].color);
+                                            const padX = 4, charW = 6.0, h = 13;
+                                            const w = (display?.length || 0) * charW + padX * 2;
+                                            const rectX = offset.anchor === 'start' ? lx - padX
+                                                : offset.anchor === 'end' ? lx - w + padX
+                                                : lx - w / 2;
                                             return (
-                                                <text
-                                                    x={x} y={y - 6}
-                                                    fontSize={10} fontWeight={700}
-                                                    fill="#1e293b" textAnchor="middle"
-                                                    style={{ pointerEvents: 'none' }}
-                                                >
-                                                    {value?.length > 12 ? `${value.slice(0, 10)}…` : value}
-                                                </text>
+                                                <g style={{ pointerEvents: 'none' }}>
+                                                    <line x1={x} y1={y} x2={lx} y2={ly}
+                                                        stroke={fillBg} strokeWidth={1} strokeDasharray="2 2" opacity={0.7} />
+                                                    <rect x={rectX} y={ly - h / 2 - 1} width={w} height={h} rx={3}
+                                                        fill="white" stroke={fillBg} strokeWidth={0.8} opacity={0.95} />
+                                                    <text x={lx} y={ly + 3} fontSize={10} fontWeight={700}
+                                                        fill="#1e293b" textAnchor={offset.anchor}>
+                                                        {display}
+                                                    </text>
+                                                </g>
                                             );
                                         }}
                                     />
