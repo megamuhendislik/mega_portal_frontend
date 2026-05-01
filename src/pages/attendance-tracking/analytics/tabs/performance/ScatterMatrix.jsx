@@ -4,7 +4,7 @@ import {
     ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList,
 } from 'recharts';
 import { Segmented } from 'antd';
-import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIcon } from 'lucide-react';
+import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIcon, Bug, Download } from 'lucide-react';
 import SectionCard from '../../shared/SectionCard';
 import api from '../../../../../services/api';
 import { useAnalytics } from '../../AnalyticsContext';
@@ -292,6 +292,33 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             collapsible={false}
             headerExtra={
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const params = new URLSearchParams(queryParams || {});
+                                const res = await api.get(
+                                    `/attendance-analytics/debug-calculations/?${params.toString()}`,
+                                    { responseType: 'blob', timeout: 60000 },
+                                );
+                                const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                                a.download = `debug-mesai-${ts}.txt`;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                            } catch (err) {
+                                alert('Debug raporu indirilemedi: ' + (err?.message || 'Bilinmeyen hata'));
+                            }
+                        }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all"
+                        title="Hesaplama adımlarını içeren TXT raporu indir"
+                    >
+                        <Bug size={11} /> Debug TXT <Download size={10} />
+                    </button>
                     <Segmented
                         size="small"
                         value={displayMode}
