@@ -53,7 +53,7 @@ const TYPE_LABELS = {
  *  - Yönetici performans rankingi
  *  - Geciken talepler listesi (en eski 20)
  */
-export default function SLATab() {
+export default function SLATab({ showScopeBanner = true } = {}) {
     const { queryParams, startDate, endDate } = useAnalytics();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -195,7 +195,7 @@ export default function SLATab() {
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
             {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
-            <ScopeBanner startDate={startDate} endDate={endDate} />
+            {showScopeBanner && <ScopeBanner startDate={startDate} endDate={endDate} />}
 
             {/* KPI row */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

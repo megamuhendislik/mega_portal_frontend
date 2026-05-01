@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from
 import {
     FileText, TrendingUp, PieChart as PieChartIcon, Users,
     CheckCircle2, Clock, XCircle, Calendar, BarChart3, Hourglass, X as CloseIcon,
+    UserCheck,
 } from 'lucide-react';
+import SLATab from './SLATab';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
@@ -73,6 +75,8 @@ function FilterChip({ label, color = 'blue', onRemove }) {
 export default function RequestAnalyticsTab() {
     const { startDate, endDate } = useAnalytics();
     const [mode, setMode] = useState('personal');
+    // Ust seviye segmented: 'employee' (calisan talepleri) vs 'manager' (SLA)
+    const [topSection, setTopSection] = useState('employee');
     const [personalData, setPersonalData] = useState(null);
     const [teamData, setTeamData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -245,7 +249,62 @@ export default function RequestAnalyticsTab() {
             {/* Kapsam göstergesi */}
             <ScopeBanner startDate={startDate} endDate={endDate} />
 
-            {/* Mode toggle */}
+            {/* ═══ ÜST BÖLÜM SEÇİCİ — Çalışan Talepleri vs Yönetici Onayları ═══ */}
+            <div className="bg-gradient-to-r from-indigo-50/60 via-white to-violet-50/60 border-2 border-indigo-200/60 rounded-2xl p-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                    {[
+                        {
+                            key: 'employee',
+                            label: 'Çalışan Talepleri',
+                            sublabel: 'Talep tipi, durum, trend, kişi bazlı',
+                            icon: FileText,
+                            gradient: 'from-indigo-500 to-blue-600',
+                        },
+                        {
+                            key: 'manager',
+                            label: 'Yönetici Onayları (SLA)',
+                            sublabel: 'Onay süresi, gecikme, yönetici performansı',
+                            icon: UserCheck,
+                            gradient: 'from-violet-500 to-fuchsia-600',
+                        },
+                    ].map((s) => {
+                        const isActive = topSection === s.key;
+                        return (
+                            <button
+                                key={s.key}
+                                onClick={() => setTopSection(s.key)}
+                                className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                    isActive
+                                        ? `bg-gradient-to-r ${s.gradient} text-white shadow-md`
+                                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                                }`}
+                            >
+                                <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+                                    <s.icon size={18} className={isActive ? 'text-white' : 'text-slate-500'} />
+                                </div>
+                                <div className="text-left">
+                                    <div className={`text-sm font-black ${isActive ? '' : 'text-slate-700'}`}>
+                                        {s.label}
+                                    </div>
+                                    <div className={`text-[10px] mt-0.5 ${isActive ? 'text-white/80' : 'text-slate-400'}`}>
+                                        {s.sublabel}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Yönetici Onayları (SLA) içeriği */}
+            {topSection === 'manager' && (
+                <SLATab showScopeBanner={false} />
+            )}
+
+            {/* Çalışan Talepleri içeriği */}
+            {topSection === 'employee' && (
+            <>
+            {/* Mode toggle (kişisel/ekip) */}
             <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200/80 w-fit shadow-sm">
                 {[{ key: 'personal', label: 'Kişisel Taleplerim', icon: FileText }, { key: 'team', label: 'Ekip Talepleri', icon: Users }].map(m => (
                     <button key={m.key} onClick={() => setMode(m.key)}
@@ -563,6 +622,8 @@ export default function RequestAnalyticsTab() {
                 onClose={() => setDrawerOpen(false)}
                 request={drawerRequest}
             />
+            </>
+            )}
         </div>
     );
 }
