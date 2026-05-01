@@ -4,7 +4,7 @@ import {
     ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList,
 } from 'recharts';
 import { Segmented } from 'antd';
-import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIcon, Bug, Download } from 'lucide-react';
+import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIcon, Bug, Download, Maximize2, Minimize2 } from 'lucide-react';
 import SectionCard from '../../shared/SectionCard';
 import api from '../../../../../services/api';
 import { useAnalytics } from '../../AnalyticsContext';
@@ -45,6 +45,20 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
     const [hoveredQuad, setHoveredQuad] = useState(null);
     const [hoveredEmpId, setHoveredEmpId] = useState(null);
     const [drillData, setDrillData] = useState(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // ESC ile expand modunu kapat + body scroll lock
+    useEffect(() => {
+        if (!isExpanded) return undefined;
+        const onKey = (ev) => { if (ev.key === 'Escape') setIsExpanded(false); };
+        window.addEventListener('keydown', onKey);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isExpanded]);
 
     // Departman ve yonetici agaci icin ek veri
     const [deptGroups, setDeptGroups] = useState([]);
@@ -293,6 +307,9 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             : 'Seçilen yöneticinin transitif ekibi · X = Yapılan Normal Mesai, Y = FM/Y';
 
     return (
+        <div className={isExpanded
+            ? 'fixed inset-0 z-50 bg-white p-4 overflow-auto'
+            : ''}>
         <SectionCard
             title="Risk Haritası"
             icon={LayoutGrid}
@@ -342,6 +359,13 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                             ),
                         }))}
                     />
+                    <button
+                        onClick={() => setIsExpanded(true)}
+                        title="Tam ekran (ESC ile kapat)"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all"
+                    >
+                        <Maximize2 size={11} /> Tam Ekran
+                    </button>
                 </div>
             }
         >
@@ -435,8 +459,10 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                             }}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-3">
-                        <div className="h-[480px]">
+                        <div className={isExpanded
+                            ? 'grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3'
+                            : 'grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-3'}>
+                        <div className={isExpanded ? 'h-[calc(100vh-280px)] min-h-[600px]' : 'h-[480px]'}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 25, right: 35, bottom: 45, left: 35 }}>
                                     {/* 4 quadrant arka plan — Sag-ust = Lider (yesil) */}
@@ -597,7 +623,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                         </div>
 
                         {/* Yan dikey liste — tum kisiler her zaman gorunur */}
-                        <div className="hidden lg:flex flex-col bg-slate-50/60 rounded-lg border border-slate-200 max-h-[480px]">
+                        <div className={`hidden lg:flex flex-col bg-slate-50/60 rounded-lg border border-slate-200 ${isExpanded ? 'max-h-[calc(100vh-280px)]' : 'max-h-[480px]'}`}>
                             <div className="px-3 py-2 border-b border-slate-200 bg-white rounded-t-lg flex items-center justify-between flex-shrink-0">
                                 <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.15em]">
                                     Tüm Kişiler
@@ -671,5 +697,15 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                 onSelectPerson={(id) => { setDrillData(null); onSelectPerson?.(id); }}
             />
         </SectionCard>
+        {isExpanded && (
+            <button
+                onClick={() => setIsExpanded(false)}
+                title="Tam ekrandan çık (ESC)"
+                className="fixed top-6 right-6 z-[60] flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-2xl transition-all"
+            >
+                <Minimize2 size={16} /> Kapat (ESC)
+            </button>
+        )}
+        </div>
     );
 }
