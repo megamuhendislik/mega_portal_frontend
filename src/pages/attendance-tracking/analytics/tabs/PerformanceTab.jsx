@@ -336,6 +336,28 @@ function TeamOverviewMode({ onSelectPerson }) {
         setSearch(''); setSelectedDept(null); setActivePresets([]);
     }, []);
 
+    const downloadDebugTxt = useCallback(async () => {
+        try {
+            const params = new URLSearchParams(queryParams || {});
+            const res = await api.get(
+                `/attendance-analytics/debug-calculations/?${params.toString()}`,
+                { responseType: 'blob', timeout: 60000 },
+            );
+            const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            a.download = `debug-mesai-${ts}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Debug raporu indirilemedi: ' + (err?.message || 'Bilinmeyen hata'));
+        }
+    }, [queryParams]);
+
     if (whLoading && employeeHours.length === 0) {
         return <LoadingSkeleton rows={4} />;
     }
@@ -346,6 +368,28 @@ function TeamOverviewMode({ onSelectPerson }) {
 
     return (
         <div className="space-y-5">
+            {/* AKSIYON BAR — Debug & ihracat (Mesai v3) */}
+            <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-500 rounded-lg text-white shadow-sm">
+                        <Activity size={16} />
+                    </div>
+                    <div>
+                        <h3 className="text-[12px] font-black text-amber-900 uppercase tracking-wider">Debug & Doğrulama</h3>
+                        <p className="text-[11px] text-amber-700 mt-0.5">
+                            Hesapların yanlış göründüğünü düşünüyorsanız ham veri + formül adımlarını içeren TXT raporu indirin
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={downloadDebugTxt}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-black shadow-md hover:shadow-lg transition-all flex-shrink-0"
+                >
+                    <ExternalLink size={14} />
+                    Debug TXT İndir
+                </button>
+            </div>
+
             {/* v3 grafik-odakli yeni dizilim */}
             <KPIStrip employees={employeeHours} />
 
