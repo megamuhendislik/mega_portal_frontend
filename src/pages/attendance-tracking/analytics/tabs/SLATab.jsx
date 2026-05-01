@@ -8,6 +8,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import ChartTooltip from '../shared/ChartTooltip';
 import ScopeBanner from '../shared/ScopeBanner';
+import GaugeCluster from '../shared/GaugeCluster';
 import ManagerDecisionDetailModal from '../shared/ManagerDecisionDetailModal';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
@@ -210,6 +211,58 @@ export default function SLATab() {
                 <KPICard title="Hedef Süre" value={targets.target_hours || 48} suffix="sa" icon={CheckCircle2} gradient="slate"
                     subtitle={`Uyarı: ${targets.warning_hours || 72}sa · Kritik: ${targets.critical_hours || 168}sa`} />
             </div>
+
+            {/* SLA Gauge Cluster — yenilikçi gauge meters */}
+            <GaugeCluster
+                title="SLA Performans Göstergeleri"
+                subtitle={`Hedef: ${targets.target_hours || 48}sa · Uyarı: ${targets.warning_hours || 72}sa`}
+                columns={4}
+                gauges={[
+                    {
+                        key: 'avg',
+                        label: 'Ortalama Karar',
+                        value: summary.avg_decision_hours || 0,
+                        max: Math.max(targets.critical_hours || 168, summary.avg_decision_hours || 0),
+                        target: targets.target_hours || 48,
+                        suffix: 'sa',
+                        color: (summary.avg_decision_hours || 0) <= (targets.target_hours || 48) ? '#10b981'
+                            : (summary.avg_decision_hours || 0) <= (targets.warning_hours || 72) ? '#f59e0b' : '#ef4444',
+                        subtitle: `Hedef: ${targets.target_hours || 48}sa`,
+                        icon: Clock,
+                    },
+                    {
+                        key: 'median',
+                        label: 'Medyan',
+                        value: summary.median_decision_hours || 0,
+                        max: Math.max(targets.critical_hours || 168, summary.median_decision_hours || 0),
+                        target: targets.target_hours || 48,
+                        suffix: 'sa',
+                        color: '#6366f1',
+                        subtitle: 'Yarı taleplerin altında',
+                    },
+                    {
+                        key: 'p95',
+                        label: 'P95 Süre',
+                        value: summary.p95_decision_hours || 0,
+                        max: Math.max(targets.critical_hours || 168, summary.p95_decision_hours || 0),
+                        target: targets.warning_hours || 72,
+                        suffix: 'sa',
+                        color: (summary.p95_decision_hours || 0) <= (targets.warning_hours || 72) ? '#10b981' : '#ef4444',
+                        subtitle: '%95 talep bu sürede',
+                    },
+                    {
+                        key: 'on_target',
+                        label: 'Hedef Tutturma',
+                        value: summary.on_target_rate_pct || 0,
+                        max: 100,
+                        target: 75,
+                        suffix: '%',
+                        color: (summary.on_target_rate_pct || 0) >= 75 ? '#10b981' : '#f59e0b',
+                        subtitle: `${summary.on_target_count || 0}/${summary.total_decided || 0} karar`,
+                        icon: Target,
+                    },
+                ]}
+            />
 
             {/* Type comparison */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

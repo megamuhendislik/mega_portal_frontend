@@ -11,6 +11,7 @@ import DrilldownModal from '../shared/DrilldownModal';
 import BurnoutWidget from '../shared/BurnoutWidget';
 import ScopeBanner from '../shared/ScopeBanner';
 import RiskMatrixCard from '../shared/RiskMatrixCard';
+import WaffleChart from '../shared/WaffleChart';
 import { ExternalLink, X as XIcon } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -611,6 +612,22 @@ export default function OvertimeMealTab() {
                     searchFields={['name', 'department']}
                     rowKey="key"
                     pageSize={25}
+                />
+            )}
+
+            {/* ═══ Waffle Chart — FM Kaynak Pay Dağılımı ═══ */}
+            {otSourceData.length > 0 && (
+                <WaffleChart
+                    title="Fazla Mesai Kaynak Pay Dağılımı"
+                    subtitle="Her hücre = %1 · Pie alternatifi"
+                    segments={otSourceData.map((s) => ({
+                        key: s.name,
+                        label: s.name,
+                        value: s.value,
+                        color: s.color,
+                    }))}
+                    unit="sa"
+                    collapsible defaultOpen={false}
                 />
             )}
 

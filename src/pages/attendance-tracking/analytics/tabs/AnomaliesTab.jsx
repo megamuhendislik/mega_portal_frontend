@@ -10,6 +10,7 @@ import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
 import PersonViewToggle from '../shared/PersonViewToggle';
 import EmployeeAnomalyDrawer from '../shared/EmployeeAnomalyDrawer';
+import StripPlot from '../shared/StripPlot';
 
 /**
  * AnomaliesTab — Anomali Tespit tam-ekran sekmesi.
@@ -205,6 +206,38 @@ export default function AnomaliesTab() {
     const severityCounts = data?.summary?.by_severity || {};
     const total = data?.summary?.total_anomalies || 0;
 
+    // StripPlot icin: her metrik bir satir, her anomali nokta
+    const stripMetrics = useMemo(() => {
+        if (!data?.metrics) return [];
+        return Object.entries(data.metrics).map(([key, m]) => ({
+            key,
+            label: m.label || METRIC_LABELS[key] || key,
+            unit: key.includes('hours') ? 'sa' : key === 'absence_days' ? 'g' : '',
+        }));
+    }, [data]);
+
+    const stripData = useMemo(() => {
+        if (!data?.metrics) return [];
+        const byEmp = {};
+        Object.entries(data.metrics).forEach(([metricKey, m]) => {
+            (m.anomalies || []).forEach((a) => {
+                if (!byEmp[a.employee_id]) {
+                    byEmp[a.employee_id] = {
+                        entity_id: a.employee_id,
+                        name: a.name,
+                        department: a.department || '—',
+                        metrics: {},
+                    };
+                }
+                byEmp[a.employee_id].metrics[metricKey] = {
+                    value: a.value,
+                    zscore: a.z_score,
+                };
+            });
+        });
+        return Object.values(byEmp);
+    }, [data]);
+
     if (loading) {
         return <LoadingSkeleton rows={5} />;
     }
@@ -238,6 +271,22 @@ export default function AnomaliesTab() {
         <div className="space-y-5 animate-in fade-in duration-500">
             {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
             <ScopeBanner startDate={startDate} endDate={endDate} />
+
+            {/* Strip Plot — anomali yogunluk gorseli (yenilikçi) */}
+            {stripData.length > 0 && (
+                <StripPlot
+                    title="Anomali Yoğunluk Stripleri"
+                    subtitle={`${stripData.length} kişi · ${stripMetrics.length} metrik · |z| büyük noktalar anomali`}
+                    metrics={stripMetrics}
+                    data={stripData}
+                    thresholdZ={threshold || 1.5}
+                    onPointClick={(empId) => {
+                        const emp = stripData.find((d) => d.entity_id === empId);
+                        if (emp) setSelectedEmp({ id: empId, name: emp.name });
+                    }}
+                    collapsible defaultOpen={false}
+                />
+            )}
 
             {/* Header */}
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/60 to-orange-50/60 p-5 shadow-sm">

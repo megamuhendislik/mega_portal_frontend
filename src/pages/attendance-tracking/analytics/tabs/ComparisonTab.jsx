@@ -10,6 +10,7 @@ import SectionCard from '../shared/SectionCard';
 import ChartTooltip from '../shared/ChartTooltip';
 import ScopeBanner from '../shared/ScopeBanner';
 import EntityPicker from '../shared/EntityPicker';
+import RadarMetric from '../shared/RadarMetric';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, Legend, LineChart, Line, Cell,
@@ -310,6 +311,41 @@ export default function ComparisonTab() {
         );
     };
 
+    const renderCompareRadar = () => {
+        if (!data || data.mode !== 'compare') return null;
+        const snap = data.snapshot || [];
+        if (snap.length === 0) return null;
+        const radarMetrics = [
+            { key: 'efficiency_pct', label: 'N.Doluluk', max: 100 },
+            { key: 'total_completion_pct', label: 'T.Doluluk', max: 120 },
+            { key: 'ot_to_target_pct', label: 'FM/Y', max: 50 },
+            { key: 'missing_to_target_pct', label: 'Eksik/Y', max: 50 },
+            { key: 'attendance_pct', label: 'Devam', max: 100 },
+        ];
+        const radarEntities = snap.map((s, i) => ({
+            id: s.key,
+            name: s.label,
+            color: colorMap[s.key] || `hsl(${i * 60}, 70%, 50%)`,
+            metrics: {
+                efficiency_pct: s.metrics?.efficiency_pct || 0,
+                total_completion_pct: s.metrics?.total_completion_pct || 0,
+                ot_to_target_pct: s.metrics?.ot_to_target_pct || 0,
+                missing_to_target_pct: s.metrics?.missing_to_target_pct || 0,
+                attendance_pct: s.metrics?.attendance_pct || s.metrics?.attendance_rate || 0,
+            },
+        }));
+        return (
+            <RadarMetric
+                title="Radar Karşılaştırma — 5 metrik"
+                subtitle="Tüm metrikler tek görüntüde · alan büyüklüğü genel performansı yansıtır"
+                entities={radarEntities}
+                metrics={radarMetrics}
+                height={400}
+                collapsible defaultOpen={true}
+            />
+        );
+    };
+
     const renderCompareTrend = () => {
         if (!data || data.mode !== 'compare') return null;
         const series = data.time_series || [];
@@ -451,7 +487,12 @@ export default function ComparisonTab() {
                     </div>
                 </div>
             )}
-            {!loading && data && mode === 'compare' && view === 'snapshot' && renderCompareSnapshot()}
+            {!loading && data && mode === 'compare' && view === 'snapshot' && (
+                <>
+                    {renderCompareSnapshot()}
+                    {renderCompareRadar()}
+                </>
+            )}
             {!loading && data && mode === 'compare' && view === 'trend' && renderCompareTrend()}
             {!loading && data && mode === 'periods' && renderPeriods()}
         </div>

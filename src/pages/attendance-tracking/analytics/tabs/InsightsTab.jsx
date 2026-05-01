@@ -10,6 +10,7 @@ import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
 import InsightDetailDrawer from '../shared/InsightDetailDrawer';
+import SeverityPyramid from '../shared/SeverityPyramid';
 
 /**
  * InsightsTab — Otomatik İçgörüler tam-ekran sekmesi.
@@ -184,27 +185,22 @@ export default function InsightsTab() {
                     </Button>
                 </div>
 
-                {/* Severity counts */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                    {Object.entries(severityCounts).map(([sev, count]) => {
-                        const cfg = SEVERITY_CFG[sev];
-                        return (
-                            <div
-                                key={sev}
-                                className={`rounded-xl border ${cfg.border} ${cfg.bg} p-3 cursor-pointer hover:shadow-sm transition-all ${filter === sev ? 'ring-2 ring-indigo-300' : ''}`}
-                                onClick={() => setFilter(filter === sev ? 'all' : sev)}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className={`text-xs font-bold uppercase tracking-wider ${cfg.title}`}>
-                                        {cfg.label}
-                                    </span>
-                                    <Tag color={cfg.tag} className="text-xs font-bold">{count}</Tag>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
             </div>
+
+            {/* Severity Pyramid — yenilikçi piramit görsel */}
+            <SeverityPyramid
+                title="Önem Piramidi"
+                subtitle={`${insights.length} içgörü · katmana tıkla → filtreye uygula`}
+                levels={[
+                    { key: 'alert', label: 'Aksiyon', count: severityCounts.alert, color: '#dc2626', gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)' },
+                    { key: 'warning', label: 'Uyarı', count: severityCounts.warning, color: '#d97706', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
+                    { key: 'info', label: 'Bilgi', count: severityCounts.info, color: '#2563eb', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
+                    { key: 'positive', label: 'Pozitif', count: severityCounts.positive, color: '#059669', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+                ]}
+                activeKey={filter === 'all' ? null : filter}
+                onLevelClick={(k) => setFilter(k || 'all')}
+                height={260}
+            />
 
             {/* Filter bar */}
             <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm flex items-center gap-3 flex-wrap">
