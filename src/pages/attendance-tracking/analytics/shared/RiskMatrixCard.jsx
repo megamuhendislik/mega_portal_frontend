@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { LayoutGrid } from 'lucide-react';
 import SectionCard from './SectionCard';
+import { addJitter, pruneLabelCollisions } from '../tabs/performance/helpers';
 
 /**
  * Generic 4-quadrant risk haritasi (kompakt). Diger tablar tarafindan
@@ -47,14 +48,28 @@ export default function RiskMatrixCard({
 }) {
     const points = useMemo(() => {
         return data.map((d) => {
-            const x = Math.min(xMax, Math.max(0, d.x || 0));
-            const y = Math.min(yMax, Math.max(0, d.y || 0));
-            const isHighX = x >= thresholds.x;
-            const isHighY = y >= thresholds.y;
+            const x_raw = Math.min(xMax, Math.max(0, d.x || 0));
+            const y_raw = Math.min(yMax, Math.max(0, d.y || 0));
+            // Jitter — yiginlanmayi onler (deterministik)
+            const jitterAmount = Math.max(xMax, yMax) * 0.02; // %2 of axis range
+            const j = addJitter(x_raw, y_raw, d.id, jitterAmount);
+            const isHighX = x_raw >= thresholds.x;
+            const isHighY = y_raw >= thresholds.y;
             const quad = isHighY && !isHighX ? 'tl' : isHighY && isHighX ? 'tr' : !isHighY && !isHighX ? 'bl' : 'br';
-            return { ...d, x, y, quad };
+            return { ...d, x: j.x, y: j.y, x_raw, y_raw, quad };
         });
     }, [data, xMax, yMax, thresholds]);
+
+    // Adaptive yMax — veri 0-15'te sikismaz
+    const adaptiveYMax = useMemo(() => {
+        const ys = points.map((p) => p.y_raw || 0);
+        if (ys.length === 0) return yMax;
+        const sorted = [...ys].sort((a, b) => a - b);
+        const p95 = sorted[Math.floor(sorted.length * 0.95)] || 0;
+        const maxY = Math.max(...ys);
+        const cap = Math.max(p95 * 1.4, maxY * 1.1, thresholds.y * 1.5);
+        return Math.min(yMax, Math.ceil(cap / 5) * 5);
+    }, [points, yMax, thresholds.y]);
 
     const counts = useMemo(() => {
         const c = { tl: 0, tr: 0, bl: 0, br: 0 };
@@ -65,12 +80,16 @@ export default function RiskMatrixCard({
     const labeledIds = useMemo(() => {
         if (!showLabels) return new Set();
         const sorted = [...points].sort((a, b) => {
-            const aS = Math.abs(a.x - thresholds.x) + Math.abs(a.y - thresholds.y);
-            const bS = Math.abs(b.x - thresholds.x) + Math.abs(b.y - thresholds.y);
+            const aS = Math.abs(a.x_raw - thresholds.x) + Math.abs(a.y_raw - thresholds.y);
+            const bS = Math.abs(b.x_raw - thresholds.x) + Math.abs(b.y_raw - thresholds.y);
             return bS - aS;
         });
-        return new Set(sorted.slice(0, 5).map((p) => p.id));
-    }, [points, showLabels, thresholds]);
+        const candidates = new Set(sorted.slice(0, 8).map((p) => p.id));
+        // Cakisma onleme — orantili min mesafe
+        const minX = xMax * 0.08;
+        const minY = adaptiveYMax * 0.10;
+        return pruneLabelCollisions(points, candidates, minX, minY);
+    }, [points, showLabels, thresholds, xMax, adaptiveYMax]);
 
     return (
         <SectionCard
@@ -114,8 +133,8 @@ export default function RiskMatrixCard({
                         <ScatterChart margin={{ top: 20, right: 25, bottom: 35, left: 25 }}>
                             <ReferenceArea x1={0} x2={thresholds.x} y1={0} y2={thresholds.y} fill={quadrantLabels.bl.color} fillOpacity={0.08} />
                             <ReferenceArea x1={thresholds.x} x2={xMax} y1={0} y2={thresholds.y} fill={quadrantLabels.br.color} fillOpacity={0.08} />
-                            <ReferenceArea x1={0} x2={thresholds.x} y1={thresholds.y} y2={yMax} fill={quadrantLabels.tl.color} fillOpacity={0.08} />
-                            <ReferenceArea x1={thresholds.x} x2={xMax} y1={thresholds.y} y2={yMax} fill={quadrantLabels.tr.color} fillOpacity={0.08} />
+                            <ReferenceArea x1={0} x2={thresholds.x} y1={thresholds.y} y2={adaptiveYMax} fill={quadrantLabels.tl.color} fillOpacity={0.08} />
+                            <ReferenceArea x1={thresholds.x} x2={xMax} y1={thresholds.y} y2={adaptiveYMax} fill={quadrantLabels.tr.color} fillOpacity={0.08} />
 
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                             <XAxis
@@ -126,7 +145,7 @@ export default function RiskMatrixCard({
                             />
                             <YAxis
                                 type="number" dataKey="y"
-                                domain={[0, yMax]}
+                                domain={[0, adaptiveYMax]}
                                 tick={{ fontSize: 10, fontWeight: 600 }}
                                 label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fontWeight: 700, fill: '#475569' } }}
                             />
@@ -142,9 +161,9 @@ export default function RiskMatrixCard({
                                         <div className="rounded-lg bg-white shadow-xl border border-slate-200 px-3 py-2 text-xs">
                                             <div className="font-bold text-slate-800">{p.name || p.label}</div>
                                             <div className="text-[10px] text-slate-500 mt-1 tabular-nums">
-                                                {xLabel}: <b>{Math.round(p.x)}</b>
+                                                {xLabel}: <b>{Math.round(p.x_raw ?? p.x)}</b>
                                                 {' · '}
-                                                {yLabel.split('/')[0]}: <b>{Math.round(p.y)}</b>
+                                                {yLabel.split('/')[0]}: <b>{Math.round(p.y_raw ?? p.y)}</b>
                                             </div>
                                             {p.tooltipExtra && <div className="text-[10px] text-slate-600 mt-1">{p.tooltipExtra}</div>}
                                         </div>

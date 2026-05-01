@@ -117,6 +117,69 @@ export function gradientFor(id) {
     return GRADIENTS[Math.abs(n) % GRADIENTS.length];
 }
 
+// Deterministik PRNG (mulberry32) — ayni seed -> ayni rastgele sayi
+function seededRandom(seed) {
+    let t = seed | 0;
+    return function () {
+        t = (t + 0x6D2B79F5) | 0;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+/**
+ * Deterministik jitter — ayni id icin her zaman ayni kayma.
+ * Y=0 ve X=0'da yigilan noktalari dagitir.
+ *
+ * @param {number} x - orijinal x
+ * @param {number} y - orijinal y
+ * @param {number|string} seed - employee_id veya benzeri stable id
+ * @param {number} amount - kayma miktari (default: x icin 1.5%, y icin 1.5%)
+ * @returns {{x, y}} jitter eklenmis koordinatlar
+ */
+export function addJitter(x, y, seed, amount = 1.5) {
+    const numericSeed = typeof seed === 'number'
+        ? seed
+        : String(seed || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const rnd = seededRandom(numericSeed * 31 + 7);
+    // Symmetric in [-amount, +amount]
+    const dx = (rnd() * 2 - 1) * amount;
+    const dy = (rnd() * 2 - 1) * amount;
+    // Y=0 veya X=0 sinirinda biraz daha cesaretli ic kaydir (negatif olmasin)
+    const xJittered = Math.max(0, x + dx);
+    const yJittered = Math.max(0, y + dy);
+    return { x: xJittered, y: yJittered };
+}
+
+/**
+ * Etiket cakisma onleme — yakin etiketleri filtreler.
+ * Recharts LabelList icinden kullanilir.
+ *
+ * @param {Array} points - tum noktalar (x, y, id, label)
+ * @param {Set} candidateIds - etiket adayi id seti
+ * @param {number} minDistanceX - min cesaret X (yuzde, default 6)
+ * @param {number} minDistanceY - min cesaret Y (yuzde, default 6)
+ * @returns {Set} etiket gosterilecek id seti
+ */
+export function pruneLabelCollisions(points, candidateIds, minDistanceX = 6, minDistanceY = 6) {
+    const candidates = points.filter((p) => candidateIds.has(p.id));
+    // Saglik puani sirasi: yuksek skor = onemli (ucta), once etiketle
+    const sorted = [...candidates].sort((a, b) => {
+        const aScore = Math.abs(a.x - 50) + Math.abs(a.y);
+        const bScore = Math.abs(b.x - 50) + Math.abs(b.y);
+        return bScore - aScore;
+    });
+    const accepted = [];
+    for (const p of sorted) {
+        const tooClose = accepted.some((a) =>
+            Math.abs(a.x - p.x) < minDistanceX && Math.abs(a.y - p.y) < minDistanceY
+        );
+        if (!tooClose) accepted.push(p);
+    }
+    return new Set(accepted.map((p) => p.id));
+}
+
 export function initials(name) {
     if (!name) return '?';
     const parts = name.trim().split(/\s+/);

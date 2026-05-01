@@ -8,7 +8,7 @@ import { LayoutGrid, User, Building2, Users2, Grid3x3, ScatterChart as ScatterIc
 import SectionCard from '../../shared/SectionCard';
 import api from '../../../../../services/api';
 import { useAnalytics } from '../../AnalyticsContext';
-import { quadrantOf, QUADRANT_META, levelColor, fmtHrs } from './helpers';
+import { quadrantOf, QUADRANT_META, levelColor, fmtHrs, addJitter, pruneLabelCollisions } from './helpers';
 import HeatmapGridView from './HeatmapGridView';
 import DrillDownGroupModal from './DrillDownGroupModal';
 
@@ -115,22 +115,25 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => e.has_target ?? (e.target_hours > 0))
                 .map((e) => {
-                    const x = Math.min(100, e.missing_to_target_pct || 0);
-                    const y = e.ot_to_target_pct || 0;
+                    const x_raw = Math.min(100, e.missing_to_target_pct || 0);
+                    const y_raw = e.ot_to_target_pct || 0;
+                    // Jitter — Y=0 ve X=0'da yiginlanmayi onler
+                    const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
                     return {
                         id: e.employee_id,
                         type: 'employee',
                         name: e.name,
                         label: e.name?.split(' ')[0] || '?',
                         department: e.department || '—',
-                        x, y,
+                        x: j.x, y: j.y,
+                        x_raw, y_raw,
                         // BUYUK BALON: 50-1200 (eski 20-400)
                         z: Math.max(50, Math.min(1200, (e.normal_hours || 1) * 12)),
                         normal_h: e.normal_hours || 0,
                         ot_h: e.ot_hours || 0,
                         missing_h: e.missing_hours || 0,
                         normal_completion: e.normal_completion_pct ?? e.efficiency_pct ?? 0,
-                        quadrant: quadrantOf(x, y),
+                        quadrant: quadrantOf(x_raw, y_raw),
                         employee: e,
                     };
                 });
@@ -166,21 +169,23 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => idSet.has(e.employee_id) && (e.has_target ?? (e.target_hours > 0)))
                 .map((e) => {
-                    const x = Math.min(100, e.missing_to_target_pct || 0);
-                    const y = e.ot_to_target_pct || 0;
+                    const x_raw = Math.min(100, e.missing_to_target_pct || 0);
+                    const y_raw = e.ot_to_target_pct || 0;
+                    const j = addJitter(x_raw, y_raw, e.employee_id, 1.5);
                     return {
                         id: e.employee_id,
                         type: 'employee',
                         name: e.name,
                         label: e.name?.split(' ')[0] || '?',
                         department: e.department || '—',
-                        x, y,
+                        x: j.x, y: j.y,
+                        x_raw, y_raw,
                         z: Math.max(80, Math.min(1500, (e.normal_hours || 1) * 14)),
                         normal_h: e.normal_hours || 0,
                         ot_h: e.ot_hours || 0,
                         missing_h: e.missing_hours || 0,
                         normal_completion: e.normal_completion_pct ?? e.efficiency_pct ?? 0,
-                        quadrant: quadrantOf(x, y),
+                        quadrant: quadrantOf(x_raw, y_raw),
                         employee: e,
                     };
                 });
@@ -188,9 +193,17 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
         return [];
     }, [viewMode, employees, deptGroups, tree, pickedManagerId]);
 
+    // Adaptive Y domain — veri max'ina gore yMax ayarla.
+    // Boylece veri 0-15'te sikismaz, 75'e kadar gerilemez.
     const yMax = useMemo(() => {
-        const maxY = Math.max(50, ...points.map((p) => p.y || 0));
-        return Math.ceil(maxY / 10) * 10 + 10;
+        const maxY = Math.max(...points.map((p) => p.y || 0), 0);
+        // p95 yaklasimi: tum noktalarin %95'i bu deger altinda
+        const sortedY = points.map((p) => p.y || 0).sort((a, b) => a - b);
+        const p95 = sortedY[Math.floor(sortedY.length * 0.95)] || maxY;
+        // Y axis = max(p95 + buffer, kucuk minimum)
+        // Outlier (Fulya tarzi) cikar — onu da gormek icin maxY kullan ama buffered
+        const cap = Math.max(p95 * 1.4, maxY * 1.1, 20);
+        return Math.ceil(cap / 5) * 5; // 5'in katlarina yuvarla
     }, [points]);
 
     const quadCounts = useMemo(() => {
@@ -204,16 +217,19 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
         return points.filter((p) => p.quadrant === hoveredQuad);
     }, [points, hoveredQuad]);
 
-    // En uc 6 nokta — etiket gosterilecek (subtree/individual modlarinda)
+    // En uc 8 aday + cakisma onleme -> max 6 etiket
     const labeledPointIds = useMemo(() => {
         const sorted = [...points].sort((a, b) => {
-            // En riskli + en saglikli
             const aScore = Math.abs(50 - (a.normal_completion || 0)) + (a.missing_h || 0) + (a.ot_h || 0);
             const bScore = Math.abs(50 - (b.normal_completion || 0)) + (b.missing_h || 0) + (b.ot_h || 0);
             return bScore - aScore;
         });
-        return new Set(sorted.slice(0, 6).map((p) => p.id));
-    }, [points]);
+        const candidates = new Set(sorted.slice(0, 10).map((p) => p.id));
+        // X dünyası 100, Y dünyası yMax - oransal min mesafe hesapla
+        const minX = 8;  // x domain 0-100, %8 min mesafe
+        const minY = Math.max(2, yMax * 0.08); // y domain 0-yMax, %8 min mesafe
+        return pruneLabelCollisions(points, candidates, minX, minY);
+    }, [points, yMax]);
 
     const handlePointClick = (p) => {
         if (p.type === 'employee') {
