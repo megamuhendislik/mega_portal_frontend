@@ -68,7 +68,7 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                         </h3>
                         <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-3">
                             <span><b>{employees.length}</b> kişi</span>
-                            <span>· N.Dol Ort: <b style={{ color: levelColor(m.avg_normal_completion_pct) }}>{fmtPct(m.avg_normal_completion_pct)}</b></span>
+                            <span>· Yap.M. Ort: <b style={{ color: levelColor(m.avg_normal_completion_pct) }}>{fmtPct(m.avg_normal_completion_pct)}</b></span>
                             <span>· Toplam FM: <b className="text-amber-600">{fmtHrs(m.total_ot_hours)}</b></span>
                             <span>· Toplam Eksik: <b className="text-red-600">{fmtHrs(m.total_missing_hours)}</b></span>
                         </div>
@@ -87,8 +87,8 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                         value={sortBy}
                         onChange={setSortBy}
                         options={[
-                            { value: 'normal_asc', label: <span className="text-[10px]"><ArrowDownAZ size={10} className="inline" /> N.Dol ↑</span> },
-                            { value: 'normal_desc', label: <span className="text-[10px]">N.Dol ↓</span> },
+                            { value: 'normal_asc', label: <span className="text-[10px]"><ArrowDownAZ size={10} className="inline" /> Yap.M. ↑</span> },
+                            { value: 'normal_desc', label: <span className="text-[10px]">Yap.M. ↓</span> },
                             { value: 'ot_desc', label: <span className="text-[10px]">FM ↓</span> },
                             { value: 'missing_desc', label: <span className="text-[10px]">Eksik ↓</span> },
                             { value: 'name', label: <span className="text-[10px]">A-Z</span> },
@@ -108,7 +108,7 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Normal</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">FM</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Eksik</th>
-                                    <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">N.Dol</th>
+                                    <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">Yap.M.</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">T.Dol</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">FM/Y</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">Eksik/Y</th>

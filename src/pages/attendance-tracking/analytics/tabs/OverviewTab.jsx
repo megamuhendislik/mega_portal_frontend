@@ -169,7 +169,7 @@ export default function OverviewTab() {
             {employeeList.length > 0 && (
                 <RiskMatrixCard
                     title="Risk Haritası"
-                    subtitle="Normal Doluluk × Fazla Mesai · Sağ-üst = ideal tempo · daha derin analiz için Mesai Analizi tabını kullan"
+                    subtitle="Yapılan Normal Mesai × Fazla Mesai · Sağ-üst = ideal tempo · daha derin analiz için Mesai Analizi tabını kullan"
                     data={employeeList
                         .filter((e) => e.has_target ?? (e.target_hours > 0))
                         .map((e) => ({
@@ -182,7 +182,7 @@ export default function OverviewTab() {
                             color: levelColorFn(e.normal_completion_pct ?? e.efficiency_pct ?? 0),
                             tooltipExtra: `Normal: ${Math.round(e.normal_hours || 0)}sa · FM: ${Math.round(e.ot_hours || 0)}sa · Eksik: ${Math.round(e.missing_hours || 0)}sa`,
                         }))}
-                    xLabel="Normal Doluluk — Gerçekleşen Normal / Yükümlülük (%)"
+                    xLabel="Yapılan Normal Mesai — Gerçekleşen Normal / Yükümlülük (%)"
                     yLabel="Fazla Mesai / Yükümlülük (%)"
                     xMax={100} yMax={50}
                     thresholds={{ x: 80, y: 25 }}
@@ -234,7 +234,7 @@ export default function OverviewTab() {
 
             {/* ── Mesai Doluluk Metrikleri (5 kart) ── */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPICard title="Normal Doluluk" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
+                <KPICard title="Yapılan Normal Mesai" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
                     subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => setShowDetailModal(true)} />

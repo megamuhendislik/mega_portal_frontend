@@ -27,7 +27,7 @@ const DISPLAY_MODES = [
     { value: 'heatmap', label: 'Isı Haritası', icon: Grid3x3 },
 ];
 
-// X ekseni = N.Doluluk (Normal/Yukumluluk %), Y = FM/Y (%)
+// X ekseni = Yap. Mesai (Normal/Yukumluluk %), Y = FM/Y (%)
 // Esikler helpers.js'tan import edilir
 
 /**
@@ -120,7 +120,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => e.has_target ?? (e.target_hours > 0))
                 .map((e) => {
-                    // X = N.Doluluk (Normal/Yukumluluk %), Y = FM/Yukumluluk (%)
+                    // X = Yap. Mesai (Normal/Yukumluluk %), Y = FM/Yukumluluk (%)
                     const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
                     // Jitter — yiginlanmayi onler
@@ -175,7 +175,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
             return employees
                 .filter((e) => idSet.has(e.employee_id) && (e.has_target ?? (e.target_hours > 0)))
                 .map((e) => {
-                    // X = N.Doluluk, Y = FM/Y
+                    // X = Yap. Mesai, Y = FM/Y
                     const x_raw = Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0);
                     const y_raw = e.ot_to_target_pct || 0;
                     const j = addJitter(x_raw, y_raw, e.employee_id, 2.5);
@@ -293,10 +293,10 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
     };
 
     const subtitle = viewMode === 'individual'
-        ? 'X = Normal/Yükümlülük, Y = FM/Yükümlülük · Boyut = Normal saat · Renk = N.Doluluk · Sağ-üst = ideal tempo'
+        ? 'X = Normal/Yükümlülük, Y = FM/Yükümlülük · Boyut = Normal saat · Renk = Yap. Mesai · Sağ-üst = ideal tempo'
         : viewMode === 'department'
-            ? 'Departman ortalaması · X = avg N.Doluluk, Y = avg FM/Y · Boyut = kişi sayısı'
-            : 'Seçilen yöneticinin transitif ekibi · X = Normal Doluluk, Y = FM/Y';
+            ? 'Departman ortalaması · X = avg Yap. Mesai, Y = avg FM/Y · Boyut = kişi sayısı'
+            : 'Seçilen yöneticinin transitif ekibi · X = Yapılan Normal Mesai, Y = FM/Y';
 
     return (
         <SectionCard
@@ -457,10 +457,10 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
 
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                     <XAxis
-                                        type="number" dataKey="x" name="N.Doluluk"
+                                        type="number" dataKey="x" name="Yap. Mesai"
                                         domain={[0, 100]}
                                         tick={{ fontSize: 11, fontWeight: 600 }}
-                                        label={{ value: 'Normal Doluluk — Gerçekleşen Normal / Yükümlülük (%)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
+                                        label={{ value: 'Yapılan Normal Mesai — Gerçekleşen Normal / Yükümlülük (%)', position: 'insideBottom', offset: -10, style: { fontSize: 12, fontWeight: 700, fill: '#475569' } }}
                                     />
                                     <YAxis
                                         type="number" dataKey="y" name="FM/Y"
@@ -490,7 +490,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                         <div>Normal: <b>{fmtHrs(p.normal_h)}</b></div>
                                                         <div>FM: <b className="text-amber-600">{fmtHrs(p.ot_h)}</b></div>
                                                         <div>Eksik: <b className="text-red-600">{fmtHrs(p.missing_h)}</b></div>
-                                                        <div>{p.type === 'department' ? 'Avg ' : ''}N.Doluluk: <b style={{ color: levelColor(p.normal_completion) }}>%{Math.round(p.normal_completion)}</b></div>
+                                                        <div>{p.type === 'department' ? 'Avg ' : ''}Yap. Mesai: <b style={{ color: levelColor(p.normal_completion) }}>%{Math.round(p.normal_completion)}</b></div>
                                                     </div>
                                                     <div className="mt-2 pt-2 border-t border-slate-100">
                                                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: q.color }}>
@@ -611,7 +611,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                             <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
                                 {[...filteredPoints]
                                     .sort((a, b) => {
-                                        // Once quadrant (sag-ust onde), sonra N.Doluluk DESC
+                                        // Once quadrant (sag-ust onde), sonra Yap. Mesai DESC
                                         const qOrder = { leader: 0, healthy: 1, inconsistent: 2, underperform: 3 };
                                         const qd = (qOrder[a.quadrant] ?? 9) - (qOrder[b.quadrant] ?? 9);
                                         if (qd !== 0) return qd;

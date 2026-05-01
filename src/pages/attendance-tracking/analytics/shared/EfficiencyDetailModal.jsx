@@ -171,7 +171,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
 
                 {/* Formula açıklaması */}
                 <div className="mx-6 mt-3 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-[10px] text-slate-500 leading-relaxed">
-                    <span className="font-bold text-slate-700">Formül:</span> Normal Doluluk = <span className="font-mono">net normal mesai / pro-rata yükümlülük</span> (capped 100) · Toplam Doluluk = <span className="font-mono">(normal + Fazla Mesai) / pro-rata yükümlülük</span> (uncapped). Devam eden dönemde yükümlülük geçen iş günleri kadar; bitmiş dönemde tam target.
+                    <span className="font-bold text-slate-700">Formül:</span> Yapılan Normal Mesai = <span className="font-mono">net normal mesai / pro-rata yükümlülük</span> (capped 100) · Toplam Doluluk = <span className="font-mono">(normal + Fazla Mesai) / pro-rata yükümlülük</span> (uncapped). Devam eden dönemde yükümlülük geçen iş günleri kadar; bitmiş dönemde tam target.
                 </div>
 
                 {/* Content */}

@@ -33,7 +33,7 @@ export default function KPIStrip({ employees }) {
     return (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <KPICard
-                title="Normal Doluluk"
+                title="Yapılan Normal Mesai"
                 value={stats.avgNormal}
                 suffix="%" icon={Target}
                 gradient="indigo"

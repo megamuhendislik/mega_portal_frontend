@@ -35,12 +35,12 @@ export function heatmapColor(normalized, invert = false) {
 export const TR_NORM = (s) => String(s || '').toLocaleLowerCase('tr')
     .replace(/[şçöüğıİ]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i', İ: 'i' })[c]);
 
-// 4 quadrant ScatterMatrix isimleri (X = N.Doluluk, Y = FM/Y)
-// Sag-ust = yuksek N.Dol + yuksek FM = "Lider"
-// Sag-alt = yuksek N.Dol + dusuk FM = "Saglikli"
-// Sol-ust = dusuk N.Dol + yuksek FM = "Tutarsiz"
-// Sol-alt = dusuk N.Dol + dusuk FM = "Yetersiz"
-export const HIGH_NORMAL_THRESHOLD = 80;  // N.Doluluk %80 ust limit
+// 4 quadrant ScatterMatrix isimleri (X = Yap. Mesai, Y = FM/Y)
+// Sag-ust = yuksek Yap.M. + yuksek FM = "Lider"
+// Sag-alt = yuksek Yap.M. + dusuk FM = "Saglikli"
+// Sol-ust = dusuk Yap.M. + yuksek FM = "Tutarsiz"
+// Sol-alt = dusuk Yap.M. + dusuk FM = "Yetersiz"
+export const HIGH_NORMAL_THRESHOLD = 80;  // Yap. Mesai %80 ust limit
 export const HIGH_OT_THRESHOLD = 25;       // FM/Y %25 ust limit
 
 export function quadrantOf(normalPct, otPct) {

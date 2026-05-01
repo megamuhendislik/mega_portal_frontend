@@ -5,14 +5,14 @@ import SectionCard from '../../shared/SectionCard';
 import { TR_NORM, gradientFor, initials, fmtHrs } from './helpers';
 
 const SORT_OPTIONS = [
-    { value: 'normal_asc', label: 'En Düşük N.Doluluk' },
+    { value: 'normal_asc', label: 'En Düşük Yap. Mesai' },
     { value: 'missing_desc', label: 'En Yüksek Eksik' },
     { value: 'ot_desc', label: 'En Yüksek FM' },
     { value: 'name', label: 'A-Z' },
 ];
 
 const COLS = [
-    { key: 'normal_completion_pct', label: 'N.Dol', max: 100, invert: false, suffix: '%' },
+    { key: 'normal_completion_pct', label: 'Yap.M.', max: 100, invert: false, suffix: '%' },
     { key: 'total_completion_pct', label: 'T.Dol', max: 120, invert: false, suffix: '%' },
     { key: 'ot_to_target_pct', label: 'FM/Y', max: 50, invert: true, suffix: '%' },
     { key: 'missing_to_target_pct', label: 'Eksik/Y', max: 50, invert: true, suffix: '%' },

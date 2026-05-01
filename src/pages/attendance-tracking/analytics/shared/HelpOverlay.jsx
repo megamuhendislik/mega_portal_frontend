@@ -18,7 +18,7 @@ const SHORTCUTS = [
 ];
 
 const METRICS_GLOSSARY = [
-    { name: 'Normal Doluluk', formula: '(Normal Mesai / Pro-rata Yükümlülük) × 100, capped 100', desc: 'Fazla Mesai hariç. Ölçülebilir kapsam içindeki normal mesainin tamamlanma oranı.' },
+    { name: 'Yapılan Normal Mesai', formula: '(Normal Mesai / Pro-rata Yükümlülük) × 100, capped 100', desc: 'Fazla Mesai hariç. Ölçülebilir kapsam içindeki normal mesainin tamamlanma oranı.' },
     { name: 'Toplam Doluluk', formula: '((Normal + Fazla Mesai) / Yükümlülük) × 100, uncapped', desc: 'Fazla Mesai dahil. Hedefin üstüne çıkanlar %100 üstünde görünür.' },
     { name: 'Fazla Mesai/Normal Oranı', formula: '(Fazla Mesai / Normal) × 100', desc: 'Fazla mesainin normal mesaiye yoğunluk oranı. Normal=0 ise tanımsız.' },
     { name: 'Fazla Mesai/Yükümlülük', formula: '(Fazla Mesai / Yükümlülük) × 100', desc: 'Fazla mesainin aylık yükümlülüğe oranı.' },

@@ -62,7 +62,7 @@ function HierarchyNode({ node, depth = 0, onSelectGroup, expandAll }) {
                     </div>
                 </div>
                 <div className="hidden md:flex items-center gap-1 flex-shrink-0">
-                    <MetricChip label="N.Dol" value={m.avg_normal_completion_pct} color={levelColor(m.avg_normal_completion_pct)} />
+                    <MetricChip label="Yap.M." value={m.avg_normal_completion_pct} color={levelColor(m.avg_normal_completion_pct)} />
                     <MetricChip label="T.Dol" value={m.avg_total_completion_pct} color={m.avg_total_completion_pct >= 100 ? '#7c3aed' : levelColor(m.avg_total_completion_pct)} />
                     <MetricChip label="FM/Y" value={m.avg_ot_to_target_pct} color={intensityColor(m.avg_ot_to_target_pct)} />
                     <MetricChip label="Ek/Y" value={m.avg_missing_to_target_pct} color={intensityColor(m.avg_missing_to_target_pct)} />

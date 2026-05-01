@@ -4,7 +4,7 @@ import { quadrantOf, QUADRANT_META, levelColor } from './helpers';
 /**
  * Risk Haritasi'nin ismi-sayilan grid versiyonu.
  * 5x5 hucreli (X: Eksik/Y, Y: FM/Y) — her hucredeki kisi sayisi balon
- * boyutu + ortalama N.Doluluk renk yogunlugu olarak gosterilir.
+ * boyutu + ortalama Yap. Mesai renk yogunlugu olarak gosterilir.
  *
  * Kullanim: ScatterMatrix view_mode='heatmap' iken render edilir.
  * Hucreye tikla -> o hucredeki kisileri drill et.
@@ -95,7 +95,7 @@ export default function HeatmapGridView({ points, onCellClick }) {
                                             backgroundColor: m.color,
                                             opacity: 0.25 + intensity * 0.6,
                                         }}
-                                        title={`${cell.count} kişi · Avg N.Dol: %${Math.round(avgNormal)} · ${m.label}`}
+                                        title={`${cell.count} kişi · Avg Yap.M.: %${Math.round(avgNormal)} · ${m.label}`}
                                     >
                                         <span
                                             className="font-black text-white tabular-nums leading-none drop-shadow"
