@@ -43,6 +43,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
     const [viewMode, setViewMode] = useState('individual');
     const [displayMode, setDisplayMode] = useState('scatter');
     const [hoveredQuad, setHoveredQuad] = useState(null);
+    const [hoveredEmpId, setHoveredEmpId] = useState(null);
     const [drillData, setDrillData] = useState(null);
 
     // Departman ve yonetici agaci icin ek veri
@@ -440,6 +441,7 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                             }}
                         />
                     ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-3">
                         <div className="h-[480px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 25, right: 35, bottom: 45, left: 35 }}>
@@ -509,9 +511,9 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                             <Cell
                                                 key={idx}
                                                 fill={levelColor(p.normal_completion)}
-                                                fillOpacity={0.85}
-                                                stroke="#fff"
-                                                strokeWidth={1}
+                                                fillOpacity={hoveredEmpId === p.id ? 1 : (hoveredEmpId ? 0.35 : 0.85)}
+                                                stroke={hoveredEmpId === p.id ? '#1e293b' : '#fff'}
+                                                strokeWidth={hoveredEmpId === p.id ? 2.5 : 1}
                                             />
                                         ))}
                                         {/* Leader-line etiketler — nokta yaninda ok ile */}
@@ -595,10 +597,70 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                 </ScatterChart>
                             </ResponsiveContainer>
                         </div>
+
+                        {/* Yan dikey liste — tum kisiler her zaman gorunur */}
+                        <div className="hidden lg:flex flex-col bg-slate-50/60 rounded-lg border border-slate-200 max-h-[480px]">
+                            <div className="px-3 py-2 border-b border-slate-200 bg-white rounded-t-lg flex items-center justify-between flex-shrink-0">
+                                <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.15em]">
+                                    Tüm Kişiler
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500 tabular-nums">
+                                    {filteredPoints.length}
+                                </span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+                                {[...filteredPoints]
+                                    .sort((a, b) => {
+                                        // Once quadrant (sag-ust onde), sonra N.Doluluk DESC
+                                        const qOrder = { leader: 0, healthy: 1, inconsistent: 2, underperform: 3 };
+                                        const qd = (qOrder[a.quadrant] ?? 9) - (qOrder[b.quadrant] ?? 9);
+                                        if (qd !== 0) return qd;
+                                        return (b.normal_completion || 0) - (a.normal_completion || 0);
+                                    })
+                                    .map((p) => {
+                                        const isHovered = hoveredEmpId === p.id;
+                                        const color = levelColor(p.normal_completion);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onMouseEnter={() => setHoveredEmpId(p.id)}
+                                                onMouseLeave={() => setHoveredEmpId(null)}
+                                                onClick={() => p.type === 'employee' && onSelectPerson?.(p.id)}
+                                                className={`w-full flex items-center gap-2 px-2 py-1 rounded text-left transition-all ${
+                                                    isHovered
+                                                        ? 'bg-white shadow-sm ring-1 ring-indigo-300'
+                                                        : 'hover:bg-white'
+                                                }`}
+                                                title={`${p.name} · ${p.department || '—'}`}
+                                            >
+                                                <span
+                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-white"
+                                                    style={{ backgroundColor: color }}
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[10px] font-bold text-slate-800 truncate leading-tight">
+                                                        {p.name}
+                                                    </div>
+                                                    <div className="text-[9px] text-slate-400 truncate leading-tight">
+                                                        {p.department || '—'}
+                                                    </div>
+                                                </div>
+                                                <span
+                                                    className="text-[10px] font-black tabular-nums flex-shrink-0"
+                                                    style={{ color }}
+                                                >
+                                                    %{Math.round(p.normal_completion)}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+                        </div>
                     )}
 
                     <p className="text-[10px] text-slate-400 text-center mt-3">
-                        Bölge rozetinde "Liste" butonu → o bölgenin kişi tablosu · Nokta tıkla → detay
+                        Liste/nokta hover senkronize · Listeye tıkla → kişi detayı · Bölge rozeti "Liste" → drill-down
                     </p>
                 </>
             )}
