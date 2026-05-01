@@ -10,24 +10,37 @@ export const useAnalytics = () => useContext(AnalyticsContext);
 const TR_MONTHS = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 export function getFiscalMonth(offset = 0) {
+    // Türkiye payroll: mali ay = ödeme yapılacak ay (dönemin BİTİŞ ayı).
+    // 26 Nisan-25 Mayıs aralığı = Mayıs mali ayı (Mayıs maaşına ait).
+    //
+    // Bugün < 26 ise: mevcut takvim ayı = mali ay (örn 2 Mayıs → Mayıs mali ayı)
+    // Bugün >= 26 ise: bir sonraki takvim ayı = mali ay (örn 28 Mayıs → Haziran mali ayı)
     const now = new Date();
     const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-    let baseMonth = d >= 26 ? m : (m === 1 ? 12 : m - 1);
-    let baseYear = d >= 26 ? y : (m === 1 ? y - 1 : y);
+    let baseMonth, baseYear;
+    if (d >= 26) {
+        baseMonth = m === 12 ? 1 : m + 1;
+        baseYear = m === 12 ? y + 1 : y;
+    } else {
+        baseMonth = m;
+        baseYear = y;
+    }
 
-    // Apply offset
+    // Apply offset (mali ay bazında ileri/geri)
     let targetMonth = baseMonth + offset;
     let targetYear = baseYear;
     while (targetMonth <= 0) { targetMonth += 12; targetYear--; }
     while (targetMonth > 12) { targetMonth -= 12; targetYear++; }
 
-    const endMonth = targetMonth === 12 ? 1 : targetMonth + 1;
-    const endYear = targetMonth === 12 ? targetYear + 1 : targetYear;
+    // Mali ay X için periyot: 26 of (X-1) → 25 of X
+    const periodStartMonth = targetMonth === 1 ? 12 : targetMonth - 1;
+    const periodStartYear = targetMonth === 1 ? targetYear - 1 : targetYear;
+
     const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
 
     return {
-        startDate: fmt(targetYear, targetMonth, 26),
-        endDate: fmt(endYear, endMonth, 25),
+        startDate: fmt(periodStartYear, periodStartMonth, 26),
+        endDate: fmt(targetYear, targetMonth, 25),
         month: targetMonth,
         year: targetYear,
         label: `${TR_MONTHS[targetMonth]} ${targetYear}`,
