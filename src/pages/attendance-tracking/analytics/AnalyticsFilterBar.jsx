@@ -176,12 +176,52 @@ export default function AnalyticsFilterBar() {
                         <span className="text-[10px] font-bold text-amber-700" title="Yapılan Normal Mesai / Yükümlülük">Yap.M. %{ctx.minAttendancePct} altı hariç</span>
                     </label>
 
-                    {/* Filters */}
-                    <button onClick={() => setShowFilters(!showFilters)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-50 rounded-lg border border-slate-200/80 transition-colors">
-                        <Filter size={11} /> Filtre
-                        <ChevronDown size={10} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                    </button>
+                    {/* Filters — aktif sayim badge */}
+                    {(() => {
+                        const activeCount =
+                            (ctx.departmentIds?.length || 0) +
+                            (ctx.positionIds?.length || 0) +
+                            (ctx.excludeDepartmentIds?.length || 0) +
+                            (ctx.excludeEmployeeIds?.length || 0) +
+                            (ctx.minAttendanceEnabled && ctx.minAttendancePct > 0 ? 1 : 0);
+                        return (
+                            <button onClick={() => setShowFilters(!showFilters)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-colors ${
+                                    activeCount > 0
+                                        ? 'text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100'
+                                        : 'text-slate-500 hover:text-slate-700 bg-slate-50 border-slate-200/80'
+                                }`}>
+                                <Filter size={11} /> Filtre
+                                {activeCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[9px] tabular-nums leading-none">
+                                        {activeCount}
+                                    </span>
+                                )}
+                                <ChevronDown size={10} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                            </button>
+                        );
+                    })()}
+
+                    {/* Tum filtreleri sifirla — sadece aktif filtre varsa goster */}
+                    {((ctx.departmentIds?.length || 0) +
+                      (ctx.positionIds?.length || 0) +
+                      (ctx.excludeDepartmentIds?.length || 0) +
+                      (ctx.excludeEmployeeIds?.length || 0) +
+                      (ctx.minAttendanceEnabled ? 1 : 0)) > 0 && (
+                        <button
+                            onClick={() => {
+                                ctx.setDepartmentIds([]);
+                                ctx.setPositionIds([]);
+                                ctx.setExcludeDepartmentIds([]);
+                                ctx.setExcludeEmployeeIds([]);
+                                ctx.setMinAttendanceEnabled(false);
+                            }}
+                            title="Tüm filtreleri sıfırla"
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200/80 transition-colors"
+                        >
+                            <X size={11} /> Sıfırla
+                        </button>
+                    )}
 
                     {/* Refresh */}
                     <button onClick={ctx.refetch} disabled={ctx.loading}
@@ -193,6 +233,67 @@ export default function AnalyticsFilterBar() {
                     {ctx.lastFetchedAt && <span className="text-[9px] text-slate-300 tabular-nums hidden md:inline">{format(ctx.lastFetchedAt, 'HH:mm')}</span>}
                 </div>
             </div>
+
+            {/* ═══ Aktif Filtre Chip Satiri — tek tek X ile kaldir ═══ */}
+            {(() => {
+                const chips = [];
+                (ctx.departmentIds || []).forEach((id) => {
+                    const d = ctx.departments?.find((x) => x.id === id);
+                    if (d) chips.push({
+                        key: `d${id}`, label: `Dept: ${d.name}`, color: 'indigo',
+                        onRemove: () => ctx.setDepartmentIds(ctx.departmentIds.filter((x) => x !== id)),
+                    });
+                });
+                (ctx.positionIds || []).forEach((id) => {
+                    const p = ctx.positions?.find((x) => x.id === id);
+                    if (p) chips.push({
+                        key: `p${id}`, label: `Pozisyon: ${p.title || p.name}`, color: 'blue',
+                        onRemove: () => ctx.setPositionIds(ctx.positionIds.filter((x) => x !== id)),
+                    });
+                });
+                (ctx.excludeDepartmentIds || []).forEach((id) => {
+                    const d = ctx.departments?.find((x) => x.id === id);
+                    if (d) chips.push({
+                        key: `xd${id}`, label: `✕ ${d.name}`, color: 'rose',
+                        onRemove: () => ctx.setExcludeDepartmentIds(ctx.excludeDepartmentIds.filter((x) => x !== id)),
+                    });
+                });
+                (ctx.excludeEmployeeIds || []).forEach((id) => {
+                    const e = ctx.employees?.find((x) => x.id === id);
+                    if (e) chips.push({
+                        key: `xe${id}`, label: `✕ ${e.first_name} ${e.last_name}`, color: 'rose',
+                        onRemove: () => ctx.setExcludeEmployeeIds(ctx.excludeEmployeeIds.filter((x) => x !== id)),
+                    });
+                });
+                if (ctx.minAttendanceEnabled && ctx.minAttendancePct > 0) {
+                    chips.push({
+                        key: 'minatt', label: `Yap.M. < %${ctx.minAttendancePct} hariç`, color: 'amber',
+                        onRemove: () => ctx.setMinAttendanceEnabled(false),
+                    });
+                }
+                if (chips.length === 0) return null;
+                const colorMap = {
+                    indigo: 'bg-indigo-100 text-indigo-700 border-indigo-300 hover:bg-indigo-200',
+                    blue: 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200',
+                    rose: 'bg-rose-100 text-rose-700 border-rose-300 hover:bg-rose-200',
+                    amber: 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200',
+                };
+                return (
+                    <div className="flex items-center gap-2 px-4 py-2 border-t border-slate-100 bg-slate-50/40 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Aktif:</span>
+                        {chips.map((c) => (
+                            <button
+                                key={c.key}
+                                onClick={c.onRemove}
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold transition-all ${colorMap[c.color]}`}
+                            >
+                                {c.label}
+                                <X size={10} />
+                            </button>
+                        ))}
+                    </div>
+                );
+            })()}
 
             {/* ═══ Compare Bar ═══ */}
             {showCompare && (

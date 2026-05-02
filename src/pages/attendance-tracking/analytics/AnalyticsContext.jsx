@@ -166,7 +166,8 @@ export function AnalyticsProvider({ children }) {
     });
     const [minAttendanceEnabled, setMinAttendanceEnabled] = useState(() => {
         const raw = searchParams.get('min_att_on');
-        return raw === null ? true : raw === '1';
+        // Default kapali — kullanici manuel acar (ay basinda %50 default herkesi elemesin)
+        return raw === null ? false : raw === '1';
     });
     // Exclude (Hariç Tut): nav-bar'dan multi-select departman/calisan
     const [excludeDepartmentIds, setExcludeDepartmentIds] = useState(() => parseIntList(searchParams.get('ex_dept')));
