@@ -98,9 +98,17 @@ export default function YearlyTrendStrip() {
         setError(null);
         try {
             const params = { year: selectedYear };
-            // Filtreleri korumak için scope/exclude'ları da geçir (backend get_scope kullanır)
-            ['department_ids', 'position_ids', 'exclude_department_ids', 'exclude_employee_ids'].forEach((k) => {
-                if (queryParams?.[k]) params[k] = queryParams[k];
+            // Filtreleri korumak için scope/exclude/min-attendance/dates geçir.
+            // start_date/end_date min_normal_completion_pct filtresinin
+            // referans ayını belirler (get_scope mantığı).
+            const passKeys = [
+                'department_ids', 'position_ids',
+                'exclude_department_ids', 'exclude_employee_ids',
+                'min_normal_completion_pct',
+                'start_date', 'end_date',
+            ];
+            passKeys.forEach((k) => {
+                if (queryParams?.[k] != null) params[k] = queryParams[k];
             });
             const res = await api.get('/attendance-analytics/yearly-monthly-aggregates/', {
                 params, timeout: 60000,
@@ -392,7 +400,7 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
         return (
             <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data}>
+                    <BarChart data={data} barGap={2} barCategoryGap="22%">
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} unit="sa" />
@@ -400,8 +408,8 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
                         <Legend wrapperStyle={{ fontSize: 10 }} />
                         <Bar dataKey="normal" name="Normal" fill={METRIC_COLORS.normal_h} radius={[3, 3, 0, 0]} />
                         <Bar dataKey="ot" name="OT" fill={METRIC_COLORS.ot_h} radius={[3, 3, 0, 0]} />
-                        <Line type="monotone" dataKey="missing" name="Eksik" stroke={METRIC_COLORS.missing_h} strokeWidth={2} dot={{ r: 3 }} />
-                    </ComposedChart>
+                        <Bar dataKey="missing" name="Eksik" fill={METRIC_COLORS.missing_h} radius={[3, 3, 0, 0]} />
+                    </BarChart>
                 </ResponsiveContainer>
             </div>
         );
