@@ -109,7 +109,7 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">FM</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Eksik</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">Yap.M.</th>
-                                    <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">T.Dol</th>
+                                    <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">T.Mesai</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">FM/Y</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">Eksik/Y</th>
                                 </tr>

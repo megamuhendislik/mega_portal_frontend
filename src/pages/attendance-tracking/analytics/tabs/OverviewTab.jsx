@@ -210,7 +210,7 @@ export default function OverviewTab() {
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
                     subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => setShowDetailModal(true)} />
-                <KPICard title="Toplam Doluluk" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
+                <KPICard title="Toplam Yapılan Mesai" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
                     gradient="emerald"
                     subtitle="(Normal + Fazla Mesai) / Yükümlülük"
                     onClick={() => setShowDetailModal(true)} />

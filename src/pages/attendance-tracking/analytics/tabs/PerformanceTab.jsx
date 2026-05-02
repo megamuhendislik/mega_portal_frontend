@@ -141,7 +141,7 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                 ) : (
                     <div className="space-y-3">
                         <MetricBar label="Yapılan Normal Mesai" value={nDol} color={levelColor(nDol)} tip="(min(W, Y-M)) / Y" />
-                        <MetricBar label="Toplam Doluluk" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + Fazla Mesai) / Y" />
+                        <MetricBar label="Toplam Yapılan Mesai" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + Fazla Mesai) / Y" />
                         <MetricBar label="Fazla Mesai / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="Fazla Mesai / Y" />
                         <MetricBar label="Eksik / Yükümlülük" value={eksY} color={intensityColor(eksY)} tip="M / Y" />
                         <MetricBar label="Fazla Mesai / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="Fazla Mesai / Normal mesai" />
@@ -507,7 +507,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                             onChange={setSortBy}
                             options={[
                                 { value: 'normal_completion_desc', label: <span className="text-[10px]">Yap. Mesai ↓</span> },
-                                { value: 'total_completion_desc', label: <span className="text-[10px]">T.Doluluk ↓</span> },
+                                { value: 'total_completion_desc', label: <span className="text-[10px]">T.Yap. Mesai ↓</span> },
                                 { value: 'normal_hours_desc', label: <span className="text-[10px]">Normal ↓</span> },
                                 { value: 'ot_desc', label: <span className="text-[10px]">FM ↓</span> },
                                 { value: 'missing_desc', label: <span className="text-[10px]">Eksik ↓</span> },
@@ -871,7 +871,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     info={METRIC_EXPLANATIONS.efficiency}
                                 />
                                 <KPICard
-                                    title="Toplam Doluluk"
+                                    title="Toplam Yapılan Mesai"
                                     value={kpi.total_completion_pct ?? 0}
                                     suffix="%" icon={TrendingUp}
                                     gradient="emerald"

@@ -54,7 +54,7 @@ export const METRIC_EXPLANATIONS = {
             <>
                 <p><strong className="text-white">Formül:</strong> Normal Mesai Saati ÷ Pro-rata Yükümlülük × 100, capped 100</p>
                 <p className="text-slate-400">Fazla Mesai HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
-                <p className="text-slate-400">"Toplam Doluluk" (N+Fazla Mesai) ve "Fazla Mesai/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
+                <p className="text-slate-400">"Toplam Yapılan Mesai" (N+Fazla Mesai) ve "Fazla Mesai/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
             </>
         ),
     },

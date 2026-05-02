@@ -11,7 +11,7 @@ import { levelColor, intensityColor } from './helpers';
 
 const METRIC_OPTIONS = [
     { key: 'avg_normal_completion_pct', label: 'Yap. Mesai', unit: '%', color: levelColor, ref: 80, sortDesc: true },
-    { key: 'avg_total_completion_pct', label: 'T.Doluluk', unit: '%', color: (v) => (v >= 100 ? '#7c3aed' : levelColor(v)), ref: 100, sortDesc: true },
+    { key: 'avg_total_completion_pct', label: 'T.Yap. Mesai', unit: '%', color: (v) => (v >= 100 ? '#7c3aed' : levelColor(v)), ref: 100, sortDesc: true },
     { key: 'avg_ot_to_target_pct', label: 'FM/Y', unit: '%', color: intensityColor, ref: null, sortDesc: true },
     { key: 'avg_missing_to_target_pct', label: 'Eksik/Y', unit: '%', color: intensityColor, ref: null, sortDesc: true },
     { key: 'total_ot_hours', label: 'FM Saat', unit: 'sa', color: () => '#f59e0b', ref: null, sortDesc: true },

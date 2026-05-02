@@ -40,7 +40,7 @@ export default function KPIStrip({ employees }) {
                 subtitle="Ortalama (W ÷ Y)"
             />
             <KPICard
-                title="Toplam Doluluk"
+                title="Toplam Yapılan Mesai"
                 value={stats.avgTotal}
                 suffix="%" icon={TrendingUp}
                 gradient={stats.avgTotal >= 100 ? 'violet' : 'emerald'}

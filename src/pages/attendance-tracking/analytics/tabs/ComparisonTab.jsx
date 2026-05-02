@@ -219,7 +219,7 @@ export default function ComparisonTab() {
 
         const metrics = [
             { key: 'efficiency_pct', label: 'Yapılan Normal Mesai %', color: '#6366f1' },
-            { key: 'total_completion_pct', label: 'Toplam Doluluk %', color: '#10b981' },
+            { key: 'total_completion_pct', label: 'Toplam Yapılan Mesai %', color: '#10b981' },
             { key: 'ot_to_target_pct', label: 'Fazla Mesai/Y %', color: '#f59e0b' },
             { key: 'missing_to_target_pct', label: 'Eksik/Y %', color: '#ef4444' },
             { key: 'normal_hours', label: 'Normal (sa)', color: '#0ea5e9' },
@@ -317,7 +317,7 @@ export default function ComparisonTab() {
         if (snap.length === 0) return null;
         const radarMetrics = [
             { key: 'efficiency_pct', label: 'Yap. Mesai', max: 100 },
-            { key: 'total_completion_pct', label: 'T.Doluluk', max: 120 },
+            { key: 'total_completion_pct', label: 'T.Yap. Mesai', max: 120 },
             { key: 'ot_to_target_pct', label: 'FM/Y', max: 50 },
             { key: 'missing_to_target_pct', label: 'Eksik/Y', max: 50 },
             { key: 'attendance_pct', label: 'Devam', max: 100 },
@@ -391,7 +391,7 @@ export default function ComparisonTab() {
         const deltas = data.deltas || {};
         const cards = [
             { label: 'Yapılan Normal Mesai', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
-            { label: 'Toplam Doluluk', key: 'total_completion_pct', suffix: '%', betterIsHigher: true },
+            { label: 'Toplam Yapılan Mesai', key: 'total_completion_pct', suffix: '%', betterIsHigher: true },
             { label: 'Fazla Mesai/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
             { label: 'Eksik/Yükümlülük', key: 'missing_to_target_pct', suffix: '%', betterIsHigher: false },
             { label: 'Normal Mesai', key: 'normal_hours', suffix: 'sa', betterIsHigher: true },

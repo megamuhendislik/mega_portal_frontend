@@ -13,7 +13,7 @@ const SORT_OPTIONS = [
 
 const COLS = [
     { key: 'normal_completion_pct', label: 'Yap.M.', max: 100, invert: false, suffix: '%' },
-    { key: 'total_completion_pct', label: 'T.Dol', max: 120, invert: false, suffix: '%' },
+    { key: 'total_completion_pct', label: 'T.Mesai', max: 120, invert: false, suffix: '%' },
     { key: 'ot_to_target_pct', label: 'FM/Y', max: 50, invert: true, suffix: '%' },
     { key: 'missing_to_target_pct', label: 'Eksik/Y', max: 50, invert: true, suffix: '%' },
     { key: 'ot_to_normal_pct', label: 'FM/N', max: 50, invert: true, suffix: '%', nullable: true },
