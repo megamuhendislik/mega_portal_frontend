@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Modal } from 'antd';
 import { X, ChevronDown, ChevronRight, Users, Building2, Search, ArrowUpDown } from 'lucide-react';
 
 const LEVEL_CONFIG = {
@@ -18,41 +19,48 @@ function getLevel(pct) {
 /**
  * Full-screen modal showing employee efficiency breakdown with department grouping.
  */
-export default function EfficiencyDetailModal({ open, onClose, employees = [], departments = [] }) {
+export default function EfficiencyDetailModal({ open, onClose, employees = [] }) {
     const [viewMode, setViewMode] = useState('all'); // 'all' | 'department'
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('efficiency');
     const [sortDir, setSortDir] = useState('desc');
     const [expandedDepts, setExpandedDepts] = useState(new Set());
 
-    // Parse employees with their efficiency
+    // Parse employees + filter those without meaningful data
     const parsed = useMemo(() => {
-        return employees.map(e => {
-            const workedTotal = e.total_worked_hours ?? e.worked_hours ?? 0;
-            const otHours = e.overtime_hours ?? e.total_overtime_hours ?? e.ot_hours ?? 0;
-            const normalHours = e.normal_hours ?? Math.max(0, workedTotal - otHours);
-            const proratedTarget = e.prorated_target_hours ?? e.target_hours ?? 0;
-            const eff = e.efficiency_pct ?? e.avg_efficiency_pct ?? 0;
-            const pureEff = e.pure_efficiency_pct ?? eff;
-            const combinedEff = e.combined_efficiency_pct ?? eff;
-            return {
-                id: e.id || e.employee_id,
-                name: e.name || e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
-                department: e.department_name || e.department || 'Bilinmiyor',
-                departmentId: e.department_id,
-                efficiency: eff,
-                pureEfficiency: pureEff,
-                combinedEfficiency: combinedEff,
-                workedHours: workedTotal,
-                normalHours,
-                targetHours: e.target_hours ?? 0,
-                proratedTarget,
-                overtimeHours: otHours,
-                missingHours: e.missing_hours ?? e.total_missing_hours ?? 0,
-                attendanceRate: e.attendance_rate_pct ?? 0,
-                level: getLevel(eff),
-            };
-        });
+        return employees
+            .map(e => {
+                const workedTotal = e.total_worked_hours ?? e.worked_hours ?? 0;
+                const otHours = e.overtime_hours ?? e.total_overtime_hours ?? e.ot_hours ?? 0;
+                const normalHours = e.normal_hours ?? Math.max(0, workedTotal - otHours);
+                const proratedTarget = e.prorated_target_hours ?? e.target_hours ?? 0;
+                const fullTarget = e.target_hours ?? 0;
+                const hasTarget = (e.has_target ?? false) || fullTarget > 0 || proratedTarget > 0;
+                const eff = e.efficiency_pct ?? e.avg_efficiency_pct ?? 0;
+                const pureEff = e.pure_efficiency_pct ?? eff;
+                const combinedEff = e.combined_efficiency_pct ?? eff;
+                return {
+                    id: e.id || e.employee_id,
+                    name: e.name || e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                    department: e.department_name || e.department || 'Bilinmiyor',
+                    departmentId: e.department_id,
+                    hasTarget,
+                    efficiency: eff,
+                    pureEfficiency: pureEff,
+                    combinedEfficiency: combinedEff,
+                    workedHours: workedTotal,
+                    normalHours,
+                    targetHours: fullTarget,
+                    proratedTarget,
+                    overtimeHours: otHours,
+                    missingHours: e.missing_hours ?? e.total_missing_hours ?? 0,
+                    attendanceRate: e.attendance_rate_pct ?? 0,
+                    level: getLevel(eff),
+                };
+            })
+            // Mesai doluluk metriği target'a bağlı — target'ı olmayan
+            // (BOARD/sözleşmeli/kapsam dışı) kişileri çıkar
+            .filter(e => e.hasTarget);
     }, [employees]);
 
     // Filter by search
@@ -108,12 +116,22 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
     const totalAverage = parsed.filter(e => e.level === 'average').length;
     const totalLow = parsed.filter(e => e.level === 'low').length;
 
-    if (!open) return null;
-
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal
+            open={open}
+            onCancel={onClose}
+            footer={null}
+            width="92%"
+            style={{ top: 24, maxWidth: 1200 }}
+            styles={{
+                body: { padding: 0, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto', overflowX: 'hidden', background: '#ffffff' },
+                content: { padding: 0, overflow: 'hidden', borderRadius: 16 },
+            }}
+            closeIcon={null}
+            destroyOnClose
+            centered={false}
+        >
+            <div className="flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <div>
@@ -205,7 +223,6 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                             </thead>
                             <tbody>
                                 {sorted.map((e, i) => {
-                                    const cfg = LEVEL_CONFIG[e.level];
                                     const pureColor = e.pureEfficiency >= 95 ? '#10b981' : e.pureEfficiency >= 80 ? '#6366f1' : e.pureEfficiency >= 60 ? '#f59e0b' : '#ef4444';
                                     const combinedColor = e.combinedEfficiency > e.pureEfficiency + 5 ? '#f97316' : pureColor;
                                     return (
@@ -321,10 +338,11 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [], d
                         <div className="text-center py-16 text-slate-400">
                             <Users size={32} className="mx-auto mb-3 text-slate-200" />
                             <p className="font-bold">Sonuç bulunamadı</p>
+                            <p className="text-[10px] mt-1">Hedef atanmamış kişiler bu listede gösterilmez.</p>
                         </div>
                     )}
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 }
