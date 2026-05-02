@@ -19,7 +19,7 @@ const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b',
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
 
 export default function OverviewTab() {
-    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate } = useAnalytics();
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate, minAttendancePct, minAttendanceEnabled } = useAnalytics();
 
     // Defensive fallback: bulk endpoint başarısız olursa kendi başımıza çekelim
     const [fallbackData, setFallbackData] = useState(null);
@@ -88,20 +88,33 @@ export default function OverviewTab() {
     const sparklineOT = useMemo(() => trendChartData.map(t => t['fazla mesai']), [trendChartData]);
 
     // Employee list for detail modal (from work_hours or entry_exit data)
+    // + Frontend post-filter: backend filter eksik kalsa bile UI tutarli olsun.
     const employeeList = useMemo(() => {
         const workHours = effectiveData?.work_hours?.employee_hours || effectiveData?.work_hours?.per_employee || [];
         const entryExit = effectiveData?.entry_exit?.performance_ranking || [];
-        // Prefer work_hours if available (has efficiency), else entry_exit
-        if (workHours.length > 0) return workHours;
-        if (entryExit.length > 0) return entryExit.map(e => ({
+        let list;
+        if (workHours.length > 0) list = workHours;
+        else if (entryExit.length > 0) list = entryExit.map(e => ({
             ...e,
             efficiency_pct: e.work_score || 0,
             total_worked_hours: e.worked_hours || 0,
             total_overtime_hours: e.overtime_hours || 0,
             total_missing_hours: e.missing_hours || 0,
         }));
-        return [];
-    }, [effectiveData]);
+        else return [];
+
+        // Frontend filter: Yapilan Normal Mesai/Yukumluluk < threshold ise haric tut
+        if (minAttendanceEnabled && minAttendancePct > 0) {
+            list = list.filter(e => {
+                // Filter sadece olculenebilir kisilere uygulanir (target_h > 0)
+                const fullTarget = e.target_hours ?? 0;
+                if (fullTarget <= 0) return true;  // MWS yok -> goster
+                const ndol = e.normal_completion_pct ?? e.efficiency_pct ?? 0;
+                return ndol >= minAttendancePct;
+            });
+        }
+        return list;
+    }, [effectiveData, minAttendancePct, minAttendanceEnabled]);
 
     // Yükleme: hem bulk hem fallback yoksa skeleton
     if ((loading || fallbackLoading) && !kpi) return <LoadingSkeleton rows={3} />;

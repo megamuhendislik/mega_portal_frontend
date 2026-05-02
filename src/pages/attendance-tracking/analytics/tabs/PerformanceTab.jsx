@@ -239,8 +239,8 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
 // ════════════════════════════════════════════════════════════════════
 
 function TeamOverviewMode({ onSelectPerson }) {
-    const { data, queryParams } = useAnalytics();
-    const [employeeHours, setEmployeeHours] = useState([]);
+    const { data, queryParams, minAttendancePct, minAttendanceEnabled } = useAnalytics();
+    const [employeeHoursRaw, setEmployeeHoursRaw] = useState([]);
     const [whLoading, setWhLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [selectedDept, setSelectedDept] = useState(null);
@@ -256,22 +256,36 @@ function TeamOverviewMode({ onSelectPerson }) {
     const fetchWorkHours = useCallback(async () => {
         // Eğer bulk'tan geldiyse kullan
         if (workHoursFromBulk?.length > 0) {
-            setEmployeeHours(workHoursFromBulk);
+            setEmployeeHoursRaw(workHoursFromBulk);
             return;
         }
         if (!queryParams?.start_date) return;
         setWhLoading(true);
         try {
             const res = await api.get('/attendance-analytics/work-hours/', { params: queryParams, timeout: 30000 });
-            setEmployeeHours(res.data?.employee_hours || []);
+            setEmployeeHoursRaw(res.data?.employee_hours || []);
         } catch {
-            setEmployeeHours([]);
+            setEmployeeHoursRaw([]);
         } finally {
             setWhLoading(false);
         }
     }, [queryParams, workHoursFromBulk]);
 
     useEffect(() => { fetchWorkHours(); }, [fetchWorkHours]);
+
+    // Frontend filter: Yapilan Normal Mesai/Yukumluluk < threshold ise haric tut.
+    // Backend filter eksik kalsa bile UI tutarli olsun.
+    const employeeHours = useMemo(() => {
+        if (!minAttendanceEnabled || !minAttendancePct || minAttendancePct <= 0) {
+            return employeeHoursRaw;
+        }
+        return employeeHoursRaw.filter((e) => {
+            const fullTarget = e.target_hours ?? 0;
+            if (fullTarget <= 0) return true; // MWS yok -> goster
+            const ndol = e.normal_completion_pct ?? e.efficiency_pct ?? 0;
+            return ndol >= minAttendancePct;
+        });
+    }, [employeeHoursRaw, minAttendancePct, minAttendanceEnabled]);
 
     // Departman chip listesi
     const deptChips = useMemo(() => {
