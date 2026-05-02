@@ -178,7 +178,7 @@ export default function DelegationDetailModal({ open, onClose }) {
             width="92%"
             style={{ top: 24, maxWidth: 1500 }}
             styles={{
-                body: { padding: 0, background: 'linear-gradient(180deg, #faf5ff 0%, #ffffff 60%)' },
+                body: { padding: 0, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto', overflowX: 'hidden', background: 'linear-gradient(180deg, #faf5ff 0%, #ffffff 60%)' },
                 content: { padding: 0, overflow: 'hidden', borderRadius: 20 },
             }}
             closeIcon={null}

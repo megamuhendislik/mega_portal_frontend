@@ -655,7 +655,7 @@ export default function TenureDetailModal({ open, onClose, data }) {
             width="92%"
             style={{ top: 24, maxWidth: 1400 }}
             styles={{
-                body: { padding: 0, background: 'linear-gradient(180deg, #fafbff 0%, #ffffff 60%)' },
+                body: { padding: 0, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto', overflowX: 'hidden', background: 'linear-gradient(180deg, #fafbff 0%, #ffffff 60%)' },
                 content: { padding: 0, overflow: 'hidden', borderRadius: 20 },
             }}
             closeIcon={null}
