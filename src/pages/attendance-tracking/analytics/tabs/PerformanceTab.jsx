@@ -29,6 +29,7 @@ import SmartFilters from './performance/SmartFilters';
 import ScatterMatrix from './performance/ScatterMatrix';
 import GroupingPanel from './performance/GroupingPanel';
 import HeatmapView from './performance/HeatmapView';
+import WeeklyLimitPanel from './performance/WeeklyLimitPanel';
 import { applyPresets, TR_NORM as TR_NORM_HELPER } from './performance/helpers';
 
 // HH:MM formatter — "s:dd"
@@ -415,6 +416,18 @@ function TeamOverviewMode({ onSelectPerson }) {
             />
 
             <HeatmapView employees={filtered} onSelectPerson={onSelectPerson} />
+
+            {/* Haftalık Limit & Yoğunluk — bagimsiz endpoint */}
+            <SectionCard
+                title="Haftalık Limit & Yoğunluk"
+                icon={TrendingUp}
+                iconGradient="from-amber-500 to-orange-600"
+                subtitle="Kişi/dept limit yakınlığı + dönem normal/OT/eksik dağılımı + karşılaştırma"
+                collapsible={true}
+                defaultOpen={false}
+            >
+                <WeeklyLimitPanel />
+            </SectionCard>
 
             {/* Detay Tablosu — default kapali */}
             <SectionCard
