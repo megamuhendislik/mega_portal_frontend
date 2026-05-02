@@ -13,7 +13,6 @@ import FavoriteViews from './shared/FavoriteViews';
 import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
 import DensityToggle from './shared/DensityToggle';
 
-const YearlyTrendStrip = React.lazy(() => import('./shared/YearlyTrendStrip'));
 const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
 const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
 const ComparisonTab = React.lazy(() => import('./tabs/ComparisonTab'));
@@ -165,13 +164,6 @@ function TeamAnalyticsInner() {
                     </span>
                 )}
             </div>
-
-            {/* Yıllık Trend Strip — yıllık modda her tab'ın üstünde */}
-            {ctx.viewMode === 'yearly' && (
-                <Suspense fallback={null}>
-                    <YearlyTrendStrip />
-                </Suspense>
-            )}
 
             {/* Filter Bar */}
             <AnalyticsFilterBar />

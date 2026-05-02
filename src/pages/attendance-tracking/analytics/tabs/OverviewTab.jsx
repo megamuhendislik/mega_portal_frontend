@@ -12,6 +12,7 @@ import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
 import RiskMatrixCard from '../shared/RiskMatrixCard';
+import YearlyTrendStrip from '../shared/YearlyTrendStrip';
 import { levelColor as levelColorFn, QUADRANT_META } from '../tabs/performance/helpers';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -22,7 +23,7 @@ const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b',
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
 
 export default function OverviewTab() {
-    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate } = useAnalytics();
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate, viewMode } = useAnalytics();
 
     // Defensive fallback: bulk endpoint başarısız olursa kendi başımıza çekelim
     const [fallbackData, setFallbackData] = useState(null);
@@ -380,6 +381,9 @@ export default function OverviewTab() {
                     </div>
                 </div>
             </SectionCard>
+
+            {/* ═══ Yıllık Trend — sadece Yıllık modda alt bölümde ═══ */}
+            {viewMode === 'yearly' && <YearlyTrendStrip />}
 
             {/* Efficiency Detail Modal */}
             <EfficiencyDetailModal
