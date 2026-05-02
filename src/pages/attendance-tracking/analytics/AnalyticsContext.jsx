@@ -202,15 +202,31 @@ export function AnalyticsProvider({ children }) {
         setIsMultiMonth(false);
     }, []);
 
-    // Yıllık görünüme geç — date range = mali yıl 1-12
+    // Yıllık görünüme geç —
+    //   YearlyTrendStrip 12-ay yıllık trendi gösterir (kendi endpoint'i).
+    //   Bulk endpoint'i (tab detayları) hala TEK MALİ AY çalışır — performans için.
+    //   Past yıl seçilirse o yılın son mali ayını (Aralık) tab detayı olarak verir.
     const switchToYearly = useCallback((year) => {
-        const fr = getFiscalYearRange(year);
+        const todayCurrent = getFiscalMonth(0);
+        let detailMonth;
+        if (year >= todayCurrent.year) {
+            detailMonth = todayCurrent; // current mali ay
+        } else {
+            // past year — Aralık mali ayı (year, ay=12)
+            const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+            detailMonth = {
+                startDate: fmt(year, 11, 26),
+                endDate: fmt(year, 12, 25),
+                year,
+                label: `Aralık ${year}`,
+            };
+        }
         setViewMode('yearly');
         setSelectedYear(year);
-        setStartDate(fr.startDate);
-        setEndDate(fr.endDate);
-        setPeriodLabel(fr.label);
-        setIsMultiMonth(true);
+        setStartDate(detailMonth.startDate);
+        setEndDate(detailMonth.endDate);
+        setPeriodLabel(`Mali Yıl ${year}`);
+        setIsMultiMonth(false);
     }, []);
 
     // Aylık görünüme geri dön
@@ -345,14 +361,24 @@ export function AnalyticsProvider({ children }) {
         current.year,
     ]);
 
-    // Yıllık modu hidrate et: default Yıllık veya URL ?view=yearly
+    // Yıllık modu hidrate et: default Yıllık → tab detay = current mali ay
     useEffect(() => {
         if (viewMode === 'yearly') {
-            const fr = getFiscalYearRange(selectedYear);
-            setStartDate(fr.startDate);
-            setEndDate(fr.endDate);
-            setPeriodLabel(fr.label);
-            setIsMultiMonth(true);
+            const todayCurrent = getFiscalMonth(0);
+            let detailMonth;
+            if (selectedYear >= todayCurrent.year) {
+                detailMonth = todayCurrent;
+            } else {
+                const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+                detailMonth = {
+                    startDate: fmt(selectedYear, 11, 26),
+                    endDate: fmt(selectedYear, 12, 25),
+                };
+            }
+            setStartDate(detailMonth.startDate);
+            setEndDate(detailMonth.endDate);
+            setPeriodLabel(`Mali Yıl ${selectedYear}`);
+            setIsMultiMonth(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -377,10 +403,20 @@ export function AnalyticsProvider({ children }) {
                     const fallback = res.data?.recommended_year ?? yrs[yrs.length - 1];
                     setSelectedYear(fallback);
                     if (viewMode === 'yearly') {
-                        const fr = getFiscalYearRange(fallback);
-                        setStartDate(fr.startDate);
-                        setEndDate(fr.endDate);
-                        setPeriodLabel(fr.label);
+                        const todayCurrent = getFiscalMonth(0);
+                        let detailMonth;
+                        if (fallback >= todayCurrent.year) {
+                            detailMonth = todayCurrent;
+                        } else {
+                            const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+                            detailMonth = {
+                                startDate: fmt(fallback, 11, 26),
+                                endDate: fmt(fallback, 12, 25),
+                            };
+                        }
+                        setStartDate(detailMonth.startDate);
+                        setEndDate(detailMonth.endDate);
+                        setPeriodLabel(`Mali Yıl ${fallback}`);
                     }
                 }
             } catch {

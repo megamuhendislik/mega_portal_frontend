@@ -61,47 +61,60 @@ export default function AnalyticsFilterBar() {
         return false;
     });
 
+    const isYearly = ctx.viewMode === 'yearly';
+
     return (
         <div className="bg-white rounded-2xl border-2 border-indigo-200/60 shadow-md overflow-hidden">
             {/* ═══ Main Navigation Bar — Donem secici belirgin ═══ */}
             <div className="flex items-center justify-between px-5 py-4 gap-4 flex-wrap bg-gradient-to-r from-indigo-50/40 via-white to-blue-50/40">
-                {/* Period Navigator — buyuk ve belirgin */}
-                <div className="flex items-center gap-3">
-                    {/* Etiket */}
-                    <div className="hidden md:flex flex-col gap-0.5 pr-2 border-r border-slate-200">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dönem</span>
-                        <span className="text-[10px] text-slate-400">Mali ay (26→25)</span>
+                {/* Period Navigator — sadece Aylık modda; Yıllık modda yıl seçici üst bar'da */}
+                {!isYearly ? (
+                    <div className="flex items-center gap-3">
+                        <div className="hidden md:flex flex-col gap-0.5 pr-2 border-r border-slate-200">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dönem</span>
+                            <span className="text-[10px] text-slate-400">Mali ay (26→25)</span>
+                        </div>
+
+                        <button onClick={handlePrev}
+                            title="Önceki ay (← tuş)"
+                            className="p-2 rounded-xl hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 transition-colors border border-transparent hover:border-indigo-200">
+                            <ChevronLeft size={20} />
+                        </button>
+
+                        <button onClick={handleToday}
+                            title="Bugüne git (T tuş)"
+                            className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white border border-indigo-600 rounded-xl shadow-md hover:shadow-lg transition-all group min-w-[180px] justify-center">
+                            <Calendar size={16} className="text-white/90" />
+                            <span className="text-base font-black tracking-tight">{ctx.periodLabel}</span>
+                        </button>
+
+                        <button onClick={handleNext}
+                            title="Sonraki ay (→ tuş)"
+                            className="p-2 rounded-xl hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 transition-colors border border-transparent hover:border-indigo-200">
+                            <ChevronRight size={20} />
+                        </button>
+
+                        {/* Quick ranges */}
+                        <div className="hidden lg:flex items-center gap-1 bg-white border border-slate-200/80 p-1 rounded-xl ml-2 shadow-sm">
+                            {QUICK_RANGES.map((qr, i) => (
+                                <button key={i} onClick={() => handleQuickRange(qr)}
+                                    className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeQuick === i ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
+                                    {qr.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-
-                    <button onClick={handlePrev}
-                        title="Önceki ay (← tuş)"
-                        className="p-2 rounded-xl hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 transition-colors border border-transparent hover:border-indigo-200">
-                        <ChevronLeft size={20} />
-                    </button>
-
-                    <button onClick={handleToday}
-                        title="Bugüne git (T tuş)"
-                        className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white border border-indigo-600 rounded-xl shadow-md hover:shadow-lg transition-all group min-w-[180px] justify-center">
-                        <Calendar size={16} className="text-white/90" />
-                        <span className="text-base font-black tracking-tight">{ctx.periodLabel}</span>
-                    </button>
-
-                    <button onClick={handleNext}
-                        title="Sonraki ay (→ tuş)"
-                        className="p-2 rounded-xl hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 transition-colors border border-transparent hover:border-indigo-200">
-                        <ChevronRight size={20} />
-                    </button>
-
-                    {/* Quick ranges */}
-                    <div className="hidden lg:flex items-center gap-1 bg-white border border-slate-200/80 p-1 rounded-xl ml-2 shadow-sm">
-                        {QUICK_RANGES.map((qr, i) => (
-                            <button key={i} onClick={() => handleQuickRange(qr)}
-                                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeQuick === i ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
-                                {qr.label}
-                            </button>
-                        ))}
+                ) : (
+                    // Yıllık modda: tab detay kapsamı bilgisi
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <Calendar size={13} className="text-indigo-500" />
+                        <span>Tab detayları:</span>
+                        <span className="font-black text-slate-700 px-2 py-0.5 bg-indigo-50 rounded-md tabular-nums">
+                            {ctx.startDate} → {ctx.endDate}
+                        </span>
+                        <span className="text-slate-400">· Yıllık trend için yukarıdaki şerite bak</span>
                     </div>
-                </div>
+                )}
 
                 {/* Right controls */}
                 <div className="flex items-center gap-2">
