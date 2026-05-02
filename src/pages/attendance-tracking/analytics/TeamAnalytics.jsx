@@ -13,6 +13,7 @@ import FavoriteViews from './shared/FavoriteViews';
 import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
 import DensityToggle from './shared/DensityToggle';
 
+const YearlyTrendStrip = React.lazy(() => import('./shared/YearlyTrendStrip'));
 const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
 const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
 const ComparisonTab = React.lazy(() => import('./tabs/ComparisonTab'));
@@ -122,48 +123,39 @@ function TeamAnalyticsInner() {
 
     return (
         <div className="space-y-4">
-            {/* ═══ Görünüm Modu Bar (Yıl + Aylık/Yıllık) ═══ */}
+            {/* ═══ Mali Yıl Seçici (Aylık mod kaldırıldı, sadece Yıllık) ═══ */}
             <div className="flex items-center gap-3 flex-wrap p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-white to-purple-50 border border-indigo-200/60 shadow-sm">
                 <div className="flex items-center gap-2">
                     <CalendarRange size={14} className="text-indigo-600" />
-                    <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-[0.1em]">Görünüm</span>
+                    <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-[0.1em]">Mali Yıl</span>
                 </div>
-                <Segmented
-                    value={ctx.viewMode}
-                    onChange={(v) => v === 'yearly' ? ctx.switchToYearly(ctx.selectedYear) : ctx.switchToMonthly()}
-                    options={[
-                        { value: 'yearly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><CalendarRange size={11} /> Yıllık</span> },
-                        { value: 'monthly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><Calendar size={11} /> Aylık</span> },
-                    ]}
+                <Select
+                    size="middle"
+                    value={ctx.selectedYear}
+                    onChange={(y) => {
+                        ctx.setSelectedYear(y);
+                        ctx.switchToYearly(y);
+                    }}
+                    options={yearOptions}
+                    loading={ctx.yearsLoading}
+                    style={{ minWidth: 110 }}
+                    suffixIcon={<Calendar size={12} />}
+                    notFoundContent="Sistemde veri yok"
                 />
-                <div className="h-5 w-px bg-slate-300" />
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-slate-600">Mali Yıl:</span>
-                    <Select
-                        size="middle"
-                        value={ctx.selectedYear}
-                        onChange={(y) => {
-                            ctx.setSelectedYear(y);
-                            if (ctx.viewMode === 'yearly') ctx.switchToYearly(y);
-                        }}
-                        options={yearOptions}
-                        loading={ctx.yearsLoading}
-                        style={{ minWidth: 110 }}
-                        suffixIcon={<Calendar size={12} />}
-                        notFoundContent="Sistemde veri yok"
-                    />
-                    {ctx.availableYears?.length > 0 && (
-                        <span className="text-[10px] text-slate-500">
-                            <span className="tabular-nums">{ctx.yearsMeta.min_year}–{ctx.yearsMeta.max_year}</span> arası mevcut
-                        </span>
-                    )}
-                </div>
-                {ctx.viewMode === 'yearly' && (
-                    <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
-                        Mali Yıl {ctx.selectedYear} · 12 mali ay (26 Ara {ctx.selectedYear - 1} → 25 Ara {ctx.selectedYear})
+                {ctx.availableYears?.length > 0 && (
+                    <span className="text-[10px] text-slate-500">
+                        <span className="tabular-nums">{ctx.yearsMeta.min_year}–{ctx.yearsMeta.max_year}</span> arası mevcut · ● mevcut yıl
                     </span>
                 )}
+                <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
+                    {ctx.selectedYear} Mali Yılı · 12 mali ay (26 Ara {ctx.selectedYear - 1} → 25 Ara {ctx.selectedYear})
+                </span>
             </div>
+
+            {/* ═══ Yıllık Trend Strip — global üst (her tab'ın üstünde) ═══ */}
+            <Suspense fallback={null}>
+                <YearlyTrendStrip />
+            </Suspense>
 
             {/* Filter Bar */}
             <AnalyticsFilterBar />

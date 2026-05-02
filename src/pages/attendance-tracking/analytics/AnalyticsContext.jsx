@@ -136,12 +136,8 @@ export function AnalyticsProvider({ children }) {
     const [periodLabel, setPeriodLabel] = useState(current.label);
     const [isMultiMonth, setIsMultiMonth] = useState(false);
 
-    // ─── View mode (Aylık | Yıllık) — default = yearly ───
-    const [viewMode, setViewMode] = useState(() => {
-        const raw = searchParams.get('view');
-        if (raw === 'monthly') return 'monthly';
-        return 'yearly'; // default
-    });
+    // ─── View mode — Aylık kaldırıldı, her zaman yearly ───
+    const [viewMode, setViewMode] = useState('yearly');
     const [selectedYear, setSelectedYear] = useState(() => {
         const raw = parseIntOrNull(searchParams.get('year'));
         return raw && raw >= 2020 && raw <= 2100 ? raw : current.year;
