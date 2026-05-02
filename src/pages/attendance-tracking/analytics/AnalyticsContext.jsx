@@ -53,6 +53,21 @@ export function getFiscalRange(startOffset, endOffset) {
     return { startDate: start.startDate, endDate: end.endDate };
 }
 
+/**
+ * Mali yıl Y için aralık: 26 Ara (Y-1) → 25 Ara Y
+ * Mali ay 1 of year Y = "26 Ara (Y-1) → 25 Oca Y" (Ocak Y maaşı)
+ * Mali ay 12 of year Y = "26 Kas Y → 25 Ara Y" (Aralık Y maaşı)
+ */
+export function getFiscalYearRange(year) {
+    const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+    return {
+        startDate: fmt(year - 1, 12, 26),
+        endDate: fmt(year, 12, 25),
+        year,
+        label: `${year} Mali Yılı`,
+    };
+}
+
 /** Compare mode options */
 export const COMPARE_MODES = [
     { key: 'none', label: 'Karşılaştırma Kapalı' },
@@ -121,6 +136,16 @@ export function AnalyticsProvider({ children }) {
     const [periodLabel, setPeriodLabel] = useState(current.label);
     const [isMultiMonth, setIsMultiMonth] = useState(false);
 
+    // ─── View mode (Aylık | Yıllık) ───
+    const [viewMode, setViewMode] = useState(() => {
+        const raw = searchParams.get('view');
+        return raw === 'yearly' ? 'yearly' : 'monthly';
+    });
+    const [selectedYear, setSelectedYear] = useState(() => {
+        const raw = parseIntOrNull(searchParams.get('year'));
+        return raw && raw >= 2020 && raw <= 2100 ? raw : current.year;
+    });
+
     // ─── Comparison period ───
     const [compareMode, setCompareMode] = useState(() => {
         const raw = searchParams.get('compare');
@@ -170,6 +195,27 @@ export function AnalyticsProvider({ children }) {
         setPeriodLabel(fm.label);
         setIsMultiMonth(false);
     }, []);
+
+    // Yıllık görünüme geç — date range = mali yıl 1-12
+    const switchToYearly = useCallback((year) => {
+        const fr = getFiscalYearRange(year);
+        setViewMode('yearly');
+        setSelectedYear(year);
+        setStartDate(fr.startDate);
+        setEndDate(fr.endDate);
+        setPeriodLabel(fr.label);
+        setIsMultiMonth(true);
+    }, []);
+
+    // Aylık görünüme geri dön
+    const switchToMonthly = useCallback(() => {
+        const fm = getFiscalMonth(monthOffset);
+        setViewMode('monthly');
+        setStartDate(fm.startDate);
+        setEndDate(fm.endDate);
+        setPeriodLabel(fm.label);
+        setIsMultiMonth(false);
+    }, [monthOffset]);
 
     // Navigate to a multi-month range
     const navigateRange = useCallback((startOff, endOff, label) => {
@@ -262,7 +308,12 @@ export function AnalyticsProvider({ children }) {
     useEffect(() => {
         if (!hydratedRef.current) return;
         const params = new URLSearchParams();
-        if (monthOffset !== 0) params.set('period', String(monthOffset));
+        if (viewMode === 'yearly') {
+            params.set('view', 'yearly');
+            if (selectedYear !== current.year) params.set('year', String(selectedYear));
+        } else if (monthOffset !== 0) {
+            params.set('period', String(monthOffset));
+        }
         if (departmentIds.length) params.set('dept', departmentIds.join(','));
         if (positionIds.length) params.set('position', positionIds.join(','));
         if (compareMode !== 'none') params.set('compare', compareMode);
@@ -274,6 +325,8 @@ export function AnalyticsProvider({ children }) {
         if (minAttendancePct !== 50) params.set('min_att', String(minAttendancePct));
         setSearchParams(params, { replace: true });
     }, [
+        viewMode,
+        selectedYear,
         monthOffset,
         departmentIds,
         positionIds,
@@ -283,7 +336,20 @@ export function AnalyticsProvider({ children }) {
         minAttendanceEnabled,
         minAttendancePct,
         setSearchParams,
+        current.year,
     ]);
+
+    // Yıllık modu hidrate et: URL ?view=yearly varsa context dates'i mali yıl olarak set et
+    useEffect(() => {
+        if (viewMode === 'yearly') {
+            const fr = getFiscalYearRange(selectedYear);
+            setStartDate(fr.startDate);
+            setEndDate(fr.endDate);
+            setPeriodLabel(fr.label);
+            setIsMultiMonth(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Query params
     const queryParams = useMemo(() => {
@@ -395,6 +461,9 @@ export function AnalyticsProvider({ children }) {
         startDate, endDate, periodLabel, isMultiMonth, monthOffset,
         setStartDate, setEndDate,
         navigateMonth, navigateRange,
+        // View mode (Aylık | Yıllık)
+        viewMode, selectedYear,
+        switchToYearly, switchToMonthly, setSelectedYear,
         // Compare
         compareMode, setCompareMode,
         compareStartDate, setCompareStartDate,
@@ -419,6 +488,7 @@ export function AnalyticsProvider({ children }) {
         refetch: () => { fetchData(); fetchCompareData(); },
     }), [startDate, endDate, periodLabel, isMultiMonth, monthOffset,
         navigateMonth, navigateRange,
+        viewMode, selectedYear, switchToYearly, switchToMonthly,
         compareMode, compareStartDate, compareEndDate, setCompareCustomRange, compareLabel,
         compareData, compareLoading, deltas,
         departmentIds, positionIds, minAttendancePct, minAttendanceEnabled,

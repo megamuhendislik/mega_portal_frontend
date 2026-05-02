@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useCallback } from 'react';
-import { message } from 'antd';
-import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle } from 'lucide-react';
+import { message, Segmented } from 'antd';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle, Calendar, CalendarRange } from 'lucide-react';
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
@@ -13,6 +13,7 @@ import FavoriteViews from './shared/FavoriteViews';
 import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
 import DensityToggle from './shared/DensityToggle';
 
+const YearlyTrendStrip = React.lazy(() => import('./shared/YearlyTrendStrip'));
 const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
 const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
 const ComparisonTab = React.lazy(() => import('./tabs/ComparisonTab'));
@@ -107,8 +108,55 @@ function TeamAnalyticsInner() {
         't': () => ctx?.navigateMonth && ctx.navigateMonth(0),
     });
 
+    // Yıl seçici opsiyonları (current year ± 5)
+    const currentYear = new Date().getFullYear();
+    const yearOptions = [];
+    for (let y = currentYear - 5; y <= currentYear + 1; y++) {
+        yearOptions.push({ value: y, label: String(y) });
+    }
+
     return (
         <div className="space-y-4">
+            {/* ═══ Görünüm Modu Bar (Yıl + Aylık/Yıllık) ═══ */}
+            <div className="flex items-center gap-3 flex-wrap p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-white to-purple-50 border border-indigo-200/60 shadow-sm">
+                <div className="flex items-center gap-2">
+                    <CalendarRange size={14} className="text-indigo-600" />
+                    <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-[0.1em]">Görünüm</span>
+                </div>
+                <Segmented
+                    value={ctx.viewMode}
+                    onChange={(v) => v === 'yearly' ? ctx.switchToYearly(ctx.selectedYear) : ctx.switchToMonthly()}
+                    options={[
+                        { value: 'monthly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><Calendar size={11} /> Aylık</span> },
+                        { value: 'yearly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><CalendarRange size={11} /> Yıllık</span> },
+                    ]}
+                />
+                <div className="h-5 w-px bg-slate-300" />
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-600">Mali Yıl:</span>
+                    <Segmented
+                        value={ctx.selectedYear}
+                        onChange={(y) => {
+                            ctx.setSelectedYear(y);
+                            if (ctx.viewMode === 'yearly') ctx.switchToYearly(y);
+                        }}
+                        options={yearOptions.map(o => ({ value: o.value, label: <span className="px-1 font-bold tabular-nums">{o.label}</span> }))}
+                    />
+                </div>
+                {ctx.viewMode === 'yearly' && (
+                    <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
+                        Mali Yıl {ctx.selectedYear} · 12 mali ay (26 Ara {ctx.selectedYear - 1} → 25 Ara {ctx.selectedYear})
+                    </span>
+                )}
+            </div>
+
+            {/* Yıllık Trend Strip — yıllık modda her tab'ın üstünde */}
+            {ctx.viewMode === 'yearly' && (
+                <Suspense fallback={null}>
+                    <YearlyTrendStrip />
+                </Suspense>
+            )}
+
             {/* Filter Bar */}
             <AnalyticsFilterBar />
 
