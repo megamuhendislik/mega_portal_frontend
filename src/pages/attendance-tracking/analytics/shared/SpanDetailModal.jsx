@@ -15,7 +15,7 @@ import {
  * Pattern: TenureDetailModal ile aynı (band, dept paneller, filtre, search).
  *
  * Bantlar (hierarchical total_managed):
- *   admin (is_system_admin=true) → indigo, "Sistem Yöneticisi"
+ *   admin (is_system_admin=true | is_board_member=true) → indigo, "Sistem/BOARD Yöneticisi"
  *   critical (>=26) → kırmızı, "Aşırı Yük"
  *   high (11-25)    → turuncu, "Yoğun"
  *   normal (4-10)   → emerald, "Normal"
@@ -35,7 +35,7 @@ const BAND_LABELS = {
     normal: 'Normal',
     high: 'Yoğun',
     critical: 'Aşırı Yük',
-    admin: 'Sistem Yöneticisi',
+    admin: 'Sistem / BOARD',
 };
 
 const BAND_DESCRIPTIONS = {
@@ -43,11 +43,11 @@ const BAND_DESCRIPTIONS = {
     normal: '4-10 kişi',
     high: '11-25 kişi',
     critical: '26+ kişi',
-    admin: 'Sistem yetkisi',
+    admin: 'Sistem yetkisi / Yön.Kurulu',
 };
 
-function getBand(total, isSystemAdmin = false) {
-    if (isSystemAdmin) return 'admin';
+function getBand(total, isSystemAdmin = false, isBoardMember = false) {
+    if (isSystemAdmin || isBoardMember) return 'admin';
     if (total >= 26) return 'critical';
     if (total >= 11) return 'high';
     if (total >= 4) return 'normal';
@@ -154,7 +154,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         }
 
         if (bandFilter !== 'all') {
-            list = list.filter((m) => getBand(m.total_managed || 0, m.is_system_admin) === bandFilter);
+            list = list.filter((m) => getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member) === bandFilter);
         }
 
         list.sort((a, b) => {
@@ -184,8 +184,8 @@ export default function SpanDetailModal({ open, onClose, data }) {
         depth: m.depth || 0,
         secondary: m.secondary_count || 0,
         is_system_admin: !!m.is_system_admin,
-        band: getBand(m.total_managed || 0, m.is_system_admin),
-        color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin)],
+        band: getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member),
+        color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member)],
     })), [filtered]);
 
     const groupedData = useMemo(() => {
@@ -211,8 +211,8 @@ export default function SpanDetailModal({ open, onClose, data }) {
                     depth: m.depth || 0,
                     secondary: m.secondary_count || 0,
                     is_system_admin: !!m.is_system_admin,
-                    band: getBand(m.total_managed || 0, m.is_system_admin),
-                    color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin)],
+                    band: getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member),
+                    color: BAND_COLORS[getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member)],
                 })),
             }))
             .sort((a, b) => b.count - a.count);
@@ -223,7 +223,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
         const sourceList = (showDeptFilter && selectedDepts.length > 0)
             ? allManagers.filter((m) => selectedDepts.includes(m.department || '—'))
             : allManagers;
-        sourceList.forEach((m) => { counts[getBand(m.total_managed || 0, m.is_system_admin)]++; });
+        sourceList.forEach((m) => { counts[getBand(m.total_managed || 0, m.is_system_admin, m.is_board_member)]++; });
         return counts;
     }, [allManagers, selectedDepts, showDeptFilter]);
 
@@ -253,7 +253,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
             dataIndex: 'name',
             sorter: (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'tr'),
             render: (v, row) => {
-                const band = getBand(row.total_managed || 0, row.is_system_admin);
+                const band = getBand(row.total_managed || 0, row.is_system_admin, row.is_board_member);
                 return (
                     <div className="flex items-center gap-2">
                         <div
@@ -326,7 +326,7 @@ export default function SpanDetailModal({ open, onClose, data }) {
             key: 'band',
             align: 'center',
             render: (v, row) => {
-                const band = getBand(v || 0, row.is_system_admin);
+                const band = getBand(v || 0, row.is_system_admin, row.is_board_member);
                 return (
                     <span
                         className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
