@@ -154,7 +154,6 @@ export default function OverviewTab() {
         );
     }
 
-    const healthColor = kpi.health_score >= 80 ? 'emerald' : kpi.health_score >= 60 ? 'amber' : 'red';
     const cmpKpi = compareData?.team_overview?.kpi;
     const isUsingFallback = !data?.team_overview && fallbackData?.team_overview;
 
@@ -184,7 +183,6 @@ export default function OverviewTab() {
                             { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
                             { label: 'Fazla Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
                             { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
-                            { label: 'Sağlık', curr: kpi.health_score || 0, prev: cmpKpi.health_score || 0, delta: deltas?.health, isSuffix: ' puan' },
                         ].map((item, i) => (
                             <div key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/80">
                                 <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider mb-1">{item.label}</p>
@@ -221,10 +219,6 @@ export default function OverviewTab() {
                 <KPICard title="Eksik / Yükümlülük" value={`${kpi.avg_missing_to_target_pct ?? 0}`} suffix="%" icon={AlertCircle}
                     gradient="red"
                     subtitle="Eksik mesai oranı"
-                    onClick={() => setShowDetailModal(true)} />
-                <KPICard title="Ekip Sağlığı" value={kpi.health_score || 0} suffix="/100" icon={Shield}
-                    gradient={healthColor} delta={isComparing ? deltas?.health : null} deltaSuffix=" puan"
-                    info={METRIC_EXPLANATIONS.health_score}
                     onClick={() => setShowDetailModal(true)} />
             </div>
 
@@ -302,39 +296,6 @@ export default function OverviewTab() {
                 defaultOpen
             >
                 <WorkforcePanel />
-            </SectionCard>
-
-            {/* Health Score Breakdown */}
-            <SectionCard title="Sağlık Skoru Detayı" icon={Activity} iconGradient="from-emerald-500 to-emerald-600"
-                subtitle="Ekip performansını oluşturan bileşenler" collapsible defaultOpen={false}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                        <KPIProgressBar label="Mesai Doluluğu (30%)" value={Math.min(kpi.avg_efficiency_pct || 0, 100)} color="#6366f1"
-                            info={METRIC_EXPLANATIONS.efficiency} />
-                        <KPIProgressBar label="Devam Oranı (30%)" value={kpi.attendance_rate_pct || 0} color="#3b82f6"
-                            info={METRIC_EXPLANATIONS.attendance_rate} />
-                        <KPIProgressBar label="Dakiklik (20%)" value={kpi.punctual_pct || 0} color="#10b981"
-                            info={METRIC_EXPLANATIONS.punctuality} />
-                    </div>
-                    <div className="space-y-3">
-                        <KPIProgressBar label="Kayıp Oranı (20%)" value={Math.max(0, 100 - (kpi.total_missing_hours / Math.max(kpi.total_worked_hours || 1, 1) * 100))} color="#f59e0b"
-                            info={METRIC_EXPLANATIONS.missing_hours} />
-                        <div className="mt-4 p-3 bg-slate-50 rounded-xl">
-                            <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                                    style={{ background: `linear-gradient(135deg, ${healthColor === 'emerald' ? '#10b981' : healthColor === 'amber' ? '#f59e0b' : '#ef4444'}, ${healthColor === 'emerald' ? '#059669' : healthColor === 'amber' ? '#d97706' : '#dc2626'})` }}>
-                                    <span className="text-xl font-black text-white">{kpi.health_score || 0}</span>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-slate-700">
-                                        {kpi.health_score >= 80 ? 'Mükemmel' : kpi.health_score >= 60 ? 'İyi' : 'Geliştirilmeli'}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400">Ağırlıklı toplam skor</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </SectionCard>
 
             {/* Efficiency Detail Modal */}
