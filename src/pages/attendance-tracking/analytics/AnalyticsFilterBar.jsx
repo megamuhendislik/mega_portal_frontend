@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, Calendar, Filter, RefreshCw, ChevronDown,
-    GitCompare, Building2, UserX, ArrowRight, X, Briefcase,
+    GitCompare, Building2, UserX, ArrowRight, X, Briefcase, CalendarRange,
 } from 'lucide-react';
+import { Select } from 'antd';
 import { useAnalytics, COMPARE_MODES, getFiscalMonth } from './AnalyticsContext';
 import { format } from 'date-fns';
 import MultiSelect from './shared/MultiSelect';
@@ -105,14 +106,55 @@ export default function AnalyticsFilterBar() {
                         </div>
                     </div>
                 ) : (
-                    // Yıllık modda: tab detay kapsamı bilgisi
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <Calendar size={13} className="text-indigo-500" />
-                        <span>Tab detayları:</span>
-                        <span className="font-black text-slate-700 px-2 py-0.5 bg-indigo-50 rounded-md tabular-nums">
-                            {ctx.startDate} → {ctx.endDate}
+                    // Yıllık modda: Mali Yıl seçici + Tab detay info — TEK BAR
+                    <div className="flex items-center gap-3 flex-wrap">
+                        {/* Mali Yıl Seçici */}
+                        <div className="flex items-center gap-2 pr-3 border-r border-slate-200">
+                            <CalendarRange size={14} className="text-indigo-600" />
+                            <span className="text-[10px] font-black text-indigo-700 uppercase tracking-[0.1em]">Mali Yıl</span>
+                            <Select
+                                size="middle"
+                                value={ctx.selectedYear}
+                                onChange={(y) => {
+                                    ctx.setSelectedYear(y);
+                                    ctx.switchToYearly(y);
+                                }}
+                                options={(ctx.availableYears || []).map((y) => ({
+                                    value: y,
+                                    label: (
+                                        <span className="font-bold tabular-nums">
+                                            {y}
+                                            {y === ctx.yearsMeta?.recommended_year && (
+                                                <span className="ml-1.5 text-[9px] font-normal text-emerald-600">●</span>
+                                            )}
+                                        </span>
+                                    ),
+                                }))}
+                                loading={ctx.yearsLoading}
+                                style={{ minWidth: 110 }}
+                                suffixIcon={<Calendar size={12} />}
+                                notFoundContent="Sistemde veri yok"
+                            />
+                            {ctx.availableYears?.length > 0 && (
+                                <span className="text-[9px] text-slate-400">
+                                    <span className="tabular-nums">{ctx.yearsMeta.min_year}–{ctx.yearsMeta.max_year}</span> mevcut
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Yıl bilgisi rozetı */}
+                        <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
+                            {ctx.selectedYear} · 12 mali ay (26 Ara {ctx.selectedYear - 1} → 25 Ara {ctx.selectedYear})
                         </span>
-                        <span className="text-slate-400">· Yıllık trend için yukarıdaki şerite bak</span>
+
+                        {/* Tab detayları (current month) */}
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                            <Calendar size={11} className="text-slate-400" />
+                            <span>Detay penceresi:</span>
+                            <span className="font-bold text-slate-700 px-1.5 py-0.5 bg-slate-100 rounded tabular-nums">
+                                {ctx.startDate} → {ctx.endDate}
+                            </span>
+                        </div>
                     </div>
                 )}
 

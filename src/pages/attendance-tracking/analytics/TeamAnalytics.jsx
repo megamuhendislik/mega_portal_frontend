@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useCallback } from 'react';
-import { message, Segmented, Select } from 'antd';
-import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle, Calendar, CalendarRange } from 'lucide-react';
+import { message } from 'antd';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle } from 'lucide-react';
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
@@ -108,57 +108,15 @@ function TeamAnalyticsInner() {
         't': () => ctx?.navigateMonth && ctx.navigateMonth(0),
     });
 
-    // Yıl dropdown opsiyonları — sadece sistemde verisi olan yıllar
-    const yearOptions = (ctx.availableYears || []).map((y) => ({
-        value: y,
-        label: (
-            <span className="font-bold tabular-nums">
-                {y}
-                {y === ctx.yearsMeta?.recommended_year && (
-                    <span className="ml-1.5 text-[9px] font-normal text-emerald-600">●</span>
-                )}
-            </span>
-        ),
-    }));
-
     return (
         <div className="space-y-4">
-            {/* ═══ Mali Yıl Seçici (Aylık mod kaldırıldı, sadece Yıllık) ═══ */}
-            <div className="flex items-center gap-3 flex-wrap p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-white to-purple-50 border border-indigo-200/60 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <CalendarRange size={14} className="text-indigo-600" />
-                    <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-[0.1em]">Mali Yıl</span>
-                </div>
-                <Select
-                    size="middle"
-                    value={ctx.selectedYear}
-                    onChange={(y) => {
-                        ctx.setSelectedYear(y);
-                        ctx.switchToYearly(y);
-                    }}
-                    options={yearOptions}
-                    loading={ctx.yearsLoading}
-                    style={{ minWidth: 110 }}
-                    suffixIcon={<Calendar size={12} />}
-                    notFoundContent="Sistemde veri yok"
-                />
-                {ctx.availableYears?.length > 0 && (
-                    <span className="text-[10px] text-slate-500">
-                        <span className="tabular-nums">{ctx.yearsMeta.min_year}–{ctx.yearsMeta.max_year}</span> arası mevcut · ● mevcut yıl
-                    </span>
-                )}
-                <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
-                    {ctx.selectedYear} Mali Yılı · 12 mali ay (26 Ara {ctx.selectedYear - 1} → 25 Ara {ctx.selectedYear})
-                </span>
-            </div>
+            {/* ═══ Filter Bar (Mali Yıl + filtre + tab detayları birleşik) ═══ */}
+            <AnalyticsFilterBar />
 
             {/* ═══ Yıllık Trend Strip — global üst (her tab'ın üstünde) ═══ */}
             <Suspense fallback={null}>
                 <YearlyTrendStrip />
             </Suspense>
-
-            {/* Filter Bar */}
-            <AnalyticsFilterBar />
 
             {/* Tab navigation + actions */}
             <div className="flex flex-wrap items-center gap-3">
