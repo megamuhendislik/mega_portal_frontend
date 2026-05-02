@@ -68,6 +68,32 @@ export default function AnalyticsFilterBar() {
         <div className="bg-white rounded-2xl border-2 border-indigo-200/60 shadow-md overflow-hidden">
             {/* ═══ Main Navigation Bar — Donem secici belirgin ═══ */}
             <div className="flex items-center justify-between px-5 py-4 gap-4 flex-wrap bg-gradient-to-r from-indigo-50/40 via-white to-blue-50/40">
+                {/* Aylık / Yıllık View Mode Toggle */}
+                <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm flex-shrink-0">
+                    <button
+                        onClick={() => ctx.switchToMonthly?.()}
+                        title="Aylık görünüm — mali ay (haftalık breakdown)"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                            !isYearly
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <Calendar size={12} /> Aylık
+                    </button>
+                    <button
+                        onClick={() => ctx.switchToYearly?.(ctx.selectedYear || ctx.yearsMeta?.recommended_year)}
+                        title="Yıllık görünüm — 12 ay özeti"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                            isYearly
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        <CalendarRange size={12} /> Yıllık
+                    </button>
+                </div>
+
                 {/* Period Navigator — sadece Aylık modda; Yıllık modda yıl seçici üst bar'da */}
                 {!isYearly ? (
                     <div className="flex items-center gap-3">
