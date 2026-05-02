@@ -11,11 +11,8 @@ import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
-import RiskMatrixCard from '../shared/RiskMatrixCard';
-import { levelColor as levelColorFn, QUADRANT_META } from '../tabs/performance/helpers';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    Cell, PieChart, Pie, Legend, ComposedChart, Line,
+    Tooltip, ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts';
 
 const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b', low: '#ef4444' };
@@ -160,53 +157,6 @@ export default function OverviewTab() {
                 </div>
             )}
 
-            {/* ═══ Workforce Panel — 6 KPI Tier 1 (Phase 9) ═══ */}
-            {/* NOT: AnomaliesPanel ve InsightsBanner kendi tablarına taşındı —
-                "Anomaliler" ve "İçgörüler" tab'larından erişin. */}
-            <SectionCard
-                title="İşgücü Metrikleri (6 KPI)"
-                subtitle="Kıdem · Yönetici Yükü · İzin · Onay Süresi · Vekalet · Eksik Saat"
-                icon={Award}
-                iconGradient="from-violet-500 to-purple-600"
-                collapsible
-                defaultOpen
-            >
-                <WorkforcePanel />
-            </SectionCard>
-
-            {/* ═══ Risk Haritası (Eksik × FM) — kompakt scatter ═══ */}
-            {employeeList.length > 0 && (
-                <RiskMatrixCard
-                    title="Risk Haritası"
-                    subtitle="Yapılan Normal Mesai × Fazla Mesai · Sağ-üst = ideal tempo · daha derin analiz için Mesai Analizi tabını kullan"
-                    data={employeeList
-                        .filter((e) => e.has_target ?? (e.target_hours > 0))
-                        .map((e) => ({
-                            id: e.employee_id,
-                            name: e.name,
-                            label: e.name?.split(' ')[0] || '?',
-                            x: Math.min(100, e.normal_completion_pct ?? e.efficiency_pct ?? 0),
-                            y: e.ot_to_target_pct || 0,
-                            z: Math.max(40, Math.min(800, (e.normal_hours || 1) * 8)),
-                            color: levelColorFn(e.normal_completion_pct ?? e.efficiency_pct ?? 0),
-                            tooltipExtra: `Normal: ${Math.round(e.normal_hours || 0)}sa · FM: ${Math.round(e.ot_hours || 0)}sa · Eksik: ${Math.round(e.missing_hours || 0)}sa`,
-                        }))}
-                    xLabel="Yapılan Normal Mesai — Gerçekleşen Normal / Yükümlülük (%)"
-                    yLabel="Fazla Mesai / Yükümlülük (%)"
-                    xMax={100} yMax={50}
-                    thresholds={{ x: 80, y: 25 }}
-                    quadrantLabels={{
-                        bl: { label: 'Yetersiz', color: QUADRANT_META.underperform.color, bg: '#fee2e2' },
-                        tl: { label: 'Tutarsız', color: QUADRANT_META.inconsistent.color, bg: '#fef3c7' },
-                        br: { label: 'Sağlıklı', color: QUADRANT_META.healthy.color, bg: '#dbeafe' },
-                        tr: { label: 'Lider', color: QUADRANT_META.leader.color, bg: '#d1fae5' },
-                    }}
-                    sizeRange={[40, 800]}
-                    height={340}
-                    collapsible defaultOpen
-                />
-            )}
-
             {/* ═══ Comparison Summary Banner ═══ */}
             {isComparing && cmpKpi && (
                 <div className="bg-gradient-to-r from-violet-50/80 to-indigo-50/80 rounded-2xl border border-violet-200/60 p-4 shadow-sm">
@@ -294,68 +244,52 @@ export default function OverviewTab() {
                     info={METRIC_EXPLANATIONS.break_minutes} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* Efficiency Distribution */}
-                <SectionCard title="Mesai Doluluk Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
-                    subtitle={`${totalPeople} çalışan`} collapsible={false}
-                    headerExtra={
-                        <button onClick={() => setShowDetailModal(true)}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200/60">
-                            <ExternalLink size={10} /> Detayları Göster
-                        </button>
-                    }>
-                    {distChartData.length > 0 ? (
-                        <div className="space-y-4">
-                            <div className="h-56">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={distChartData} cx="50%" cy="50%" outerRadius={85} innerRadius={50}
-                                            dataKey="value" strokeWidth={2} stroke="#fff">
-                                            {distChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                        </Pie>
-                                        <Tooltip content={<ChartTooltip />} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="space-y-2">
-                                {distChartData.map((d, i) => (
-                                    <KPIProgressBar key={i} label={`${d.name} (${d.value})`}
-                                        value={totalPeople > 0 ? Math.round(d.value / totalPeople * 100) : 0}
-                                        color={d.color} />
-                                ))}
-                            </div>
+            {/* Mesai Doluluk Dağılımı — full width */}
+            <SectionCard title="Mesai Doluluk Dağılımı" icon={Target} iconGradient="from-indigo-500 to-indigo-600"
+                subtitle={`${totalPeople} çalışan`} collapsible defaultOpen
+                headerExtra={
+                    <button onClick={() => setShowDetailModal(true)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200/60">
+                        <ExternalLink size={10} /> Detayları Göster
+                    </button>
+                }>
+                {distChartData.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div className="h-56">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={distChartData} cx="50%" cy="50%" outerRadius={85} innerRadius={50}
+                                        dataKey="value" strokeWidth={2} stroke="#fff">
+                                        {distChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                    </Pie>
+                                    <Tooltip content={<ChartTooltip />} />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
-                    ) : (
-                        <div className="h-56 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
-                    )}
-                </SectionCard>
+                        <div className="space-y-2">
+                            {distChartData.map((d, i) => (
+                                <KPIProgressBar key={i} label={`${d.name} (${d.value})`}
+                                    value={totalPeople > 0 ? Math.round(d.value / totalPeople * 100) : 0}
+                                    color={d.color} />
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="h-56 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
+                )}
+            </SectionCard>
 
-                {/* Monthly Trend */}
-                <div className="lg:col-span-2">
-                    <SectionCard title="Aylık Performans Trendi" icon={BarChart3} iconGradient="from-blue-500 to-blue-600"
-                        subtitle="Çalışma vs hedef ve fazla mesai" collapsible={false}>
-                        {trendChartData.length > 0 ? (
-                            <div className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={trendChartData} barGap={4}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} />
-                                        <YAxis tick={{ fontSize: 10 }} />
-                                        <Tooltip content={<ChartTooltip unit="sa" />} />
-                                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                        <Bar dataKey="çalışma" name="Çalışma" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="fazla mesai" name="Fazla Mesai" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                                        <Line type="monotone" dataKey="hedef" name="Hedef" stroke="#ef4444" strokeWidth={2}
-                                            strokeDasharray="6 3" dot={false} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <div className="h-72 flex items-center justify-center text-slate-400 text-sm">Veri yok</div>
-                        )}
-                    </SectionCard>
-                </div>
-            </div>
+            {/* ═══ Workforce Panel — 6 KPI Tier 1 (collapsible) ═══ */}
+            <SectionCard
+                title="İşgücü Metrikleri (6 KPI)"
+                subtitle="Kıdem · Yönetici Yükü · İzin · Onay Süresi · Vekalet · Eksik Saat"
+                icon={Award}
+                iconGradient="from-violet-500 to-purple-600"
+                collapsible
+                defaultOpen
+            >
+                <WorkforcePanel />
+            </SectionCard>
 
             {/* Health Score Breakdown */}
             <SectionCard title="Sağlık Skoru Detayı" icon={Activity} iconGradient="from-emerald-500 to-emerald-600"
