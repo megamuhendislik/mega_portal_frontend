@@ -1,5 +1,5 @@
 import React, { useState, Suspense, useCallback } from 'react';
-import { message, Segmented } from 'antd';
+import { message, Segmented, Select } from 'antd';
 import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle, Calendar, CalendarRange } from 'lucide-react';
 import api from '../../../services/api';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
@@ -108,12 +108,18 @@ function TeamAnalyticsInner() {
         't': () => ctx?.navigateMonth && ctx.navigateMonth(0),
     });
 
-    // Yıl seçici opsiyonları (current year ± 5)
-    const currentYear = new Date().getFullYear();
-    const yearOptions = [];
-    for (let y = currentYear - 5; y <= currentYear + 1; y++) {
-        yearOptions.push({ value: y, label: String(y) });
-    }
+    // Yıl dropdown opsiyonları — sadece sistemde verisi olan yıllar
+    const yearOptions = (ctx.availableYears || []).map((y) => ({
+        value: y,
+        label: (
+            <span className="font-bold tabular-nums">
+                {y}
+                {y === ctx.yearsMeta?.recommended_year && (
+                    <span className="ml-1.5 text-[9px] font-normal text-emerald-600">●</span>
+                )}
+            </span>
+        ),
+    }));
 
     return (
         <div className="space-y-4">
@@ -127,21 +133,31 @@ function TeamAnalyticsInner() {
                     value={ctx.viewMode}
                     onChange={(v) => v === 'yearly' ? ctx.switchToYearly(ctx.selectedYear) : ctx.switchToMonthly()}
                     options={[
-                        { value: 'monthly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><Calendar size={11} /> Aylık</span> },
                         { value: 'yearly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><CalendarRange size={11} /> Yıllık</span> },
+                        { value: 'monthly', label: <span className="flex items-center gap-1.5 px-2 py-0.5 font-bold"><Calendar size={11} /> Aylık</span> },
                     ]}
                 />
                 <div className="h-5 w-px bg-slate-300" />
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold text-slate-600">Mali Yıl:</span>
-                    <Segmented
+                    <Select
+                        size="middle"
                         value={ctx.selectedYear}
                         onChange={(y) => {
                             ctx.setSelectedYear(y);
                             if (ctx.viewMode === 'yearly') ctx.switchToYearly(y);
                         }}
-                        options={yearOptions.map(o => ({ value: o.value, label: <span className="px-1 font-bold tabular-nums">{o.label}</span> }))}
+                        options={yearOptions}
+                        loading={ctx.yearsLoading}
+                        style={{ minWidth: 110 }}
+                        suffixIcon={<Calendar size={12} />}
+                        notFoundContent="Sistemde veri yok"
                     />
+                    {ctx.availableYears?.length > 0 && (
+                        <span className="text-[10px] text-slate-500">
+                            <span className="tabular-nums">{ctx.yearsMeta.min_year}–{ctx.yearsMeta.max_year}</span> arası mevcut
+                        </span>
+                    )}
                 </div>
                 {ctx.viewMode === 'yearly' && (
                     <span className="ml-auto text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">

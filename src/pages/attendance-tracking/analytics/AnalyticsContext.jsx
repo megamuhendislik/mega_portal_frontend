@@ -136,15 +136,21 @@ export function AnalyticsProvider({ children }) {
     const [periodLabel, setPeriodLabel] = useState(current.label);
     const [isMultiMonth, setIsMultiMonth] = useState(false);
 
-    // ─── View mode (Aylık | Yıllık) ───
+    // ─── View mode (Aylık | Yıllık) — default = yearly ───
     const [viewMode, setViewMode] = useState(() => {
         const raw = searchParams.get('view');
-        return raw === 'yearly' ? 'yearly' : 'monthly';
+        if (raw === 'monthly') return 'monthly';
+        return 'yearly'; // default
     });
     const [selectedYear, setSelectedYear] = useState(() => {
         const raw = parseIntOrNull(searchParams.get('year'));
         return raw && raw >= 2020 && raw <= 2100 ? raw : current.year;
     });
+    const [availableYears, setAvailableYears] = useState([current.year]);
+    const [yearsMeta, setYearsMeta] = useState({
+        min_year: current.year, max_year: current.year, recommended_year: current.year,
+    });
+    const [yearsLoading, setYearsLoading] = useState(true);
 
     // ─── Comparison period ───
     const [compareMode, setCompareMode] = useState(() => {
@@ -339,7 +345,7 @@ export function AnalyticsProvider({ children }) {
         current.year,
     ]);
 
-    // Yıllık modu hidrate et: URL ?view=yearly varsa context dates'i mali yıl olarak set et
+    // Yıllık modu hidrate et: default Yıllık veya URL ?view=yearly
     useEffect(() => {
         if (viewMode === 'yearly') {
             const fr = getFiscalYearRange(selectedYear);
@@ -348,6 +354,42 @@ export function AnalyticsProvider({ children }) {
             setPeriodLabel(fr.label);
             setIsMultiMonth(true);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Available years fetch — sistem başlangıcına göre dropdown opsiyonları
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await api.get('/attendance-analytics/available-years/');
+                if (cancelled) return;
+                const yrs = Array.isArray(res.data?.years) && res.data.years.length > 0
+                    ? res.data.years : [current.year];
+                setAvailableYears(yrs);
+                setYearsMeta({
+                    min_year: res.data?.min_year ?? yrs[0],
+                    max_year: res.data?.max_year ?? yrs[yrs.length - 1],
+                    recommended_year: res.data?.recommended_year ?? yrs[yrs.length - 1],
+                });
+                // Eğer mevcut seçili yıl available değilse recommended'a switch
+                if (!yrs.includes(selectedYear)) {
+                    const fallback = res.data?.recommended_year ?? yrs[yrs.length - 1];
+                    setSelectedYear(fallback);
+                    if (viewMode === 'yearly') {
+                        const fr = getFiscalYearRange(fallback);
+                        setStartDate(fr.startDate);
+                        setEndDate(fr.endDate);
+                        setPeriodLabel(fr.label);
+                    }
+                }
+            } catch {
+                /* sessiz — fallback default tek yıl */
+            } finally {
+                if (!cancelled) setYearsLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -464,6 +506,7 @@ export function AnalyticsProvider({ children }) {
         // View mode (Aylık | Yıllık)
         viewMode, selectedYear,
         switchToYearly, switchToMonthly, setSelectedYear,
+        availableYears, yearsMeta, yearsLoading,
         // Compare
         compareMode, setCompareMode,
         compareStartDate, setCompareStartDate,
@@ -489,6 +532,7 @@ export function AnalyticsProvider({ children }) {
     }), [startDate, endDate, periodLabel, isMultiMonth, monthOffset,
         navigateMonth, navigateRange,
         viewMode, selectedYear, switchToYearly, switchToMonthly,
+        availableYears, yearsMeta, yearsLoading,
         compareMode, compareStartDate, compareEndDate, setCompareCustomRange, compareLabel,
         compareData, compareLoading, deltas,
         departmentIds, positionIds, minAttendancePct, minAttendanceEnabled,
