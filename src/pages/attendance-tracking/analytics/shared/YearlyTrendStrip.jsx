@@ -81,6 +81,60 @@ function withCumulativeAvg(series, key = 'avg') {
     });
 }
 
+// Kumulatif tum metrikler (Hepsi modu icin) — running sum
+function buildCumulativeAll(months, monthlyData) {
+    let normalAcc = 0, otAcc = 0, missingAcc = 0;
+    return months.map((m, idx) => {
+        const row = monthlyData[idx] || {};
+        normalAcc += row.avg_normal_h ?? 0;
+        otAcc += row.avg_ot_h ?? 0;
+        missingAcc += row.avg_missing_h ?? 0;
+        return {
+            month: m.label,
+            monthIdx: m.index,
+            normal: +normalAcc.toFixed(2),
+            ot: +otAcc.toFixed(2),
+            missing: +missingAcc.toFixed(2),
+        };
+    });
+}
+
+// Kumulatif tek metric — running sum + running avg
+function buildCumulativeSingle(months, monthlyData, metric) {
+    let sumAcc = 0;
+    let avgAcc = 0;
+    let nMonths = 0;
+    const sumKey = `sum_${metric}`;
+    const avgKey = `avg_${metric}`;
+    return months.map((m, idx) => {
+        const row = monthlyData[idx] || {};
+        sumAcc += row[sumKey] ?? 0;
+        if ((row[avgKey] ?? 0) > 0) {
+            avgAcc += row[avgKey];
+            nMonths++;
+        }
+        return {
+            month: m.label,
+            monthIdx: m.index,
+            cumSum: +sumAcc.toFixed(2),
+            cumAvg: nMonths > 0 ? +(avgAcc / nMonths).toFixed(2) : 0,
+        };
+    });
+}
+
+// Mali ay X of year Y = "26 of (X-1) → 25 of X"
+function getFiscalMonthRange(year, month) {
+    const fmt = (yr, mo, dy) => `${yr}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+    const startMonth = month === 1 ? 12 : month - 1;
+    const startYear = month === 1 ? year - 1 : year;
+    return {
+        startDate: fmt(startYear, startMonth, 26),
+        endDate: fmt(year, month, 25),
+    };
+}
+
+const TR_MONTHS_FULL = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
 export default function YearlyTrendStrip() {
     const { selectedYear, queryParams } = useAnalytics();
     const [data, setData] = useState(null);
@@ -88,9 +142,10 @@ export default function YearlyTrendStrip() {
     const [error, setError] = useState(null);
     const [scope, setScope] = useState('company');
     const [metric, setMetric] = useState('all');
-    const [chartMode, setChartMode] = useState('line'); // 'line' | 'bar' | 'area'
+    const [chartMode, setChartMode] = useState('line'); // 'line' | 'bar' | 'area' | 'cumulative'
     const [selectedPersons, setSelectedPersons] = useState([]);
     const [selectedDepts, setSelectedDepts] = useState([]);
+    const [drillMonth, setDrillMonth] = useState(null); // 1-12 — tıklanan mali ay
 
     const fetchData = useCallback(async () => {
         if (!selectedYear) return;
@@ -154,21 +209,28 @@ export default function YearlyTrendStrip() {
     // Şirket genel chart datası
     const companyChartData = useMemo(() => {
         if (!data) return [];
+        const months = data.months || [];
+        const monthly = data.company?.monthly || [];
+        if (chartMode === 'cumulative') {
+            if (metric === 'all') {
+                return buildCumulativeAll(months, monthly);
+            }
+            return buildCumulativeSingle(months, monthly, metric);
+        }
         if (metric === 'all') {
-            // Composed: 3 metric ayrı bar/line
-            const months = data.months || [];
             return months.map((m, idx) => {
-                const row = data.company?.monthly?.[idx] || {};
+                const row = monthly[idx] || {};
                 return {
                     month: m.label,
+                    monthIdx: m.index,
                     normal: row.avg_normal_h ?? 0,
                     ot: row.avg_ot_h ?? 0,
                     missing: row.avg_missing_h ?? 0,
                 };
             });
         }
-        return withCumulativeAvg(getCompanySeries(data, metric.replace('h', 'h')));
-    }, [data, metric]);
+        return withCumulativeAvg(getCompanySeries(data, metric));
+    }, [data, metric, chartMode]);
 
     const yearAvg = useMemo(() => {
         if (!data || metric === 'all') return null;
@@ -283,6 +345,7 @@ export default function YearlyTrendStrip() {
                         { value: 'line', label: <span className="text-[10px] px-1">Çizgi</span> },
                         { value: 'bar', label: <span className="text-[10px] px-1">Bar</span> },
                         { value: 'area', label: <span className="text-[10px] px-1">Alan</span> },
+                        { value: 'cumulative', label: <span className="text-[10px] px-1 font-bold">Kümülatif</span> },
                     ]}
                 />
 
@@ -349,6 +412,22 @@ export default function YearlyTrendStrip() {
                         metric={metric}
                         chartMode={chartMode}
                         yearAvg={yearAvg}
+                        onMonthClick={(idx) => setDrillMonth(idx)}
+                    />
+                )}
+                {scope === 'company' && (
+                    <p className="text-[10px] text-slate-400 mt-1 text-center">
+                        💡 Bir aya tıklayınca alt bölümde haftalık dağılımı açılır
+                    </p>
+                )}
+
+                {/* Aylık drill-down — haftalık dağılım */}
+                {drillMonth && (
+                    <MonthDrillPanel
+                        year={selectedYear}
+                        month={drillMonth}
+                        onClose={() => setDrillMonth(null)}
+                        queryParams={queryParams}
                     />
                 )}
                 {(scope === 'department' || scope === 'persons') && (
@@ -392,15 +471,73 @@ function KpiTile({ label, value, suffix, color = 'slate', icon: Icon }) {
     );
 }
 
-function CompanyChart({ data, metric, chartMode, yearAvg }) {
+function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
     if (!data || data.length === 0) {
         return <Empty description="Veri yok" />;
     }
+    // Bar/Line click → drill-down (parent setState)
+    const handleBarClick = (e) => {
+        if (!onMonthClick) return;
+        const idx = e?.activePayload?.[0]?.payload?.monthIdx;
+        if (idx) onMonthClick(idx);
+    };
+
+    // Kümülatif modu (running sum)
+    if (chartMode === 'cumulative') {
+        if (metric === 'all') {
+            return (
+                <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={data} onClick={handleBarClick}>
+                            <defs>
+                                <linearGradient id="cumGrad-normal" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={METRIC_COLORS.normal_h} stopOpacity={0.5} />
+                                    <stop offset="100%" stopColor={METRIC_COLORS.normal_h} stopOpacity={0.05} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} unit="sa" />
+                            <RTooltip />
+                            <Legend wrapperStyle={{ fontSize: 10 }} />
+                            <Area type="monotone" dataKey="normal" name="Kümülatif Normal" stroke={METRIC_COLORS.normal_h} fill="url(#cumGrad-normal)" strokeWidth={2} />
+                            <Line type="monotone" dataKey="ot" name="Kümülatif OT" stroke={METRIC_COLORS.ot_h} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5, onClick: (e, p) => onMonthClick && onMonthClick(p?.payload?.monthIdx) }} />
+                            <Line type="monotone" dataKey="missing" name="Kümülatif Eksik" stroke={METRIC_COLORS.missing_h} strokeWidth={2} strokeDasharray="4 3" dot={{ r: 2 }} />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            );
+        }
+        const c = METRIC_COLORS[metric];
+        return (
+            <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} onClick={handleBarClick}>
+                        <defs>
+                            <linearGradient id={`cumGrad-${metric}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={c} stopOpacity={0.5} />
+                                <stop offset="100%" stopColor={c} stopOpacity={0.05} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis yAxisId="L" tick={{ fontSize: 10 }} unit="sa" orientation="left" />
+                        <YAxis yAxisId="R" tick={{ fontSize: 10 }} unit="sa" orientation="right" />
+                        <RTooltip />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Area yAxisId="L" type="monotone" dataKey="cumSum" name="Kümülatif Toplam (sol)" stroke={c} fill={`url(#cumGrad-${metric})`} strokeWidth={2} />
+                        <Line yAxisId="R" type="monotone" dataKey="cumAvg" name="Yıl Bilinmesi Ort. (sağ)" stroke={c} strokeDasharray="4 3" strokeWidth={2} dot={{ r: 3 }} />
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
+        );
+    }
+
     if (metric === 'all') {
         return (
             <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} barGap={2} barCategoryGap="22%">
+                    <BarChart data={data} barGap={2} barCategoryGap="22%" onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} unit="sa" />
@@ -419,7 +556,7 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
         <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
                 {chartMode === 'bar' ? (
-                    <BarChart data={data}>
+                    <BarChart data={data} onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} unit="sa" />
@@ -431,7 +568,7 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
                         <Bar dataKey="avg" name="Kişi Ort." fill={color} radius={[4, 4, 0, 0]} />
                     </BarChart>
                 ) : chartMode === 'area' ? (
-                    <ComposedChart data={data}>
+                    <ComposedChart data={data} onClick={handleBarClick}>
                         <defs>
                             <linearGradient id={`grad-${metric}`} x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor={color} stopOpacity={0.4} />
@@ -446,7 +583,7 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
                         <Line type="monotone" dataKey="cumAvg" name="Kümülatif Ort." stroke={color} strokeDasharray="4 3" strokeWidth={2} dot={false} />
                     </ComposedChart>
                 ) : (
-                    <LineChart data={data}>
+                    <LineChart data={data} onClick={handleBarClick}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} unit="sa" />
@@ -461,6 +598,169 @@ function CompanyChart({ data, metric, chartMode, yearAvg }) {
                     </LineChart>
                 )}
             </ResponsiveContainer>
+        </div>
+    );
+}
+
+function MonthDrillPanel({ year, month, onClose, queryParams }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const range = useMemo(() => getFiscalMonthRange(year, month), [year, month]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const params = {
+                    start_date: range.startDate,
+                    end_date: range.endDate,
+                };
+                ['department_ids', 'position_ids', 'exclude_department_ids', 'exclude_employee_ids', 'min_normal_completion_pct'].forEach((k) => {
+                    if (queryParams?.[k] != null) params[k] = queryParams[k];
+                });
+                const res = await api.get('/attendance-analytics/weekly-limit/', { params, timeout: 30000 });
+                if (!cancelled) setData(res.data);
+            } catch (err) {
+                if (!cancelled) setError(err?.response?.data?.error || err?.message || 'Yüklenemedi');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [year, month, range.startDate, range.endDate, queryParams]);
+
+    // Haftalık şirket aggregate
+    const weeklySummary = useMemo(() => {
+        if (!data?.weeks?.length || !data?.employees?.length) return [];
+        const weeks = data.weeks;
+        return weeks.map((w, idx) => {
+            let totalOt = 0;
+            let count = 0;
+            data.employees.forEach((e) => {
+                const wk = e.weeks?.[idx];
+                if (wk) {
+                    totalOt += wk.ot_hours || 0;
+                    count++;
+                }
+            });
+            return {
+                label: `${w.start.slice(5)} → ${w.end.slice(5)}`,
+                week_start: w.start,
+                avg_ot: count > 0 ? +(totalOt / count).toFixed(2) : 0,
+                sum_ot: +totalOt.toFixed(2),
+                members: count,
+            };
+        });
+    }, [data]);
+
+    const totals = useMemo(() => {
+        if (!data?.employees?.length) return null;
+        let normal = 0, ot = 0, missing = 0;
+        let nWithData = 0;
+        data.employees.forEach((e) => {
+            normal += e.totals?.normal_hours || 0;
+            ot += e.totals?.ot_hours || 0;
+            missing += e.totals?.missing_hours || 0;
+            if ((e.totals?.normal_hours || 0) > 0) nWithData++;
+        });
+        const n = nWithData || 1;
+        return {
+            sum_normal: +normal.toFixed(1),
+            sum_ot: +ot.toFixed(1),
+            sum_missing: +missing.toFixed(1),
+            avg_normal: +(normal / n).toFixed(2),
+            avg_ot: +(ot / n).toFixed(2),
+            avg_missing: +(missing / n).toFixed(2),
+            employees: nWithData,
+            weeks: data.weeks?.length || 0,
+        };
+    }, [data]);
+
+    return (
+        <div className="mt-4 rounded-xl border-2 border-indigo-300 bg-indigo-50/30 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-indigo-200">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-indigo-100">
+                        <Calendar size={14} className="text-indigo-600" />
+                    </div>
+                    <div>
+                        <h4 className="text-[13px] font-black text-slate-800">
+                            {TR_MONTHS_FULL[month]} {year} — Haftalık Dağılım
+                        </h4>
+                        <p className="text-[10px] text-slate-500">
+                            {range.startDate} → {range.endDate} · Mali Ay {month}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 px-2 py-1 rounded-md hover:bg-white/60 transition-colors"
+                >
+                    Kapat ✕
+                </button>
+            </div>
+
+            {loading && (
+                <div className="text-center py-6 text-[12px] text-indigo-600">Haftalık veri yükleniyor…</div>
+            )}
+            {error && (
+                <div className="text-center py-4 text-[12px] text-red-600">{error}</div>
+            )}
+            {!loading && !error && data && (
+                <>
+                    {/* Aylık özet KPI */}
+                    {totals && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                            <KpiTile label={`${totals.weeks} hafta · ${totals.employees} kişi`} value={totals.weeks} suffix="hf" color="slate" icon={Calendar} />
+                            <KpiTile label="Aylık Toplam Normal" value={totals.sum_normal} suffix="sa" color="indigo" />
+                            <KpiTile label="Aylık Toplam OT" value={totals.sum_ot} suffix="sa" color="amber" icon={TrendingUp} />
+                            <KpiTile label="Aylık Toplam Eksik" value={totals.sum_missing} suffix="sa" color="red" icon={AlertTriangle} />
+                        </div>
+                    )}
+
+                    {/* Haftalık şirket OT bar chart */}
+                    {weeklySummary.length > 0 ? (
+                        <div className="rounded-lg border border-indigo-200 bg-white p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <h5 className="text-[11px] font-bold text-slate-700">Haftalık Kişi-Ortalaması OT</h5>
+                                <span className="text-[10px] text-slate-400">
+                                    Aylık ort. <span className="font-bold tabular-nums text-amber-700">{totals?.avg_ot ?? 0}sa</span> · <span className="font-bold tabular-nums text-indigo-700">{totals?.avg_normal ?? 0}sa</span> normal
+                                </span>
+                            </div>
+                            <div className="h-44">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={weeklySummary}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                                        <YAxis tick={{ fontSize: 10 }} unit="sa" />
+                                        <RTooltip
+                                            content={({ active, payload, label }) => {
+                                                if (!active || !payload?.length) return null;
+                                                const d = payload[0].payload;
+                                                return (
+                                                    <div className="rounded-lg bg-white border border-slate-200 shadow-md px-3 py-2 text-[11px]">
+                                                        <div className="font-bold text-slate-700 mb-1">{label}</div>
+                                                        <div>Kişi başı OT: <span className="font-bold tabular-nums text-amber-700">{d.avg_ot}sa</span></div>
+                                                        <div>Toplam OT: <span className="font-bold tabular-nums text-amber-700">{d.sum_ot}sa</span></div>
+                                                        <div>Veri olan kişi: <span className="font-bold tabular-nums">{d.members}</span></div>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
+                                        <Bar dataKey="avg_ot" name="Haftalık Kişi Ort. OT" fill={METRIC_COLORS.ot_h} radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    ) : (
+                        <Empty description="Bu ay için haftalık veri yok" />
+                    )}
+                </>
+            )}
         </div>
     );
 }
