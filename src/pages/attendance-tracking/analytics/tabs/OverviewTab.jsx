@@ -8,6 +8,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
+import PunctualityDetailModal from '../shared/PunctualityDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
@@ -64,6 +65,7 @@ export default function OverviewTab() {
     const trendData = overview?.monthly_trend;
 
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showPunctualityModal, setShowPunctualityModal] = useState(false);
 
     const distChartData = useMemo(() => {
         if (!distribution) return [];
@@ -243,7 +245,8 @@ export default function OverviewTab() {
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
                     delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
                 <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald"
-                    info={METRIC_EXPLANATIONS.punctuality} />
+                    info={METRIC_EXPLANATIONS.punctuality}
+                    onClick={() => setShowPunctualityModal(true)} />
                 <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
                     info={METRIC_EXPLANATIONS.meal_rate} />
@@ -303,6 +306,12 @@ export default function OverviewTab() {
                 open={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 employees={employeeList}
+            />
+
+            {/* Punctuality Detail Modal — Dakiklik tikla */}
+            <PunctualityDetailModal
+                open={showPunctualityModal}
+                onClose={() => setShowPunctualityModal(false)}
             />
         </div>
     );
