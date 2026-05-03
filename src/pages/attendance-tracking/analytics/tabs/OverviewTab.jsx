@@ -8,6 +8,7 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
+import KPIDetailModal from '../shared/KPIDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
@@ -64,6 +65,7 @@ export default function OverviewTab() {
     const trendData = overview?.monthly_trend;
 
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [activeKPI, setActiveKPI] = useState(null);  // Universal KPI modal state
 
     const distChartData = useMemo(() => {
         if (!distribution) return [];
@@ -115,6 +117,223 @@ export default function OverviewTab() {
         }
         return list;
     }, [effectiveData, minAttendancePct, minAttendanceEnabled]);
+
+    // ── KPI Detail Modal Configurations ──────────────────────────────
+    // Her KPI tıklayınca açılır: title, formula, columns, sortKey, levelFn
+    const KPI_CONFIGS = useMemo(() => ({
+        normal_completion: {
+            title: 'Yapılan Normal Mesai — Detay',
+            icon: Target,
+            formula: 'Normal Mesai (W) ÷ Pro-rata Yükümlülük (Y) × 100, cap [0,100]',
+            description: 'Her çalışanın yaptığı normal mesainin (OT hariç) bu döneme kadar olan yükümlülüğüne oranı. Cap 100.',
+            sortKey: 'normal_completion_pct',
+            levelKey: 'normal_completion_pct',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'normal_completion_pct', label: 'Yap.M./Y', type: 'percent', highlight: true },
+            ],
+        },
+        total_completion: {
+            title: 'Toplam Yapılan Mesai — Detay',
+            icon: TrendingUp,
+            formula: '(Normal + Fazla Mesai) ÷ Yükümlülük × 100, UNCAPPED',
+            description: 'Fazla mesai dahil toplam yapılan mesainin yükümlülüğe oranı. >100 = hedef üstüne çıktı.',
+            sortKey: 'total_completion_pct',
+            levelKey: 'total_completion_pct',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'total_completion_pct', label: 'Toplam/Y', type: 'percent', highlight: true },
+            ],
+        },
+        ot_to_target: {
+            title: 'Fazla Mesai / Yükümlülük — Detay',
+            icon: Zap,
+            formula: 'Fazla Mesai (OT) ÷ Pro-rata Yükümlülük × 100',
+            description: 'Çalışanın yaptığı fazla mesainin yükümlülüğe oranı. Yüksek = aşırı yük olabilir.',
+            sortKey: 'ot_to_target_pct',
+            sortDir: 'desc',
+            levelFn: (r) => {
+                const v = r.ot_to_target_pct ?? 0;
+                if (v >= 50) return 'low';      // çok yüksek = kırmızı
+                if (v >= 25) return 'average';
+                if (v >= 10) return 'good';
+                return 'excellent';             // az = sağlıklı
+            },
+            columns: [
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'ot_to_target_pct', label: 'OT/Y', type: 'percent', highlight: true },
+            ],
+        },
+        missing_to_target: {
+            title: 'Eksik / Yükümlülük — Detay',
+            icon: AlertCircle,
+            formula: 'Eksik Mesai (M) ÷ Pro-rata Yükümlülük × 100, cap [0,100]',
+            description: 'Eksik mesainin yükümlülüğe oranı. Yüksek = sorun. ABSENT günleri tam günlük eksik sayılır.',
+            sortKey: 'missing_to_target_pct',
+            sortDir: 'desc',
+            levelFn: (r) => {
+                const v = r.missing_to_target_pct ?? 0;
+                if (v >= 30) return 'low';
+                if (v >= 15) return 'average';
+                if (v >= 5) return 'good';
+                return 'excellent';
+            },
+            columns: [
+                { key: 'missing_hours', label: 'Eksik (sa)', type: 'hours' },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'missing_to_target_pct', label: 'Eksik/Y', type: 'percent', highlight: true },
+            ],
+        },
+        normal_hours: {
+            title: 'Normal Mesai (saat) — Detay',
+            icon: Clock,
+            formula: 'Σ normal_seconds ÷ 3600 (Fazla Mesai HARİÇ)',
+            description: 'Çalışan başına saat cinsinden normal mesai. ABSENT günler 0 sayılır.',
+            sortKey: 'normal_hours',
+            sortDir: 'desc',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours', highlight: true },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'normal_completion_pct', label: 'Yap.M./Y', type: 'percent' },
+            ],
+        },
+        worked_hours: {
+            title: 'Toplam Çalışma (saat) — Detay',
+            icon: Clock,
+            formula: 'Σ (normal_seconds + calculated_overtime_seconds) ÷ 3600',
+            description: 'Çalışan başına toplam çalışma saati (normal + fazla mesai dahil).',
+            sortKey: 'worked_hours',
+            sortDir: 'desc',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
+                { key: 'worked_hours', label: 'Toplam (sa)', type: 'hours', highlight: true },
+                { key: 'target_hours', label: 'Tam Hedef (sa)', type: 'hours' },
+            ],
+        },
+        ot_hours: {
+            title: 'Fazla Mesai (saat) — Detay',
+            icon: Zap,
+            formula: 'Σ calculated_overtime_seconds ÷ 3600 (APPROVED + APPROVED auto)',
+            description: 'Çalışan başına onaylı fazla mesai saati (POTENTIAL hariç).',
+            sortKey: 'ot_hours',
+            sortDir: 'desc',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours', highlight: true },
+                { key: 'ot_to_normal_pct', label: 'OT/Normal', type: 'percent' },
+                { key: 'ot_to_target_pct', label: 'OT/Y', type: 'percent' },
+            ],
+        },
+        missing_hours: {
+            title: 'Eksik Mesai (saat) — Detay',
+            icon: AlertCircle,
+            formula: 'Σ missing_seconds ÷ 3600 (ABSENT günleri DAHİL)',
+            description: 'Çalışan başına eksik mesai saati. ABSENT günleri tam günlük eksik (örn. 9sa) sayılır.',
+            sortKey: 'missing_hours',
+            sortDir: 'desc',
+            columns: [
+                { key: 'missing_hours', label: 'Eksik (sa)', type: 'hours', highlight: true },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
+                { key: 'missing_to_target_pct', label: 'Eksik/Y', type: 'percent' },
+            ],
+        },
+        attendance: {
+            title: 'Devam Oranı — Detay',
+            icon: CalendarCheck,
+            formula: '(Toplam Kayıt − ABSENT) ÷ Toplam Kayıt × 100',
+            description: 'Sadece sistemin "ABSENT" işaretlediği no-show günler oranı düşürür. Onaylı izin/sağlık raporu/dış görev günleri otomatik APPROVED kayıt yarattığından "gelmiş" sayılır. Tatil/hafta sonu kayıt oluşmadığı için hariç.',
+            sortKey: 'attendance_pct',
+            sortDir: 'asc',  // önce düşükler (problemli kişiler) görünsün
+            levelFn: (r) => {
+                const v = r.attendance_pct ?? 100;
+                if (v >= 95) return 'excellent';
+                if (v >= 85) return 'good';
+                if (v >= 70) return 'average';
+                return 'low';
+            },
+            columns: [
+                { key: 'present_records', label: 'Gelen Kayıt', type: 'number' },
+                { key: 'absent_days', label: 'ABSENT Gün', type: 'number' },
+                { key: 'total_records', label: 'Toplam Kayıt', type: 'number' },
+                { key: 'attendance_pct', label: 'Devam %', type: 'percent', highlight: true },
+            ],
+        },
+        ot_to_normal: {
+            title: 'Fazla Mesai / Normal — Detay',
+            icon: TrendingUp,
+            formula: 'Fazla Mesai ÷ Normal Mesai × 100 (Normal=0 → tanımsız)',
+            description: 'Fazla mesainin normal mesaiye oranı. Normal mesai sıfırsa metrik tanımsız.',
+            sortKey: 'ot_to_normal_pct',
+            sortDir: 'desc',
+            levelFn: (r) => {
+                const v = r.ot_to_normal_pct;
+                if (v == null) return null;
+                if (v >= 50) return 'low';
+                if (v >= 25) return 'average';
+                if (v >= 10) return 'good';
+                return 'excellent';
+            },
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
+                { key: 'ot_to_normal_pct', label: 'OT/Normal', type: 'percent', highlight: true },
+            ],
+        },
+        meal: {
+            title: 'Yemek Oranı — Detay',
+            icon: Coffee,
+            formula: 'Yemek Sipariş Sayısı ÷ Çalışılan İş Günü × 100',
+            description: 'Çalışan başına yemek siparişi oranı. CANCELLED siparişler hariç.',
+            sortKey: 'meal_rate_pct',
+            sortDir: 'desc',
+            columns: [
+                { key: 'meal_orders', label: 'Sipariş', type: 'number' },
+                { key: 'meal_working_days', label: 'İş Günü', type: 'number' },
+                { key: 'meal_rate_pct', label: 'Yemek %', type: 'percent', highlight: true },
+            ],
+        },
+        break: {
+            title: 'Ortalama Mola — Detay',
+            icon: Coffee,
+            formula: 'Avg(potential_break_seconds) ÷ 60 (dakika)',
+            description: 'Çalışan başına ortalama günlük mola dakikası. potential_break_seconds = vardiya içi check_out / check_in arasındaki boşluklardan algılanan.',
+            sortKey: 'avg_break_minutes',
+            sortDir: 'desc',
+            levelFn: (r) => {
+                const v = r.avg_break_minutes ?? 0;
+                if (v >= 90) return 'low';      // çok uzun mola
+                if (v >= 75) return 'average';
+                if (v >= 60) return 'good';
+                return 'excellent';
+            },
+            columns: [
+                { key: 'avg_break_minutes', label: 'Ort. Mola (dk)', type: 'minutes', highlight: true },
+            ],
+        },
+        team: {
+            title: 'Ekip Üyeleri — Detay',
+            icon: Users,
+            formula: 'Yetki kapsamındaki çalışan listesi',
+            description: 'Yöneticisi olduğun veya tüm şirket görme yetkin varsa tüm çalışanlar.',
+            sortKey: 'name',
+            sortDir: 'asc',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
+                { key: 'missing_hours', label: 'Eksik (sa)', type: 'hours' },
+            ],
+        },
+    }), []);
+
+    const openKPI = (key) => {
+        const cfg = KPI_CONFIGS[key];
+        if (cfg) setActiveKPI({ key, ...cfg });
+    };
 
     // Yükleme: hem bulk hem fallback yoksa skeleton
     if ((loading || fallbackLoading) && !kpi) return <LoadingSkeleton rows={3} />;
@@ -207,46 +426,55 @@ export default function OverviewTab() {
                 <KPICard title="Yapılan Normal Mesai" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
                     subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
-                    onClick={() => setShowDetailModal(true)} />
+                    onClick={() => openKPI('normal_completion')} />
                 <KPICard title="Toplam Yapılan Mesai" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
                     gradient="emerald"
                     subtitle="(Normal + Fazla Mesai) / Yükümlülük"
-                    onClick={() => setShowDetailModal(true)} />
+                    onClick={() => openKPI('total_completion')} />
                 <KPICard title="Fazla Mesai / Yükümlülük" value={`${kpi.avg_ot_to_target_pct ?? 0}`} suffix="%" icon={Zap}
                     gradient="amber"
                     subtitle="Fazla mesai oranı"
-                    onClick={() => setShowDetailModal(true)} />
+                    onClick={() => openKPI('ot_to_target')} />
                 <KPICard title="Eksik / Yükümlülük" value={`${kpi.avg_missing_to_target_pct ?? 0}`} suffix="%" icon={AlertCircle}
                     gradient="red"
                     subtitle="Eksik mesai oranı"
-                    onClick={() => setShowDetailModal(true)} />
+                    onClick={() => openKPI('missing_to_target')} />
             </div>
 
             {/* ── Saat Bazlı Toplamlar (4 mini KPI) ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours ?? Math.max(0, (kpi.total_worked_hours || 0) - (kpi.total_overtime_hours || 0)))} suffix="sa" icon={Clock} gradient="indigo"
-                    subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`} />
+                    subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`}
+                    onClick={() => openKPI('normal_hours')} />
                 <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
                     delta={isComparing ? deltas?.worked : null}
-                    subtitle={`Hedef: ${Math.round(kpi.total_target_hours || 0)}sa`} info={METRIC_EXPLANATIONS.worked_hours} />
+                    subtitle={`Hedef: ${Math.round(kpi.total_target_hours || 0)}sa`} info={METRIC_EXPLANATIONS.worked_hours}
+                    onClick={() => openKPI('worked_hours')} />
                 <KPICard mini title="Fazla Mesai" value={Math.round(kpi.total_overtime_hours || 0)} suffix="sa" icon={Zap} gradient="amber"
                     delta={isComparing ? deltas?.overtime : kpi.vs_prev?.ot}
-                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime} />
+                    sparkline={sparklineOT} info={METRIC_EXPLANATIONS.overtime}
+                    onClick={() => openKPI('ot_hours')} />
                 <KPICard mini title="Eksik Mesai" value={Math.round(kpi.total_missing_hours || 0)} suffix="sa" icon={AlertCircle} gradient="red"
                     delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
-                    info={METRIC_EXPLANATIONS.missing_hours} />
+                    info={METRIC_EXPLANATIONS.missing_hours}
+                    onClick={() => openKPI('missing_hours')} />
             </div>
 
             {/* ── Diğer ekip metrikleri (mini KPI) ── */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
+                <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate"
+                    onClick={() => openKPI('team')} />
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
-                    delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
-                <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
+                    delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate}
+                    onClick={() => openKPI('attendance')} />
+                <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet"
+                    onClick={() => openKPI('ot_to_normal')} />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
-                    info={METRIC_EXPLANATIONS.meal_rate} />
+                    info={METRIC_EXPLANATIONS.meal_rate}
+                    onClick={() => openKPI('meal')} />
                 <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"
-                    info={METRIC_EXPLANATIONS.break_minutes} />
+                    info={METRIC_EXPLANATIONS.break_minutes}
+                    onClick={() => openKPI('break')} />
             </div>
 
             {/* Mesai Doluluk Dağılımı — full width */}
@@ -296,11 +524,27 @@ export default function OverviewTab() {
                 <WorkforcePanel />
             </SectionCard>
 
-            {/* Efficiency Detail Modal */}
+            {/* Efficiency Detail Modal — "Detayları Göster" butonu ile acilir (Mesai Doluluk Dagilimi alti) */}
             <EfficiencyDetailModal
                 open={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 employees={employeeList}
+            />
+
+            {/* Universal KPI Detail Modal — herhangi bir KPI'ya tiklayinca acilir */}
+            <KPIDetailModal
+                open={!!activeKPI}
+                onClose={() => setActiveKPI(null)}
+                title={activeKPI?.title}
+                icon={activeKPI?.icon}
+                formula={activeKPI?.formula}
+                description={activeKPI?.description}
+                columns={activeKPI?.columns || []}
+                sortKey={activeKPI?.sortKey}
+                sortDir={activeKPI?.sortDir || 'desc'}
+                levelFn={activeKPI?.levelFn}
+                levelKey={activeKPI?.levelKey}
+                data={employeeList}
             />
         </div>
     );
