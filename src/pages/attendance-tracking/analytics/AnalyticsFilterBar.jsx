@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, Calendar, Filter, RefreshCw, ChevronDown,
     GitCompare, Building2, UserX, ArrowRight, X, Briefcase, CalendarRange,
+    Bug, Download,
 } from 'lucide-react';
 import { Select } from 'antd';
+import api from '../../../services/api';
 import { useAnalytics, COMPARE_MODES, getFiscalMonth } from './AnalyticsContext';
 import { format } from 'date-fns';
 import MultiSelect from './shared/MultiSelect';
@@ -248,6 +250,35 @@ export default function AnalyticsFilterBar() {
                             <X size={11} /> Sıfırla
                         </button>
                     )}
+
+                    {/* Global Debug TXT — tum hesaplari indir */}
+                    <button
+                        onClick={async () => {
+                            try {
+                                const params = new URLSearchParams(ctx.queryParams || {});
+                                const res = await api.get(
+                                    `/attendance-analytics/debug-calculations/?${params.toString()}`,
+                                    { responseType: 'blob', timeout: 120000 },
+                                );
+                                const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                                a.download = `debug-mesai-${ts}.txt`;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                            } catch (err) {
+                                alert('Debug raporu indirilemedi: ' + (err?.message || 'Bilinmeyen'));
+                            }
+                        }}
+                        title="Tüm hesapların TXT raporunu indir"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-700 border border-amber-200/80 transition-colors"
+                    >
+                        <Bug size={11} /> Debug TXT <Download size={10} />
+                    </button>
 
                     {/* Refresh */}
                     <button onClick={ctx.refetch} disabled={ctx.loading}
