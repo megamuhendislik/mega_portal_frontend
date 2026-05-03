@@ -1,35 +1,93 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';
 
 /**
  * A `?` icon that shows a floating tooltip with metric explanation on click.
+ * Tooltip is rendered via portal to document.body so it escapes parent
+ * overflow/transform/stacking contexts and appears above everything.
  */
 export default function InfoTooltip({ title, children, className = '' }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef(null);
+    const [pos, setPos] = useState({ top: 0, left: 0, placement: 'top' });
+    const btnRef = useRef(null);
+    const popRef = useRef(null);
+
+    const updatePosition = () => {
+        if (!btnRef.current) return;
+        const rect = btnRef.current.getBoundingClientRect();
+        const TOOLTIP_W = 288; // w-72
+        const TOOLTIP_H = 160; // approx; we measure if popRef exists
+        const popH = popRef.current?.offsetHeight || TOOLTIP_H;
+        const popW = popRef.current?.offsetWidth || TOOLTIP_W;
+        const margin = 8;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        // Prefer top placement; fall back to bottom if not enough room above
+        let placement = 'top';
+        let top = rect.top - popH - margin;
+        if (top < margin) {
+            placement = 'bottom';
+            top = rect.bottom + margin;
+        }
+        // Center horizontally on the icon, clamp to viewport
+        let left = rect.left + rect.width / 2 - popW / 2;
+        left = Math.max(margin, Math.min(vw - popW - margin, left));
+
+        // Final clamp vertical
+        top = Math.max(margin, Math.min(vh - popH - margin, top));
+
+        setPos({ top, left, placement, anchorX: rect.left + rect.width / 2 });
+    };
+
+    useLayoutEffect(() => {
+        if (!open) return;
+        updatePosition();
+        // Re-measure after popup rendered (height becomes accurate)
+        const id = requestAnimationFrame(updatePosition);
+        return () => cancelAnimationFrame(id);
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
+        const onClick = (e) => {
+            if (btnRef.current?.contains(e.target)) return;
+            if (popRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+        const onScroll = () => setOpen(false);
+        document.addEventListener('mousedown', onClick);
+        document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', updatePosition);
+        return () => {
+            document.removeEventListener('mousedown', onClick);
+            document.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', updatePosition);
+        };
     }, [open]);
 
     return (
-        <span className={`relative inline-flex ${className}`} ref={ref}>
+        <span className={`inline-flex ${className}`}>
             <button
+                ref={btnRef}
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
                 className="p-0.5 rounded-full text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
                 title="Nasıl hesaplanır?"
             >
                 <HelpCircle size={12} />
             </button>
-            {open && (
-                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 animate-in fade-in zoom-in-95 duration-200">
+            {open && createPortal(
+                <div
+                    ref={popRef}
+                    style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999, width: 288 }}
+                    className="animate-in fade-in zoom-in-95 duration-150"
+                >
                     <div className="bg-slate-900 text-white rounded-xl shadow-2xl p-4 text-[11px] leading-relaxed relative">
-                        {/* Arrow */}
-                        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45" />
-
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="font-bold text-[10px] uppercase tracking-wider text-slate-300">{title || 'Hesaplama'}</h4>
                             <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -38,7 +96,8 @@ export default function InfoTooltip({ title, children, className = '' }) {
                         </div>
                         <div className="space-y-1.5 text-slate-300">{children}</div>
                     </div>
-                </div>
+                </div>,
+                document.body,
             )}
         </span>
     );
@@ -106,8 +165,11 @@ export const METRIC_EXPLANATIONS = {
         title: 'Devam Oranı',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> (Gelinen Gün ÷ Toplam İş Günü) × 100</p>
-                <p className="text-slate-400">İzin, rapor ve devamsız günler "gelinen gün" sayılmaz.</p>
+                <p><strong className="text-white">Formül:</strong> (Devamsız Olmayan Kayıt ÷ Toplam Attendance Kayıt) × 100</p>
+                <p className="text-slate-400"><strong className="text-slate-200">Düşürür:</strong> Sadece sistemin "ABSENT" işaretlediği günler (no-show / kart çekilmemiş iş günü).</p>
+                <p className="text-slate-400"><strong className="text-slate-200">Düşürmez:</strong> Onaylı yıllık izin, mazeret, sağlık raporu, dış görev — bu günler için sistem otomatik "APPROVED" attendance kaydı oluşturduğundan "gelmiş" sayılır.</p>
+                <p className="text-slate-400"><strong className="text-slate-200">Hariç:</strong> Hafta sonu ve tatil günleri (kayıt oluşmaz).</p>
+                <p className="text-slate-400 italic">Yani metrik aslında "ABSENT olmama oranı"dır.</p>
             </>
         ),
     },
