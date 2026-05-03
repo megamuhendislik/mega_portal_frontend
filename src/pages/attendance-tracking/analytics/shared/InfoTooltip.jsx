@@ -94,9 +94,8 @@ export const METRIC_EXPLANATIONS = {
             <>
                 <p><strong className="text-white">Formül:</strong> Ağırlıklı ortalama (0-100)</p>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-400">
-                    <li>Mesai Doluluğu: %30</li>
-                    <li>Devam oranı: %30</li>
-                    <li>Dakiklik: %20</li>
+                    <li>Mesai Doluluğu: %40</li>
+                    <li>Devam oranı: %40</li>
                     <li>Kayıp oranı: %20</li>
                 </ul>
                 <p className="text-slate-400">≥80 Mükemmel, ≥60 İyi, &lt;60 Geliştirilmeli</p>
@@ -109,16 +108,6 @@ export const METRIC_EXPLANATIONS = {
             <>
                 <p><strong className="text-white">Formül:</strong> (Gelinen Gün ÷ Toplam İş Günü) × 100</p>
                 <p className="text-slate-400">İzin, rapor ve devamsız günler "gelinen gün" sayılmaz.</p>
-            </>
-        ),
-    },
-    punctuality: {
-        title: 'Dakiklik',
-        content: (
-            <>
-                <p><strong className="text-white">Formül:</strong> (Zamanında Giriş Sayısı ÷ Toplam İş Günü) × 100</p>
-                <p className="text-slate-400">"Zamanında" = Vardiya başlangıcı ± tolerans süresi (genellikle 15 dk).</p>
-                <p className="text-slate-400">Her çalışanın kendi vardiya saatine göre hesaplanır.</p>
             </>
         ),
     },

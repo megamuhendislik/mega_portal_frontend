@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    User, Clock, AlarmClock, Coffee, TrendingUp, Calendar, Award, Target, BarChart3,
+    User, Clock, AlarmClock, Coffee, TrendingUp, Calendar, Target, BarChart3,
     Users, ChevronLeft, Trophy, AlertTriangle, ArrowUpDown, Search, Building2,
     Activity, Crown, ChevronRight, ChevronDown, Zap, Minus, ExternalLink, Maximize2,
 } from 'lucide-react';
@@ -927,13 +927,12 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                         </>
                     )}
 
-                    {/* 4 mini summary KPI */}
+                    {/* 3 mini summary KPI */}
                     {summary && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                             {[
                                 { label: 'Ort. Giriş', value: summary.avg_check_in || '—', icon: AlarmClock, color: 'emerald' },
                                 { label: 'Ort. Çıkış', value: summary.avg_check_out || '—', icon: AlarmClock, color: 'indigo' },
-                                { label: 'Dakiklik', value: `%${summary.punctuality_pct || 0}`, icon: Award, color: 'amber' },
                                 { label: 'Yemek Oranı', value: `${summary.meal_orders || 0}/${summary.meal_working_days || 0}`, icon: Coffee, color: 'cyan' },
                             ].map((item, i) => (
                                 <KPICard key={i} mini title={item.label} value={item.value} icon={item.icon} gradient={item.color} />

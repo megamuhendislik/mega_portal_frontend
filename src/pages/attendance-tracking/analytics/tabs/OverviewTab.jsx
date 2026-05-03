@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink, RotateCw, Zap, Minus } from 'lucide-react';
+import { Users, Target, Clock, AlertCircle, CalendarCheck, Coffee, Activity, TrendingUp, Award, BarChart3, Shield, GitCompare, ExternalLink, RotateCw, Zap } from 'lucide-react';
 import { Button } from 'antd';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
@@ -8,7 +8,6 @@ import SectionCard from '../shared/SectionCard';
 import { LoadingSkeleton, EmptyState } from '../shared/EmptyState';
 import { METRIC_EXPLANATIONS } from '../shared/InfoTooltip';
 import EfficiencyDetailModal from '../shared/EfficiencyDetailModal';
-import PunctualityDetailModal from '../shared/PunctualityDetailModal';
 import ChartTooltip from '../shared/ChartTooltip';
 import WorkforcePanel from '../shared/WorkforcePanel';
 import ScopeBanner from '../shared/ScopeBanner';
@@ -65,7 +64,6 @@ export default function OverviewTab() {
     const trendData = overview?.monthly_trend;
 
     const [showDetailModal, setShowDetailModal] = useState(false);
-    const [showPunctualityModal, setShowPunctualityModal] = useState(false);
 
     const distChartData = useMemo(() => {
         if (!distribution) return [];
@@ -240,13 +238,10 @@ export default function OverviewTab() {
             </div>
 
             {/* ── Diğer ekip metrikleri (mini KPI) ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
                 <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate" />
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
                     delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate} />
-                <KPICard mini title="Dakiklik" value={`${kpi.punctual_pct || 0}`} suffix="%" icon={Award} gradient="emerald"
-                    info={METRIC_EXPLANATIONS.punctuality}
-                    onClick={() => setShowPunctualityModal(true)} />
                 <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet" />
                 <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
                     info={METRIC_EXPLANATIONS.meal_rate} />
@@ -306,12 +301,6 @@ export default function OverviewTab() {
                 open={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 employees={employeeList}
-            />
-
-            {/* Punctuality Detail Modal — Dakiklik tikla */}
-            <PunctualityDetailModal
-                open={showPunctualityModal}
-                onClose={() => setShowPunctualityModal(false)}
             />
         </div>
     );

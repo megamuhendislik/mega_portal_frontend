@@ -24,8 +24,7 @@ const METRICS_GLOSSARY = [
     { name: 'Fazla Mesai/Yükümlülük', formula: '(Fazla Mesai / Yükümlülük) × 100', desc: 'Fazla mesainin aylık yükümlülüğe oranı.' },
     { name: 'Eksik/Yükümlülük', formula: '(Eksik / Yükümlülük) × 100, capped 100', desc: 'Eksik mesainin yükümlülüğe oranı.' },
     { name: 'Devam Oranı', formula: '(Gelinen Gün / İş Günü) × 100', desc: 'İzinli/devamsız günler hariç gelme yüzdesi.' },
-    { name: 'Dakiklik', formula: '(Zamanında Giriş / İş Günü) × 100', desc: 'Tolerans penceresi içinde giren gün yüzdesi.' },
-    { name: 'Sağlık Skoru', formula: '%30 doluluk + %30 devam + %20 dakiklik + %20 kayıp azaltma', desc: 'Ekip performansı için birleşik skor (0–100).' },
+    { name: 'Sağlık Skoru', formula: '%40 doluluk + %40 devam + %20 kayıp azaltma', desc: 'Ekip performansı için birleşik skor (0–100).' },
     { name: 'Mazeret İzni', formula: 'Yıllık 18 saat (max 4.5 sa/gün)', desc: 'Saatlik izin kontingenti (yıllık 1 Ocak sıfırlama).' },
 ];
 
