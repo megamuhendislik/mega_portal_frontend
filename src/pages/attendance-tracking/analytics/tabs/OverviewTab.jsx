@@ -202,8 +202,8 @@ export default function OverviewTab() {
                 </div>
             )}
 
-            {/* ── Mesai Doluluk Metrikleri (5 kart) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* ── Ana 4 Doluluk Metriği (Saglik Skoru kalkti) ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KPICard title="Yapılan Normal Mesai" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
                     subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
