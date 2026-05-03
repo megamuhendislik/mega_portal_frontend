@@ -274,10 +274,10 @@ export default function AnalyticsFilterBar() {
                                 alert('Debug raporu indirilemedi: ' + (err?.message || 'Bilinmeyen'));
                             }
                         }}
-                        title="Tüm hesapların TXT raporunu indir"
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-700 border border-amber-200/80 transition-colors"
+                        title="Tüm hesapların TXT raporunu indir (her kişi için ham veri + formül + dakiklik gün-gün)"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[12px] font-black shadow-md hover:shadow-lg transition-all"
                     >
-                        <Bug size={11} /> Debug TXT <Download size={10} />
+                        <Bug size={14} /> Debug TXT <Download size={12} />
                     </button>
 
                     {/* Refresh */}
