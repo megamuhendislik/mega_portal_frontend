@@ -174,11 +174,13 @@ export const METRIC_EXPLANATIONS = {
         ),
     },
     meal_rate: {
-        title: 'Yemek Oranı',
+        title: 'FM Yemek Oranı',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> (Yemek Sipariş Günü ÷ İş Günü) × 100</p>
-                <p className="text-slate-400">Sistemde yemek siparişi kaydı bulunan günler sayılır.</p>
+                <p><strong className="text-white">Formül:</strong> (Yemek Alınan Onaylı FM Günü ÷ Toplam Onaylı FM Günü) × 100</p>
+                <p className="text-slate-400">Sadece <strong className="text-slate-200">onaylı fazla mesai</strong> günleri payda. FM yapılmayan günler hesaba dahil değil.</p>
+                <p className="text-slate-400"><strong className="text-slate-200">Yoğunluk:</strong> Toplam onaylı FM saati ÷ toplam yemek = "her yemek başına X saat OT" (modal'da görünür).</p>
+                <p className="text-slate-400 italic">Eski "Yemek/İş Günü" hesabı 2026-05-04'te kaldırıldı (anlamsızdı, çoğu çalışanda %0 görünüyordu).</p>
             </>
         ),
     },

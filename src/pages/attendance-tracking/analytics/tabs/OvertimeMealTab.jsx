@@ -230,7 +230,7 @@ export default function OvertimeMealTab() {
             <BurnoutWidget />
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                 <KPICard title="Toplam Fazla Mesai" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
                     info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard title="Onaylı Fazla Mesai" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
@@ -238,8 +238,12 @@ export default function OvertimeMealTab() {
                     info={{ title: 'Onaylı Fazla Mesai', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan Fazla Mesai kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış fazla mesai saatleri.</p></> }} />
                 <KPICard title="Fazla Mesai Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
                 <KPICard title="Ort. Fazla Mesai / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
-                <KPICard title="Yemek Oranı" value={breakMeal?.meal_rate_pct || breakMeal?.overall_meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
-                    subtitle="İş günlerinde yemek" info={METRIC_EXPLANATIONS.meal_rate} />
+                <KPICard title="FM Yemek Oranı" value={breakMeal?.meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
+                    subtitle={`${breakMeal?.meal_days_on_ot || 0}/${breakMeal?.approved_ot_days || 0} FM günü`}
+                    info={METRIC_EXPLANATIONS.meal_rate} />
+                <KPICard title="Saat / Yemek" value={breakMeal?.ot_hours_per_meal || 0} suffix="sa" icon={Utensils} gradient="rose"
+                    subtitle={`${breakMeal?.total_meals || 0} yemek · ${breakMeal?.total_approved_ot_hours || 0} sa OT`}
+                    info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ Toplam Yemek Sayısı</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{breakMeal?.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

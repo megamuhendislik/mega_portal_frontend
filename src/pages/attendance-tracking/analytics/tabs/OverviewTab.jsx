@@ -285,16 +285,19 @@ export default function OverviewTab() {
             ],
         },
         meal: {
-            title: 'Yemek Oranı — Detay',
+            title: 'FM Yemek Oranı — Detay',
             icon: Coffee,
-            formula: 'Yemek Sipariş Sayısı ÷ Çalışılan İş Günü × 100',
-            description: 'Çalışan başına yemek siparişi oranı. CANCELLED siparişler hariç.',
+            formula: 'Yemek Alınan Onaylı FM Günü ÷ Toplam Onaylı FM Günü × 100',
+            description: `Onaylı fazla mesai günlerinde yemek siparişi alınma oranı. Topluca: ${kpi?.total_meals || 0} yemek, ${kpi?.total_approved_ot_hours || 0} sa onaylı FM → her yemek başına ${kpi?.ot_hours_per_meal || 0} sa OT (${kpi?.meals_per_ot_hour || 0} yemek/saat).`,
             sortKey: 'meal_rate_pct',
             sortDir: 'desc',
             columns: [
-                { key: 'meal_orders', label: 'Sipariş', type: 'number' },
-                { key: 'meal_working_days', label: 'İş Günü', type: 'number' },
-                { key: 'meal_rate_pct', label: 'Yemek %', type: 'percent', highlight: true },
+                { key: 'approved_ot_days', label: 'Onaylı FM Günü', type: 'number' },
+                { key: 'meal_days_on_ot', label: 'Yemekli FM Günü', type: 'number' },
+                { key: 'meal_rate_pct', label: 'FM Yemek %', type: 'percent', highlight: true },
+                { key: 'total_approved_ot_hours_emp', label: 'Onaylı FM (sa)', type: 'number' },
+                { key: 'meal_orders', label: 'Toplam Yemek', type: 'number' },
+                { key: 'ot_hours_per_meal', label: 'Saat/Yemek', type: 'number' },
             ],
         },
         break: {
@@ -328,7 +331,7 @@ export default function OverviewTab() {
                 { key: 'missing_hours', label: 'Eksik (sa)', type: 'hours' },
             ],
         },
-    }), []);
+    }), [kpi?.total_meals, kpi?.total_approved_ot_hours, kpi?.ot_hours_per_meal, kpi?.meals_per_ot_hour]);
 
     const openKPI = (key) => {
         const cfg = KPI_CONFIGS[key];
@@ -469,7 +472,8 @@ export default function OverviewTab() {
                     onClick={() => openKPI('attendance')} />
                 <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet"
                     onClick={() => openKPI('ot_to_normal')} />
-                <KPICard mini title="Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
+                <KPICard mini title="FM Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
+                    subtitle={kpi.ot_hours_per_meal ? `~${kpi.ot_hours_per_meal} sa OT/yemek` : 'Onaylı FM günü kapsamı'}
                     info={METRIC_EXPLANATIONS.meal_rate}
                     onClick={() => openKPI('meal')} />
                 <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"
