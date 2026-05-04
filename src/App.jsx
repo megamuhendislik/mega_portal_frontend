@@ -1,27 +1,9 @@
 import React, { Suspense } from 'react'; // trigger redeploy
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { lazyRetry } from './utils/lazyRetry';
 import Login from './pages/Login';
 import MainLayout from './layouts/MainLayout';
-
-const lazyRetry = (importFn) =>
-  React.lazy(() => {
-    const key = 'lazy-retry-' + importFn.toString().slice(0, 50);
-    const hasRefreshed = JSON.parse(sessionStorage.getItem(key) || 'false');
-    return importFn()
-      .then((component) => {
-        sessionStorage.removeItem(key);
-        return component;
-      })
-      .catch((error) => {
-        if (!hasRefreshed) {
-          sessionStorage.setItem(key, 'true');
-          window.location.reload();
-          return new Promise(() => {});
-        }
-        throw error;
-      });
-  });
 
 const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
 const Profile = lazyRetry(() => import('./pages/Profile'));

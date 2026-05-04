@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import {
     FileText, TrendingUp, PieChart as PieChartIcon, Users,
     CheckCircle2, Clock, XCircle, Calendar, BarChart3, Hourglass, X as CloseIcon,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import SLATab from './SLATab';
 import api from '../../../../services/api';
+import { lazyRetry } from '../../../../utils/lazyRetry';
 import { useAnalytics } from '../AnalyticsContext';
 import KPICard, { KPIProgressBar } from '../shared/KPICard';
 import SectionCard from '../shared/SectionCard';
@@ -20,7 +21,8 @@ import {
 } from 'recharts';
 
 // Lazy-load — yalnızca bekleyen talep filtresi etkin olunca tablo render edilir
-const PendingRequestsTable = lazy(() => import('../shared/PendingRequestsTable'));
+// lazyRetry: deploy sonrasi stale chunk hash 404 -> auto reload
+const PendingRequestsTable = lazyRetry(() => import('../shared/PendingRequestsTable'));
 
 const TYPE_COLORS = { leave: '#3B82F6', overtime: '#F59E0B', meal: '#10B981', cardless: '#8B5CF6', health_report: '#EC4899' };
 const TYPE_LABELS = { leave: 'İzin', overtime: 'Fazla Mesai', meal: 'Yemek', cardless: 'Kartsız Giriş', health_report: 'Sağlık Raporu' };

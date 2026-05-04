@@ -2,6 +2,7 @@ import React, { useState, Suspense, useCallback } from 'react';
 import { message } from 'antd';
 import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle } from 'lucide-react';
 import api from '../../../services/api';
+import { lazyRetry } from '../../../utils/lazyRetry';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
 import AnalyticsFilterBar from './AnalyticsFilterBar';
 import './analytics-print.css';
@@ -13,14 +14,15 @@ import FavoriteViews from './shared/FavoriteViews';
 import useKeyboardShortcuts from './shared/useKeyboardShortcuts';
 import DensityToggle from './shared/DensityToggle';
 
-const YearlyTrendStrip = React.lazy(() => import('./shared/YearlyTrendStrip'));
-const OverviewTab = React.lazy(() => import('./tabs/OverviewTab'));
-const PerformanceTab = React.lazy(() => import('./tabs/PerformanceTab'));
-const ComparisonTab = React.lazy(() => import('./tabs/ComparisonTab'));
-const OvertimeMealTab = React.lazy(() => import('./tabs/OvertimeMealTab'));
-const RequestAnalyticsTab = React.lazy(() => import('./tabs/RequestAnalyticsTab'));
-const InsightsTab = React.lazy(() => import('./tabs/InsightsTab'));
-const AnomaliesTab = React.lazy(() => import('./tabs/AnomaliesTab'));
+// lazyRetry: deploy sonrasi stale chunk hash 404 -> auto reload (kullanici hatali ekran gormez)
+const YearlyTrendStrip = lazyRetry(() => import('./shared/YearlyTrendStrip'));
+const OverviewTab = lazyRetry(() => import('./tabs/OverviewTab'));
+const PerformanceTab = lazyRetry(() => import('./tabs/PerformanceTab'));
+const ComparisonTab = lazyRetry(() => import('./tabs/ComparisonTab'));
+const OvertimeMealTab = lazyRetry(() => import('./tabs/OvertimeMealTab'));
+const RequestAnalyticsTab = lazyRetry(() => import('./tabs/RequestAnalyticsTab'));
+const InsightsTab = lazyRetry(() => import('./tabs/InsightsTab'));
+const AnomaliesTab = lazyRetry(() => import('./tabs/AnomaliesTab'));
 
 const TABS = [
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
