@@ -11,6 +11,7 @@ import {
     MagnifyingGlassIcon,
     ChevronDownIcon,
     ChevronRightIcon,
+    ShieldExclamationIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -154,14 +155,14 @@ export default function SecondaryManagerCheckerTab() {
                 <StatCard label="BOARD Üyesi" value={summary.board_members} color="indigo" />
             </div>
 
-            {/* Warning banner */}
-            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r flex items-start gap-2">
-                <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-amber-900">
-                    <strong>Uyarı:</strong> BOARD auto-SECONDARY otomatik sync hâlâ aktif. Burada sildiğin auto kayıtlar,
-                    sisteme yeni çalışan eklendiğinde / aktive edildiğinde geri eklenir. Kalıcı çözüm için signal'i
-                    kapatmak ayrı bir görev. Analytics scope için <code className="px-1 bg-amber-100 rounded">SYSTEM_FULL_ACCESS</code> izni
-                    zaten bypass sağlıyor — bu SECONDARY ilişkisi artık fonksiyonel olarak gereksiz.
+            {/* Status banner */}
+            <div className="bg-emerald-50 border-l-4 border-emerald-400 p-3 rounded-r flex items-start gap-2">
+                <CheckCircleIcon className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-emerald-900">
+                    <strong>Bilgi:</strong> BOARD auto-SECONDARY otomatik sync <strong>artık devre dışı</strong> (2026-05-09).
+                    Yeni çalışan eklendiğinde / aktive edildiğinde otomatik SECONDARY oluşmaz.
+                    Mevcut auto kayıtlarını aşağıdan temizleyebilirsin. Analytics scope için <code className="px-1 bg-emerald-100 rounded">SYSTEM_FULL_ACCESS</code> izni
+                    zaten yeterli — bu mekanizmaya gerek yok.
                 </div>
             </div>
 
@@ -228,7 +229,7 @@ export default function SecondaryManagerCheckerTab() {
                                 <th className="px-3 py-2 text-left">Departman</th>
                                 <th className="px-3 py-2 text-left">Yönetici</th>
                                 <th className="px-3 py-2 text-center">Auto?</th>
-                                <th className="px-3 py-2 text-left">Created</th>
+                                <th className="px-3 py-2 text-left">Atama</th>
                                 <th className="px-3 py-2 text-left">Kaynak</th>
                                 <th className="px-3 py-2 text-left">Çakışma</th>
                             </tr>
@@ -245,7 +246,7 @@ export default function SecondaryManagerCheckerTab() {
                                             : <XCircleIcon className="w-4 h-4 text-gray-300 inline" />}
                                     </td>
                                     <td className="px-3 py-2 text-xs text-gray-500">
-                                        {r.created_at ? new Date(r.created_at).toLocaleDateString('tr-TR') : '—'}
+                                        {r.assigned_date ? new Date(r.assigned_date).toLocaleDateString('tr-TR') : '—'}
                                     </td>
                                     <td className="px-3 py-2">
                                         {r.is_board_manager
@@ -294,6 +295,11 @@ export default function SecondaryManagerCheckerTab() {
                 <button onClick={downloadTxt}
                     className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm flex items-center gap-1">
                     <ArrowDownTrayIcon className="w-4 h-4" /> TXT İndir
+                </button>
+                <button onClick={() => runDryRun('system_admins')}
+                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm flex items-center gap-1"
+                    title="Sistem admin (is_superuser veya SYSTEM_FULL_ACCESS) yetkisine sahip kullanıcıların manager olduğu TÜM SECONDARY ilişkileri siler — auto + manuel">
+                    <ShieldExclamationIcon className="w-4 h-4" /> Dry-Run: Sistem Yöneticilerini Temizle
                 </button>
                 <div className="flex-1" />
                 <button onClick={() => runDryRun('all_auto')}
