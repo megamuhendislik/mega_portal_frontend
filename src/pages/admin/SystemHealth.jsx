@@ -77,6 +77,7 @@ import SubstituteAuditTab from './system-health/SubstituteAuditTab';
 import DailyRecordAuditTab from './system-health/DailyRecordAuditTab';
 import ExcuseLeaveAuditTab from './system-health/ExcuseLeaveAuditTab';
 import RequestInspectionTab from './system-health/RequestInspectionTab';
+import FalseCancelledHRRestoreTab from './system-health/FalseCancelledHRRestoreTab';
 import PotentialAuditTab from './system-health/PotentialAuditTab';
 import BugFixVerificationTab from './system-health/BugFixVerificationTab';
 import QuickGateFixTab from './system-health/QuickGateFixTab';
@@ -188,6 +189,7 @@ export default function SystemHealth() {
                         { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
                         { id: 'cancellation_investigation', name: 'İptal İnceleme', icon: ExclamationTriangleIcon },
                         { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
+                        { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -262,6 +264,7 @@ export default function SystemHealth() {
                 {activeTab === 'service_health' && <ServiceHealthTab />}
                 {activeTab === 'excuse_leave_audit' && <ExcuseLeaveAuditTab />}
                 {activeTab === 'request_inspection' && <RequestInspectionTab />}
+                {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
                 {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
                 {activeTab === 'potential_audit' && <PotentialAuditTab />}
             </div>
