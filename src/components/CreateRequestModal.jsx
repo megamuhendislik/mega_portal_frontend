@@ -1464,22 +1464,49 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     )}
 
                     {/* RE_REQUEST banner — iptal/red/birleştirildi talepten yeniden oluşturma akışı */}
-                    {step === 2 && initialData?.mode === 'RE_REQUEST' && initialData?.source_id && (
-                        <div className="mx-3 sm:mx-5 mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 flex items-start gap-2">
-                            <Info size={16} className="shrink-0 mt-0.5" />
-                            <div>
-                                Bu talep <strong>#{initialData.source_id}</strong> no'lu{' '}
-                                {initialData.source_status === 'CANCELLED' || initialData.source_status === 'CANCELED'
-                                    ? 'iptal edilen'
-                                    : initialData.source_status === 'REJECTED'
-                                        ? 'reddedilen'
-                                        : initialData.source_status === 'BUNDLED'
-                                            ? 'birleştirilen'
-                                            : 'eski'}{' '}
-                                talepten yeniden oluşturuluyor. Alanları istediğiniz gibi düzenleyebilirsiniz.
-                            </div>
-                        </div>
-                    )}
+                    {step === 2 && initialData?.mode === 'RE_REQUEST' && initialData?.source_id && (() => {
+                        const srcDateStr = initialData.data?.date
+                            || initialData.data?.start_date
+                            || initialData.data?._sortDate;
+                        let isOldDate = false;
+                        if (srcDateStr) {
+                            try {
+                                const srcDate = new Date(srcDateStr);
+                                const daysAgo = (new Date() - srcDate) / (1000 * 60 * 60 * 24);
+                                // Yaklaşık 2 mali ay (60 gün) geri pencere
+                                isOldDate = daysAgo > 60;
+                            } catch { /* ignore date parse error */ }
+                        }
+                        return (
+                            <>
+                                <div className="mx-3 sm:mx-5 mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 flex items-start gap-2">
+                                    <Info size={16} className="shrink-0 mt-0.5" />
+                                    <div>
+                                        Bu talep <strong>#{initialData.source_id}</strong> no'lu{' '}
+                                        {initialData.source_status === 'CANCELLED' || initialData.source_status === 'CANCELED'
+                                            ? 'iptal edilen'
+                                            : initialData.source_status === 'REJECTED'
+                                                ? 'reddedilen'
+                                                : initialData.source_status === 'BUNDLED'
+                                                    ? 'birleştirilen'
+                                                    : 'eski'}{' '}
+                                        talepten yeniden oluşturuluyor. Alanları istediğiniz gibi düzenleyebilirsiniz.
+                                    </div>
+                                </div>
+                                {isOldDate && (
+                                    <div className="mx-3 sm:mx-5 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900 flex items-start gap-2">
+                                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                        <div>
+                                            <strong>Uyarı:</strong> Talep tarihi <strong>{srcDateStr}</strong>{' '}
+                                            retroaktif pencere dışında (~2 mali ay). Talep oluşturulabilir
+                                            ancak muhasebe kuralı gereği sistem tarafından otomatik
+                                            iptal edilebilir. Bu durumda İK ile iletişime geçin.
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
 
                     {/* Step 2: Leave — side-by-side layout */}
                     {step === 2 && selectedType === 'LEAVE' && (
