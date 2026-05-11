@@ -22,10 +22,13 @@ import ModalOverlay from '../../../components/ui/ModalOverlay';
 export default function FalseCancelledHRRestoreTab() {
     const [daysBack, setDaysBack] = useState(30);
     const [employeeCode, setEmployeeCode] = useState('');
+    const [debugMode, setDebugMode] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
     const [restoreLoading, setRestoreLoading] = useState(false);
     const [candidates, setCandidates] = useState(null);
+    const [excluded, setExcluded] = useState(null);  // debug mode'da dolar
+    const [stats, setStats] = useState(null);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState(null);
@@ -38,20 +41,25 @@ export default function FalseCancelledHRRestoreTab() {
         try {
             const body = { days_back: Number(daysBack) || 30 };
             if (employeeCode.trim()) body.employee_code = employeeCode.trim();
+            if (debugMode) body.debug = true;
             const resp = await api.post(
                 '/system/health-check/false-cancelled-hr-scan/',
                 body,
             );
             setCandidates(resp.data.candidates || []);
+            setExcluded(resp.data.excluded || null);
+            setStats(resp.data.stats || null);
             setSelectedIds(new Set());
         } catch (err) {
             const msg = err.response?.data?.error || err.message || 'Tarama başarısız';
             setError(msg);
             setCandidates(null);
+            setExcluded(null);
+            setStats(null);
         } finally {
             setScanLoading(false);
         }
-    }, [daysBack, employeeCode]);
+    }, [daysBack, employeeCode, debugMode]);
 
     const downloadTxt = useCallback(async () => {
         setExportLoading(true);
@@ -191,6 +199,15 @@ export default function FalseCancelledHRRestoreTab() {
                             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-48"
                         />
                     </div>
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={debugMode}
+                            onChange={(e) => setDebugMode(e.target.checked)}
+                            className="rounded"
+                        />
+                        <span>Debug modu (elenenleri göster)</span>
+                    </label>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={runScan}
@@ -231,6 +248,36 @@ export default function FalseCancelledHRRestoreTab() {
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-start gap-2">
                     <CheckCircleIcon className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                     <div className="text-sm text-emerald-800">{successMsg}</div>
+                </div>
+            )}
+
+            {/* Stats panel (debug mode) */}
+            {stats && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <div className="text-xs font-bold text-slate-700 mb-2">
+                        Tarama İstatistikleri (debug)
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <div className="text-slate-500">Toplam CANCELLED Taranmış</div>
+                            <div className="font-bold text-slate-800 text-lg">{stats.total_cancelled_scanned}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500">Audit Log Match</div>
+                            <div className="font-bold text-blue-700 text-lg">{stats.audit_log_match_count}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500">Aday</div>
+                            <div className="font-bold text-emerald-700 text-lg">{stats.candidates}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500">Elenen</div>
+                            <div className="font-bold text-rose-700 text-lg">{stats.excluded}</div>
+                        </div>
+                    </div>
+                    <div className="mt-2 text-[10px] text-slate-500">
+                        Aralık: {stats.date_from} → {stats.date_to} | Çalışan filtresi: {stats.employee_filter}
+                    </div>
                 </div>
             )}
 
@@ -351,6 +398,72 @@ export default function FalseCancelledHRRestoreTab() {
                             </table>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Excluded panel (debug mode) */}
+            {excluded && excluded.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                        <div className="text-sm font-bold text-slate-800">
+                            Elenen Kayıtlar ({excluded.length}) — debug
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1">
+                            Tarama sonucuna dahil edilmeyen CANCELLED HealthReport kayıtları ve eleme sebepleri.
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                            <thead className="bg-slate-50 text-slate-600">
+                                <tr>
+                                    <th className="px-3 py-2 text-left">HR#</th>
+                                    <th className="px-3 py-2 text-left">Çalışan</th>
+                                    <th className="px-3 py-2 text-left">Tarih</th>
+                                    <th className="px-3 py-2 text-left">Tür</th>
+                                    <th className="px-3 py-2 text-left">Zaman</th>
+                                    <th className="px-3 py-2 text-left">İptal Sebebi</th>
+                                    <th className="px-3 py-2 text-left">Eleme Nedeni</th>
+                                    <th className="px-3 py-2 text-left">Detay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {excluded.map((e) => (
+                                    <tr key={`excl-${e.id}`} className="border-t border-gray-100 hover:bg-slate-50">
+                                        <td className="px-3 py-2 font-mono text-slate-700">{e.id}</td>
+                                        <td className="px-3 py-2">
+                                            <div className="font-medium text-slate-700">{e.employee_name}</div>
+                                            <div className="text-[10px] text-slate-500">{e.employee_code}</div>
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-700">{e.start_date}</td>
+                                        <td className="px-3 py-2 text-slate-600">{formatType(e.report_type)}</td>
+                                        <td className="px-3 py-2 text-slate-700">
+                                            {e.start_time && e.end_time
+                                                ? `${formatTime(e.start_time)} – ${formatTime(e.end_time)}`
+                                                : <span className="text-slate-400">Tam gün</span>
+                                            }
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-600 text-[10px] max-w-[200px] truncate"
+                                            title={e.rejection_reason || '(boş)'}>
+                                            {e.rejection_reason || <span className="text-slate-400">(boş)</span>}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                e.exclusion_reason === 'not_system_cancel' ? 'bg-amber-100 text-amber-800' :
+                                                e.exclusion_reason === 'no_sibling' ? 'bg-slate-100 text-slate-700' :
+                                                'bg-rose-100 text-rose-800'
+                                            }`}>
+                                                {e.exclusion_reason}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[300px] truncate"
+                                            title={e.detail}>
+                                            {e.detail}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
