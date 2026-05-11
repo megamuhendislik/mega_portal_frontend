@@ -269,6 +269,29 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
         setShowCreateModal(true);
     }, []);
 
+    // Generic re-request handler — CANCELLED/REJECTED/BUNDLED tüm türlerde tek tıkla yeniden oluştur
+    const handleReRequest = useCallback((req) => {
+        const typeMap = {
+            OVERTIME: 'OVERTIME',
+            LEAVE: 'LEAVE',
+            EXTERNAL_DUTY: 'EXTERNAL_DUTY',
+            MEAL: 'MEAL',
+            CARDLESS_ENTRY: 'CARDLESS_ENTRY',
+            HEALTH_REPORT: 'HEALTH_REPORT',
+            HOSPITAL_VISIT: 'HOSPITAL_VISIT',
+            SPECIAL_LEAVE: 'SPECIAL_LEAVE',
+        };
+        const modalType = typeMap[req._type || req.type] || (req._type || req.type);
+        setCreateModalInitialData({
+            type: modalType,
+            data: req,
+            mode: 'RE_REQUEST',
+            source_id: req.id,
+            source_status: req.status,
+        });
+        setShowCreateModal(true);
+    }, []);
+
     const handleViewDetails = useCallback((r, t) => {
         setSelectedRequest(r);
         setSelectedRequestType(t);
@@ -481,6 +504,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             approved: actual.filter(r => ['APPROVED', 'ORDERED'].includes(r.status)).length,
             rejected: actual.filter(r => r.status === 'REJECTED').length,
             cancelled: actual.filter(r => ['CANCELLED', 'CANCELED'].includes(r.status)).length,
+            bundled: actual.filter(r => r.status === 'BUNDLED').length,
         };
     }, [allMyRequests, dateFrom, dateTo]);
 
@@ -595,6 +619,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                     <FilterChip active={statusFilter === 'APPROVED'} onClick={() => setStatusFilter('APPROVED')} label="Onaylı" count={counts.approved} color="emerald" />
                     <FilterChip active={statusFilter === 'REJECTED'} onClick={() => setStatusFilter('REJECTED')} label="Red" count={counts.rejected} color="red" />
                     <FilterChip active={statusFilter === 'CANCELLED'} onClick={() => setStatusFilter('CANCELLED')} label="İptal" count={counts.cancelled} color="slate" />
+                    <FilterChip active={statusFilter === 'BUNDLED'} onClick={() => setStatusFilter(statusFilter === 'BUNDLED' ? 'ALL' : 'BUNDLED')} label="Birleştirildi" count={counts.bundled} color="cyan" />
                     <div className="h-8 w-px bg-slate-200 mx-1 self-center hidden sm:block" />
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
                         <input type="checkbox" checked={showPotential} onChange={(e) => setShowPotential(e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded" />
@@ -664,6 +689,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                                             onViewDetails={handleViewDetails}
                                             onEdit={handleEdit}
                                             onDelete={handleDeleteRequest}
+                                            onReRequest={handleReRequest}
                                             showEmployeeColumn={false}
                                             mode="personal"
                                             claimPotentialRenderer={(r) => {

@@ -32,6 +32,11 @@ const VERDICT_META = {
         color: 'bg-sky-50 text-sky-900 border-sky-300',
         chip: 'bg-sky-600',
     },
+    SYSTEM_DEDUP_CLEANUP: {
+        label: 'Sistem Duplikat Temizleme',
+        color: 'bg-violet-50 text-violet-900 border-violet-300',
+        chip: 'bg-violet-600',
+    },
     INTEGRITY_AUDITOR_FIX: {
         label: 'Veri Bütünlüğü Düzeltmesi',
         color: 'bg-violet-50 text-violet-900 border-violet-300',
@@ -75,6 +80,10 @@ const BADGE_META = {
     ORPHAN_TARGET_APPROVER: {
         label: 'Sahipsiz Onaylayıcı',
         color: 'bg-rose-100 text-rose-700 border-rose-200',
+    },
+    SYSTEM_CREATED_CANCELLED: {
+        label: 'Sistem Yaratıp İptal',
+        color: 'bg-violet-100 text-violet-700 border-violet-200',
     },
 };
 

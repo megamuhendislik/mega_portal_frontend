@@ -2,7 +2,8 @@ import React from 'react';
 import {
     ChevronDown, ChevronRight, Clock, FileText, Utensils, Briefcase,
     CreditCard, CheckCircle2, XCircle, AlertCircle, User, ArrowRight,
-    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield, CalendarHeart
+    Check, X, Eye, Edit2, Trash2, HeartPulse, Stethoscope, Shield, CalendarHeart,
+    RotateCw
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
@@ -431,6 +432,7 @@ const ExpandableRequestRow = ({
     onReject,
     onEdit,
     onDelete,
+    onReRequest,
     claimPotentialRenderer,
     showEmployeeColumn = true,
     mode = 'incoming',
@@ -655,6 +657,20 @@ const ExpandableRequestRow = ({
                                 title="Sil / İptal"
                             >
                                 <Trash2 size={14} />
+                            </button>
+                        )}
+
+                        {/* Tekrar Talep Et: CANCELLED / REJECTED / BUNDLED durumlarda */}
+                        {mode === 'personal'
+                            && onReRequest
+                            && ['CANCELLED', 'CANCELED', 'REJECTED', 'BUNDLED'].includes(req.status)
+                            && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onReRequest(req); }}
+                                className="px-2 py-1 flex items-center gap-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors text-[10px] font-bold whitespace-nowrap"
+                                title="Bu talebin verilerini kullanarak yeni bir talep oluştur"
+                            >
+                                <RotateCw size={12} /> Tekrar Talep
                             </button>
                         )}
                     </div>

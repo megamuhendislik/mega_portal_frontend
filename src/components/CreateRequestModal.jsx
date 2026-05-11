@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope, Download } from 'lucide-react';
+import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, CreditCard, ChevronRight, Check, Users, HeartPulse, Stethoscope, Download, Info } from 'lucide-react';
 import { message } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +63,63 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                         setLeaveForm(prev => ({ ...prev, request_type: bdType.id }));
                     }
                 }, 100);
+            } else if (initialData.type === 'LEAVE' || initialData.type === 'EXTERNAL_DUTY' || initialData.type === 'SPECIAL_LEAVE') {
+                // Re-request: leave talebi yeniden oluştur — sub-step picker'ı atla
+                const d = initialData.data || {};
+                setSelectedType('LEAVE');
+                setLeaveSubStep(null);
+                setStep(2);
+                const rtId = d.request_type_id || d.request_type || '';
+                setLeaveForm(prev => ({
+                    ...prev,
+                    request_type: rtId,
+                    start_date: d.start_date || '',
+                    end_date: d.end_date || '',
+                    reason: d.reason || '',
+                    destination: d.destination || '',
+                    contact_phone: d.contact_phone || '',
+                    send_to_substitute: !!d.send_to_substitute,
+                    start_time: d.start_time ? String(d.start_time).substring(0, 5) : '',
+                    end_time: d.end_time ? String(d.end_time).substring(0, 5) : '',
+                }));
+                // Try to derive selectedLeaveType from request_type code if available
+                const rtCode = d.request_type_code || d.leave_type;
+                if (rtCode) setSelectedLeaveType(rtCode);
+            } else if (initialData.type === 'MEAL') {
+                handleTypeSelect('MEAL');
+                const d = initialData.data || {};
+                setMealForm({
+                    date: d.date || getIstanbulToday(),
+                    description: d.description || d.order_note || '',
+                });
+            } else if (initialData.type === 'CARDLESS_ENTRY') {
+                handleTypeSelect('CARDLESS_ENTRY');
+                const d = initialData.data || {};
+                setCardlessEntryForm({
+                    date: d.date || getIstanbulToday(),
+                    check_in_time: d.check_in_time ? String(d.check_in_time).substring(0, 5) : '',
+                    check_out_time: d.check_out_time ? String(d.check_out_time).substring(0, 5) : '',
+                    reason: d.reason || '',
+                    send_to_substitute: !!d.send_to_substitute,
+                });
+            } else if (initialData.type === 'HEALTH_REPORT') {
+                handleTypeSelect('HEALTH_REPORT');
+                const d = initialData.data || {};
+                setHealthReportForm({
+                    start_date: d.start_date || getIstanbulToday(),
+                    end_date: d.end_date || getIstanbulToday(),
+                    description: d.description || '',
+                });
+            } else if (initialData.type === 'HOSPITAL_VISIT') {
+                handleTypeSelect('HOSPITAL_VISIT');
+                const d = initialData.data || {};
+                setHospitalVisitForm({
+                    date: d.date || d.start_date || '',
+                    is_full_day: d.is_full_day !== false,
+                    start_time: d.start_time ? String(d.start_time).substring(0, 5) : '',
+                    end_time: d.end_time ? String(d.end_time).substring(0, 5) : '',
+                    description: d.description || '',
+                });
             }
         }
     }, [isOpen, initialData]);
@@ -1403,6 +1460,24 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                                     requestTypes={requestTypes}
                                 />
                             )}
+                        </div>
+                    )}
+
+                    {/* RE_REQUEST banner — iptal/red/birleştirildi talepten yeniden oluşturma akışı */}
+                    {step === 2 && initialData?.mode === 'RE_REQUEST' && initialData?.source_id && (
+                        <div className="mx-3 sm:mx-5 mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 flex items-start gap-2">
+                            <Info size={16} className="shrink-0 mt-0.5" />
+                            <div>
+                                Bu talep <strong>#{initialData.source_id}</strong> no'lu{' '}
+                                {initialData.source_status === 'CANCELLED' || initialData.source_status === 'CANCELED'
+                                    ? 'iptal edilen'
+                                    : initialData.source_status === 'REJECTED'
+                                        ? 'reddedilen'
+                                        : initialData.source_status === 'BUNDLED'
+                                            ? 'birleştirilen'
+                                            : 'eski'}{' '}
+                                talepten yeniden oluşturuluyor. Alanları istediğiniz gibi düzenleyebilirsiniz.
+                            </div>
                         </div>
                     )}
 
