@@ -86,6 +86,7 @@ import AnomalyFixTestsTab from './system-health/AnomalyFixTestsTab';
 import DailyCorrectionTab from './system-health/DailyCorrectionTab';
 import CancellationInvestigationTab from './system-health/CancellationInvestigationTab';
 import FixValidationTab from './system-health/FixValidationTab';
+import StuckAttendanceRecoveryTab from './system-health/StuckAttendanceRecoveryTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -190,6 +191,7 @@ export default function SystemHealth() {
                         { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
                         { id: 'cancellation_investigation', name: 'İptal İnceleme', icon: ExclamationTriangleIcon },
                         { id: 'fix_validation', name: 'Kök Neden Doğrulama', icon: BeakerIcon },
+                        { id: 'stuck_attendance_recovery', name: 'Takılı Attendance Kurtarma', icon: WrenchScrewdriverIcon },
                         { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
                         { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
@@ -269,6 +271,7 @@ export default function SystemHealth() {
                 {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
                 {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
                 {activeTab === 'fix_validation' && <FixValidationTab />}
+                {activeTab === 'stuck_attendance_recovery' && <StuckAttendanceRecoveryTab />}
                 {activeTab === 'potential_audit' && <PotentialAuditTab />}
             </div>
 
