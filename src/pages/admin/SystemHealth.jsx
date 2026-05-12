@@ -85,6 +85,7 @@ import DuplicateAttendanceTab from './system-health/DuplicateAttendanceTab';
 import AnomalyFixTestsTab from './system-health/AnomalyFixTestsTab';
 import DailyCorrectionTab from './system-health/DailyCorrectionTab';
 import CancellationInvestigationTab from './system-health/CancellationInvestigationTab';
+import FixValidationTab from './system-health/FixValidationTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -188,6 +189,7 @@ export default function SystemHealth() {
                         { id: 'excuse_leave_audit', name: 'Mazeret İzni', icon: ClockIcon },
                         { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
                         { id: 'cancellation_investigation', name: 'İptal İnceleme', icon: ExclamationTriangleIcon },
+                        { id: 'fix_validation', name: 'Kök Neden Doğrulama', icon: BeakerIcon },
                         { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
                         { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
@@ -266,6 +268,7 @@ export default function SystemHealth() {
                 {activeTab === 'request_inspection' && <RequestInspectionTab />}
                 {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
                 {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
+                {activeTab === 'fix_validation' && <FixValidationTab />}
                 {activeTab === 'potential_audit' && <PotentialAuditTab />}
             </div>
 
