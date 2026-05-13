@@ -197,13 +197,17 @@ export default function RiskMatrixCard({
                                 {showLabels && (
                                     <LabelList
                                         dataKey="label"
-                                        content={({ x, y, value, index }) => {
+                                        content={({ x, y, width, height, value, index }) => {
                                             const p = points[index];
                                             if (!p || !labeledIds.has(p.id)) return null;
+                                            // Recharts Scatter LabelList'inde (x, y) balonun sol-ust kosesi;
+                                            // merkez = x + width/2, y + height/2.
+                                            const cx = x + (width || 0) / 2;
+                                            const cy = y + (height || 0) / 2;
                                             const labelIdx = labeledIdsArray.indexOf(p.id);
                                             const offset = LABEL_OFFSETS[labelIdx % LABEL_OFFSETS.length] || LABEL_OFFSETS[0];
-                                            const lx = x + offset.dx;
-                                            const ly = y + offset.dy;
+                                            const lx = cx + offset.dx;
+                                            const ly = cy + offset.dy;
                                             const display = value?.length > 12 ? `${value.slice(0, 10)}…` : value;
                                             const fillBg = p.color || (colorFn ? colorFn(p) : quadrantLabels[p.quad].color);
                                             const padX = 4, charW = 6.0, h = 13;
@@ -213,7 +217,7 @@ export default function RiskMatrixCard({
                                                 : lx - w / 2;
                                             return (
                                                 <g style={{ pointerEvents: 'none' }}>
-                                                    <line x1={x} y1={y} x2={lx} y2={ly}
+                                                    <line x1={cx} y1={cy} x2={lx} y2={ly}
                                                         stroke={fillBg} strokeWidth={1} strokeDasharray="2 2" opacity={0.7} />
                                                     <rect x={rectX} y={ly - h / 2 - 1} width={w} height={h} rx={3}
                                                         fill="white" stroke={fillBg} strokeWidth={0.8} opacity={0.95} />

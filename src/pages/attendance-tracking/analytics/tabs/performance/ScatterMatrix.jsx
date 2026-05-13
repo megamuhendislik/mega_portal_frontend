@@ -539,18 +539,24 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                         {/* Leader-line etiketler — nokta yaninda ok ile */}
                                         <LabelList
                                             dataKey="label"
-                                            content={({ x, y, value, index }) => {
+                                            content={({ x, y, width, height, value, index }) => {
                                                 const p = filteredPoints[index];
                                                 if (!p) return null;
                                                 // Departman modu: hepsini göster · diğer mod: pruned set
                                                 const showLabel = viewMode === 'department' || labeledPointIds.has(p.id);
                                                 if (!showLabel) return null;
 
+                                                // Recharts Scatter LabelList'inde (x, y) balonun sol-ust kosesi
+                                                // (cx - radius, cy - radius). Merkez = x + width/2, y + height/2.
+                                                const cx = x + (width || 0) / 2;
+                                                const cy = y + (height || 0) / 2;
+                                                const radius = (width || 0) / 2;
+
                                                 // Departman modunda klasik (uzerinde) etiket — kisa adlar
                                                 if (viewMode === 'department') {
                                                     return (
                                                         <text
-                                                            x={x} y={y - 8}
+                                                            x={cx} y={cy - radius - 6}
                                                             fontSize={11} fontWeight={700}
                                                             fill="#1e293b" textAnchor="middle"
                                                             style={{ pointerEvents: 'none' }}
@@ -563,8 +569,9 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                 // Bireysel/subtree: KOMPAKT etiket — ilk ad, kucuk font
                                                 const labelIdx = labeledIdsArray.indexOf(p.id);
                                                 const offset = LABEL_OFFSETS[labelIdx % LABEL_OFFSETS.length] || LABEL_OFFSETS[0];
-                                                const lx = x + offset.dx;
-                                                const ly = y + offset.dy;
+                                                // Offset balon yariciapina ek olarak uygulanir — etiket balonun dis kenarindan basla
+                                                const lx = cx + offset.dx;
+                                                const ly = cy + offset.dy;
                                                 const display = value?.length > 8 ? `${value.slice(0, 7)}…` : value;
                                                 const fillBg = levelColor(p.normal_completion);
                                                 const isHovered = hoveredEmpId === p.id;
@@ -581,9 +588,9 @@ export default function ScatterMatrix({ employees, onSelectPerson }) {
                                                 const opacity = !hoveredEmpId ? 0.92 : (isHovered ? 1 : 0.18);
                                                 return (
                                                     <g style={{ pointerEvents: 'none', opacity }}>
-                                                        {/* Leader line nokta -> etiket */}
+                                                        {/* Leader line balon MERKEZINDEN -> etiket */}
                                                         <line
-                                                            x1={x} y1={y}
+                                                            x1={cx} y1={cy}
                                                             x2={lx} y2={ly}
                                                             stroke={fillBg}
                                                             strokeWidth={isHovered ? 1.5 : 0.6}
