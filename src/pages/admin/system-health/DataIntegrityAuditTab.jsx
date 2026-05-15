@@ -608,13 +608,22 @@ export default function DataIntegrityAuditTab() {
             if (employeeId) {
                 body.employee_id = Number(employeeId);
             }
-            const res = await api.post('/system/health-check/data-integrity-audit/', body);
+            // Audit 16 kategori taradığı için 30sn default timeout aşılabilir;
+            // backend gunicorn timeout 1800sn, axios'ta 5 dakika ver.
+            const res = await api.post('/system/health-check/data-integrity-audit/', body, {
+                timeout: 300000,
+            });
             setResults(res.data);
             if (mode === 'fix') {
                 setFixReport(res.data);
             }
         } catch (err) {
-            setError(err.response?.data?.error || err.response?.data?.detail || 'Denetim çalıştırılamadı');
+            const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '');
+            setError(
+                err.response?.data?.error
+                || err.response?.data?.detail
+                || (isTimeout ? 'Denetim çok uzun sürdü (timeout). Daha kısa tarih aralığı veya tek kategori seçip tekrar deneyin.' : 'Denetim çalıştırılamadı')
+            );
         } finally {
             setLoading(false);
         }
@@ -686,7 +695,9 @@ export default function DataIntegrityAuditTab() {
                 date_to: dateTo,
             };
             if (employeeId) body.employee_id = Number(employeeId);
-            const res = await api.post('/system/health-check/data-integrity-audit/', body);
+            const res = await api.post('/system/health-check/data-integrity-audit/', body, {
+                timeout: 300000,
+            });
             setFixReport(res.data);
             // Re-scan to refresh results
             const scanBody = {
@@ -696,7 +707,9 @@ export default function DataIntegrityAuditTab() {
                 date_to: dateTo,
             };
             if (employeeId) scanBody.employee_id = Number(employeeId);
-            const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody);
+            const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody, {
+                timeout: 300000,
+            });
             setResults(scanRes.data);
         } catch (err) {
             setError(err.response?.data?.error || 'Düzeltme başarısız');
