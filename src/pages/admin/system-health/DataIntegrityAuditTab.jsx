@@ -35,6 +35,7 @@ const CATEGORY_LABELS = {
     ot_card_verification: 'Fazla Mesai-Kart Doğrulama',
     leave_credit_mismatch: 'İzin Kredi Uyumsuzluğu',
     excuse_leave_integrity: 'Mazeret İzni Bütünlüğü',
+    external_duty_consistency: 'Dış Görev Tutarlılığı',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
