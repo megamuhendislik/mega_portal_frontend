@@ -609,9 +609,9 @@ export default function DataIntegrityAuditTab() {
                 body.employee_id = Number(employeeId);
             }
             // Audit 16 kategori taradığı için 30sn default timeout aşılabilir;
-            // backend gunicorn timeout 1800sn, axios'ta 5 dakika ver.
+            // backend gunicorn timeout 1800sn, axios'ta 30 dakika ver.
             const res = await api.post('/system/health-check/data-integrity-audit/', body, {
-                timeout: 300000,
+                timeout: 1800000,
             });
             setResults(res.data);
             if (mode === 'fix') {
@@ -696,7 +696,7 @@ export default function DataIntegrityAuditTab() {
             };
             if (employeeId) body.employee_id = Number(employeeId);
             const res = await api.post('/system/health-check/data-integrity-audit/', body, {
-                timeout: 300000,
+                timeout: 1800000,
             });
             setFixReport(res.data);
             // Re-scan to refresh results
@@ -708,7 +708,7 @@ export default function DataIntegrityAuditTab() {
             };
             if (employeeId) scanBody.employee_id = Number(employeeId);
             const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody, {
-                timeout: 300000,
+                timeout: 1800000,
             });
             setResults(scanRes.data);
         } catch (err) {
