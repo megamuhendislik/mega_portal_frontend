@@ -20,6 +20,52 @@ import api from '../../../services/api';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
+// Son oturumda eklenen / düzeltilen audit kategorileri. Tarama sonrası bu
+// kategorilerin güncel sayıları "Son Düzeltmeler" panelinde gösterilir;
+// bu sayede deploy sonrası fix'in etkili olup olmadığı tek bakışta görünür.
+const RECENT_FIXES = [
+    {
+        id: 'fix-1-external-duty',
+        title: 'Dış Görev Edit (LR#484 Bahar)',
+        commit: '6b1944c',
+        date: '2026-05-16',
+        category: 'external_duty_consistency',
+        summary: 'partial_update date_segments zorunlu kılındı; eski 4 kayıt manuel inceleme bekliyor.',
+    },
+    {
+        id: 'fix-2-notif-gap',
+        title: 'Bildirim Boşluğu (LR title false positive)',
+        commit: 'ccd7ff2',
+        date: '2026-05-16',
+        category: 'notification_gap',
+        summary: 'Audit "Yeni İzin Talebi" başlığını da tanıyor; 31 sahte LR flag\'i kalkmalı.',
+    },
+    {
+        id: 'fix-3-zero-segment',
+        title: 'OT Sıfır-Süre Segment (Füsun #439095)',
+        commit: '9428481',
+        date: '2026-05-16',
+        category: 'ot_overlap',
+        summary: 'claim_potential 0-süre segment artık 1440dk ghost POTENTIAL üretmiyor.',
+    },
+    {
+        id: 'fix-4-duration-mismatch',
+        title: 'Duration Mismatch Multi-Segment',
+        commit: '87ea9d8',
+        date: '2026-05-16',
+        category: 'duration_mismatch',
+        summary: 'Audit segments toplamını kullanıyor; Hacı/Yusuf/Taylan 5 false positive temizlenir.',
+    },
+    {
+        id: 'fix-5-ot-card-tolerance',
+        title: 'OT-Card Tolerance Bölgesi',
+        commit: 'c7e4053',
+        date: '2026-05-16',
+        category: 'ot_card_verification',
+        summary: 'Tolerance (±5dk) kaynaklı 30dk farklar artık flag edilmiyor; ~10 false positive temizlenir.',
+    },
+];
+
 const CATEGORY_LABELS = {
     ot_overlap: 'Fazla Mesai Çakışması',
     attendance_recalc: 'Mesai Yeniden Hesaplama',
@@ -405,6 +451,73 @@ const FixReportModal = ({ results, onClose }) => {
 };
 
 // ─── Category Card ──────────────────────────────────────────────────────────
+
+const RecentFixesPanel = ({ results }) => {
+    const categories = results?.categories || null;
+    const hasResults = Boolean(categories);
+
+    const statusFor = (cat) => {
+        if (!hasResults) return { tone: 'idle', label: 'Bekliyor', count: null };
+        const data = categories[cat];
+        if (!data) return { tone: 'idle', label: 'Taranmadı', count: null };
+        if (data.error) return { tone: 'error', label: 'Hata', count: null };
+        const c = data.count ?? 0;
+        if (c === 0) return { tone: 'ok', label: 'Temiz', count: 0 };
+        return { tone: 'warn', label: `${c} sorun`, count: c };
+    };
+
+    const TONES = {
+        idle:  'bg-slate-50 border-slate-200 text-slate-500',
+        ok:    'bg-emerald-50 border-emerald-200 text-emerald-700',
+        warn:  'bg-amber-50 border-amber-200 text-amber-800',
+        error: 'bg-red-50 border-red-200 text-red-700',
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <WrenchScrewdriverIcon className="w-4 h-4 text-emerald-600" />
+                        Son Düzeltmeler (2026-05-16)
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Bu oturumda kök nedeni düzeltilen 5 bug. Tara çalıştırıp her kategorinin güncel sayısını teyit edebilirsin.
+                    </p>
+                </div>
+                {!hasResults && (
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                        Doğrulamak için Tara
+                    </span>
+                )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                {RECENT_FIXES.map(fix => {
+                    const st = statusFor(fix.category);
+                    return (
+                        <div key={fix.id} className={`border rounded-lg p-3 ${TONES[st.tone]}`}>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-xs font-bold leading-tight">{fix.title}</span>
+                                <span className="text-[10px] font-mono opacity-70 shrink-0">{fix.commit}</span>
+                            </div>
+                            <p className="text-[11px] opacity-80 leading-snug">{fix.summary}</p>
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-current/10">
+                                <span className="text-[10px] uppercase tracking-wider opacity-70">
+                                    {CATEGORY_LABELS[fix.category] || fix.category}
+                                </span>
+                                <span className="text-xs font-bold flex items-center gap-1">
+                                    {st.tone === 'ok' && <CheckCircleIcon className="w-3.5 h-3.5" />}
+                                    {st.tone === 'warn' && <ExclamationTriangleIcon className="w-3.5 h-3.5" />}
+                                    {st.label}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFixCategory, fixLoading }) => {
     const [expanded, setExpanded] = useState(false);
@@ -897,6 +1010,9 @@ export default function DataIntegrityAuditTab() {
                     </div>
                 </div>
             </div>
+
+            {/* Son Düzeltmeler — 2026-05-16 oturumu */}
+            <RecentFixesPanel results={results} />
 
             {/* Error */}
             {error && (
