@@ -64,6 +64,14 @@ const RECENT_FIXES = [
         category: 'ot_card_verification',
         summary: 'Tolerance (±5dk) kaynaklı 30dk farklar artık flag edilmiyor; ~10 false positive temizlenir.',
     },
+    {
+        id: 'fix-6-duty-lunch',
+        title: 'Dış Görev Lunch Deduction (Bug 7)',
+        commit: '7c86abf',
+        date: '2026-05-16',
+        category: 'external_duty_consistency',
+        summary: 'Tam gün dış görevde 10sa yerine 9sa normal mesai. Lunch artık düşülür. Audit fix mode auto-recalc çağırır → mevcut yanlış kayıtlar otomatik onarılır.',
+    },
 ];
 
 const CATEGORY_LABELS = {
