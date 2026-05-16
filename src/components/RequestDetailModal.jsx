@@ -208,6 +208,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   })();
 
   const canEditOrCancel = request?.status === 'PENDING' && isOwner;
+  // Dış Görev için "Düzenle" geçici olarak kapatıldı:
+  // mevcut edit modalı date_segments alanını göndermediği için backend
+  // partial_update tarih edit'lerini segment uyumsuzluğu nedeniyle reddediyor.
+  // Düzgün segment-bazlı edit UI'ı yapılana kadar kullanıcı iptal+yeniden
+  // oluştur akışını izlemeli.
+  const isExternalDuty = request?.request_type_detail?.category === 'EXTERNAL_DUTY';
+  const canEdit = canEditOrCancel && !isExternalDuty;
 
   const startEditing = () => {
     const fields = EDIT_FIELDS_MAP[requestType] || [];
@@ -1506,13 +1513,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
             )}
             {canEditOrCancel && !isEditing && (
               <>
-                <button
-                  onClick={startEditing}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm flex items-center gap-1.5"
-                >
-                  <Edit3 size={14} />
-                  Düzenle
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={startEditing}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm flex items-center gap-1.5"
+                  >
+                    <Edit3 size={14} />
+                    Düzenle
+                  </button>
+                )}
+                {isExternalDuty && (
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg">
+                    Dış Görev talebini düzenlemek için iptal edip yeniden oluşturun.
+                  </span>
+                )}
                 <button
                   onClick={confirmCancel}
                   disabled={cancelLoading}
