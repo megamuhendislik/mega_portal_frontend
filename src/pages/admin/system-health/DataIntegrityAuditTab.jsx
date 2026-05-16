@@ -452,12 +452,15 @@ const FixReportModal = ({ results, onClose }) => {
 
 // ─── Category Card ──────────────────────────────────────────────────────────
 
-const RecentFixesPanel = ({ results }) => {
+const RecentFixesPanel = ({ results, onQuickVerify, loading }) => {
     const categories = results?.categories || null;
-    const hasResults = Boolean(categories);
+    // Sadece RECENT_FIXES'tan en az birinin tarandığını "hasResults" sayalım,
+    // tam tarama veya hızlı doğrulama farketmez.
+    const verifiedCats = categories ? RECENT_FIXES.filter(f => categories[f.category]) : [];
+    const hasResults = verifiedCats.length > 0;
 
     const statusFor = (cat) => {
-        if (!hasResults) return { tone: 'idle', label: 'Bekliyor', count: null };
+        if (!categories) return { tone: 'idle', label: 'Bekliyor', count: null };
         const data = categories[cat];
         if (!data) return { tone: 'idle', label: 'Taranmadı', count: null };
         if (data.error) return { tone: 'error', label: 'Hata', count: null };
@@ -475,21 +478,29 @@ const RecentFixesPanel = ({ results }) => {
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
                 <div>
                     <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                         <WrenchScrewdriverIcon className="w-4 h-4 text-emerald-600" />
                         Son Düzeltmeler (2026-05-16)
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                        Bu oturumda kök nedeni düzeltilen 5 bug. Tara çalıştırıp her kategorinin güncel sayısını teyit edebilirsin.
+                        Bu oturumda kök nedeni düzeltilen 5 bug. Hızlı Doğrulama yalnızca bu 5 kategoriyi tarar (~5-10 sn).
                     </p>
                 </div>
-                {!hasResults && (
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-                        Doğrulamak için Tara
-                    </span>
-                )}
+                <button
+                    type="button"
+                    onClick={onQuickVerify}
+                    disabled={loading}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                >
+                    {loading ? (
+                        <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                        <CheckCircleIcon className="w-3.5 h-3.5" />
+                    )}
+                    {loading ? 'Taraniyor...' : (hasResults ? 'Yeniden Doğrula' : 'Hızlı Doğrula')}
+                </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                 {RECENT_FIXES.map(fix => {
@@ -736,6 +747,43 @@ export default function DataIntegrityAuditTab() {
                 err.response?.data?.error
                 || err.response?.data?.detail
                 || (isTimeout ? 'Denetim çok uzun sürdü (timeout). Daha kısa tarih aralığı veya tek kategori seçip tekrar deneyin.' : 'Denetim çalıştırılamadı')
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Son Düzeltmeler paneli — yalnızca 5 fix kategorisini tarar (hızlı).
+    // Mevcut sonuçlarla merge eder ki kullanıcı önce tam tarama yapmış olsa
+    // bile fix kategorileri taze sayıyla güncellensin.
+    const runQuickVerify = async () => {
+        const categories = RECENT_FIXES.map(f => f.category);
+        setLoading(true);
+        setError(null);
+        try {
+            const body = {
+                mode: 'scan',
+                categories,
+                date_from: dateFrom,
+                date_to: dateTo,
+            };
+            if (employeeId) body.employee_id = Number(employeeId);
+            const res = await api.post('/system/health-check/data-integrity-audit/', body, {
+                timeout: 1800000,
+            });
+            setResults(prev => {
+                if (!prev) return res.data;
+                return {
+                    ...prev,
+                    categories: { ...(prev.categories || {}), ...(res.data?.categories || {}) },
+                };
+            });
+        } catch (err) {
+            const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '');
+            setError(
+                err.response?.data?.error
+                || err.response?.data?.detail
+                || (isTimeout ? 'Hızlı doğrulama zaman aşımına uğradı.' : 'Hızlı doğrulama çalıştırılamadı')
             );
         } finally {
             setLoading(false);
@@ -1012,7 +1060,7 @@ export default function DataIntegrityAuditTab() {
             </div>
 
             {/* Son Düzeltmeler — 2026-05-16 oturumu */}
-            <RecentFixesPanel results={results} />
+            <RecentFixesPanel results={results} onQuickVerify={runQuickVerify} loading={loading} />
 
             {/* Error */}
             {error && (
