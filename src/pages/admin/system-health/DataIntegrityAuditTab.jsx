@@ -72,6 +72,14 @@ const RECENT_FIXES = [
         category: 'external_duty_consistency',
         summary: 'Tam gün dış görevde 10sa yerine 9sa normal mesai. Lunch artık düşülür. Audit fix mode auto-recalc çağırır → mevcut yanlış kayıtlar otomatik onarılır.',
     },
+    {
+        id: 'fix-7-ghost-split',
+        title: 'Ghost Split Kayıtları (Füsun gap)',
+        commit: '6cf13e3',
+        date: '2026-05-17',
+        category: 'ghost_split_records',
+        summary: 'SPLIT kayıtları gerçek kart event ile karşılaştırılır. Çalışan dışardayken oluşturulan ghost OT kayıtları (Füsun #578084 gibi) tespit edilir + Düzelt ile silinir, recalc tetiklenir.',
+    },
 ];
 
 const CATEGORY_LABELS = {
@@ -90,6 +98,7 @@ const CATEGORY_LABELS = {
     leave_credit_mismatch: 'İzin Kredi Uyumsuzluğu',
     excuse_leave_integrity: 'Mazeret İzni Bütünlüğü',
     external_duty_consistency: 'Dış Görev Tutarlılığı',
+    ghost_split_records: 'Hayali Bölme Kayıtları',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
