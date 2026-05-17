@@ -254,8 +254,9 @@ function TeamOverviewMode({ onSelectPerson }) {
     const workHoursFromBulk = data?.work_hours?.employee_hours;
 
     const fetchWorkHours = useCallback(async () => {
-        // Eğer bulk'tan geldiyse kullan
-        if (workHoursFromBulk?.length > 0) {
+        // Y9 fix (2026-05-17): Bulk endpoint başarılı ama boş döndüyse fallback'e gitmesin
+        // (eskiden length===0 → fallback denerdi). Array varsa direkt kullan.
+        if (Array.isArray(workHoursFromBulk)) {
             setEmployeeHoursRaw(workHoursFromBulk);
             return;
         }
@@ -310,11 +311,11 @@ function TeamOverviewMode({ onSelectPerson }) {
             list = list.filter((e) => TR_NORM(e.name).includes(q) || TR_NORM(e.department).includes(q));
         }
         list = applyPresets(list, activePresets);
+        // Y8 fix (2026-05-17): Tek tutarlı alan adı — backend her zaman normal_completion_pct döner
+        const normalPct = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
         list.sort((a, b) => {
-            const aN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
-            const bN = (x) => (x.normal_completion_pct ?? x.efficiency_pct ?? 0);
             switch (sortBy) {
-                case 'normal_completion_desc': return bN(b) - aN(a);
+                case 'normal_completion_desc': return normalPct(b) - normalPct(a);
                 case 'total_completion_desc': return (b.total_completion_pct || 0) - (a.total_completion_pct || 0);
                 case 'normal_hours_desc': return (b.normal_hours || 0) - (a.normal_hours || 0);
                 case 'ot_desc': return (b.ot_hours || 0) - (a.ot_hours || 0);
@@ -444,6 +445,7 @@ function TeamOverviewMode({ onSelectPerson }) {
             </SectionCard>
 
             {/* Detay Tablosu — default kapali */}
+            {/* Y10 fix (2026-05-17): duplicate collapsible prop kaldırıldı */}
             <SectionCard
                 title="Detay Tablosu"
                 icon={Users}
@@ -451,7 +453,6 @@ function TeamOverviewMode({ onSelectPerson }) {
                 subtitle={`${filtered.length} / ${employeeHours.length} çalışan · 10 sütunlu satır-bazlı tablo`}
                 collapsible={true}
                 defaultOpen={false}
-                collapsible={false}
                 headerExtra={
                     <button
                         onClick={() => { setSearch(''); setSelectedDept(null); setSortBy('normal_completion_desc'); }}

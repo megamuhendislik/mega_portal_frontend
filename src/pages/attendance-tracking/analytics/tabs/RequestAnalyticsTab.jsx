@@ -241,10 +241,11 @@ export default function RequestAnalyticsTab() {
     const pendingCount = data?.pending_count || data?.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0;
 
     const hasFilter = !!(selectedType || selectedStatus || selectedMonth);
-    // Tablo görünür mu? Team mode + en az bir filter aktif (varsayılan: status=PENDING'i type seçilince auto-aç)
-    // UX: type pie tıklanınca status'u 'PENDING'e zorla (kullanıcı farklı seçtiyse koru)
+    // Tablo görünür mu? Team mode + en az bir filter aktif.
+    // Y5 fix (2026-05-17): redundant ternary kaldırıldı. Kullanıcı status seçmediyse
+    // varsayılan PENDING — type seçimi status'u zorlamaz (user choice korunur).
     const showPendingTable = mode === 'team' && hasFilter;
-    const effectiveStatus = selectedStatus || (selectedType ? 'PENDING' : 'PENDING');
+    const effectiveStatus = selectedStatus || 'PENDING';
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">

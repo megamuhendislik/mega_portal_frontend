@@ -389,9 +389,11 @@ export default function ComparisonTab() {
     const renderPeriods = () => {
         if (!data || data.mode !== 'periods') return null;
         const deltas = data.deltas || {};
+        // K3 fix (2026-05-17): attendance_pct backend'den artık dönüyor; eklenmiş.
         const cards = [
             { label: 'Yapılan Normal Mesai', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
             { label: 'Toplam Yapılan Mesai', key: 'total_completion_pct', suffix: '%', betterIsHigher: true },
+            { label: 'Devam Oranı', key: 'attendance_pct', suffix: '%', betterIsHigher: true },
             { label: 'Fazla Mesai/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
             { label: 'Eksik/Yükümlülük', key: 'missing_to_target_pct', suffix: '%', betterIsHigher: false },
             { label: 'Normal Mesai', key: 'normal_hours', suffix: 'sa', betterIsHigher: true },
@@ -407,7 +409,9 @@ export default function ComparisonTab() {
                     {cards.map((c) => {
                         const d = deltas[c.key] || {};
                         const diff = Number(d.diff) || 0;
-                        const pctChange = Number(d.pct_change) || 0;
+                        const pctChangeRaw = d.pct_change;  // K3: null olabilir (prev=0)
+                        const pctIsValid = pctChangeRaw != null;
+                        const pctChange = pctIsValid ? Number(pctChangeRaw) : 0;
                         // diff === 0 -> neutral (Minus icon, slate); önceden TrendingDown gösterilirdi (bug)
                         const isImproved =
                             diff === 0 || c.betterIsHigher === null
@@ -423,7 +427,6 @@ export default function ComparisonTab() {
                             : isImproved
                             ? 'text-emerald-600'
                             : 'text-red-600';
-                        // Mevcut değer rozeti rengi — neutral metric'ler için indigo
                         const bColor = isImproved === null
                             ? 'bg-slate-50 text-slate-700'
                             : isImproved
@@ -456,7 +459,9 @@ export default function ComparisonTab() {
                                     <TrendIcon size={14} />
                                     {diff >= 0 ? '+' : ''}{diff}{c.suffix}
                                     <span className="text-[10px] text-slate-400 ml-auto">
-                                        ({pctChange >= 0 ? '+' : ''}%{pctChange})
+                                        {pctIsValid
+                                            ? `(${pctChange >= 0 ? '+' : ''}%${pctChange})`
+                                            : '(— önceki dönem 0)'}
                                     </span>
                                 </div>
                             </div>

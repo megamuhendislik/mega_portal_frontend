@@ -515,11 +515,12 @@ export function AnalyticsProvider({ children }) {
     useEffect(() => { fetchCompareData(); }, [fetchCompareData]);
 
     // Compute deltas between primary and compare data
+    // K4 fix (2026-05-17): prev=0 ise pct null döner (eskiden +100 yapay zirve)
     const deltas = useMemo(() => {
         if (!data?.team_overview?.kpi || !compareData?.team_overview?.kpi) return null;
         const primary = data.team_overview.kpi;
         const compare = compareData.team_overview.kpi;
-        const delta = (a, b) => b !== 0 ? Math.round((a - b) / Math.abs(b) * 100) : (a > 0 ? 100 : 0);
+        const delta = (a, b) => (b !== 0 && b != null) ? Math.round((a - b) / Math.abs(b) * 100) : null;
         return {
             efficiency: delta(primary.avg_efficiency_pct || 0, compare.avg_efficiency_pct || 0),
             worked: delta(primary.total_worked_hours || 0, compare.total_worked_hours || 0),

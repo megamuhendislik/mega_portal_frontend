@@ -422,8 +422,11 @@ export default function OvertimeMealTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Break Analysis */}
+                {/* Y4 fix (2026-05-17): Mola metriği netleştirildi — "sayılan mola"
+                    (Attendance.break_seconds), potential boşluk (potential_break_seconds) DEĞİL.
+                    Eşik açıklaması: 60dk normal, 60-75 dk uyarı, >75 dk politika sınırı aşımı. */}
                 <SectionCard title="Mola Süreleri Analizi" icon={Coffee} iconGradient="from-cyan-500 to-blue-600"
-                    subtitle="Kişi bazlı ortalama mola süreleri"
+                    subtitle="Kişi bazlı ort. sayılan mola süresi · <60dk OK · 60-75 dk uyarı · >75dk politika aşımı"
                     headerExtra={breakDistributionFull.length > 0 ? (
                         <button onClick={() => setDrilldown({ type: 'break_distribution' })}
                             className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border border-cyan-200/60">
@@ -431,21 +434,28 @@ export default function OvertimeMealTab() {
                         </button>
                     ) : null}>
                     {breakDistribution.length > 0 ? (
-                        <div style={{ height: Math.max(250, breakDistribution.length * 28) }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={breakDistribution} layout="vertical" barSize={14}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis type="number" tick={{ fontSize: 10 }} unit=" dk" />
-                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} width={90} />
-                                    <Tooltip content={<ChartTooltip />} />
-                                    <Bar dataKey="mola_dk" name="Ort. Mola" radius={[0, 6, 6, 0]}>
-                                        {breakDistribution.map((entry, i) => (
-                                            <Cell key={i} fill={entry.mola_dk > 75 ? '#ef4444' : entry.mola_dk > 60 ? '#f59e0b' : '#06b6d4'} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <>
+                            <div style={{ height: Math.max(250, breakDistribution.length * 28) }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={breakDistribution} layout="vertical" barSize={14}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis type="number" tick={{ fontSize: 10 }} unit=" dk" />
+                                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} width={90} />
+                                        <Tooltip content={<ChartTooltip />} />
+                                        <Bar dataKey="mola_dk" name="Ort. Sayılan Mola" radius={[0, 6, 6, 0]}>
+                                            {breakDistribution.map((entry, i) => (
+                                                <Cell key={i} fill={entry.mola_dk > 75 ? '#ef4444' : entry.mola_dk > 60 ? '#f59e0b' : '#06b6d4'} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-3 text-[10px] text-slate-500 flex-wrap">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-cyan-500" /> ≤60dk normal</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> 60-75dk uyarı</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> &gt;75dk politika aşımı</span>
+                            </div>
+                        </>
                     ) : <EmptyState message="Mola verisi yok" />}
                 </SectionCard>
 

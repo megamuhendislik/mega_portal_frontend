@@ -400,26 +400,78 @@ export default function OverviewTab() {
                         <span className="text-[10px] text-violet-400">{periodLabel} vs {compareLabel}</span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        {[
-                            { label: 'Mesai Doluluğu', curr: `%${kpi.avg_efficiency_pct || 0}`, prev: `%${cmpKpi.avg_efficiency_pct || 0}`, delta: deltas?.efficiency },
-                            { label: 'Çalışma', curr: `${Math.round(kpi.total_worked_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_worked_hours || 0)}h`, delta: deltas?.worked },
-                            { label: 'Fazla Mesai', curr: `${Math.round(kpi.total_overtime_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_overtime_hours || 0)}h`, delta: deltas?.overtime },
-                            { label: 'Kayıp', curr: `${Math.round(kpi.total_missing_hours || 0)}h`, prev: `${Math.round(cmpKpi.total_missing_hours || 0)}h`, delta: deltas?.missing },
-                        ].map((item, i) => (
-                            <div key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/80">
-                                <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider mb-1">{item.label}</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-lg font-black text-slate-800">{item.curr}</span>
-                                    <span className="text-[10px] text-slate-400">vs</span>
-                                    <span className="text-sm font-bold text-slate-500">{item.prev}</span>
-                                </div>
-                                {item.delta != null && (
-                                    <span className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${item.delta > 0 ? 'text-emerald-600 bg-emerald-50' : item.delta < 0 ? 'text-red-600 bg-red-50' : 'text-slate-400 bg-slate-50'}`}>
-                                        {item.delta > 0 ? '+' : ''}{item.delta}{item.isSuffix || '%'}
-                                    </span>
-                                )}
-                            </div>
-                        ))}
+                        {(() => {
+                            // Y1 fix (2026-05-17): Her metrik için mutlak fark + birim göster.
+                            // % metrikleri (efficiency) için percentage-point diff.
+                            // Saat metrikleri için saat diff. Eskiden hepsi "%" suffix ile gösteriliyordu.
+                            // Ayrıca: betterIsHigher semantic — artış iyi mi kötü mü?
+                            const round = (n) => Math.round(n || 0);
+                            const items = [
+                                {
+                                    label: 'Mesai Doluluğu',
+                                    curr: `%${kpi.avg_efficiency_pct || 0}`,
+                                    prev: `%${cmpKpi.avg_efficiency_pct || 0}`,
+                                    pct: deltas?.efficiency,
+                                    absDiff: round((kpi.avg_efficiency_pct || 0) - (cmpKpi.avg_efficiency_pct || 0)),
+                                    unit: 'pp', // percentage points
+                                    betterIsHigher: true,
+                                },
+                                {
+                                    label: 'Çalışma',
+                                    curr: `${round(kpi.total_worked_hours)}h`,
+                                    prev: `${round(cmpKpi.total_worked_hours)}h`,
+                                    pct: deltas?.worked,
+                                    absDiff: round((kpi.total_worked_hours || 0) - (cmpKpi.total_worked_hours || 0)),
+                                    unit: 'h',
+                                    betterIsHigher: true,
+                                },
+                                {
+                                    label: 'Fazla Mesai',
+                                    curr: `${round(kpi.total_overtime_hours)}h`,
+                                    prev: `${round(cmpKpi.total_overtime_hours)}h`,
+                                    pct: deltas?.overtime,
+                                    absDiff: round((kpi.total_overtime_hours || 0) - (cmpKpi.total_overtime_hours || 0)),
+                                    unit: 'h',
+                                    betterIsHigher: null, // OT artışı/azalışı semantik değil
+                                },
+                                {
+                                    label: 'Kayıp',
+                                    curr: `${round(kpi.total_missing_hours)}h`,
+                                    prev: `${round(cmpKpi.total_missing_hours)}h`,
+                                    pct: deltas?.missing,
+                                    absDiff: round((kpi.total_missing_hours || 0) - (cmpKpi.total_missing_hours || 0)),
+                                    unit: 'h',
+                                    betterIsHigher: false, // Kayıp artışı kötü
+                                },
+                            ];
+                            return items.map((item, i) => {
+                                const hasPct = item.pct != null;
+                                const isImproved = item.absDiff === 0 || item.betterIsHigher === null
+                                    ? null
+                                    : item.betterIsHigher
+                                    ? item.absDiff > 0
+                                    : item.absDiff < 0;
+                                const colorCls = isImproved === null
+                                    ? 'text-slate-500 bg-slate-50'
+                                    : isImproved
+                                    ? 'text-emerald-600 bg-emerald-50'
+                                    : 'text-red-600 bg-red-50';
+                                return (
+                                    <div key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/80">
+                                        <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider mb-1">{item.label}</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-lg font-black text-slate-800">{item.curr}</span>
+                                            <span className="text-[10px] text-slate-400">vs</span>
+                                            <span className="text-sm font-bold text-slate-500">{item.prev}</span>
+                                        </div>
+                                        <span className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${colorCls}`}>
+                                            {item.absDiff >= 0 ? '+' : ''}{item.absDiff}{item.unit}
+                                            {hasPct && <span className="opacity-70 ml-1">({item.pct >= 0 ? '+' : ''}{item.pct}%)</span>}
+                                        </span>
+                                    </div>
+                                );
+                            });
+                        })()}
                     </div>
                 </div>
             )}
@@ -446,7 +498,9 @@ export default function OverviewTab() {
 
             {/* ── Saat Bazlı Toplamlar (4 mini KPI) ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours ?? Math.max(0, (kpi.total_worked_hours || 0) - (kpi.total_overtime_hours || 0)))} suffix="sa" icon={Clock} gradient="indigo"
+                {/* Y2 fix (2026-05-17): Backend total_normal_hours her zaman döner; fallback kaldırıldı
+                    (eski max(0, worked-ot) OT>worked edge case'inde 0 göstererek yanıltıyordu) */}
+                <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours || 0)} suffix="sa" icon={Clock} gradient="indigo"
                     subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`}
                     onClick={() => openKPI('normal_hours')} />
                 <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
