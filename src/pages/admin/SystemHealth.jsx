@@ -56,6 +56,7 @@ import OvertimeAuditTab from './system-health/OvertimeAuditTab';
 import OTEmployeeAnalysisTab from './system-health/OTEmployeeAnalysisTab';
 import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import FixSimulationTab from './system-health/FixSimulationTab';
+import GateEventPatternTab from './system-health/GateEventPatternTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksRawImportTab from './system-health/PdksRawImportTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
@@ -173,6 +174,7 @@ export default function SystemHealth() {
                         { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
                         { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
                         { id: 'fix_simulation', name: 'Fix Simülasyonu', icon: SparklesIcon },
+                        { id: 'gate_event_pattern', name: 'Gate Event Analizi', icon: BoltIcon },
                         { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
                         { id: 'manager_permission', name: 'Yönetici Yetki', icon: ShieldCheckIcon },
@@ -255,6 +257,7 @@ export default function SystemHealth() {
                 {activeTab === 'password_reset' && <PasswordResetTab />}
                 {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
                 {activeTab === 'fix_simulation' && <FixSimulationTab />}
+                {activeTab === 'gate_event_pattern' && <GateEventPatternTab />}
                 {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
                 {activeTab === 'manager_permission' && <ManagerPermissionTab />}
