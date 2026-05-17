@@ -298,7 +298,7 @@ const LogContent = ({ log }) => {
 
 // ─── Detail Log Modal (single or bulk) ──────────────────────────────────────
 
-const DetailLogModal = ({ data, logs, onClose }) => {
+const DetailLogModal = ({ data, logs, onClose, issueContext, onFix, onIgnore }) => {
     const [activeTab, setActiveTab] = useState(0);
 
     const isBulk = Array.isArray(logs) && logs.length > 0;
@@ -307,6 +307,9 @@ const DetailLogModal = ({ data, logs, onClose }) => {
     if (items.length === 0) return null;
 
     const current = items[activeTab] || items[0];
+    // Footer aksiyonları sadece tek-kayıt modunda + issue context varsa görünür.
+    // Bulk modda hangi issue'a karşılık geldiği belirsiz olduğu için gizli.
+    const showActions = !isBulk && issueContext && issueContext.issue;
 
     return (
         <ModalOverlay open={true} onClose={onClose}>
@@ -359,6 +362,43 @@ const DetailLogModal = ({ data, logs, onClose }) => {
                 <div className="flex-1 overflow-y-auto p-5 min-h-0">
                     <LogContent log={current} />
                 </div>
+
+                {/* Footer aksiyonları (tek-kayıt modunda) */}
+                {showActions && (
+                    <div className="border-t border-gray-200 bg-white px-5 py-3 rounded-b-2xl shrink-0 flex items-center justify-between gap-3">
+                        <div className="text-[11px] text-gray-500">
+                            <span className="font-bold text-gray-700">
+                                {CATEGORY_LABELS[issueContext.categoryKey] || issueContext.categoryKey}
+                            </span>
+                            {' — '}
+                            <span className="font-mono">#{issueContext.issue.id}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    onIgnore?.(issueContext.categoryKey, issueContext.issue);
+                                    onClose();
+                                }}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+                            >
+                                <NoSymbolIcon className="w-3.5 h-3.5" />
+                                Yoksay
+                            </button>
+                            {issueContext.issue.fixable && (
+                                <button
+                                    onClick={() => {
+                                        onFix?.(issueContext.categoryKey, issueContext.issue);
+                                        onClose();
+                                    }}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+                                >
+                                    <WrenchScrewdriverIcon className="w-3.5 h-3.5" />
+                                    Kabul Et ve Düzelt
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </ModalOverlay>
     );
@@ -790,7 +830,7 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                                             <td className="py-2.5 px-2">
                                                 {issue.employee_id && issue.date && (
                                                     <button
-                                                        onClick={() => onDetailLog?.(issue.employee_id, issue.date)}
+                                                        onClick={() => onDetailLog?.(issue.employee_id, issue.date, { categoryKey, issue })}
                                                         className="p-1 hover:bg-indigo-100 rounded-lg transition-colors"
                                                         title="Detay Logu"
                                                     >
@@ -848,6 +888,7 @@ export default function DataIntegrityAuditTab() {
     const [error, setError] = useState(null);
     const [results, setResults] = useState(null);
     const [detailLog, setDetailLog] = useState(null);    // single log
+    const [detailIssueContext, setDetailIssueContext] = useState(null);  // {categoryKey, issue} eşliği
     const [bulkLogs, setBulkLogs] = useState(null);      // array of logs
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [fixReport, setFixReport] = useState(null);
@@ -1032,7 +1073,7 @@ export default function DataIntegrityAuditTab() {
     };
 
     // Single log fetch
-    const fetchDetailLog = useCallback(async (empId, date) => {
+    const fetchDetailLog = useCallback(async (empId, date, issueContext = null) => {
         setLoadingDetail(true);
         try {
             const res = await api.post('/system/health-check/data-integrity-detail-log/', {
@@ -1040,6 +1081,7 @@ export default function DataIntegrityAuditTab() {
                 date: date,
             });
             setDetailLog(res.data);
+            setDetailIssueContext(issueContext);
             setBulkLogs(null);
         } catch (err) {
             setError(err.response?.data?.error || 'Detay logu alınamadı');
@@ -1122,8 +1164,50 @@ export default function DataIntegrityAuditTab() {
 
     const closeModal = useCallback(() => {
         setDetailLog(null);
+        setDetailIssueContext(null);
         setBulkLogs(null);
     }, []);
+
+    // Tek bir issue için fix mode çalıştır — modal footer "Kabul Et ve Düzelt"
+    // butonu çağırır. employee_id filtre edilir ki yan etki minimum olsun.
+    const fixSingleIssue = useCallback(async (categoryKey, issue) => {
+        if (!issue?.id) return;
+        if (!window.confirm(
+            `"${CATEGORY_LABELS[categoryKey] || categoryKey}" kategorisinde ` +
+            `${issue.employee_name || 'kayıt'} (#${issue.id}) düzeltilecek.\n\nDevam?`
+        )) return;
+        setFixLoading(true);
+        setError(null);
+        try {
+            const body = {
+                mode: 'fix',
+                categories: [categoryKey],
+                date_from: issue.date || dateFrom,
+                date_to: issue.date || dateTo,
+            };
+            if (issue.employee_id) body.employee_id = Number(issue.employee_id);
+            const res = await api.post('/system/health-check/data-integrity-audit/', body, {
+                timeout: 1800000,
+            });
+            setFixReport(res.data);
+            // Tam yeniden tara
+            const scanBody = {
+                mode: 'scan',
+                categories: selectedCategories,
+                date_from: dateFrom,
+                date_to: dateTo,
+            };
+            if (employeeId) scanBody.employee_id = Number(employeeId);
+            const scanRes = await api.post('/system/health-check/data-integrity-audit/', scanBody, {
+                timeout: 1800000,
+            });
+            setResults(scanRes.data);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Düzeltme başarısız');
+        } finally {
+            setFixLoading(false);
+        }
+    }, [dateFrom, dateTo, employeeId, selectedCategories]);
 
     const [exporting, setExporting] = useState(false);
     const downloadTxtReport = useCallback(async () => {
@@ -1457,7 +1541,14 @@ export default function DataIntegrityAuditTab() {
 
             {/* Detail Log Modal (single or bulk) */}
             {(detailLog || bulkLogs) && (
-                <DetailLogModal data={detailLog} logs={bulkLogs} onClose={closeModal} />
+                <DetailLogModal
+                    data={detailLog}
+                    logs={bulkLogs}
+                    onClose={closeModal}
+                    issueContext={detailIssueContext}
+                    onFix={fixSingleIssue}
+                    onIgnore={openIgnoreModal}
+                />
             )}
 
             {fixReport && (
