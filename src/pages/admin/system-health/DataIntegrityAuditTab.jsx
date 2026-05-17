@@ -15,6 +15,7 @@ import {
     XMarkIcon,
     QueueListIcon,
     ArrowDownTrayIcon,
+    NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 
@@ -547,7 +548,136 @@ const RecentFixesPanel = ({ results, onQuickVerify, loading }) => {
     );
 };
 
-const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFixCategory, fixLoading }) => {
+const IgnoreModal = ({ data, onClose, onSubmit, submitting }) => {
+    const [reason, setReason] = useState('');
+    if (!data) return null;
+    const { issue, category } = data;
+    const label = CATEGORY_LABELS[category] || category;
+    return (
+        <ModalOverlay onClose={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-rose-100 rounded-xl">
+                        <NoSymbolIcon className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800">Kaydı Yoksay</h3>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 mb-4 space-y-1">
+                    <div className="text-xs text-gray-500">Kategori</div>
+                    <div className="text-sm font-bold text-gray-800">{label}</div>
+                    <div className="text-xs text-gray-500 mt-2">Kayıt</div>
+                    <div className="text-sm text-gray-700">
+                        {issue.employee_name} — {issue.date || '-'} — ID: {issue.id}
+                    </div>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">
+                    Bu kayıt bir daha denetimde gösterilmeyecek. Sebep yaz (opsiyonel):
+                </p>
+                <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Örn: Yönetici tarafından onaylandı, yanlış pozitif, vb."
+                    className="w-full border border-gray-300 rounded-lg p-2 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-rose-300"
+                />
+                <div className="flex justify-end gap-2 mt-4">
+                    <button
+                        onClick={onClose}
+                        disabled={submitting}
+                        className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        İptal
+                    </button>
+                    <button
+                        onClick={() => onSubmit(reason)}
+                        disabled={submitting}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                    >
+                        {submitting ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <NoSymbolIcon className="w-4 h-4" />}
+                        Yoksay
+                    </button>
+                </div>
+            </div>
+        </ModalOverlay>
+    );
+};
+
+const IgnoredPanel = ({ items, loading, onUnignore, unignoreLoadingId }) => {
+    const [expanded, setExpanded] = useState(false);
+    if (loading) {
+        return (
+            <div className="rounded-2xl bg-white border border-gray-200 p-4 mb-4">
+                <div className="text-xs text-gray-400">Yoksayılanlar yükleniyor…</div>
+            </div>
+        );
+    }
+    if (!items || items.length === 0) {
+        return null;
+    }
+    return (
+        <div className="rounded-2xl bg-white border border-rose-200 p-4 mb-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <NoSymbolIcon className="w-4 h-4 text-rose-500" />
+                    <h3 className="text-sm font-bold text-gray-800">
+                        Yoksayılan Kayıtlar ({items.length})
+                    </h3>
+                </div>
+                <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold"
+                >
+                    {expanded ? 'Gizle' : 'Detayları Aç'}
+                </button>
+            </div>
+            {expanded && (
+                <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="border-b border-gray-200">
+                                <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Kategori</th>
+                                <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Kayıt ID</th>
+                                <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Sebep</th>
+                                <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Kim</th>
+                                <th className="text-left py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Ne Zaman</th>
+                                <th className="text-right py-2 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px]">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.map((it) => (
+                                <tr key={it.id} className="border-b border-gray-100 hover:bg-rose-50/30">
+                                    <td className="py-2 px-2 text-gray-700">
+                                        {CATEGORY_LABELS[it.category] || it.category}
+                                    </td>
+                                    <td className="py-2 px-2 font-mono text-gray-600">#{it.record_id}</td>
+                                    <td className="py-2 px-2 text-gray-700">
+                                        {it.reason || <span className="text-gray-300">—</span>}
+                                    </td>
+                                    <td className="py-2 px-2 text-gray-600">
+                                        {it.ignored_by || it.ignored_by_username || '-'}
+                                    </td>
+                                    <td className="py-2 px-2 text-gray-500 font-mono text-[10px]">
+                                        {it.ignored_at ? new Date(it.ignored_at).toLocaleString('tr-TR') : '-'}
+                                    </td>
+                                    <td className="py-2 px-2 text-right">
+                                        <button
+                                            onClick={() => onUnignore(it.id)}
+                                            disabled={unignoreLoadingId === it.id}
+                                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg disabled:opacity-50 transition-colors"
+                                        >
+                                            {unignoreLoadingId === it.id ? '...' : 'Geri Al'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFixCategory, fixLoading, onIgnore }) => {
     const [expanded, setExpanded] = useState(false);
     const label = CATEGORY_LABELS[categoryKey] || categoryKey;
     const { severity, count, fixed, issues } = categoryData;
@@ -610,6 +740,9 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                                         <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-12">
                                             Log
                                         </th>
+                                        <th className="text-left py-2.5 px-2 font-bold text-gray-500 uppercase tracking-wide text-[10px] whitespace-nowrap w-16">
+                                            Yoksay
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -662,6 +795,19 @@ const CategoryCard = ({ categoryKey, categoryData, auditMode, onDetailLog, onFix
                                                     </button>
                                                 )}
                                             </td>
+                                            <td className="py-2.5 px-2">
+                                                {issue.id ? (
+                                                    <button
+                                                        onClick={() => onIgnore?.(categoryKey, issue)}
+                                                        className="p-1 hover:bg-rose-100 rounded-lg transition-colors"
+                                                        title="Bu kaydı bir daha gösterme (Yoksay)"
+                                                    >
+                                                        <NoSymbolIcon className="w-4 h-4 text-rose-500" />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-gray-300">—</span>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -704,6 +850,13 @@ export default function DataIntegrityAuditTab() {
     const [fixReport, setFixReport] = useState(null);
     const [fixLoading, setFixLoading] = useState(false);
 
+    // Yoksay (AuditIgnore)
+    const [ignoreList, setIgnoreList] = useState([]);
+    const [ignoreLoading, setIgnoreLoading] = useState(false);
+    const [ignoreModalData, setIgnoreModalData] = useState(null);  // {category, issue}
+    const [ignoreSubmitting, setIgnoreSubmitting] = useState(false);
+    const [unignoreLoadingId, setUnignoreLoadingId] = useState(null);
+
     // Filters
     const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
     const [dateTo, setDateTo] = useState(getDefaultDateTo);
@@ -718,6 +871,74 @@ export default function DataIntegrityAuditTab() {
 
     const selectAllCategories = () => setSelectedCategories([...ALL_CATEGORIES]);
     const clearAllCategories = () => setSelectedCategories([]);
+
+    // ─── Yoksay handlers ────────────────────────────────────────────────────
+    const fetchIgnoreList = useCallback(async () => {
+        setIgnoreLoading(true);
+        try {
+            const res = await api.get('/system/health-check/audit-ignore/');
+            setIgnoreList(res.data?.items || []);
+        } catch {
+            // sessiz fail — panel görünmez
+        } finally {
+            setIgnoreLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchIgnoreList(); }, [fetchIgnoreList]);
+
+    const openIgnoreModal = (category, issue) => {
+        setIgnoreModalData({ category, issue });
+    };
+
+    const submitIgnore = async (reason) => {
+        if (!ignoreModalData) return;
+        const { category, issue } = ignoreModalData;
+        setIgnoreSubmitting(true);
+        try {
+            await api.post('/system/health-check/audit-ignore/', {
+                category,
+                record_id: issue.id,
+                reason: reason || '',
+            });
+            setIgnoreModalData(null);
+            await fetchIgnoreList();
+            // Mevcut sonuçlardan da görsel olarak çıkar (yeni tarama beklemeden)
+            setResults(prev => {
+                if (!prev?.categories?.[category]) return prev;
+                const oldIssues = prev.categories[category].issues || [];
+                const newIssues = oldIssues.filter(i => i.id !== issue.id);
+                return {
+                    ...prev,
+                    categories: {
+                        ...prev.categories,
+                        [category]: {
+                            ...prev.categories[category],
+                            issues: newIssues,
+                            count: newIssues.length,
+                            ignored_count: (prev.categories[category].ignored_count || 0) + 1,
+                        },
+                    },
+                };
+            });
+        } catch (err) {
+            alert(err.response?.data?.error || 'Yoksayma başarısız');
+        } finally {
+            setIgnoreSubmitting(false);
+        }
+    };
+
+    const handleUnignore = async (ignoreId) => {
+        setUnignoreLoadingId(ignoreId);
+        try {
+            await api.delete('/system/health-check/audit-ignore/', { data: { id: ignoreId } });
+            await fetchIgnoreList();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Geri alma başarısız');
+        } finally {
+            setUnignoreLoadingId(null);
+        }
+    };
 
     const runAudit = async (mode) => {
         if (mode === 'fix') {
@@ -1079,6 +1300,14 @@ export default function DataIntegrityAuditTab() {
             {/* Son Düzeltmeler — 2026-05-16 oturumu */}
             <RecentFixesPanel results={results} onQuickVerify={runQuickVerify} loading={loading} />
 
+            {/* Yoksayılan Kayıtlar */}
+            <IgnoredPanel
+                items={ignoreList}
+                loading={ignoreLoading}
+                onUnignore={handleUnignore}
+                unignoreLoadingId={unignoreLoadingId}
+            />
+
             {/* Error */}
             {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
@@ -1166,7 +1395,7 @@ export default function DataIntegrityAuditTab() {
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
                                 )
                                 .map(([key, data]) => (
-                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} />
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} onIgnore={openIgnoreModal} />
                                 ))}
                         </div>
                     )}
@@ -1185,7 +1414,7 @@ export default function DataIntegrityAuditTab() {
                                         ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[b[1].severity] || 3)
                                 )
                                 .map(([key, data]) => (
-                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} />
+                                    <CategoryCard key={key} categoryKey={key} categoryData={data} auditMode={results.mode} onDetailLog={fetchDetailLog} onFixCategory={fixCategory} fixLoading={fixLoading} onIgnore={openIgnoreModal} />
                                 ))}
                         </div>
                     )}
@@ -1231,6 +1460,14 @@ export default function DataIntegrityAuditTab() {
             {fixReport && (
                 <FixReportModal results={fixReport} onClose={() => setFixReport(null)} />
             )}
+
+            {/* Yoksay Modal */}
+            <IgnoreModal
+                data={ignoreModalData}
+                onClose={() => setIgnoreModalData(null)}
+                onSubmit={submitIgnore}
+                submitting={ignoreSubmitting}
+            />
 
             {/* Loading overlay */}
             <ModalOverlay open={loadingDetail} onClose={() => {}} closeOnOverlayClick={false} closeOnEsc={false}>
