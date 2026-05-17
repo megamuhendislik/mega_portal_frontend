@@ -602,7 +602,7 @@ const IgnoreModal = ({ data, onClose, onSubmit, submitting }) => {
 };
 
 const IgnoredPanel = ({ items, loading, onUnignore, unignoreLoadingId }) => {
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);  // Default açık — kullanıcı hep görsün
     if (loading) {
         return (
             <div className="rounded-2xl bg-white border border-gray-200 p-4 mb-4">
@@ -621,12 +621,15 @@ const IgnoredPanel = ({ items, loading, onUnignore, unignoreLoadingId }) => {
                     <h3 className="text-sm font-bold text-gray-800">
                         Yoksayılan Kayıtlar ({items.length})
                     </h3>
+                    <span className="text-[10px] text-gray-400 italic">
+                        kayıt güncellenirse otomatik kalkar
+                    </span>
                 </div>
                 <button
                     onClick={() => setExpanded(!expanded)}
                     className="text-xs text-rose-600 hover:text-rose-700 font-bold"
                 >
-                    {expanded ? 'Gizle' : 'Detayları Aç'}
+                    {expanded ? 'Gizle' : 'Hepsini Göster'}
                 </button>
             </div>
             {expanded && (
