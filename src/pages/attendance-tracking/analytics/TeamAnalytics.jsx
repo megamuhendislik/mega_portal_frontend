@@ -25,11 +25,11 @@ const InsightsTab = lazyRetry(() => import('./tabs/InsightsTab'));
 const AnomaliesTab = lazyRetry(() => import('./tabs/AnomaliesTab'));
 
 const TABS = [
+    { key: 'insights', label: 'Öngörüler', icon: Sparkles, desc: 'Aksiyon-odaklı otomatik bulgular' },
     { key: 'overview', label: 'Genel Bakış', icon: BarChart3, desc: 'KPI ve özet metrikler' },
     { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, fazla mesai ve eksik dağılımı' },
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
     { key: 'overtime_meal', label: 'Fazla Mesai & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
-    { key: 'insights', label: 'İçgörüler', icon: Sparkles, desc: 'Otomatik öneriler' },
     { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'Çalışan talepleri + Yönetici onayları (SLA)' },
     { key: 'anomalies', label: 'Anomaliler', icon: AlertTriangle, desc: 'Z-score sapma tespiti' },
 ];
@@ -42,7 +42,7 @@ const TAB_LABEL = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
  */
 function TeamAnalyticsInner() {
     const ctx = useAnalytics();
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('insights');
     const [helpOpen, setHelpOpen] = useState(false);
 
     // Export — backend /api/attendance-analytics/export/ endpoint'ini cagir, dosyayi indir

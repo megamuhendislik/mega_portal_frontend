@@ -315,6 +315,9 @@ function DeptComparisonChart({ evidence }) {
 
 function HighAttendancePanel({ evidence }) {
     const pct = evidence?.attendance_pct ?? 0;
+    const totalDays = evidence?.total_workdays ?? evidence?.total_employees ?? 0;
+    const workedDays = evidence?.worked_days ?? evidence?.attended_employees ?? 0;
+    const absentDays = evidence?.absent_days ?? evidence?.absent_employee_count ?? 0;
     return (
         <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 p-5 text-center">
             <div className="inline-flex p-3 rounded-full bg-emerald-100 mb-3">
@@ -322,21 +325,154 @@ function HighAttendancePanel({ evidence }) {
             </div>
             <h3 className="text-base font-black text-emerald-800 mb-1">Tebrikler!</h3>
             <p className="text-sm text-emerald-700 mb-3">
-                Ekibinizin devam oranı oldukça yüksek.
+                Gün-bazlı devam oranı: çalışılan iş günü / (çalışılan + devamsız iş günü).
             </p>
-            <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="grid grid-cols-4 gap-2 mt-4">
                 <div className="rounded-lg bg-white/70 p-2.5">
                     <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider">Devam Oranı</p>
                     <p className="text-xl font-black tabular-nums text-emerald-800">%{pct}</p>
                 </div>
                 <div className="rounded-lg bg-white/70 p-2.5">
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Toplam Çalışan</p>
-                    <p className="text-xl font-black tabular-nums text-slate-800">{evidence?.total_employees ?? 0}</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Toplam Gün</p>
+                    <p className="text-xl font-black tabular-nums text-slate-800">{totalDays}</p>
                 </div>
                 <div className="rounded-lg bg-white/70 p-2.5">
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Devam Eden</p>
-                    <p className="text-xl font-black tabular-nums text-slate-800">{evidence?.attended_employees ?? 0}</p>
+                    <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-wider">Çalışılan</p>
+                    <p className="text-xl font-black tabular-nums text-emerald-700">{workedDays}</p>
                 </div>
+                <div className="rounded-lg bg-white/70 p-2.5">
+                    <p className="text-[9px] text-rose-500 font-bold uppercase tracking-wider">Devamsız</p>
+                    <p className="text-xl font-black tabular-nums text-rose-700">{absentDays}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MissingTrendChart({ evidence }) {
+    const data = useMemo(() => {
+        const breakdown = evidence?.monthly_breakdown || [];
+        return breakdown.map((b) => ({
+            label: b.period === 'previous' ? 'Önceki Dönem' : 'Mevcut Dönem',
+            hours: b.hours || 0,
+        }));
+    }, [evidence]);
+    if (data.length === 0) return null;
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-1.5 mb-3">
+                <AlertTriangle size={13} className="text-amber-600" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+                    Eksik Saat Karşılaştırma
+                </span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="label" stroke="#64748b" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
+                    <RTooltip content={<ChartTooltip unit="sa" />} cursor={{ fill: 'rgba(245,158,11,0.08)' }} />
+                    <Bar dataKey="hours" fill="#f59e0b" radius={[6, 6, 0, 0]} name="Eksik Saat" />
+                </BarChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="rounded-lg bg-slate-50 p-2 text-center">
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Önceki</p>
+                    <p className="text-base font-black tabular-nums text-slate-800">
+                        {evidence?.prev_missing_hours ?? 0}<span className="text-[10px] text-slate-400 ml-0.5">sa</span>
+                    </p>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-2 text-center">
+                    <p className="text-[9px] text-amber-500 font-bold uppercase tracking-wider">Mevcut</p>
+                    <p className="text-base font-black tabular-nums text-amber-800">
+                        {evidence?.curr_missing_hours ?? 0}<span className="text-[10px] text-amber-400 ml-0.5">sa</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function OTConcentrationChart({ evidence }) {
+    const data = useMemo(
+        () => (evidence?.distribution || []).map((d) => ({
+            rank: `#${d.rank}`,
+            hours: d.hours,
+            pct: d.pct_of_total,
+        })),
+        [evidence],
+    );
+    if (data.length === 0) return null;
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                    <Trophy size={13} className="text-amber-600" />
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+                        En Çok OT Yapan İlk 10 (Pay Dağılımı)
+                    </span>
+                </div>
+                <Tag color="orange" className="!m-0 text-[10px]">
+                    Top 3 payı: %{evidence?.top3_share_pct ?? 0}
+                </Tag>
+            </div>
+            <ResponsiveContainer width="100%" height={Math.max(200, data.length * 28)}>
+                <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" stroke="#64748b" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="rank" stroke="#64748b" tick={{ fontSize: 11 }} width={40} />
+                    <RTooltip content={<ChartTooltip unit="sa" />} cursor={{ fill: 'rgba(245,158,11,0.05)' }} />
+                    <Bar dataKey="hours" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={14} />
+                </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
+                <span>Toplam OT: <strong className="text-slate-700">{evidence?.total_ot_hours ?? 0}sa</strong></span>
+                <span>Katkıda bulunan: <strong className="text-slate-700">{evidence?.contributors_count ?? 0}</strong> kişi</span>
+            </div>
+        </div>
+    );
+}
+
+function WeeklyOTLimitTable({ evidence }) {
+    const rows = evidence?.details || [];
+    if (rows.length === 0) return null;
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                    <AlertCircle size={13} className="text-red-600" />
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+                        Bu Hafta Limit Yaklaşanlar ({rows.length})
+                    </span>
+                </div>
+                <Tag color="default" className="!m-0 text-[10px]">
+                    {evidence?.week_start} → {evidence?.today}
+                </Tag>
+            </div>
+            <div className="space-y-1.5 max-h-72 overflow-auto">
+                {rows.slice(0, 30).map((r) => {
+                    const barColor = r.ratio_pct >= 100 ? '#dc2626'
+                        : r.ratio_pct >= 95 ? '#f97316'
+                            : '#f59e0b';
+                    return (
+                        <div key={r.employee_id} className="py-1.5 px-2 rounded-lg hover:bg-slate-50 border border-slate-100">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-[12px] font-semibold text-slate-700">
+                                    #{r.employee_id}
+                                </span>
+                                <span className="text-[11px] font-bold tabular-nums" style={{ color: barColor }}>
+                                    {r.hours}sa / {r.limit}sa
+                                </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{ width: `${Math.min(100, r.ratio_pct)}%`, background: barColor }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -362,6 +498,15 @@ function EvidenceSection({ code, evidence }) {
     if (code === 'HIGH_ATTENDANCE') {
         return <HighAttendancePanel evidence={evidence} />;
     }
+    if (code === 'MISSING_TREND_UP' || code === 'MISSING_TREND_DOWN') {
+        return <MissingTrendChart evidence={evidence} />;
+    }
+    if (code === 'OT_CONCENTRATION') {
+        return <OTConcentrationChart evidence={evidence} />;
+    }
+    if (code === 'WEEKLY_OT_LIMIT_NEAR') {
+        return <WeeklyOTLimitTable evidence={evidence} />;
+    }
     return null;
 }
 
@@ -370,8 +515,11 @@ function EvidenceSection({ code, evidence }) {
 function AffectedEmployeesTable({ rows, code }) {
     const valueLabel = useMemo(() => {
         if (code === 'OT_TREND_UP' || code === 'OT_TREND_DOWN' || code === 'OT_DOW_HEAVY') return 'Fazla Mesai (sa)';
+        if (code === 'OT_CONCENTRATION') return 'OT (sa)';
         if (code === 'ABSENCE_UP' || code === 'ABSENCE_DOWN') return 'Gün';
         if (code === 'PENDING_OLD') return 'Bekleme (sa)';
+        if (code === 'MISSING_TREND_UP' || code === 'MISSING_TREND_DOWN') return 'Eksik (sa)';
+        if (code === 'WEEKLY_OT_LIMIT_NEAR') return 'Doluluk (%)';
         return 'Değer';
     }, [code]);
 
