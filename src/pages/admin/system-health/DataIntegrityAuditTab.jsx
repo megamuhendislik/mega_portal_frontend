@@ -310,7 +310,7 @@ const DetailLogModal = ({ data, logs, onClose }) => {
     return (
         <ModalOverlay open={true} onClose={onClose}>
             <div
-                className="bg-gray-50 shadow-2xl w-full max-w-5xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
+                className="bg-gray-50 shadow-2xl w-full max-w-5xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden max-h-[calc(100vh-3rem)]"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl shrink-0">
@@ -383,7 +383,7 @@ const FixReportModal = ({ results, onClose }) => {
     return (
         <ModalOverlay open={true} onClose={onClose}>
             <div
-                className="bg-gray-50 shadow-2xl w-full max-w-4xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden"
+                className="bg-gray-50 shadow-2xl w-full max-w-4xl mx-4 my-6 rounded-2xl flex flex-col overflow-hidden max-h-[calc(100vh-3rem)]"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white rounded-t-2xl shrink-0">
