@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Select, Segmented, Tag, Spin } from 'antd';
 import {
     GitCompare, Calendar, ArrowRight, BarChart3, AlertTriangle,
-    TrendingUp, TrendingDown,
+    TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
@@ -406,13 +406,29 @@ export default function ComparisonTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     {cards.map((c) => {
                         const d = deltas[c.key] || {};
+                        const diff = Number(d.diff) || 0;
+                        const pctChange = Number(d.pct_change) || 0;
+                        // diff === 0 -> neutral (Minus icon, slate); önceden TrendingDown gösterilirdi (bug)
                         const isImproved =
-                            c.betterIsHigher === null
+                            diff === 0 || c.betterIsHigher === null
                                 ? null
                                 : c.betterIsHigher
-                                ? d.diff > 0
-                                : d.diff < 0;
-                        const TrendIcon = d.diff > 0 ? TrendingUp : TrendingDown;
+                                ? diff > 0
+                                : diff < 0;
+                        const TrendIcon = diff > 0 ? TrendingUp
+                            : diff < 0 ? TrendingDown
+                            : Minus;
+                        const trendColor = isImproved === null
+                            ? 'text-slate-500'
+                            : isImproved
+                            ? 'text-emerald-600'
+                            : 'text-red-600';
+                        // Mevcut değer rozeti rengi — neutral metric'ler için indigo
+                        const bColor = isImproved === null
+                            ? 'bg-slate-50 text-slate-700'
+                            : isImproved
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-red-50 text-red-700';
                         return (
                             <div
                                 key={c.key}
@@ -431,24 +447,16 @@ export default function ComparisonTab() {
                                     <ArrowRight size={14} className="text-slate-400" />
                                     <div className="text-right">
                                         <div className="text-[9px] text-slate-400">B: {data.period_b}</div>
-                                        <div className="text-lg font-bold text-slate-700 tabular-nums">
+                                        <div className={`text-lg font-bold tabular-nums inline-block px-2 py-0.5 rounded ${bColor}`}>
                                             {d.period_b}{c.suffix}
                                         </div>
                                     </div>
                                 </div>
-                                <div
-                                    className={`flex items-center gap-1.5 text-sm font-bold ${
-                                        isImproved === null
-                                            ? 'text-slate-600'
-                                            : isImproved
-                                            ? 'text-emerald-600'
-                                            : 'text-red-600'
-                                    }`}
-                                >
+                                <div className={`flex items-center gap-1.5 text-sm font-bold ${trendColor}`}>
                                     <TrendIcon size={14} />
-                                    {d.diff >= 0 ? '+' : ''}{d.diff}{c.suffix}
+                                    {diff >= 0 ? '+' : ''}{diff}{c.suffix}
                                     <span className="text-[10px] text-slate-400 ml-auto">
-                                        ({d.pct_change >= 0 ? '+' : ''}%{d.pct_change})
+                                        ({pctChange >= 0 ? '+' : ''}%{pctChange})
                                     </span>
                                 </div>
                             </div>
