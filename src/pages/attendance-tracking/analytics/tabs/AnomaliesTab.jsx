@@ -98,7 +98,9 @@ export default function AnomaliesTab() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [threshold, setThreshold] = useState(2.0);
+    // v3 (2026-05-17): z-score yerine yüzdelik dilim. Default %5 (üst/alt 5%).
+    const [thresholdPct, setThresholdPct] = useState(5.0);
+    const [hypotheticalN, setHypotheticalN] = useState(10000);
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Filtreler
@@ -128,7 +130,12 @@ export default function AnomaliesTab() {
         setError(null);
         try {
             const res = await api.get('/attendance-analytics/anomalies/', {
-                params: { ...queryParams, threshold }, timeout: 30000,
+                params: {
+                    ...queryParams,
+                    threshold_pct: thresholdPct,
+                    hypothetical_n: hypotheticalN,
+                },
+                timeout: 30000,
             });
             setData(res.data);
         } catch (err) {
@@ -137,7 +144,7 @@ export default function AnomaliesTab() {
         } finally {
             setLoading(false);
         }
-    }, [queryParams, threshold]);
+    }, [queryParams, thresholdPct, hypotheticalN]);
 
     useEffect(() => { fetchAnomalies(); }, [fetchAnomalies, refreshKey]);
 
@@ -157,7 +164,8 @@ export default function AnomaliesTab() {
         return list.sort((a, b) => {
             const sd = (SEVERITY_ORDER[b.severity] || 0) - (SEVERITY_ORDER[a.severity] || 0);
             if (sd !== 0) return sd;
-            return Math.abs(b.z_score) - Math.abs(a.z_score);
+            // En uç dilimde olan önce (tier_pct düşük = daha uç)
+            return (a.tier_pct ?? 100) - (b.tier_pct ?? 100);
         });
     }, [data]);
 
@@ -224,14 +232,16 @@ export default function AnomaliesTab() {
                 if (!byEmp[a.employee_id]) {
                     byEmp[a.employee_id] = {
                         entity_id: a.employee_id,
-                        name: a.name,
+                        name: a.employee_name,
                         department: a.department || '—',
                         metrics: {},
                     };
                 }
                 byEmp[a.employee_id].metrics[metricKey] = {
                     value: a.value,
-                    zscore: a.z_score,
+                    zscore: a.z_score, // backward compat — StripPlot z-score üzerinden çalışır
+                    percentile: a.percentile,
+                    tier_pct: a.tier_pct,
                 };
             });
         });
@@ -272,14 +282,14 @@ export default function AnomaliesTab() {
             {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
             <ScopeBanner startDate={startDate} endDate={endDate} />
 
-            {/* Strip Plot — anomali yogunluk gorseli (yenilikçi) */}
+            {/* Strip Plot — anomali yogunluk gorseli (z-score yaklaşımı backward compat) */}
             {stripData.length > 0 && (
                 <StripPlot
                     title="Anomali Yoğunluk Stripleri"
-                    subtitle={`${stripData.length} kişi · ${stripMetrics.length} metrik · |z| büyük noktalar anomali`}
+                    subtitle={`${stripData.length} kişi · ${stripMetrics.length} metrik · Üst/alt %${thresholdPct} dilimdeki noktalar`}
                     metrics={stripMetrics}
                     data={stripData}
-                    thresholdZ={threshold || 1.5}
+                    thresholdZ={data?.threshold || 1.65}
                     onPointClick={(empId) => {
                         const emp = stripData.find((d) => d.entity_id === empId);
                         if (emp) setSelectedEmp({ id: empId, name: emp.name });
@@ -298,7 +308,7 @@ export default function AnomaliesTab() {
                         <div>
                             <h2 className="text-lg font-bold text-slate-800">Anomali Tespiti</h2>
                             <p className="text-xs text-slate-500 mt-0.5">
-                                Z-score tabanlı istatistiksel sapma analizi
+                                Yüzdelik dilim tabanlı (üst/alt %{thresholdPct.toFixed(1)})
                                 {data?.sample_size && (
                                     <> · <span className="font-semibold">{data.sample_size}</span> çalışan analiz edildi</>
                                 )}
@@ -343,20 +353,35 @@ export default function AnomaliesTab() {
                 {/* Threshold slider + view toggle */}
                 <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase">
-                        <Activity size={12} /> Eşik (Z-score):
+                        <Activity size={12} /> Eşik (üst/alt %):
                     </div>
                     <div className="flex-1 max-w-xs">
                         <Slider
-                            value={threshold}
-                            onChange={setThreshold}
-                            min={1.5}
-                            max={3.0}
-                            step={0.1}
-                            marks={{ 1.5: '1.5σ', 2.0: '2.0σ', 2.5: '2.5σ', 3.0: '3.0σ' }}
+                            value={thresholdPct}
+                            onChange={setThresholdPct}
+                            min={1}
+                            max={20}
+                            step={0.5}
+                            marks={{ 1: '%1', 5: '%5', 10: '%10', 20: '%20' }}
                         />
                     </div>
-                    <Tooltip title="|z-score| eşiğin üzerinde olan değerler anomali sayılır. Düşük = daha hassas, yüksek = sadece çok belirgin sapmalar.">
-                        <Tag color="blue">Mevcut: <span className="font-bold">{threshold.toFixed(1)}σ</span></Tag>
+                    <Tooltip title={`Üst veya alt %${thresholdPct.toFixed(1)}'lik dilime giren değerler anomali sayılır. Düşük = sadece en uç vakalar, yüksek = daha geniş tarama. Default %5 (her uçtan).`}>
+                        <Tag color="blue">Mevcut: <span className="font-bold">%{thresholdPct.toFixed(1)}</span></Tag>
+                    </Tooltip>
+                    <Tooltip title={`Anomalileri "${hypotheticalN} kişilik şirkette ilk N kişi" olarak yorumlamak için varsayımsal şirket büyüklüğü. Değiştirildiğinde mesajlar buna göre güncellenir.`}>
+                        <Tag color="default">
+                            Karşılaştırma:{' '}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const next = { 1000: 10000, 10000: 100000, 100000: 1000 }[hypotheticalN] || 10000;
+                                    setHypotheticalN(next);
+                                }}
+                                className="font-bold underline cursor-pointer"
+                            >
+                                {hypotheticalN.toLocaleString('tr-TR')} kişi
+                            </button>
+                        </Tag>
                     </Tooltip>
                     <div className="ml-auto flex items-center gap-2">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Görünüm:</span>
@@ -419,7 +444,7 @@ export default function AnomaliesTab() {
                     </h3>
                     <p className="text-sm text-emerald-600">
                         {total === 0
-                            ? `Ekip içi varyasyon ${threshold.toFixed(1)}σ eşiğinin altında — sürdürülebilir tempoda.`
+                            ? `Hiç kimse üst/alt %${thresholdPct.toFixed(1)}'lik dilime düşmedi — ekip homojen.`
                             : 'Filtre kriterlerini gevşetmeyi deneyin.'}
                     </p>
                 </div>
@@ -457,12 +482,17 @@ export default function AnomaliesTab() {
                                                 {unit && <span className="ml-0.5 text-slate-500 font-normal">{unit}</span>}
                                             </span>
                                         </div>
-                                        <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                                            <span>Ortalamadan</span>
+                                        <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5 flex-wrap">
                                             <span className={`font-bold ${cfg.text}`}>
-                                                {Math.abs(a.z_score).toFixed(2)}σ {a.direction === 'above' ? 'yüksek' : 'düşük'}
+                                                {a.tier_label || (a.direction === 'above' ? 'Üst dilimde' : 'Alt dilimde')}
                                             </span>
-                                            <span>({a.z_score > 0 ? '+' : ''}{a.z_score.toFixed(2)})</span>
+                                            <span className="text-slate-400">→</span>
+                                            <span className="text-slate-600">
+                                                {hypotheticalN.toLocaleString('tr-TR')} kişide{' '}
+                                                <span className={`font-bold ${cfg.text}`}>
+                                                    {a.direction === 'above' ? 'ilk' : 'son'} {(a.rank_in_10k || 0).toLocaleString('tr-TR')}
+                                                </span>
+                                            </span>
                                             <ChevronRight size={12} className="ml-auto text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
                                         </div>
                                     </div>
@@ -522,7 +552,7 @@ export default function AnomaliesTab() {
                                                             {unit && <span className="ml-0.5 text-slate-400 font-normal">{unit}</span>}
                                                         </span>
                                                         <span className={`tabular-nums font-bold ${sev.text}`}>
-                                                            ({a.z_score > 0 ? '+' : ''}{a.z_score.toFixed(2)}σ)
+                                                            {a.tier_label || (a.direction === 'above' ? '↑' : '↓')}
                                                         </span>
                                                     </span>
                                                 );
@@ -538,7 +568,9 @@ export default function AnomaliesTab() {
             )}
 
             <div className="text-center text-xs text-slate-400">
-                Z-score = (değer − ortalama) / standart sapma. |z| ≥ {threshold.toFixed(1)} = anomali.
+                Yüzdelik dilim = ekip içinde sıralama yüzdesi (0=en düşük, 100=en yüksek).
+                Üst veya alt %{thresholdPct.toFixed(1)}'e giren değerler anomali sayılır.
+                "{hypotheticalN.toLocaleString('tr-TR')} kişide ilk N" = varsayımsal şirket büyüklüğüyle yorum (rozete tıklayarak değiştirin).
                 Min örneklem: 5 çalışan. · Karta tıklayarak kişinin tüm metriklerini ve trendini görüntüleyin.
             </div>
 

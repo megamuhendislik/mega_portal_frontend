@@ -208,8 +208,13 @@ export default function EmployeeAnomalyDrawer({ open, onClose, employeeId, emplo
                                                 <div className={`flex items-center gap-1 mt-1 text-[10px] font-bold ${sev.text}`}>
                                                     <TrendIcon size={10} />
                                                     <span className="tabular-nums">
-                                                        {Math.abs(a.z_score).toFixed(2)}σ {a.direction === 'above' ? 'yüksek' : 'düşük'}
+                                                        {a.tier_label || (a.direction === 'above' ? 'Üst dilimde' : 'Alt dilimde')}
                                                     </span>
+                                                    {a.rank_in_10k && (
+                                                        <span className="text-slate-500 font-medium">
+                                                            · {(data?.hypothetical_n || 10000).toLocaleString('tr-TR')} kişide {a.direction === 'above' ? 'ilk' : 'son'} {a.rank_in_10k.toLocaleString('tr-TR')}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -363,7 +368,8 @@ export default function EmployeeAnomalyDrawer({ open, onClose, employeeId, emplo
                         {/* Footer note */}
                         <div className="rounded-xl border border-slate-200/60 bg-slate-50/50 p-3">
                             <p className="text-[10px] text-slate-500 leading-relaxed">
-                                Z-score = (değer − ekip ortalaması) / standart sapma. |z| eşiğin üzerindeyse anomali sayılır.
+                                Yüzdelik dilim = ekip içinde sıralama yüzdesi. Üst veya alt %{(data?.threshold_pct || 5).toFixed(1)}'e giren değerler anomali sayılır.
+                                "Üst %X" → varsayımsal {(data?.hypothetical_n || 10000).toLocaleString('tr-TR')} kişilik şirkette ilk N kişiye girer.
                                 Trend grafiği son 6 ay aylık aggregate. Ekip ortalaması seçili dönemdeki çalışanlardan hesaplanır.
                             </p>
                         </div>
