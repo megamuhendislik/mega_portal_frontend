@@ -3,14 +3,14 @@ import { Tag, Button, Segmented, Tooltip } from 'antd';
 import {
     Sparkles, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
     Calendar, AlertCircle, Hourglass, Lightbulb, RotateCw, Filter,
-    ArrowRight, Users, Activity, Flame, Zap, Clock,
+    ArrowRight, Users, Activity, Flame,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
 import InsightDetailDrawer from '../shared/InsightDetailDrawer';
-import SeverityPyramid from '../shared/SeverityPyramid';
+import SeverityCompass from '../shared/SeverityCompass';
 
 /**
  * InsightsTab v2 (2026-05-17 audit) — Öngörüler odaklı landing tab.
@@ -325,70 +325,15 @@ export default function InsightsTab() {
                 />
             </div>
 
-            {/* ═══ Severity Pyramid + Severity Bar ═══ */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                    <SeverityPyramid
-                        title="Önem Piramidi"
-                        subtitle={`${insights.length} öngörü · katmana tıkla → filtreye uygula`}
-                        levels={[
-                            { key: 'alert', label: 'Aksiyon', count: severityCounts.alert, color: '#dc2626', gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)' },
-                            { key: 'warning', label: 'Uyarı', count: severityCounts.warning, color: '#d97706', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-                            { key: 'info', label: 'Bilgi', count: severityCounts.info, color: '#2563eb', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
-                            { key: 'positive', label: 'Pozitif', count: severityCounts.positive, color: '#059669', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-                        ]}
-                        activeKey={filter === 'all' ? null : filter}
-                        onLevelClick={(k) => setFilter(k || 'all')}
-                        height={260}
-                    />
-                </div>
-
-                {/* ═══ Severity Bar (alternatif görsel) ═══ */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-3">
-                        <Zap size={13} className="text-indigo-600" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                            Severity Dağılımı
-                        </span>
-                    </div>
-                    <div className="space-y-2.5">
-                        {['alert', 'warning', 'info', 'positive'].map((sev) => {
-                            const cfg = SEVERITY_CFG[sev];
-                            const count = severityCounts[sev] || 0;
-                            const max = Math.max(1, ...Object.values(severityCounts));
-                            const pct = (count / max) * 100;
-                            return (
-                                <button
-                                    key={sev}
-                                    type="button"
-                                    onClick={() => setFilter(sev === filter ? 'all' : sev)}
-                                    className="w-full group"
-                                >
-                                    <div className="flex items-center gap-2 text-[11px] mb-1">
-                                        <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
-                                        <span className={`flex-1 text-left font-semibold ${cfg.title}`}>
-                                            {cfg.label}
-                                        </span>
-                                        <span className={`tabular-nums font-black ${cfg.title}`}>
-                                            {count}
-                                        </span>
-                                    </div>
-                                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full transition-all duration-500"
-                                            style={{ width: `${pct}%`, background: cfg.accent }}
-                                        />
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center gap-1.5">
-                        <Clock size={10} />
-                        <span>Severity sıralaması: Aksiyon → Uyarı → Bilgi → Pozitif</span>
-                    </div>
-                </div>
-            </div>
+            {/* ═══ Severity Compass — 4-quadrant pusula ═══ */}
+            <SeverityCompass
+                title="Öngörü Pusulası"
+                subtitle={`${insights.length} öngörü · K=Aksiyon, D=Uyarı, G=Bilgi, B=Pozitif · segmente tıkla → filtre`}
+                counts={severityCounts}
+                activeKey={filter === 'all' ? null : filter}
+                onSegmentClick={(k) => setFilter(k || 'all')}
+                size={340}
+            />
 
             {/* ═══ Filter bar ═══ */}
             <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm flex items-center gap-3 flex-wrap">
