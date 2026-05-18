@@ -158,6 +158,42 @@ export default function HeatmapView({ employees, onSelectPerson }) {
                     )}
                 </div>
             )}
+
+            {/* Faz 3 fix (2026-05-17): Renk skalası lejantı eklendi */}
+            {sorted.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Renk Skalası
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-[10px]">
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-red-500" /> Çok kötü (≤20%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-orange-400" /> Kötü (20-35%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-orange-300" /> Düşük (35-50%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-yellow-300" /> Orta (50-65%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-lime-400" /> İyi (65-80%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-emerald-400" /> Çok iyi (80-95%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-4 h-3 rounded-sm bg-emerald-500" /> Mükemmel (≥95%)
+                        </span>
+                    </div>
+                    <div className="text-[9px] text-slate-400 mt-1.5">
+                        FM/Y, Eksik/Y, FM/N gibi <em>tersine</em> metrikler için: yüksek değer kötü olduğundan
+                        renk ölçeği ters çalışır (kırmızı = yüksek değer).
+                    </div>
+                </div>
+            )}
         </SectionCard>
     );
 }

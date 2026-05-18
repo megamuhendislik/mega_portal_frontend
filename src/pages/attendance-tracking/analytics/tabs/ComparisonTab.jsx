@@ -315,12 +315,21 @@ export default function ComparisonTab() {
         if (!data || data.mode !== 'compare') return null;
         const snap = data.snapshot || [];
         if (snap.length === 0) return null;
+        // O2 fix (2026-05-17): Radar max dinamik — hardcoded 100/120/50
+        // overshoot durumunda axis dışı kalıyordu. Veriden çekilir, en az 100.
+        const metricKeys = ['efficiency_pct', 'total_completion_pct', 'ot_to_target_pct', 'missing_to_target_pct', 'attendance_pct'];
+        const dynamicMax = (key, floor) => {
+            const vals = snap.map(s => Number(s.metrics?.[key]) || 0);
+            const peak = vals.length ? Math.max(...vals) : floor;
+            // Round up to next 25 for cleaner axis labels
+            return Math.max(floor, Math.ceil(peak / 25) * 25);
+        };
         const radarMetrics = [
-            { key: 'efficiency_pct', label: 'Yap. Mesai', max: 100 },
-            { key: 'total_completion_pct', label: 'T.Yap. Mesai', max: 120 },
-            { key: 'ot_to_target_pct', label: 'FM/Y', max: 50 },
-            { key: 'missing_to_target_pct', label: 'Eksik/Y', max: 50 },
-            { key: 'attendance_pct', label: 'Devam', max: 100 },
+            { key: 'efficiency_pct', label: 'Yap. Mesai', max: dynamicMax('efficiency_pct', 100) },
+            { key: 'total_completion_pct', label: 'T.Yap. Mesai', max: dynamicMax('total_completion_pct', 120) },
+            { key: 'ot_to_target_pct', label: 'FM/Y', max: dynamicMax('ot_to_target_pct', 50) },
+            { key: 'missing_to_target_pct', label: 'Eksik/Y', max: dynamicMax('missing_to_target_pct', 50) },
+            { key: 'attendance_pct', label: 'Devam', max: dynamicMax('attendance_pct', 100) },
         ];
         const radarEntities = snap.map((s, i) => ({
             id: s.key,

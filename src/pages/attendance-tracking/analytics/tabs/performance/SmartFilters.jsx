@@ -40,7 +40,7 @@ export default function SmartFilters({
                     className="pl-3 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-56 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
                 />
 
-                {/* Preset chip'ler */}
+                {/* Preset chip'ler — Faz 3 fix: tooltip eklendi (description) */}
                 <div className="flex items-center gap-1 flex-wrap">
                     {Object.entries(PRESETS).map(([k, p]) => {
                         const active = activePresets.includes(k);
@@ -48,6 +48,7 @@ export default function SmartFilters({
                             <button
                                 key={k}
                                 onClick={() => onPresetToggle(k)}
+                                title={p.description || p.label}
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
                                     active
                                         ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'

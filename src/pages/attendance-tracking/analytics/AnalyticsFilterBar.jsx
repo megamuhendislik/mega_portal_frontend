@@ -195,13 +195,16 @@ export default function AnalyticsFilterBar() {
                         Karşılaştır
                     </button>
 
-                    {/* Min attendance filter */}
-                    <label className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50/80 rounded-lg border border-amber-200/60 cursor-pointer select-none">
+                    {/* Min attendance filter — O10 fix (2026-05-17): label netleştirildi */}
+                    <label
+                        className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50/80 rounded-lg border border-amber-200/60 cursor-pointer select-none"
+                        title={`Tamamlama oranı (Yapılan Normal Mesai / Yükümlülük) %${ctx.minAttendancePct}'in altındaki çalışanları analizden gizle`}
+                    >
                         <input type="checkbox" checked={ctx.minAttendanceEnabled}
                             onChange={e => ctx.setMinAttendanceEnabled(e.target.checked)}
                             className="w-3 h-3 rounded border-amber-300 text-amber-500 focus:ring-amber-200" />
                         <UserX size={11} className="text-amber-600" />
-                        <span className="text-[10px] font-bold text-amber-700" title="Yapılan Normal Mesai / Yükümlülük">Yap.M. %{ctx.minAttendancePct} altı hariç</span>
+                        <span className="text-[10px] font-bold text-amber-700">Min. tamamlama %{ctx.minAttendancePct}</span>
                     </label>
 
                     {/* Filters — aktif sayim badge */}

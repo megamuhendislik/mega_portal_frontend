@@ -60,22 +60,27 @@ export const QUADRANT_META = {
 };
 
 // Smart filter preset'leri — frontend-only
+// Faz 3 fix (2026-05-17): Her preset için inline açıklama (tooltip).
 export const PRESETS = {
     high_ot: {
         label: 'Yuksek FM',
+        description: 'Fazla Mesai / Yükümlülük ≥ %25',
         predicate: (e) => (e.ot_to_target_pct || 0) >= 25,
     },
     high_missing: {
         label: 'Eksigi Yuksek',
+        description: 'Eksik / Yükümlülük ≥ %15',
         predicate: (e) => (e.missing_to_target_pct || 0) >= 15,
     },
     healthy: {
         label: 'Saglikli',
+        description: 'Yap. Mesai ≥ %90 ve Eksik / Yükümlülük < %5',
         predicate: (e) => (e.normal_completion_pct ?? e.efficiency_pct ?? 0) >= 90
             && (e.missing_to_target_pct || 0) < 5,
     },
     underfilling: {
         label: 'Tam Doldurmayan',
+        description: 'Yap. Mesai < %80',
         predicate: (e) => (e.normal_completion_pct ?? e.efficiency_pct ?? 0) < 80,
     },
 };

@@ -1,3 +1,20 @@
+/**
+ * ApprovalDelayDetailModal — Onay süresi gecikme detay drill-down.
+ *
+ * O5 fix (2026-05-17): Endpoint dokümentasyonu eklendi.
+ *
+ * Backend endpoint: GET /api/attendance-analytics/approval-delays-detail/
+ *   Query params: start_date, end_date, scope filters (department_ids, ...)
+ *   Returns: {
+ *     period: {...},
+ *     summary: { total_decided, total_pending, avg_hours, ... },
+ *     decisions: [{ request_id, type, employee_name, hours, decision, bucket }, ...]
+ *   }
+ *   Backend service: attendance/services/analytics/workforce_service.py
+ *     get_approval_delays_detail()
+ *   SLA hours hesabı sla_service._compute_decision_hours kullanır
+ *   (iş günü bazlı, weekend hariç — K1 fix 2026-05-17).
+ */
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal, Input, Table, Empty, Segmented, Tag } from 'antd';
 import {

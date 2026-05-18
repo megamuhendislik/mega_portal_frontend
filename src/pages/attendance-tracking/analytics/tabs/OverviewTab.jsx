@@ -78,12 +78,20 @@ export default function OverviewTab() {
 
     const trendChartData = useMemo(() => {
         if (!trendData) return [];
-        return trendData.map(m => ({
-            name: (m.label || '').replace(/\d{4}$/, '').trim(),
-            çalışma: Math.round(m.worked_hours || m.total_worked_hours || 0),
-            hedef: Math.round(m.target_hours || 0),
-            'fazla mesai': Math.round(m.ot_hours || m.overtime_hours || 0),
-        }));
+        // Faz 3 fix (2026-05-17): Normal + OT ayrı stacked bar görünümü için
+        // worked = normal + ot olduğundan, normal'i çıkarıp ayrı tutuyoruz.
+        return trendData.map(m => {
+            const worked = Math.round(m.worked_hours || m.total_worked_hours || 0);
+            const ot = Math.round(m.ot_hours || m.overtime_hours || 0);
+            const normal = Math.max(0, worked - ot);
+            return {
+                name: (m.label || '').replace(/\d{4}$/, '').trim(),
+                'normal mesai': normal,
+                'fazla mesai': ot,
+                çalışma: worked, // backward compat (eski grafik kullanımı)
+                hedef: Math.round(m.target_hours || 0),
+            };
+        });
     }, [trendData]);
 
     // sparklineWorked is reserved for future KPI sparklines
@@ -526,8 +534,14 @@ export default function OverviewTab() {
                     onClick={() => openKPI('attendance')} />
                 <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet"
                     onClick={() => openKPI('ot_to_normal')} />
-                <KPICard mini title="FM Yemek Oranı" value={`${kpi.meal_rate_pct || 0}`} suffix="%" icon={Coffee} gradient="amber"
-                    subtitle={kpi.ot_hours_per_meal ? `~${kpi.ot_hours_per_meal} sa OT/yemek` : 'Onaylı FM günü kapsamı'}
+                {/* O13 fix (2026-05-17): approved_ot_days=0 ise "—" göster (eski "%0" yanıltıcı) */}
+                <KPICard mini title="FM Yemek Oranı"
+                    value={(kpi.approved_ot_days || 0) === 0 ? '—' : `${kpi.meal_rate_pct || 0}`}
+                    suffix={(kpi.approved_ot_days || 0) === 0 ? '' : '%'}
+                    icon={Coffee} gradient="amber"
+                    subtitle={(kpi.approved_ot_days || 0) === 0
+                        ? 'Bu dönem onaylı FM günü yok'
+                        : (kpi.ot_hours_per_meal ? `~${kpi.ot_hours_per_meal} sa OT/yemek` : 'Onaylı FM günü kapsamı')}
                     info={METRIC_EXPLANATIONS.meal_rate}
                     onClick={() => openKPI('meal')} />
                 <KPICard mini title="Ort. Mola" value={kpi.avg_break_minutes || 0} suffix="dk" icon={Coffee} gradient="cyan"

@@ -476,10 +476,13 @@ function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
         return <Empty description="Veri yok" />;
     }
     // Bar/Line click → drill-down (parent setState)
+    // O9 fix (2026-05-17): monthIdx 1-12 doğrulaması (eskiden 0 veya 13+ undefined erişim olabilirdi)
     const handleBarClick = (e) => {
         if (!onMonthClick) return;
         const idx = e?.activePayload?.[0]?.payload?.monthIdx;
-        if (idx) onMonthClick(idx);
+        if (Number.isInteger(idx) && idx >= 1 && idx <= 12) {
+            onMonthClick(idx);
+        }
     };
 
     // Kümülatif modu (running sum)
@@ -497,7 +500,9 @@ function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                            <YAxis tick={{ fontSize: 10 }} unit="sa" />
+                            {/* O8 fix (2026-05-17): Y axis label eklendi */}
+                            <YAxis tick={{ fontSize: 10 }} unit=" sa"
+                                label={{ value: 'Saat', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fontWeight: 600, fill: '#64748b' } }} />
                             <RTooltip />
                             <Legend wrapperStyle={{ fontSize: 10 }} />
                             <Area type="monotone" dataKey="normal" name="Kümülatif Normal" stroke={METRIC_COLORS.normal_h} fill="url(#cumGrad-normal)" strokeWidth={2} />
