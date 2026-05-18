@@ -115,10 +115,15 @@ function TeamAnalyticsInner() {
             {/* ═══ Filter Bar (Mali Yıl + filtre + tab detayları birleşik) ═══ */}
             <AnalyticsFilterBar />
 
-            {/* ═══ Yıllık Trend Strip — global üst (her tab'ın üstünde) ═══ */}
-            <Suspense fallback={null}>
-                <YearlyTrendStrip />
-            </Suspense>
+            {/* ═══ Yıllık Trend Strip — sadece Genel Bakış + Mesai Analizi (2026-05-18) ═══
+                 Kullanıcı geri bildirimi: bu bar/line chart sadece "Genel Bakış" ve
+                 "Mesai Analizi" sekmelerinde anlamlı; diğer tab'larda ayrı görseller var.
+            */}
+            {(activeTab === 'overview' || activeTab === 'performance') && (
+                <Suspense fallback={null}>
+                    <YearlyTrendStrip />
+                </Suspense>
+            )}
 
             {/* Tab navigation + actions */}
             <div className="flex flex-wrap items-center gap-3">
