@@ -91,6 +91,7 @@ import FixValidationTab from './system-health/FixValidationTab';
 import StuckAttendanceRecoveryTab from './system-health/StuckAttendanceRecoveryTab';
 import PersonDayDiagnosticTab from './system-health/PersonDayDiagnosticTab';
 import SegmentDuplicateAuditTab from './system-health/SegmentDuplicateAuditTab';
+import AnalyticsFixAuditTab from './system-health/AnalyticsFixAuditTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -140,6 +141,7 @@ export default function SystemHealth() {
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
+                        { id: 'analytics_fix_audit', name: 'Analytics Fix Audit', icon: SparklesIcon },
                         { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
                         { id: 'anomaly_fix_tests', name: 'Anomali Fix Testleri', icon: BugAntIcon },
                         { id: 'daily_correction', name: 'Günlük Düzeltme', icon: WrenchScrewdriverIcon },
@@ -223,6 +225,7 @@ export default function SystemHealth() {
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
+                {activeTab === 'analytics_fix_audit' && <AnalyticsFixAuditTab />}
                 {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
                 {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
                 {activeTab === 'anomaly_fix_tests' && <AnomalyFixTestsTab />}
