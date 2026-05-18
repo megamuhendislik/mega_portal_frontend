@@ -173,12 +173,35 @@ export default function RecalculationAuditTab() {
 
     // ── Full Recalculation ──────────────────────────────────────────
     const runFullRecalculation = async (mode = 'dry_run') => {
-        if (mode === 'apply' && !window.confirm(
-            'DIKKAT: Tum degisiklikler kalici olarak uygulanacak!\n\n' +
-            'Dry-run raporundaki tum split duzeltmeleri, normal mesai yeniden hesaplamalari,\n' +
-            'Fazla Mesai ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
-            'Bu islem geri alinamaz. Devam etmek istiyor musunuz?'
-        )) return;
+        if (mode === 'apply') {
+            // Çalışan aleyhine (Normal AZALANSA) ek koruma: prompt + tam-kelime
+            // yazma şartı. Türkay 11 May benzeri 2sa 20dk haksız eksik
+            // senaryoları kaza ile uygulanmasın.
+            const normalDiff = frcResult?.summary?.normal_diff || 0;
+            const missingDiff = frcResult?.summary?.missing_diff || 0;
+            if (normalDiff < 0) {
+                const lossHours = (Math.abs(normalDiff) / 3600).toFixed(2);
+                const eksikGain = (Math.abs(missingDiff) / 3600).toFixed(2);
+                const typed = window.prompt(
+                    `⚠️ DİKKAT — KULLANICI ALEYHİNE DEĞİŞİM\n\n` +
+                    `Bu işlem ${lossHours} saat NORMAL MESAİ SİLECEK.\n` +
+                    `Eksik artışı: +${eksikGain} saat\n\n` +
+                    `Çalışanlar haksız eksik göstermiş olabilir. Detay TXT raporunu\n` +
+                    `kontrol et — her bir değişimi tek tek doğrulamadan UYGULAMA.\n\n` +
+                    `Bilerek devam ediyorsan tam olarak şu kelimeyi yaz: ONAYLIYORUM`
+                );
+                if (typed !== 'ONAYLIYORUM') {
+                    alert('İptal edildi. Bilerek devam etmek için "ONAYLIYORUM" yazılması gerekir.');
+                    return;
+                }
+            }
+            if (!window.confirm(
+                'DIKKAT: Tum degisiklikler kalici olarak uygulanacak!\n\n' +
+                'Dry-run raporundaki tum split duzeltmeleri, normal mesai yeniden hesaplamalari,\n' +
+                'Fazla Mesai ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
+                'Bu islem geri alinamaz. Devam etmek istiyor musunuz?'
+            )) return;
+        }
 
         setFrcLoading(true);
         setFrcError(null);
