@@ -15,6 +15,7 @@ import {
 import api from '../../../services/api';
 import Phase2IssuePanel from './Phase2IssuePanel';
 import IntegrityFindingsPanel from './IntegrityFindingsPanel';
+import SanityCheckPanel from './SanityCheckPanel';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1500,6 +1501,9 @@ export default function RecalculationAuditTab() {
                     employeeId={employeeId || null}
                 />
             )}
+
+            {/* ══════════ HESAPLAMA SANITY CHECK ══════════ */}
+            <SanityCheckPanel />
 
             {/* ══════════ OT TALEP DENETİMİ ══════════ */}
             <div className="border-t border-gray-200 pt-6 mt-6">
