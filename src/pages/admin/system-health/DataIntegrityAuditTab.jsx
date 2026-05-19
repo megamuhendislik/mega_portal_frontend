@@ -100,6 +100,7 @@ const CATEGORY_LABELS = {
     excuse_leave_integrity: 'Mazeret İzni Bütünlüğü',
     external_duty_consistency: 'Dış Görev Tutarlılığı',
     ghost_split_records: 'Hayali Bölme Kayıtları',
+    duty_lunch_deduction: 'Dış Görev Öğle Düşümü',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
