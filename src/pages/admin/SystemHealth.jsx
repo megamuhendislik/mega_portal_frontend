@@ -37,59 +37,23 @@ import {
 
 import ResourceMonitor from '../../components/ResourceMonitor';
 
-// Extracted tab components
-import PermissionsTab from './system-health/PermissionsTab';
+// Extracted tab components (sadece doğrudan kullanılanlar; hub'lar kendi içe import yapar)
 import DashboardTab from './system-health/DashboardTab';
-import AttendanceDiagTab from './system-health/AttendanceDiagTab';
-import SecurityAuditTab from './system-health/SecurityAuditTab';
-import RBACAuditTab from './system-health/RBACAuditTab';
-import PermissionAnalysisTab from './system-health/PermissionAnalysisTab';
-import SecondaryManagerCheckerTab from './system-health/SecondaryManagerCheckerTab';
-import ManagerCheckTab from './system-health/ManagerCheckTab';
-import AttendanceAuditTab from './system-health/AttendanceAuditTab';
-import SpecTestsTab from './system-health/SpecTestsTab';
-import PasswordResetTab from './system-health/PasswordResetTab';
-import OrgAuditTab from './system-health/OrgAuditTab';
-import RequestAnalysisTab from './system-health/RequestAnalysisTab';
-import OvertimeAuditTab from './system-health/OvertimeAuditTab';
-import OTEmployeeAnalysisTab from './system-health/OTEmployeeAnalysisTab';
+import RecalculationAuditTab from './system-health/RecalculationAuditTab';
 import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
 import GateEventPatternTab from './system-health/GateEventPatternTab';
-import TestsHubTab from './system-health/TestsHubTab';
-import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
-import PdksRawImportTab from './system-health/PdksRawImportTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
-import ManagerPermissionTab from './system-health/ManagerPermissionTab';
-import DataBrowserTab from './system-health/DataBrowserTab';
-import BirthdayTab from './system-health/BirthdayTab';
-import E2ETestTab from './system-health/E2ETestTab';
-import OTAnalysisTab from './system-health/OTAnalysisTab';
-import ErrorLogsTab from './system-health/ErrorLogsTab';
-import RecalculationAuditTab from './system-health/RecalculationAuditTab';
-import NightlyAuditTab from './system-health/NightlyAuditTab';
-import EmployeeDetailTab from './system-health/EmployeeDetailTab';
-import OTGroupingAuditTab from './system-health/OTGroupingAuditTab';
-import MonthlyAuditTab from './system-health/MonthlyAuditTab';
-import ScheduleAuditTab from './system-health/ScheduleAuditTab';
-import RequestHealthTab from './system-health/RequestHealthTab';
-import ServiceHealthTab from './system-health/ServiceHealthTab';
-import SubstituteAuditTab from './system-health/SubstituteAuditTab';
-import DailyRecordAuditTab from './system-health/DailyRecordAuditTab';
-import ExcuseLeaveAuditTab from './system-health/ExcuseLeaveAuditTab';
-import RequestInspectionTab from './system-health/RequestInspectionTab';
-import FalseCancelledHRRestoreTab from './system-health/FalseCancelledHRRestoreTab';
-import PotentialAuditTab from './system-health/PotentialAuditTab';
-import BugFixVerificationTab from './system-health/BugFixVerificationTab';
-import QuickGateFixTab from './system-health/QuickGateFixTab';
-import DuplicateAttendanceTab from './system-health/DuplicateAttendanceTab';
-import AnomalyFixTestsTab from './system-health/AnomalyFixTestsTab';
-import DailyCorrectionTab from './system-health/DailyCorrectionTab';
-import CancellationInvestigationTab from './system-health/CancellationInvestigationTab';
-import FixValidationTab from './system-health/FixValidationTab';
-import StuckAttendanceRecoveryTab from './system-health/StuckAttendanceRecoveryTab';
-import PersonDayDiagnosticTab from './system-health/PersonDayDiagnosticTab';
-import SegmentDuplicateAuditTab from './system-health/SegmentDuplicateAuditTab';
-import AnalyticsFixAuditTab from './system-health/AnalyticsFixAuditTab';
+import PdksRawImportTab from './system-health/PdksRawImportTab';
+
+// Hub tabs (alt-sekmeli paneller — eski 44 tabı kapsar)
+import TestsHubTab from './system-health/TestsHubTab';
+import OTHubTab from './system-health/OTHubTab';
+import RBACHubTab from './system-health/RBACHubTab';
+import PersonDayHubTab from './system-health/PersonDayHubTab';
+import RequestHubTab from './system-health/RequestHubTab';
+import RecoveryHubTab from './system-health/RecoveryHubTab';
+import AttendanceAuditHubTab from './system-health/AttendanceAuditHubTab';
+import SystemMaintenanceHubTab from './system-health/SystemMaintenanceHubTab';
 
 export default function SystemHealth() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -138,64 +102,27 @@ export default function SystemHealth() {
             <div className="bg-white px-2 rounded-xl shadow-sm border border-gray-100">
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
-                        // ─── Ana paneller ───
+                        // ─── ⭐ Ana paneller ───
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'recalc_audit', name: 'Hesaplama Denetimi', icon: ArrowPathIcon },
                         { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
-                        { id: 'tests_hub', name: 'Test & Doğrulama', icon: BeakerIcon },
                         { id: 'gate_event_pattern', name: 'Gate Event Analizi', icon: BoltIcon },
-                        // ─── Audit / Denetim ───
-                        { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
-                        { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
-                        { id: 'ot_analysis', name: 'Fazla Mesai Çalışan Analizi', icon: UsersIcon },
-                        { id: 'ot_analysis_panel', name: 'Fazla Mesai Analizi', icon: BoltIcon },
-                        { id: 'ot_grouping_audit', name: 'Fazla Mesai Gruplama', icon: FunnelIcon },
-                        { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
-                        { id: 'monthly_audit', name: 'Aylik Denetim', icon: CalculatorIcon },
-                        { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
-                        { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
-                        { id: 'schedule_audit', name: 'Takvim Denetim', icon: ClockIcon },
-                        { id: 'nightly_logs', name: 'Gece Denetim', icon: MoonIcon },
-                        { id: 'segment_duplicate_audit', name: 'Segment Duplikat', icon: WrenchScrewdriverIcon },
-                        // ─── Onarım / Recovery ───
-                        { id: 'daily_correction', name: 'Günlük Düzeltme', icon: WrenchScrewdriverIcon },
-                        { id: 'quick_gate_fix', name: 'Hızlı Kart Onarımı', icon: BoltIcon },
-                        { id: 'stuck_attendance_recovery', name: 'Takılı Attendance', icon: WrenchScrewdriverIcon },
-                        { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
-                        { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
-                        // ─── RBAC / Yetki ───
-                        { id: 'security_audit', name: 'RBAC Denetimi', icon: ShieldCheckIcon },
-                        { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
-                        { id: 'permission_analysis', name: 'Yetki Sistemi Analizi', icon: KeyIcon },
-                        { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
-                        { id: 'manager_permission', name: 'Yönetici Yetki', icon: ShieldCheckIcon },
-                        { id: 'manager_check', name: 'Yönetici Check', icon: IdentificationIcon },
-                        { id: 'secondary_manager_checker', name: 'İkincil Yönetici', icon: UserGroupIcon },
-                        { id: 'substitute_audit', name: 'Vekalet Denetimi', icon: ArrowsRightLeftIcon },
-                        // ─── Kayıt / Çalışan ───
-                        { id: 'record_check', name: 'Kayıt Kontrol', icon: ClipboardDocumentCheckIcon },
-                        { id: 'daily_record_audit', name: 'Kayıt Denetimi', icon: MagnifyingGlassIcon },
-                        { id: 'person_day_diagnostic', name: 'Kişi-Gün Tanılama', icon: MagnifyingGlassIcon },
-                        { id: 'employee_detail', name: 'Çalışan Detay', icon: UserIcon },
+                        // ─── 🎯 Hub'lar (alt-sekmeli) ───
+                        { id: 'attendance_audit_hub', name: 'Mesai Denetim', icon: CalculatorIcon },
+                        { id: 'ot_hub', name: 'Fazla Mesai', icon: BoltIcon },
+                        { id: 'rbac_hub', name: 'RBAC & Yetki', icon: ShieldCheckIcon },
+                        { id: 'persondayHub', name: 'Kişi-Gün Tanılama', icon: MagnifyingGlassIcon },
+                        { id: 'request_hub', name: 'Talep & İzin', icon: ClipboardDocumentCheckIcon },
+                        { id: 'recovery_hub', name: 'Onarım & Recovery', icon: WrenchScrewdriverIcon },
+                        { id: 'tests_hub', name: 'Test & Doğrulama', icon: BeakerIcon },
+                        { id: 'system_maintenance_hub', name: 'Sistem & Bakım', icon: ServerStackIcon },
+                        // ─── 🔧 Stand-alone (özel araçlar) ───
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
                         { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
-                        // ─── Talep / İzin ───
-                        { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
-                        { id: 'request_health', name: 'Talep Sağlığı', icon: ClipboardDocumentCheckIcon },
-                        { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
-                        { id: 'cancellation_investigation', name: 'İptal İnceleme', icon: ExclamationTriangleIcon },
-                        { id: 'excuse_leave_audit', name: 'Mazeret İzni', icon: ClockIcon },
-                        // ─── Sistem / Bakım ───
-                        { id: 'service_health', name: 'Servis Sağlığı', icon: ServerStackIcon },
-                        { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
-                        { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon },
+                        { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
-                        { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
-                        { id: 'org_audit', name: 'Org Röntgen', icon: BuildingOfficeIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
-                        { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
-                        { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
                         { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
                         { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
@@ -218,63 +145,27 @@ export default function SystemHealth() {
 
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
+                {/* ⭐ Ana paneller */}
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
                 {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
                 {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
-                {activeTab === 'tests_hub' && <TestsHubTab />}
                 {activeTab === 'gate_event_pattern' && <GateEventPatternTab />}
-                {/* Audit / Denetim */}
-                {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
-                {activeTab === 'overtime_audit' && <OvertimeAuditTab />}
-                {activeTab === 'ot_analysis' && <OTEmployeeAnalysisTab />}
-                {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
-                {activeTab === 'ot_grouping_audit' && <OTGroupingAuditTab />}
-                {activeTab === 'potential_audit' && <PotentialAuditTab />}
-                {activeTab === 'monthly_audit' && <MonthlyAuditTab />}
-                {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
-                {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
-                {activeTab === 'schedule_audit' && <ScheduleAuditTab />}
-                {activeTab === 'nightly_logs' && <NightlyAuditTab />}
-                {activeTab === 'segment_duplicate_audit' && <SegmentDuplicateAuditTab />}
-                {/* Onarım / Recovery */}
-                {activeTab === 'daily_correction' && <DailyCorrectionTab />}
-                {activeTab === 'quick_gate_fix' && <QuickGateFixTab />}
-                {activeTab === 'stuck_attendance_recovery' && <StuckAttendanceRecoveryTab />}
-                {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
-                {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
-                {/* RBAC / Yetki */}
-                {activeTab === 'security_audit' && <SecurityAuditTab />}
-                {activeTab === 'rbac_audit' && <RBACAuditTab />}
-                {activeTab === 'permission_analysis' && <PermissionAnalysisTab />}
-                {activeTab === 'permissions' && <PermissionsTab />}
-                {activeTab === 'manager_permission' && <ManagerPermissionTab />}
-                {activeTab === 'manager_check' && <ManagerCheckTab />}
-                {activeTab === 'secondary_manager_checker' && <SecondaryManagerCheckerTab />}
-                {activeTab === 'substitute_audit' && <SubstituteAuditTab />}
-                {/* Kayıt / Çalışan */}
-                {activeTab === 'record_check' && <UnifiedRecordCheckTab />}
-                {activeTab === 'daily_record_audit' && <DailyRecordAuditTab />}
-                {activeTab === 'person_day_diagnostic' && <PersonDayDiagnosticTab />}
-                {activeTab === 'employee_detail' && <EmployeeDetailTab />}
+                {/* 🎯 Hub'lar */}
+                {activeTab === 'attendance_audit_hub' && <AttendanceAuditHubTab />}
+                {activeTab === 'ot_hub' && <OTHubTab />}
+                {activeTab === 'rbac_hub' && <RBACHubTab />}
+                {activeTab === 'persondayHub' && <PersonDayHubTab />}
+                {activeTab === 'request_hub' && <RequestHubTab />}
+                {activeTab === 'recovery_hub' && <RecoveryHubTab />}
+                {activeTab === 'tests_hub' && <TestsHubTab />}
+                {activeTab === 'system_maintenance_hub' && <SystemMaintenanceHubTab />}
+                {/* 🔧 Stand-alone */}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
                 {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
-                {/* Talep / İzin */}
-                {activeTab === 'request_analysis' && <RequestAnalysisTab />}
-                {activeTab === 'request_health' && <RequestHealthTab />}
-                {activeTab === 'request_inspection' && <RequestInspectionTab />}
-                {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
-                {activeTab === 'excuse_leave_audit' && <ExcuseLeaveAuditTab />}
-                {/* Sistem / Bakım */}
-                {activeTab === 'service_health' && <ServiceHealthTab />}
-                {activeTab === 'error_logs' && <ErrorLogsTab />}
-                {activeTab === 'resources' && <ResourceMonitor />}
+                {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}
-                {activeTab === 'data_browser' && <DataBrowserTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
-                {activeTab === 'org_audit' && <OrgAuditTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
-                {activeTab === 'password_reset' && <PasswordResetTab />}
-                {activeTab === 'birthdays' && <BirthdayTab />}
             </div>
 
         </div>
