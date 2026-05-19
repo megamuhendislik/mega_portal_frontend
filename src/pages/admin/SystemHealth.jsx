@@ -50,13 +50,12 @@ import AttendanceAuditTab from './system-health/AttendanceAuditTab';
 import SpecTestsTab from './system-health/SpecTestsTab';
 import PasswordResetTab from './system-health/PasswordResetTab';
 import OrgAuditTab from './system-health/OrgAuditTab';
-import BreakFixTab from './system-health/BreakFixTab';
 import RequestAnalysisTab from './system-health/RequestAnalysisTab';
 import OvertimeAuditTab from './system-health/OvertimeAuditTab';
 import OTEmployeeAnalysisTab from './system-health/OTEmployeeAnalysisTab';
 import DataIntegrityAuditTab from './system-health/DataIntegrityAuditTab';
-import FixSimulationTab from './system-health/FixSimulationTab';
 import GateEventPatternTab from './system-health/GateEventPatternTab';
+import TestsHubTab from './system-health/TestsHubTab';
 import UnifiedRecordCheckTab from './system-health/UnifiedRecordCheckTab';
 import PdksRawImportTab from './system-health/PdksRawImportTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
@@ -72,7 +71,6 @@ import EmployeeDetailTab from './system-health/EmployeeDetailTab';
 import OTGroupingAuditTab from './system-health/OTGroupingAuditTab';
 import MonthlyAuditTab from './system-health/MonthlyAuditTab';
 import ScheduleAuditTab from './system-health/ScheduleAuditTab';
-import EmployeeDebugTab from './system-health/EmployeeDebugTab';
 import RequestHealthTab from './system-health/RequestHealthTab';
 import ServiceHealthTab from './system-health/ServiceHealthTab';
 import SubstituteAuditTab from './system-health/SubstituteAuditTab';
@@ -140,68 +138,64 @@ export default function SystemHealth() {
             <div className="bg-white px-2 rounded-xl shadow-sm border border-gray-100">
                 <nav className="flex space-x-1 overflow-x-auto p-2" aria-label="Tabs">
                     {[
+                        // ─── Ana paneller ───
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
-                        { id: 'analytics_fix_audit', name: 'Analytics Fix Audit', icon: SparklesIcon },
+                        { id: 'recalc_audit', name: 'Hesaplama Denetimi', icon: ArrowPathIcon },
+                        { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
+                        { id: 'tests_hub', name: 'Test & Doğrulama', icon: BeakerIcon },
+                        { id: 'gate_event_pattern', name: 'Gate Event Analizi', icon: BoltIcon },
+                        // ─── Audit / Denetim ───
                         { id: 'duplicate_attendance', name: 'Mükerrer Mesai', icon: BugAntIcon },
-                        { id: 'anomaly_fix_tests', name: 'Anomali Fix Testleri', icon: BugAntIcon },
+                        { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
+                        { id: 'ot_analysis', name: 'Fazla Mesai Çalışan Analizi', icon: UsersIcon },
+                        { id: 'ot_analysis_panel', name: 'Fazla Mesai Analizi', icon: BoltIcon },
+                        { id: 'ot_grouping_audit', name: 'Fazla Mesai Gruplama', icon: FunnelIcon },
+                        { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
+                        { id: 'monthly_audit', name: 'Aylik Denetim', icon: CalculatorIcon },
+                        { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
+                        { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
+                        { id: 'schedule_audit', name: 'Takvim Denetim', icon: ClockIcon },
+                        { id: 'nightly_logs', name: 'Gece Denetim', icon: MoonIcon },
+                        { id: 'segment_duplicate_audit', name: 'Segment Duplikat', icon: WrenchScrewdriverIcon },
+                        // ─── Onarım / Recovery ───
                         { id: 'daily_correction', name: 'Günlük Düzeltme', icon: WrenchScrewdriverIcon },
-                        { id: 'bugfix_verify', name: 'Canlı Bug Fix Doğrulama', icon: SparklesIcon },
                         { id: 'quick_gate_fix', name: 'Hızlı Kart Onarımı', icon: BoltIcon },
-                        { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
-                        { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
-                        { id: 'stress_test', name: 'Stres Testi & Konsol', icon: CommandLineIcon },
-                        { id: 'test_suite', name: 'Sistem Testleri', icon: CheckCircleIcon },
-                        { id: 'logs', name: 'Servis Logları', icon: ClockIcon },
-                        { id: 'security', name: 'Güvenlik', icon: ShieldCheckIcon },
+                        { id: 'stuck_attendance_recovery', name: 'Takılı Attendance', icon: WrenchScrewdriverIcon },
+                        { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
+                        { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
+                        // ─── RBAC / Yetki ───
                         { id: 'security_audit', name: 'RBAC Denetimi', icon: ShieldCheckIcon },
                         { id: 'rbac_audit', name: 'RBAC Uyumluluk', icon: ClipboardDocumentCheckIcon },
                         { id: 'permission_analysis', name: 'Yetki Sistemi Analizi', icon: KeyIcon },
-                        { id: 'secondary_manager_checker', name: 'İkincil Yönetici Checker', icon: UserGroupIcon },
-                        { id: 'manager_check', name: 'Yönetici Check', icon: IdentificationIcon },
-                        { id: 'attendance_audit', name: 'Mesai Uyumluluk', icon: ClockIcon },
-                        { id: 'spec_tests', name: 'Spec Testleri', icon: PlayCircleIcon },
-                        { id: 'overtime_audit', name: 'Mesai Denetimi', icon: ClockIcon },
-                        { id: 'ot_analysis', name: 'Fazla Mesai Çalışan Analizi', icon: UsersIcon },
-                        { id: 'record_check', name: 'Kayıt Kontrol', icon: ClipboardDocumentCheckIcon },
-                        { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
-                        { id: 'break_fix', name: 'Mola Düzeltme', icon: PauseCircleIcon },
-                        { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
-                        { id: 'data_audit', name: 'Veri Denetimi', icon: ClipboardDocumentCheckIcon },
-                        { id: 'attendance_diag', name: 'Mesai Doğrulama', icon: ClockIcon },
-                        { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon },
-                        { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
-                        { id: 'maintenance', name: 'Bakım & Onarım', icon: WrenchScrewdriverIcon },
-                        { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
-                        { id: 'org_audit', name: 'Org Röntgen', icon: BuildingOfficeIcon },
-                        { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
-                        { id: 'data_integrity', name: 'Veri Bütünlüğü', icon: ShieldCheckIcon },
-                        { id: 'fix_simulation', name: 'Fix Simülasyonu', icon: SparklesIcon },
-                        { id: 'gate_event_pattern', name: 'Gate Event Analizi', icon: BoltIcon },
-                        { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
-                        { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
+                        { id: 'permissions', name: 'Yetki Kontrolü', icon: KeyIcon },
                         { id: 'manager_permission', name: 'Yönetici Yetki', icon: ShieldCheckIcon },
-                        { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
-                        { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
-                        { id: 'ot_analysis_panel', name: 'Fazla Mesai Analizi', icon: BoltIcon },
-                        { id: 'e2e_tests', name: 'E2E Testleri', icon: BeakerIcon },
-                        { id: 'recalc_audit', name: 'Hesaplama Denetimi', icon: ArrowPathIcon },
-                        { id: 'nightly_logs', name: 'Gece Denetim', icon: MoonIcon },
-                        { id: 'employee_detail', name: 'Calisan Detay', icon: UserIcon },
-                        { id: 'ot_grouping_audit', name: 'Fazla Mesai Gruplama', icon: FunnelIcon },
-                        { id: 'monthly_audit', name: 'Aylik Denetim', icon: CalculatorIcon },
-                        { id: 'schedule_audit', name: 'Takvim Denetim', icon: ClockIcon },
-                        { id: 'employee_debug', name: 'Çalışan Debug', icon: UsersIcon },
+                        { id: 'manager_check', name: 'Yönetici Check', icon: IdentificationIcon },
+                        { id: 'secondary_manager_checker', name: 'İkincil Yönetici', icon: UserGroupIcon },
                         { id: 'substitute_audit', name: 'Vekalet Denetimi', icon: ArrowsRightLeftIcon },
+                        // ─── Kayıt / Çalışan ───
+                        { id: 'record_check', name: 'Kayıt Kontrol', icon: ClipboardDocumentCheckIcon },
                         { id: 'daily_record_audit', name: 'Kayıt Denetimi', icon: MagnifyingGlassIcon },
+                        { id: 'person_day_diagnostic', name: 'Kişi-Gün Tanılama', icon: MagnifyingGlassIcon },
+                        { id: 'employee_detail', name: 'Çalışan Detay', icon: UserIcon },
+                        { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
+                        { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
+                        // ─── Talep / İzin ───
+                        { id: 'request_analysis', name: 'Talep Analizi', icon: ClipboardDocumentCheckIcon },
                         { id: 'request_health', name: 'Talep Sağlığı', icon: ClipboardDocumentCheckIcon },
-                        { id: 'service_health', name: 'Servis Sağlığı', icon: ServerStackIcon },
-                        { id: 'excuse_leave_audit', name: 'Mazeret İzni', icon: ClockIcon },
                         { id: 'request_inspection', name: 'Talep İnceleme', icon: ClipboardDocumentCheckIcon },
                         { id: 'cancellation_investigation', name: 'İptal İnceleme', icon: ExclamationTriangleIcon },
-                        { id: 'fix_validation', name: 'Kök Neden Doğrulama', icon: BeakerIcon },
-                        { id: 'stuck_attendance_recovery', name: 'Takılı Attendance Kurtarma', icon: WrenchScrewdriverIcon },
-                        { id: 'person_day_diagnostic', name: 'Kişi-Gün Tanılama', icon: MagnifyingGlassIcon },
-                        { id: 'segment_duplicate_audit', name: 'Segment Duplikat Tarayıcı', icon: WrenchScrewdriverIcon },
+                        { id: 'excuse_leave_audit', name: 'Mazeret İzni', icon: ClockIcon },
+                        // ─── Sistem / Bakım ───
+                        { id: 'service_health', name: 'Servis Sağlığı', icon: ServerStackIcon },
+                        { id: 'error_logs', name: 'Hata Logları', icon: BugAntIcon },
+                        { id: 'resources', name: 'Kaynak Kullanımı', icon: ChartBarIcon },
+                        { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
+                        { id: 'data_browser', name: 'Veri Tarayıcı', icon: ClipboardDocumentCheckIcon },
+                        { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
+                        { id: 'org_audit', name: 'Org Röntgen', icon: BuildingOfficeIcon },
+                        { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
+                        { id: 'password_reset', name: 'Şifre Sıfırlama', icon: UsersIcon },
+                        { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon },
                         { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
                         { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
@@ -225,69 +219,62 @@ export default function SystemHealth() {
             {/* CONTENT AREA */}
             <div className="min-h-[500px]">
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
-                {activeTab === 'analytics_fix_audit' && <AnalyticsFixAuditTab />}
+                {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
+                {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
+                {activeTab === 'tests_hub' && <TestsHubTab />}
+                {activeTab === 'gate_event_pattern' && <GateEventPatternTab />}
+                {/* Audit / Denetim */}
                 {activeTab === 'duplicate_attendance' && <DuplicateAttendanceTab />}
-                {activeTab === 'bugfix_verify' && <BugFixVerificationTab />}
-                {activeTab === 'anomaly_fix_tests' && <AnomalyFixTestsTab />}
+                {activeTab === 'overtime_audit' && <OvertimeAuditTab />}
+                {activeTab === 'ot_analysis' && <OTEmployeeAnalysisTab />}
+                {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
+                {activeTab === 'ot_grouping_audit' && <OTGroupingAuditTab />}
+                {activeTab === 'potential_audit' && <PotentialAuditTab />}
+                {activeTab === 'monthly_audit' && <MonthlyAuditTab />}
+                {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
+                {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
+                {activeTab === 'schedule_audit' && <ScheduleAuditTab />}
+                {activeTab === 'nightly_logs' && <NightlyAuditTab />}
+                {activeTab === 'segment_duplicate_audit' && <SegmentDuplicateAuditTab />}
+                {/* Onarım / Recovery */}
                 {activeTab === 'daily_correction' && <DailyCorrectionTab />}
                 {activeTab === 'quick_gate_fix' && <QuickGateFixTab />}
-                {activeTab === 'error_logs' && <ErrorLogsTab />}
-                {activeTab === 'permissions' && <PermissionsTab />}
-                {activeTab === 'stress_test' && <StressTestTab />}
-                {activeTab === 'test_suite' && <TestSuiteTab />}
-                {activeTab === 'logs' && <ServiceLogsTab />}
-                {activeTab === 'security' && <SecurityTab />}
+                {activeTab === 'stuck_attendance_recovery' && <StuckAttendanceRecoveryTab />}
+                {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
+                {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
+                {/* RBAC / Yetki */}
                 {activeTab === 'security_audit' && <SecurityAuditTab />}
                 {activeTab === 'rbac_audit' && <RBACAuditTab />}
                 {activeTab === 'permission_analysis' && <PermissionAnalysisTab />}
-                {activeTab === 'secondary_manager_checker' && <SecondaryManagerCheckerTab />}
-                {activeTab === 'manager_check' && <ManagerCheckTab />}
-                {activeTab === 'attendance_audit' && <AttendanceAuditTab />}
-                {activeTab === 'spec_tests' && <SpecTestsTab />}
-                {activeTab === 'overtime_audit' && <OvertimeAuditTab />}
-                {activeTab === 'ot_analysis' && <OTEmployeeAnalysisTab />}
-                {activeTab === 'record_check' && <UnifiedRecordCheckTab />}
-                {activeTab === 'request_analysis' && <RequestAnalysisTab />}
-                {activeTab === 'break_fix' && <BreakFixTab />}
-                {activeTab === 'synthetic' && <SyntheticDataTab />}
-                {activeTab === 'data_audit' && <DataAuditTab />}
-                {activeTab === 'attendance_diag' && <AttendanceDiagTab />}
-                {activeTab === 'resources' && <ResourceMonitor />}
-                {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
-                {activeTab === 'maintenance' && <MaintenanceTab />}
-                {activeTab === 'system_reset' && <SystemResetTab />}
-                {activeTab === 'org_audit' && <OrgAuditTab />}
-                {activeTab === 'password_reset' && <PasswordResetTab />}
-                {activeTab === 'data_integrity' && <DataIntegrityAuditTab />}
-                {activeTab === 'fix_simulation' && <FixSimulationTab />}
-                {activeTab === 'gate_event_pattern' && <GateEventPatternTab />}
-                {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
-                {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
+                {activeTab === 'permissions' && <PermissionsTab />}
                 {activeTab === 'manager_permission' && <ManagerPermissionTab />}
-                {activeTab === 'data_browser' && <DataBrowserTab />}
-                {activeTab === 'birthdays' && <BirthdayTab />}
-                {activeTab === 'ot_analysis_panel' && <OTAnalysisTab />}
-                {activeTab === 'e2e_tests' && <E2ETestTab />}
-                {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
-                {activeTab === 'nightly_logs' && <NightlyAuditTab />}
-                {activeTab === 'employee_detail' && <EmployeeDetailTab />}
-                {activeTab === 'ot_grouping_audit' && <OTGroupingAuditTab />}
-                {activeTab === 'monthly_audit' && <MonthlyAuditTab />}
-                {activeTab === 'schedule_audit' && <ScheduleAuditTab />}
-                {activeTab === 'employee_debug' && <EmployeeDebugTab />}
+                {activeTab === 'manager_check' && <ManagerCheckTab />}
+                {activeTab === 'secondary_manager_checker' && <SecondaryManagerCheckerTab />}
                 {activeTab === 'substitute_audit' && <SubstituteAuditTab />}
+                {/* Kayıt / Çalışan */}
+                {activeTab === 'record_check' && <UnifiedRecordCheckTab />}
                 {activeTab === 'daily_record_audit' && <DailyRecordAuditTab />}
-                {activeTab === 'request_health' && <RequestHealthTab />}
-                {activeTab === 'service_health' && <ServiceHealthTab />}
-                {activeTab === 'excuse_leave_audit' && <ExcuseLeaveAuditTab />}
-                {activeTab === 'request_inspection' && <RequestInspectionTab />}
-                {activeTab === 'false_cancelled_hr' && <FalseCancelledHRRestoreTab />}
-                {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
-                {activeTab === 'fix_validation' && <FixValidationTab />}
-                {activeTab === 'stuck_attendance_recovery' && <StuckAttendanceRecoveryTab />}
                 {activeTab === 'person_day_diagnostic' && <PersonDayDiagnosticTab />}
-                {activeTab === 'segment_duplicate_audit' && <SegmentDuplicateAuditTab />}
-                {activeTab === 'potential_audit' && <PotentialAuditTab />}
+                {activeTab === 'employee_detail' && <EmployeeDetailTab />}
+                {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
+                {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
+                {/* Talep / İzin */}
+                {activeTab === 'request_analysis' && <RequestAnalysisTab />}
+                {activeTab === 'request_health' && <RequestHealthTab />}
+                {activeTab === 'request_inspection' && <RequestInspectionTab />}
+                {activeTab === 'cancellation_investigation' && <CancellationInvestigationTab />}
+                {activeTab === 'excuse_leave_audit' && <ExcuseLeaveAuditTab />}
+                {/* Sistem / Bakım */}
+                {activeTab === 'service_health' && <ServiceHealthTab />}
+                {activeTab === 'error_logs' && <ErrorLogsTab />}
+                {activeTab === 'resources' && <ResourceMonitor />}
+                {activeTab === 'stress_test' && <StressTestTab />}
+                {activeTab === 'data_browser' && <DataBrowserTab />}
+                {activeTab === 'synthetic' && <SyntheticDataTab />}
+                {activeTab === 'org_audit' && <OrgAuditTab />}
+                {activeTab === 'system_reset' && <SystemResetTab />}
+                {activeTab === 'password_reset' && <PasswordResetTab />}
+                {activeTab === 'birthdays' && <BirthdayTab />}
             </div>
 
         </div>
@@ -522,144 +509,6 @@ function CalendarCleanupTab() {
     );
 }
 
-function DataAuditTab() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [filter, setFilter] = useState('ALL'); // ALL, CRITICAL, WARNING
-
-    useEffect(() => {
-        loadAudit();
-    }, []);
-
-    const loadAudit = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/system/health-check/data-audit/');
-            setData(res.data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filteredEmployees = data?.employees?.filter(emp => {
-        if (filter === 'ALL') return true;
-        return emp.status === filter;
-    }) || [];
-
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'CRITICAL': return <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">KRİTİK EKSİK</span>;
-            case 'WARNING': return <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold">UYARI</span>;
-            case 'OK': return <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">TAMAM</span>;
-            default: return null;
-        }
-    };
-
-    return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <ShieldCheckIcon className="w-6 h-6 text-indigo-600" />
-                        Veri Denetimi ve Bütünlük Raporu
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Tüm çalışanların kritik veri alanlarını (İşe Giriş Tarihi, Email, TC vb.) tarar ve eksikleri raporlar.
-                    </p>
-                </div>
-                <button
-                    onClick={loadAudit}
-                    className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500"
-                    title="Yenile"
-                >
-                    <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mb-4">
-                {['ALL', 'CRITICAL', 'WARNING', 'OK'].map(f => (
-                    <button
-                        key={f}
-                        onClick={() => setFilter(f)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${filter === f ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    >
-                        {f === 'ALL' ? 'Tümü' : f}
-                    </button>
-                ))}
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
-                        <tr>
-                            <th className="px-4 py-3">Durum</th>
-                            <th className="px-4 py-3">Personel</th>
-                            <th className="px-4 py-3">Departman & Pozisyon</th>
-                            <th className="px-4 py-3">İşe Giriş Tarihi</th>
-                            <th className="px-4 py-3">Email & Kullanıcı</th>
-                            <th className="px-4 py-3">Eksik Alanlar</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {loading && (
-                            <tr><td colSpan="6" className="p-8 text-center text-gray-400">Veriler taranıyor...</td></tr>
-                        )}
-                        {!loading && filteredEmployees.length === 0 && (
-                            <tr><td colSpan="6" className="p-8 text-center text-gray-400">Kriterlere uygun kayıt bulunamadı.</td></tr>
-                        )}
-                        {!loading && filteredEmployees.map(emp => (
-                            <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 py-3">{getStatusBadge(emp.status)}</td>
-                                <td className="px-4 py-3">
-                                    <div className="font-bold text-gray-800">{emp.name}</div>
-                                    <div className="text-xs text-gray-400 font-mono">{emp.employee_code}</div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="text-xs">
-                                        <span className="block font-medium">{emp.department}</span>
-                                    </div>
-                                </td>
-                                <td className={`px-4 py-3 font-mono text-xs ${!emp.hired_date ? 'text-red-600 font-bold bg-red-50' : 'text-gray-600'}`}>
-                                    {emp.hired_date || 'EKSİK'}
-                                </td>
-                                <td className="px-4 py-3 text-xs">
-                                    <div className={!emp.email ? 'text-red-600 font-bold' : ''}>{emp.email || 'E-POSTA YOK'}</div>
-                                    <div className={!emp.has_user ? 'text-amber-600' : 'text-green-600'}>
-                                        {emp.has_user ? `Kullanıcı: ${emp.username}` : 'Kullanıcı Hesabı Yok'}
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    {emp.missing_fields.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1">
-                                            {emp.missing_fields.map(f => (
-                                                <span key={f} className="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-red-200">
-                                                    {f}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-green-500 text-xs font-bold flex items-center gap-1">
-                                            <CheckCircleIcon className="w-4 h-4" /> Tamam
-                                        </span>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="mt-4 text-xs text-gray-400 text-right">
-                Toplam {data?.total_scanned || 0} personel tarandı.
-            </div>
-        </div>
-    );
-}
-
 function StressTestTab() {
     const [isRunning, setIsRunning] = useState(false);
     const [activeTest, setActiveTest] = useState(null);
@@ -846,173 +695,6 @@ function StressTestTab() {
     );
 }
 
-function ServiceLogsTab() {
-    const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        loadLogs();
-    }, []);
-
-    const loadLogs = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/service-logs/');
-            setLogs(res.data.results || res.data);
-        } catch (e) { console.error(e); }
-        setLoading(false);
-    };
-
-    return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
-            <div className="flex justify-between p-4 border-b border-gray-100 items-center bg-gray-50/50">
-                <h3 className="font-semibold text-gray-800">Servis Hareket Dökümü</h3>
-                <button onClick={loadLogs} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition" title="Yenile">
-                    <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3">Zaman</th>
-                            <th className="px-6 py-3">Level</th>
-                            <th className="px-6 py-3">Bileşen</th>
-                            <th className="px-6 py-3">Mesaj</th>
-                            <th className="px-6 py-3">Detay</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {logs.map((log) => (
-                            <tr key={log.id} className="hover:bg-indigo-50/30 transition-colors">
-                                <td className="px-6 py-3 text-gray-500 font-mono text-xs">{new Date(log.timestamp).toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}</td>
-                                <td className="px-6 py-3">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getLevelBadge(log.level)}`}>{log.level}</span>
-                                </td>
-                                <td className="px-6 py-3 text-indigo-600 font-medium text-xs">{log.component}</td>
-                                <td className="px-6 py-3 text-gray-800">{log.message}</td>
-                                <td className="px-6 py-3 text-xs text-gray-500 font-mono max-w-xs truncate" title={JSON.stringify(log.details)}>{log.details ? JSON.stringify(log.details) : '-'}</td>
-                            </tr>
-                        ))}
-                        {logs.length === 0 && !loading && (
-                            <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-400">Kayıt bulunamadı.</td></tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-function SecurityTab() {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 bg-green-50 rounded-lg">
-                        <ShieldCheckIcon className="w-8 h-8 text-green-600" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-gray-800">Güvenlik Durumu</h3>
-                        <p className="text-gray-500 text-sm">Katman 1 Koruma Aktif</p>
-                    </div>
-                </div>
-                <div className="space-y-3">
-                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-                        <span className="text-gray-600">API Yetkilendirme</span>
-                        <span className="text-green-600 font-bold">AKTİF (JWT)</span>
-                    </div>
-                    <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-                        <span className="text-gray-600">Kapı Şifreleme (Fernet)</span>
-                        <span className="text-green-600 font-bold">AKTİF</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-function TestSuiteTab() {
-    const [running, setRunning] = useState(false);
-    const [output, setOutput] = useState(null);
-    const [error, setError] = useState(null);
-
-    const runTests = async () => {
-        setRunning(true);
-        setOutput("Testler başlatılıyor... Lütfen bekleyiniz (Bu işlem 30-60 saniye sürebilir)...\n");
-        setError(null);
-        try {
-            const res = await api.post('/system/health-check/run_regression_tests/');
-            // Append result
-            setOutput(res.data.logs || "Log çıktısı yok.");
-            if (!res.data.success) {
-                setError(`Testler Hata ile Tamamlandı (Exit Code: ${res.data.exit_code})`);
-            }
-        } catch (e) {
-            setError(e.response?.data?.error || e.message);
-            setOutput(prev => prev + `\nFATAL ERROR: ${e.message}`);
-        } finally {
-            setRunning(false);
-        }
-    };
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
-            <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Tam Kapsamlı Sistem Testi</h3>
-                <p className="text-sm text-gray-500 mb-6">
-                    Backend üzerindeki `comprehensive_test.py` dosyasını çalıştırır.
-                    Şunları kontrol eder:
-                </p>
-                <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside mb-6">
-                    <li>Organizasyon & Yetkiler</li>
-                    <li>Token & Auth Sistemi</li>
-                    <li>Puantaj Motoru (Giriş/Çıkış)</li>
-                    <li>İzin Talepleri & Onay Mekanizması</li>
-                    <li>Escalation (Zaman Aşımı) Kuralları</li>
-                    <li>Önemli: Regression Testleri (Yeni Bug Fixler)</li>
-                </ul>
-
-                <button
-                    onClick={runTests}
-                    disabled={running}
-                    className={`w-full py-3 px-4 rounded-lg font-bold shadow-sm transition-all flex justify-center items-center gap-2
-                        ${running
-                            ? 'bg-gray-100 text-gray-400 cursor-wait'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}
-                    `}
-                >
-                    {running ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlayCircleIcon className="w-5 h-5" />}
-                    {running ? 'TESTLER KOŞULUYOR...' : 'TESTLERİ BAŞLAT'}
-                </button>
-            </div>
-
-            <div className="lg:col-span-2">
-                <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[250px] sm:h-[350px] md:h-[600px]">
-                    <div className="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
-                        <span className="text-xs font-mono text-gray-400">root@mega-engine:~# python comprehensive_test.py</span>
-                        {error && <span className="text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">{error}</span>}
-                    </div>
-                    <div className="flex-1 p-4 overflow-y-auto font-mono text-xs md:text-sm text-gray-300 space-y-1">
-                        {!output && !running && (
-                            <div className="text-gray-600 select-none flex flex-col items-center justify-center h-full gap-2">
-                                <CommandLineIcon className="w-12 h-12 opacity-20" />
-                                <span>Çıktı bekleniyor...</span>
-                            </div>
-                        )}
-                        {output && (
-                            <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-green-400">
-                                {output}
-                            </pre>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 function SyntheticDataTab() {
     const [isRunning, setIsRunning] = useState(false);
     const [wipeExisting, setWipeExisting] = useState(true);
@@ -1152,24 +834,3 @@ function SyntheticDataTab() {
 }
 
 
-function MaintenanceTab() {
-    return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
-            <div className="flex items-center gap-4 mb-6 text-indigo-700 bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                <WrenchScrewdriverIcon className="w-10 h-10" />
-                <div>
-                    <h3 className="text-xl font-bold">Sistem Bakım Araçları</h3>
-                    <p className="text-sm opacity-80">Bakım araçları için "Mola Düzeltme" sekmesini kullanın.</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// --- UTILS ---
-
-function getLevelBadge(level) {
-    if (level === 'ERROR') return 'bg-red-50 text-red-700 border-red-200';
-    if (level === 'WARNING') return 'bg-yellow-50 text-yellow-700 border-yellow-200';
-    return 'bg-blue-50 text-blue-700 border-blue-200';
-}
