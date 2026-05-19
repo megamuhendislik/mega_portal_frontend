@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 import Phase2IssuePanel from './Phase2IssuePanel';
+import IntegrityFindingsPanel from './IntegrityFindingsPanel';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1488,6 +1489,16 @@ export default function RecalculationAuditTab() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* ══════════ VERİ BÜTÜNLÜĞÜ BULGULARI (2026-05-19 birleştirme) ══════════ */}
+            {frcResult && !frcLoading && frcResult.summary?.integrity_findings !== undefined && (
+                <IntegrityFindingsPanel
+                    findings={frcResult.summary.integrity_findings}
+                    dateFrom={startDate}
+                    dateTo={endDate}
+                    employeeId={employeeId || null}
+                />
             )}
 
             {/* ══════════ OT TALEP DENETİMİ ══════════ */}
