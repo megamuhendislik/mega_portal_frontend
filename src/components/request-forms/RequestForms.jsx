@@ -1044,15 +1044,60 @@ export const ExternalDutyForm = ({
             setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
         };
 
+        const toggleIncluded = (index, checked) => {
+            const updated = [...segments];
+            const cur = updated[index] || {};
+            const next = { ...cur, included: checked };
+            // İlk dahil ediliş + saat boş ise: son dahil edilen günden veya 09:00-18:00 başlangıç
+            if (checked && !cur.start_time && !cur.end_time) {
+                const lastFilled = updated.slice(0, index).reverse()
+                    .find(s => s.included && s.start_time && s.end_time);
+                next.start_time = lastFilled?.start_time || '09:00';
+                next.end_time = lastFilled?.end_time || '18:00';
+            }
+            updated[index] = next;
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
         const applyToAll = () => {
             if (segments.length === 0) return;
-            const first = segments[0];
-            if (!first.start_time || !first.end_time) return;
-            const updated = segments.map(seg => ({
+            const firstIncluded = segments.find(s => s.included && s.start_time && s.end_time)
+                || (segments[0]?.start_time && segments[0]?.end_time ? segments[0] : null);
+            if (!firstIncluded) return;
+            const updated = segments.map(seg => seg.included ? ({
                 ...seg,
-                start_time: first.start_time,
-                end_time: first.end_time,
+                start_time: firstIncluded.start_time,
+                end_time: firstIncluded.end_time,
+            }) : seg);
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
+        const includeAll = () => {
+            const updated = segments.map(s => ({
+                ...s,
+                included: true,
+                start_time: s.start_time || '09:00',
+                end_time: s.end_time || '18:00',
             }));
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
+        const excludeAll = () => {
+            const updated = segments.map(s => ({ ...s, included: false }));
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
+        const includeWeekdaysOnly = () => {
+            const updated = segments.map(s => {
+                const d = new Date(s.date + 'T00:00:00');
+                const isWeekday = d.getDay() >= 1 && d.getDay() <= 5;
+                return {
+                    ...s,
+                    included: isWeekday,
+                    start_time: isWeekday ? (s.start_time || '09:00') : s.start_time,
+                    end_time: isWeekday ? (s.end_time || '18:00') : s.end_time,
+                };
+            });
             setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
         };
 
@@ -1092,18 +1137,38 @@ export const ExternalDutyForm = ({
                 {/* Gün bazlı çalışma saatleri — tarih seçilince otomatik gösterilir */}
                 {segments.length > 0 && (
                     <div className="space-y-3 pt-2 border-t border-slate-200">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
                                 <Clock size={16} className="text-indigo-500" />
                                 Gün Bazlı Çalışma Saatleri
+                                <span className="text-[11px] font-medium text-slate-500">
+                                    ({segments.filter(s => s.included).length}/{segments.length} dahil)
+                                </span>
                             </div>
-                            {segments.length > 1 && (
+                            {segments.length > 1 && segments.some(s => s.included && s.start_time && s.end_time) && (
                                 <button type="button" onClick={applyToAll}
                                     className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 transition-colors">
-                                    <Copy size={14} /> İlk günü tümüne uygula
+                                    <Copy size={14} /> İlk dahil saati uygula
                                 </button>
                             )}
                         </div>
+
+                        {segments.length > 1 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button type="button" onClick={includeAll}
+                                    className="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
+                                    Tümünü Dahil Et
+                                </button>
+                                <button type="button" onClick={excludeAll}
+                                    className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors">
+                                    Tümünü Atla
+                                </button>
+                                <button type="button" onClick={includeWeekdaysOnly}
+                                    className="px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
+                                    Hafta İçi Dahil Et
+                                </button>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             {segments.map((seg, i) => {
@@ -1111,18 +1176,42 @@ export const ExternalDutyForm = ({
                                 const dayName = _segP ? DAY_NAMES[_segP.dayOfWeek] : '';
                                 const dateLabel = new Date(seg.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' });
                                 const dayPreview = dutyHoursPreview?.days?.find(dp => dp.date === seg.date);
+                                const isIncluded = !!seg.included;
 
                                 return (
                                     <div key={seg.date} className={`p-3 rounded-xl border transition-all ${
-                                        dayPreview?.is_off_day ? 'bg-red-50/50 border-red-200' : 'bg-white border-slate-200'
+                                        !isIncluded
+                                            ? 'bg-slate-50/40 border-slate-100'
+                                            : (dayPreview?.is_off_day ? 'bg-red-50/50 border-red-200' : 'bg-white border-slate-200')
                                     }`}>
                                         <div className="flex items-center gap-3 flex-wrap">
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={isIncluded}
+                                                onClick={() => toggleIncluded(i, !isIncluded)}
+                                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                                                    isIncluded ? 'bg-indigo-600' : 'bg-slate-300'
+                                                }`}
+                                                title={isIncluded ? 'Bu günü talep dışı bırak' : 'Bu günü talebe dahil et'}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                                    isIncluded ? 'translate-x-4' : 'translate-x-0'
+                                                }`} />
+                                            </button>
+
                                             <div className="w-28">
-                                                <span className="font-bold text-sm text-slate-700">{dateLabel}</span>
+                                                <span className={`font-bold text-sm ${isIncluded ? 'text-slate-700' : 'text-slate-400'}`}>{dateLabel}</span>
                                                 <span className="block text-[10px] text-slate-400">{dayName}</span>
                                             </div>
 
-                                            {dayPreview && (
+                                            {!isIncluded && (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-500">
+                                                    Talep edilmeyecek
+                                                </span>
+                                            )}
+
+                                            {isIncluded && dayPreview && (
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                     dayPreview.is_off_day ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
                                                 }`}>
@@ -1131,17 +1220,19 @@ export const ExternalDutyForm = ({
                                             )}
 
                                             <div className="flex items-center gap-2 ml-auto">
-                                                <input type="time" value={seg.start_time}
+                                                <input type="time" value={seg.start_time || ''}
+                                                    disabled={!isIncluded}
                                                     onChange={e => updateSegment(i, 'start_time', e.target.value)}
-                                                    className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+                                                    className={`p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${!isIncluded ? 'opacity-40 cursor-not-allowed' : ''}`} />
                                                 <span className="text-slate-400 text-sm">&rarr;</span>
-                                                <input type="time" value={seg.end_time}
+                                                <input type="time" value={seg.end_time || ''}
+                                                    disabled={!isIncluded}
                                                     onChange={e => updateSegment(i, 'end_time', e.target.value)}
-                                                    className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+                                                    className={`p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${!isIncluded ? 'opacity-40 cursor-not-allowed' : ''}`} />
                                             </div>
                                         </div>
 
-                                        {dayPreview && seg.start_time && seg.end_time && (
+                                        {isIncluded && dayPreview && seg.start_time && seg.end_time && (
                                             <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-100 text-xs flex-wrap">
                                                 {dayPreview.normal_work_minutes > 0 && (
                                                     <span className="text-emerald-600 font-bold">
@@ -1540,13 +1631,25 @@ export const ExternalDutyForm = ({
                     <SummaryRow label="Tür" value={taskTypeLabels[externalDutyForm.task_type] || ''} />
                 </SummaryCard>
                 <SummaryCard title="Tarih & Saat" icon={CalendarDays}>
-                    <SummaryRow label="Tarih" value={`${externalDutyForm.start_date} - ${externalDutyForm.end_date}`} />
-                    <SummaryRow label="Saat" value={
-                        (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time).length > 0
-                            ? `${(externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time).length} gün tanımlı`
-                            : externalDutyForm.start_time && externalDutyForm.end_time ? `${externalDutyForm.start_time} - ${externalDutyForm.end_time}` : ''
-                    } />
-                    <SummaryRow label="Süre" value={duration ? `${duration} Gün` : ''} />
+                    <SummaryRow label="Aralık" value={`${externalDutyForm.start_date} - ${externalDutyForm.end_date}${duration ? ` (${duration} gün kapsam)` : ''}`} />
+                    {(() => {
+                        const included = (externalDutyForm.date_segments || [])
+                            .filter(s => s.included && s.start_time && s.end_time);
+                        const formatShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' });
+                        return (
+                            <>
+                                <SummaryRow label="Talep edilen" value={`${included.length} gün`} />
+                                {included.length > 0 && included.length <= 8 && (
+                                    <SummaryRow label="Günler" value={included.map(s => formatShort(s.date)).join(', ')} />
+                                )}
+                                {included.length > 0 && (
+                                    <SummaryRow label="Saatler" value={included.length === 1
+                                        ? `${included[0].start_time} - ${included[0].end_time}`
+                                        : 'Gün başına değişken'} />
+                                )}
+                            </>
+                        );
+                    })()}
                 </SummaryCard>
                 {/* Tahmini Mesai Hesaplaması */}
                 {dutyHoursPreview ? (
@@ -1767,10 +1870,13 @@ export const ExternalDutyForm = ({
                     <ChevronLeft size={16} /> Geri
                 </button>
                 {currentStepIndex < TOTAL_ACTIVE - 1 && currentStep !== 0 && (() => {
-                    // Step 1 (Tarih & Çalışma Saatleri): tüm günlere saat girilmeden İleri basılamaz
-                    const step1Disabled = currentStep === 1 && !(
-                        (externalDutyForm.date_segments || []).length > 0 &&
-                        (externalDutyForm.date_segments || []).every(s => s.start_time && s.end_time)
+                    // Step 1 (Tarih & Çalışma Saatleri): en az 1 dahil edilmiş + saati dolu gün gerekli;
+                    // dahil edilmiş ama saati boş gün varsa da bloklanır
+                    const segs = externalDutyForm.date_segments || [];
+                    const includedFilled = segs.filter(s => s.included && s.start_time && s.end_time);
+                    const includedIncomplete = segs.filter(s => s.included && (!s.start_time || !s.end_time));
+                    const step1Disabled = currentStep === 1 && (
+                        includedFilled.length === 0 || includedIncomplete.length > 0
                     );
                     return (
                         <button type="button" onClick={goNext} disabled={step1Disabled}

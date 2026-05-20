@@ -308,8 +308,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     date: dateStr,
                     start_time: '',
                     end_time: '',
+                    included: false,
                 });
                 current.setDate(current.getDate() + 1);
+            }
+            // Tek gün → otomatik dahil et (kullanıcı kolayligi)
+            if (newSegments.length === 1 && newSegments[0].included !== true) {
+                newSegments[0] = { ...newSegments[0], included: true };
             }
             // Only update if segments actually changed
             if (JSON.stringify(newSegments.map(s => s.date)) !== JSON.stringify(externalDutyForm.date_segments.map(s => s.date))) {
@@ -825,16 +830,19 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     throw new Error('Lütfen görev tarih aralığını eksiksiz seçin.');
                 }
 
-                // Validate: ALL days must have times filled
+                // Validate: en az bir gün dahil edilmiş ve saatleri dolu olmalı
                 const allSegs = externalDutyForm.date_segments || [];
-                const filledSegs = allSegs.filter(s => s.start_time && s.end_time);
-                const totalDays = allSegs.length;
-                if (totalDays === 0) {
-                    throw new Error('Çalışma saatleri bulunamadı. Lütfen tarih seçimini kontrol edin.');
+                // Sadece included=true ve saatleri dolu segment'ler gönderilir; included alanı backend'e gitmez
+                const filledSegs = allSegs
+                    .filter(s => s.included && s.start_time && s.end_time)
+                    .map(({ included, ...rest }) => rest);
+                if (filledSegs.length === 0) {
+                    throw new Error('En az bir gün dahil edilmeli ve saatleri girilmelidir.');
                 }
-                if (filledSegs.length < totalDays) {
-                    const missing = totalDays - filledSegs.length;
-                    throw new Error(`${missing} gün için çalışma saatleri girilmemiş. Tüm günler için saat girişi zorunludur.`);
+                // Dahil edilen ama saatleri eksik gün varsa uyar
+                const includedButEmpty = allSegs.filter(s => s.included && (!s.start_time || !s.end_time));
+                if (includedButEmpty.length > 0) {
+                    throw new Error(`${includedButEmpty.length} dahil edilen gün için saat eksik. Lütfen tamamlayın.`);
                 }
 
                 // Single-day: copy segment times to root fields for correct partial-day display
@@ -1320,15 +1328,22 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
     // Fetch duty hours preview for external duty summary step
     const fetchDutyHoursPreview = async () => {
         if (!externalDutyForm.start_date || !externalDutyForm.end_date) return;
+        // Sadece included segment'leri ile preview hesapla; included alanı backend'e gitmez
+        const filledSegments = (externalDutyForm.date_segments || [])
+            .filter(s => s.included && s.start_time && s.end_time)
+            .map(({ included, ...rest }) => rest);
+        if (filledSegments.length === 0) {
+            setDutyHoursPreview(null);
+            return;
+        }
         setDutyHoursLoading(true);
         try {
-            const filledSegments = (externalDutyForm.date_segments || []).filter(s => s.start_time && s.end_time);
             const resp = await api.post('/leave/requests/preview-duty-hours/', {
                 start_date: externalDutyForm.start_date,
                 end_date: externalDutyForm.end_date,
                 start_time: externalDutyForm.start_time || null,
                 end_time: externalDutyForm.end_time || null,
-                date_segments: filledSegments.length > 0 ? filledSegments : null,
+                date_segments: filledSegments,
             });
             setDutyHoursPreview(resp.data);
         } catch (err) {
