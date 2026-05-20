@@ -472,8 +472,32 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                 {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-500">+{stats.healthReportDisplay}</span>}
                             </div>
                             <div className="flex gap-2">
-                                {parseFloat(stats.missingHours) > 0 && <span className="text-rose-500">-{stats.missingDisplay} eksik</span>}
-                                {(() => { const k = Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec); return k > 60 ? <span className="text-slate-400">{fmtSec(k)} kalan</span> : null; })()}
+                                {parseFloat(stats.missingHours) > 0 && (
+                                    <Tooltip title="Eksik = bugüne kadar hedeflenen net mesai - gerçekleşen net mesai. Öğle arası ve mola düşülmüş net hesaba göre.">
+                                        <span className="text-rose-500 cursor-help">-{stats.missingDisplay} eksik</span>
+                                    </Tooltip>
+                                )}
+                                {(() => {
+                                    const k = Math.max(0, stats._targetSec - stats._realizedSec - (stats._dutySec||0) - stats._leaveSec - stats._hrSec - stats._missingSec);
+                                    if (k <= 60) return null;
+                                    // Brüt yaklaşık karşılık: net + (gün başına ~90dk öğle+mola)
+                                    // Bir net iş günü ≈ 7:30 → 9:00 brüt (oran 1.2)
+                                    const grossSec = Math.round(k * 1.2);
+                                    return (
+                                        <Tooltip title={(
+                                            <div className="text-xs space-y-1">
+                                                <div><strong>Net kalan:</strong> {fmtSec(k)}</div>
+                                                <div><strong>Brüt karşılığı:</strong> ≈ {fmtSec(grossSec)}</div>
+                                                <div className="opacity-80 mt-1">
+                                                    Bu süre net hedef (öğle 60dk + mola 30dk düşülmüş).
+                                                    İşyerinde geçirilecek brüt süre günlük ~1:30 daha uzundur.
+                                                </div>
+                                            </div>
+                                        )}>
+                                            <span className="text-slate-500 cursor-help font-semibold">{fmtSec(k)} net kalan</span>
+                                        </Tooltip>
+                                    );
+                                })()}
                             </div>
                         </div>
 
