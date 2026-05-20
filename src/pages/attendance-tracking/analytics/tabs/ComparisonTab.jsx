@@ -262,11 +262,16 @@ export default function ComparisonTab() {
                     </ResponsiveContainer>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                    {snap.map((s) => (
+                    {snap.map((s) => {
+                        // Stage66 B11 fix: backend `has_data=false` → veri yok rozeti
+                        const hasData = s.has_data !== false;
+                        return (
                         <div
                             key={s.key}
                             className={`rounded-lg border p-3 ${
-                                s.is_avg
+                                !hasData
+                                    ? 'border-amber-300 bg-amber-50/40 border-dashed opacity-70'
+                                    : s.is_avg
                                     ? 'border-slate-300 bg-slate-50/60 border-dashed'
                                     : 'border-slate-200 bg-white'
                             }`}
@@ -280,32 +285,44 @@ export default function ComparisonTab() {
                                     }}
                                 />
                                 <span className="font-bold text-sm text-slate-800">{s.label}</span>
-                                {s.is_avg && s.population_size > 0 && (
+                                {!hasData && (
+                                    <Tag color="warning" className="ml-auto text-[10px]">
+                                        Veri yok
+                                    </Tag>
+                                )}
+                                {hasData && s.is_avg && s.population_size > 0 && (
                                     <Tag color="default" className="ml-auto text-[10px]">
                                         {s.population_size} kişi
                                     </Tag>
                                 )}
                             </div>
-                            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                                <div>
-                                    <span className="text-slate-500">Doluluk:</span>{' '}
-                                    <span className="font-bold tabular-nums">%{s.metrics?.efficiency_pct}</span>
+                            {hasData ? (
+                                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                                    <div>
+                                        <span className="text-slate-500">Doluluk:</span>{' '}
+                                        <span className="font-bold tabular-nums">%{s.metrics?.efficiency_pct}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">Çalışma:</span>{' '}
+                                        <span className="font-bold tabular-nums">{s.metrics?.worked_hours}sa</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">Fazla Mesai:</span>{' '}
+                                        <span className="font-bold tabular-nums">{s.metrics?.overtime_hours}sa</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">Eksik:</span>{' '}
+                                        <span className="font-bold tabular-nums text-red-600">{s.metrics?.missing_hours}sa</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="text-slate-500">Çalışma:</span>{' '}
-                                    <span className="font-bold tabular-nums">{s.metrics?.worked_hours}sa</span>
+                            ) : (
+                                <div className="text-[11px] text-amber-700 italic py-1">
+                                    {s.is_avg ? 'Bu grup için aylık özet kaydı bulunmuyor' : 'Bu dönem için veri yok (henüz işe başlamamış veya kayıt yok)'}
                                 </div>
-                                <div>
-                                    <span className="text-slate-500">Fazla Mesai:</span>{' '}
-                                    <span className="font-bold tabular-nums">{s.metrics?.overtime_hours}sa</span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-500">Eksik:</span>{' '}
-                                    <span className="font-bold tabular-nums text-red-600">{s.metrics?.missing_hours}sa</span>
-                                </div>
-                            </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </SectionCard>
         );
@@ -317,7 +334,6 @@ export default function ComparisonTab() {
         if (snap.length === 0) return null;
         // O2 fix (2026-05-17): Radar max dinamik — hardcoded 100/120/50
         // overshoot durumunda axis dışı kalıyordu. Veriden çekilir, en az 100.
-        const metricKeys = ['efficiency_pct', 'total_completion_pct', 'ot_to_target_pct', 'missing_to_target_pct', 'attendance_pct'];
         const dynamicMax = (key, floor) => {
             const vals = snap.map(s => Number(s.metrics?.[key]) || 0);
             const peak = vals.length ? Math.max(...vals) : floor;
@@ -359,10 +375,17 @@ export default function ComparisonTab() {
         if (!data || data.mode !== 'compare') return null;
         const series = data.time_series || [];
         const ents = data.entities || [];
+        // Stage66 B10 fix: has_data=false → trend'de null (boşluk) göster, 0 değil.
+        // Recharts `connectNulls` default false → çizgi pre-hire aylarda kırılır.
         const lineData = series.map((p) => ({
             ay: p.period?.slice(5),
             ...ents.reduce(
-                (acc, e) => ({ ...acc, [e.key]: p[`${e.key}_efficiency`] ?? 0 }),
+                (acc, e) => ({
+                    ...acc,
+                    [e.key]: p[`${e.key}_has_data`] === false
+                        ? null
+                        : (p[`${e.key}_efficiency`] ?? 0),
+                }),
                 {},
             ),
         }));
@@ -398,6 +421,9 @@ export default function ComparisonTab() {
     const renderPeriods = () => {
         if (!data || data.mode !== 'periods') return null;
         const deltas = data.deltas || {};
+        // Stage66 B9 fix: has_data_a/has_data_b — MWS yoksa 0 vs veri-yok ayrımı
+        const hasA = data.has_data_a !== false;
+        const hasB = data.has_data_b !== false;
         // K3 fix (2026-05-17): attendance_pct backend'den artık dönüyor; eklenmiş.
         const cards = [
             { label: 'Yapılan Normal Mesai', key: 'efficiency_pct', suffix: '%', betterIsHigher: true },
@@ -414,6 +440,16 @@ export default function ComparisonTab() {
                 title={`${data.person.name} — ${data.period_a} vs ${data.period_b}`}
                 collapsible={false}
             >
+                {(!hasA || !hasB) && (
+                    <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800">
+                        <AlertTriangle size={12} />
+                        {!hasA && !hasB
+                            ? `Her iki dönem (${data.period_a} ve ${data.period_b}) için aylık özet kaydı yok — karşılaştırma anlamlı değil.`
+                            : !hasA
+                            ? `${data.period_a} dönemi için aylık özet yok (henüz işe başlamamış veya kayıt yok) — A tarafı sıfır görünüyor.`
+                            : `${data.period_b} dönemi için aylık özet yok — B tarafı sıfır görünüyor.`}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     {cards.map((c) => {
                         const d = deltas[c.key] || {};
@@ -452,27 +488,29 @@ export default function ComparisonTab() {
                                 <div className="flex items-baseline justify-between gap-2 mb-3">
                                     <div>
                                         <div className="text-[9px] text-slate-400">A: {data.period_a}</div>
-                                        <div className="text-lg font-bold text-slate-700 tabular-nums">
-                                            {d.period_a}{c.suffix}
+                                        <div className={`text-lg font-bold tabular-nums ${hasA ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+                                            {hasA ? `${d.period_a}${c.suffix}` : '— veri yok'}
                                         </div>
                                     </div>
                                     <ArrowRight size={14} className="text-slate-400" />
                                     <div className="text-right">
                                         <div className="text-[9px] text-slate-400">B: {data.period_b}</div>
-                                        <div className={`text-lg font-bold tabular-nums inline-block px-2 py-0.5 rounded ${bColor}`}>
-                                            {d.period_b}{c.suffix}
+                                        <div className={`text-lg font-bold tabular-nums inline-block px-2 py-0.5 rounded ${hasB ? bColor : 'text-slate-300 italic'}`}>
+                                            {hasB ? `${d.period_b}${c.suffix}` : '— veri yok'}
                                         </div>
                                     </div>
                                 </div>
-                                <div className={`flex items-center gap-1.5 text-sm font-bold ${trendColor}`}>
-                                    <TrendIcon size={14} />
-                                    {diff >= 0 ? '+' : ''}{diff}{c.suffix}
-                                    <span className="text-[10px] text-slate-400 ml-auto">
-                                        {pctIsValid
-                                            ? `(${pctChange >= 0 ? '+' : ''}%${pctChange})`
-                                            : '(— önceki dönem 0)'}
-                                    </span>
-                                </div>
+                                {hasA && hasB && (
+                                    <div className={`flex items-center gap-1.5 text-sm font-bold ${trendColor}`}>
+                                        <TrendIcon size={14} />
+                                        {diff >= 0 ? '+' : ''}{diff}{c.suffix}
+                                        <span className="text-[10px] text-slate-400 ml-auto">
+                                            {pctIsValid
+                                                ? `(${pctChange >= 0 ? '+' : ''}%${pctChange})`
+                                                : '(— önceki dönem 0)'}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
