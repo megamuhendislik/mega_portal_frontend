@@ -3,7 +3,7 @@ import { TrendingUp, Clock, AlertTriangle, Briefcase, MinusCircle, CheckCircle, 
 import { Popover, Tooltip } from 'antd';
 import { getIstanbulMonth, getIstanbulYear } from '../utils/dateUtils';
 
-// Saniye → "H:MM" formatı
+// Saniye → "H:MM" formatı (kalan/eksik/efor için)
 function fmtSec(s) {
     if (!s) return '0:00';
     const neg = s < 0;
