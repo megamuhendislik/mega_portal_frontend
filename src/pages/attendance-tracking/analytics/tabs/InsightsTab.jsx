@@ -10,7 +10,8 @@ import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
 import InsightDetailDrawer from '../shared/InsightDetailDrawer';
-import SeverityCompass from '../shared/SeverityCompass';
+import PriorityStream from '../shared/PriorityStream';
+import TimeFrameSelector from '../shared/TimeFrameSelector';
 
 /**
  * InsightsTab v2 (2026-05-17 audit) — Öngörüler odaklı landing tab.
@@ -161,6 +162,14 @@ function AffectedChips({ count, preview, severity }) {
     );
 }
 
+const TIME_FRAME_LABELS = {
+    week: 'Bu Hafta',
+    month: 'Bu Mali Ay',
+    quarter: 'Son 90 Gün',
+    year: 'Bu Yıl',
+    custom: 'Özel Aralık',
+};
+
 export default function InsightsTab() {
     const { queryParams, startDate, endDate } = useAnalytics();
     const [data, setData] = useState(null);
@@ -170,14 +179,24 @@ export default function InsightsTab() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    // Insights-özel time frame seçici (global AnalyticsFilter'dan bağımsız).
+    // Default: month (geriye dönük uyumluluk).
+    const [timeFrame, setTimeFrame] = useState('month');
 
     const fetchInsights = useCallback(async () => {
-        if (!queryParams?.start_date) return;
         setLoading(true);
         setError(null);
         try {
+            // Time-frame ile scope/department vb. filtreler birleştirilir.
+            // start_date/end_date sadece time_frame='custom' için anlamlı —
+            // diğerlerinde backend kendi tarihlerini türetir.
+            const params = { ...(queryParams || {}), time_frame: timeFrame };
+            if (timeFrame !== 'custom') {
+                delete params.start_date;
+                delete params.end_date;
+            }
             const res = await api.get('/attendance-analytics/insights/', {
-                params: queryParams, timeout: 30000,
+                params, timeout: 30000,
             });
             setData(res.data);
         } catch (err) {
@@ -186,7 +205,7 @@ export default function InsightsTab() {
         } finally {
             setLoading(false);
         }
-    }, [queryParams]);
+    }, [queryParams, timeFrame]);
 
     useEffect(() => { fetchInsights(); }, [fetchInsights, refreshKey]);
 
@@ -249,33 +268,32 @@ export default function InsightsTab() {
     }
 
     const period = data?.period;
-    const prevPeriod = data?.previous_period;
+
+    const frameLabel = TIME_FRAME_LABELS[data?.time_frame || timeFrame] || 'Seçili Dönem';
 
     return (
-        <div className="space-y-5 animate-in fade-in duration-500">
+        <div className="space-y-4 animate-in fade-in duration-500">
             {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
             <ScopeBanner startDate={startDate} endDate={endDate} />
 
-            {/* ═══ Header — başlık + yenile butonu ═══ */}
-            <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 p-5 shadow-sm">
-                <div className="flex items-start justify-between flex-wrap gap-3">
+            {/* ═══ Modern Hero — başlık + son güncelleme + yenile ═══ */}
+            <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-violet-50 to-fuchsia-50 p-5 shadow-sm overflow-hidden relative">
+                <div className="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-indigo-300/20 to-fuchsia-300/20 rounded-full blur-2xl pointer-events-none"></div>
+                <div className="relative flex items-start justify-between flex-wrap gap-3">
                     <div className="flex items-start gap-3">
-                        <div className="p-2 bg-indigo-100 rounded-xl">
-                            <Sparkles size={20} className="text-indigo-600" />
+                        <div className="p-2.5 bg-white rounded-xl shadow-sm">
+                            <Sparkles size={22} className="text-indigo-600" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-slate-800">Otomatik Öngörüler</h2>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                                {period && (
-                                    <>
-                                        <span className="font-mono">{period.start} → {period.end}</span>
-                                        {prevPeriod && (
-                                            <span className="text-slate-400"> · önceki dönem: <span className="font-mono">{prevPeriod.start} → {prevPeriod.end}</span></span>
-                                        )}
-                                    </>
-                                )}
+                            <h2 className="text-xl font-black text-slate-800 leading-tight">
+                                Otomatik Öngörüler
+                            </h2>
+                            <p className="text-[12px] text-slate-600 mt-1 max-w-xl">
+                                Ekibinizin verisinden otomatik tespit edilen
+                                <span className="font-bold text-indigo-700"> {frameLabel.toLowerCase()} </span>
+                                aksiyon noktaları, uyarılar ve başarılar.
                                 {data?.generated_at && (
-                                    <> · son güncelleme: {new Date(data.generated_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</>
+                                    <> · son güncelleme: <span className="font-mono text-slate-500">{new Date(data.generated_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span></>
                                 )}
                             </p>
                         </div>
@@ -284,11 +302,19 @@ export default function InsightsTab() {
                         icon={<RotateCw size={14} />}
                         onClick={() => setRefreshKey((k) => k + 1)}
                         size="middle"
+                        className="!bg-white !border-indigo-200 hover:!border-indigo-400"
                     >
                         Yenile
                     </Button>
                 </div>
             </div>
+
+            {/* ═══ Time-Frame Selector (Insights-özel) ═══ */}
+            <TimeFrameSelector
+                value={timeFrame}
+                onChange={setTimeFrame}
+                period={period}
+            />
 
             {/* ═══ Aksiyon Paneli — Üst KPI'lar ═══ */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -325,14 +351,13 @@ export default function InsightsTab() {
                 />
             </div>
 
-            {/* ═══ Severity Compass — 4-quadrant pusula ═══ */}
-            <SeverityCompass
-                title="Öngörü Pusulası"
-                subtitle={`${insights.length} öngörü · K=Aksiyon, D=Uyarı, G=Bilgi, B=Pozitif · segmente tıkla → filtre`}
+            {/* ═══ Priority Stream — Modern severity dağılım ═══ */}
+            <PriorityStream
                 counts={severityCounts}
+                insights={insights}
                 activeKey={filter === 'all' ? null : filter}
                 onSegmentClick={(k) => setFilter(k || 'all')}
-                size={340}
+                timeFrameLabel={frameLabel}
             />
 
             {/* ═══ Filter bar ═══ */}
