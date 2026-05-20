@@ -1052,7 +1052,7 @@ export const ExternalDutyForm = ({
             if (checked && !cur.start_time && !cur.end_time) {
                 const lastFilled = updated.slice(0, index).reverse()
                     .find(s => s.included && s.start_time && s.end_time);
-                next.start_time = lastFilled?.start_time || '09:00';
+                next.start_time = lastFilled?.start_time || '08:00';
                 next.end_time = lastFilled?.end_time || '18:00';
             }
             updated[index] = next;
@@ -1076,7 +1076,7 @@ export const ExternalDutyForm = ({
             const updated = segments.map(s => ({
                 ...s,
                 included: true,
-                start_time: s.start_time || '09:00',
+                start_time: s.start_time || '08:00',
                 end_time: s.end_time || '18:00',
             }));
             setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
@@ -1094,7 +1094,7 @@ export const ExternalDutyForm = ({
                 return {
                     ...s,
                     included: isWeekday,
-                    start_time: isWeekday ? (s.start_time || '09:00') : s.start_time,
+                    start_time: isWeekday ? (s.start_time || '08:00') : s.start_time,
                     end_time: isWeekday ? (s.end_time || '18:00') : s.end_time,
                 };
             });

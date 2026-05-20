@@ -306,8 +306,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 const existing = externalDutyForm.date_segments.find(s => s.date === dateStr);
                 newSegments.push(existing || {
                     date: dateStr,
-                    start_time: '',
-                    end_time: '',
+                    start_time: '08:00',
+                    end_time: '18:00',
                     included: false,
                 });
                 current.setDate(current.getDate() + 1);
