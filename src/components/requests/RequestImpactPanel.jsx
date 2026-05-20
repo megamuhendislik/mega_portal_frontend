@@ -426,19 +426,11 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                 const segments = req.date_segments || [];
                 const isPendingDuty = req.status === 'PENDING';
 
-                // Calculate total minutes from segments
-                let segTotalMin = 0;
-                if (segments.length > 0) {
-                    for (const s of segments) {
-                        if (s.start_time && s.end_time) {
-                            const [sh, sm] = s.start_time.split(':').map(Number);
-                            const [eh, em] = s.end_time.split(':').map(Number);
-                            let diff = (eh * 60 + em) - (sh * 60 + sm);
-                            if (diff < 0) diff += 24 * 60;
-                            segTotalMin += diff;
-                        }
-                    }
-                }
+                // PENDING duty: backend preview_duty_hours sonucu (öğle düşülmüş net hesap)
+                const previewDays = dwi?.preview_days || [];
+                const previewTotals = dwi?.preview_totals || null;
+                const previewNormalMin = previewTotals?.total_normal_work_minutes || 0;
+                const previewOtMin = previewTotals?.total_overtime_minutes || 0;
 
                 return (
                     <>
@@ -455,8 +447,47 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                                 </>
                             )}
 
-                            {/* Pending: show day-by-day segments */}
-                            {isPendingDuty && segments.length > 0 && (
+                            {/* Pending: gün-bazlı çalışma — öğle DÜŞÜLMÜŞ net mesai (preview_duty_hours sonucu) */}
+                            {isPendingDuty && previewDays.length > 0 && (
+                                <div className="mt-2">
+                                    <span className="text-[10px] font-bold text-blue-600 uppercase mb-1 block">Gün Bazlı Çalışma</span>
+                                    <div className="space-y-1">
+                                        {previewDays.map((day, i) => {
+                                            const normM = day.normal_work_minutes || 0;
+                                            const otM = day.overtime_minutes || 0;
+                                            return (
+                                                <div key={i} className={`flex items-center justify-between text-xs p-2 rounded-lg border ${day.is_off_day ? 'bg-red-50 border-red-100' : 'bg-white border-blue-100'}`}>
+                                                    <span className="text-slate-600 font-medium">
+                                                        {new Date(day.date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' })}
+                                                    </span>
+                                                    <span className="text-blue-700 font-bold">{day.duty_start} - {day.duty_end}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        {normM > 0 && (
+                                                            <span className="text-emerald-600 font-bold text-[10px]">N: {Math.floor(normM / 60)}s{normM % 60 > 0 ? ` ${normM % 60}dk` : ''}</span>
+                                                        )}
+                                                        {otM > 0 && (
+                                                            <span className="text-amber-600 font-bold text-[10px]">FM: {Math.floor(otM / 60)}s{otM % 60 > 0 ? ` ${otM % 60}dk` : ''}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {(previewNormalMin > 0 || previewOtMin > 0) && (
+                                            <div className="flex items-center justify-between text-xs bg-blue-50 p-2 rounded-lg border border-blue-200 font-bold">
+                                                <span className="text-blue-700">Toplam</span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-emerald-700">Normal: {Math.floor(previewNormalMin / 60)}s{previewNormalMin % 60 > 0 ? ` ${previewNormalMin % 60}dk` : ''}</span>
+                                                    {previewOtMin > 0 && (
+                                                        <span className="text-amber-700">FM: {Math.floor(previewOtMin / 60)}s{previewOtMin % 60 > 0 ? ` ${previewOtMin % 60}dk` : ''}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            {/* Pending fallback (preview_days yoksa): raw segment listesi */}
+                            {isPendingDuty && previewDays.length === 0 && segments.length > 0 && (
                                 <div className="mt-2">
                                     <span className="text-[10px] font-bold text-blue-600 uppercase mb-1 block">Gün Bazlı Çalışma</span>
                                     <div className="space-y-1">
@@ -468,23 +499,8 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                                                 <span className="text-blue-700 font-bold">
                                                     {seg.start_time || '--:--'} - {seg.end_time || '--:--'}
                                                 </span>
-                                                {seg.start_time && seg.end_time && (() => {
-                                                    const [sh, sm] = seg.start_time.split(':').map(Number);
-                                                    const [eh, em] = seg.end_time.split(':').map(Number);
-                                                    let diff = (eh * 60 + em) - (sh * 60 + sm);
-                                                    if (diff < 0) diff += 24 * 60;
-                                                    const h = Math.floor(diff / 60);
-                                                    const m = diff % 60;
-                                                    return <span className="text-slate-400 text-[10px]">{h > 0 ? `${h}s ` : ''}{m > 0 ? `${m}dk` : ''}</span>;
-                                                })()}
                                             </div>
                                         ))}
-                                        {segTotalMin > 0 && (
-                                            <div className="flex items-center justify-between text-xs bg-blue-50 p-2 rounded-lg border border-blue-200 font-bold">
-                                                <span className="text-blue-700">Toplam</span>
-                                                <span className="text-blue-800">{Math.floor(segTotalMin / 60)}s {segTotalMin % 60 > 0 ? `${segTotalMin % 60}dk` : ''}</span>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             )}
@@ -502,9 +518,10 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             <p className="font-bold mb-1">Onay Bilgilendirme</p>
                             <ul className="list-disc pl-4 space-y-0.5">
                                 <li>Onaylandığında çalışanın mesai kaydına işlenecektir</li>
-                                <li>Öğle molası düşülmez, tüm görev süresi çalışma sayılır</li>
-                                <li>Mesai hedefini aşan süre otomatik onaylı fazla mesai olarak kaydedilecektir</li>
-                                {totalOtMin > 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s {totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir</li>}
+                                <li>Öğle molası düşülür; vardiya içi net süre normal mesai, dışındaki süre fazla mesai olarak işlenir</li>
+                                <li>Tatil/hafta sonu günlerinde tüm süre fazla mesai olarak değerlendirilir</li>
+                                {previewOtMin > 0 && <li>Bu talep <strong>{Math.floor(previewOtMin / 60)}s{previewOtMin % 60 > 0 ? ` ${previewOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir (otomatik onaylanacak)</li>}
+                                {totalOtMin > 0 && previewOtMin === 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s{totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir</li>}
                             </ul>
                         </div>
                     </>

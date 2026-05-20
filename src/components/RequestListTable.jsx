@@ -323,16 +323,26 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                                     const st = hasTimes ? req.start_time : segSingle ? segs[0].start_time : null;
                                                     const et = hasTimes ? req.end_time : segSingle ? segs[0].end_time : null;
 
-                                                    // External Duty: toplam süreyi segmentlerden hesapla
+                                                    // External Duty: toplam süreyi NET (öğle düşülmüş) hesapla
                                                     if (isExternalDuty && Array.isArray(segs) && segs.length > 0) {
+                                                        // Backend preview_totals varsa (PENDING) onu kullan; yoksa attendance/OT toplamı (APPROVED)
+                                                        const dwi = req.duty_work_info || {};
+                                                        const pt = dwi.preview_totals;
                                                         let totalMin = 0;
-                                                        segs.forEach(s => {
-                                                            if (s.start_time && s.end_time) {
-                                                                const [sh, sm] = s.start_time.split(':').map(Number);
-                                                                const [eh, em] = s.end_time.split(':').map(Number);
-                                                                totalMin += (eh * 60 + em) - (sh * 60 + sm);
-                                                            }
-                                                        });
+                                                        if (pt) {
+                                                            totalMin = (pt.total_normal_work_minutes || 0) + (pt.total_overtime_minutes || 0);
+                                                        } else if ((dwi.total_work_minutes || 0) + (dwi.total_ot_minutes || 0) > 0) {
+                                                            totalMin = (dwi.total_work_minutes || 0) + (dwi.total_ot_minutes || 0);
+                                                        } else {
+                                                            // Fallback: raw segment toplamı (eski talepler için)
+                                                            segs.forEach(s => {
+                                                                if (s.start_time && s.end_time) {
+                                                                    const [sh, sm] = s.start_time.split(':').map(Number);
+                                                                    const [eh, em] = s.end_time.split(':').map(Number);
+                                                                    totalMin += (eh * 60 + em) - (sh * 60 + sm);
+                                                                }
+                                                            });
+                                                        }
                                                         const hrs = Math.floor(totalMin / 60);
                                                         const mins = totalMin % 60;
                                                         return (<>
