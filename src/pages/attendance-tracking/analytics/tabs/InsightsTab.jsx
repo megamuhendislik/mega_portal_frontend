@@ -10,7 +10,7 @@ import { useAnalytics } from '../AnalyticsContext';
 import { LoadingSkeleton } from '../shared/EmptyState';
 import ScopeBanner from '../shared/ScopeBanner';
 import InsightDetailDrawer from '../shared/InsightDetailDrawer';
-import PriorityStream from '../shared/PriorityStream';
+import InsightRadar from '../shared/InsightRadar';
 import TimeFrameSelector from '../shared/TimeFrameSelector';
 
 /**
@@ -351,12 +351,12 @@ export default function InsightsTab() {
                 />
             </div>
 
-            {/* ═══ Priority Stream — Modern severity dağılım ═══ */}
-            <PriorityStream
-                counts={severityCounts}
+            {/* ═══ Insight Radar — Pusula tarzı 4-kuadrant + skor noktaları ═══ */}
+            <InsightRadar
                 insights={insights}
                 activeKey={filter === 'all' ? null : filter}
                 onSegmentClick={(k) => setFilter(k || 'all')}
+                onInsightClick={openDrawer}
                 timeFrameLabel={frameLabel}
             />
 
@@ -425,9 +425,26 @@ export default function InsightsTab() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <h3 className={`text-sm font-bold ${cfg.title}`}>{ins.title}</h3>
-                                            <Tag color={cfg.tag} className="flex-shrink-0 text-[10px]">
-                                                {cfg.label}
-                                            </Tag>
+                                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                {typeof ins.priority_score === 'number' && (
+                                                    <Tooltip title={`Önem skoru: ${ins.priority_score.toFixed(1)} / 10`}>
+                                                        <span
+                                                            className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums"
+                                                            style={{
+                                                                background: cfg.accent + '22',
+                                                                color: cfg.accent,
+                                                                border: `1px solid ${cfg.accent}55`,
+                                                            }}
+                                                        >
+                                                            {ins.priority_score.toFixed(1)}
+                                                            <span className="text-[8px] opacity-60">/10</span>
+                                                        </span>
+                                                    </Tooltip>
+                                                )}
+                                                <Tag color={cfg.tag} className="text-[10px] !m-0">
+                                                    {cfg.label}
+                                                </Tag>
+                                            </div>
                                         </div>
                                         <p className={`text-sm leading-relaxed ${cfg.text} mb-3`}>
                                             {ins.message}
