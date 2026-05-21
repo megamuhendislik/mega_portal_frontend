@@ -106,10 +106,10 @@ function sectorPath(cx, cy, rOuter, rInner, startAngle, endAngle) {
 
 // Belirli bir insight için sektör içinde nokta konumu hesapla
 function computeDotPosition(insight, sector, cx, cy, rMax, rMin, indexInSector, totalInSector) {
-    // Distance from center: yüksek skor = merkeze yakın
-    // score 10 → rMin (merkez yakın), score 0 → rMax (kenara yakın)
+    // Distance from center: yüksek skor = dış kenara yakın
+    // score 0 → rMin (merkeze yakın), score 10 → rMax (kenara yakın)
     const score = Math.max(0, Math.min(10, insight.priority_score || 0));
-    const ratio = 1 - (score / 10);  // 0 → 1
+    const ratio = score / 10;  // 0 → 1
     const radius = rMin + (rMax - rMin) * ratio;
 
     // Açı: sektör içinde eşit dağıtım — overlap'i azaltmak için
@@ -206,8 +206,8 @@ export default function InsightRadar({
         }
     };
 
-    // Score reference rings: 0, 2.5, 5, 7.5, 10
-    const refScores = [10, 7.5, 5, 2.5];
+    // Score reference rings: içerden dışarı 2.5, 5, 7.5, 10
+    const refScores = [2.5, 5, 7.5, 10];
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 shadow-sm">
@@ -220,7 +220,7 @@ export default function InsightRadar({
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                         {timeFrameLabel ? `${timeFrameLabel} · ` : ''}
-                        {totalCount} öngörü · merkeze yaklaşan = yüksek önem (0-10)
+                        {totalCount} öngörü · dış kenara çıkan = yüksek önem (0-10)
                     </p>
                 </div>
                 {topInsight && (
@@ -275,7 +275,7 @@ export default function InsightRadar({
 
                         {/* Konsantrik ring'ler (score referansı) */}
                         {refScores.map((s) => {
-                            const r = rInner + 18 + (rOuter - 18 - (rInner + 18)) * (1 - s / 10);
+                            const r = rInner + 18 + (rOuter - 18 - (rInner + 18)) * (s / 10);
                             return (
                                 <g key={`ring-${s}`} className="pointer-events-none">
                                     <circle
@@ -512,9 +512,9 @@ export default function InsightRadar({
                         ))}
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                        <span>Kenar</span>
+                        <span>Merkez</span>
                         <span className="inline-block h-1.5 w-12 rounded-full bg-gradient-to-r from-slate-200 to-slate-500"></span>
-                        <span className="font-bold">Merkez (yüksek önem)</span>
+                        <span className="font-bold">Kenar (yüksek önem)</span>
                     </div>
                 </div>
             )}
