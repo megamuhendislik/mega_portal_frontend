@@ -223,8 +223,11 @@ export function formatIstanbulDateLong(date) {
 }
 
 /**
- * Istanbul TZ'de mali ayı hesapla (26-25 kuralı).
- * 26'sından itibaren sonraki aya ait, 25'ine kadar mevcut aya ait.
+ * @deprecated 26-25 hardcoded varsayım. Kullanıcı çalışma takvimi (FiscalCalendar)
+ * farklı sınırlarda olabilir (22-21 vs.). Bunun yerine `useFiscalPeriods` hook'unu
+ * kullan: `const { current, findByDate } = useFiscalPeriods();`.
+ *
+ * Istanbul TZ'de mali ayı hesapla (26-25 kuralı — eski sistem fallback).
  * @param {string|Date} [date] - Hesaplanacak tarih (default: bugün)
  * @returns {{ month: number, year: number }}
  */

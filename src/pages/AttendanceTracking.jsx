@@ -10,6 +10,7 @@ import api from '../services/api';
 import { differenceInDays, addDays, isBefore, min as dateMin, format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { getIstanbulToday, getIstanbulTodayDate } from '../utils/dateUtils';
+import useFiscalPeriods from '../hooks/useFiscalPeriods';
 import {
     formatMinutes,
     EmployeeAttendanceRow,
@@ -30,23 +31,19 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const [showSubstituteTeam, setShowSubstituteTeam] = useState(false);
 
     // State — propMonth is 0-based (from Attendance.jsx), convert to 1-based for API
-    // Default to fiscal month: if day >= 26, we're in next month's fiscal period
-    const getFiscalMonth = () => {
-        const [, m, d] = getIstanbulToday().split('-').map(Number);
-        if (d >= 26) {
-            return m + 1 > 12 ? 1 : m + 1;
+    // Eski hardcoded 26-25 mantığı kaldırıldı; useFiscalPeriods kullanıcının
+    // çalışma takvimine göre cari fiscal ay/yılı verir.
+    const { current: fiscalCurrent } = useFiscalPeriods({ months: 24 });
+    const [year, setYear] = useState(propYear || null);
+    const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : null);
+
+    // Hook backend'den döndüğünde initial year/month'i kur (prop yoksa)
+    useEffect(() => {
+        if (fiscalCurrent && year === null) {
+            setYear(fiscalCurrent.year);
+            setMonth(fiscalCurrent.month);
         }
-        return m;
-    };
-    const getFiscalYear = () => {
-        const [y, m, d] = getIstanbulToday().split('-').map(Number);
-        if (d >= 26 && m === 12) {
-            return y + 1; // December 26+ → January of next year
-        }
-        return y;
-    };
-    const [year, setYear] = useState(propYear || getFiscalYear());
-    const [month, setMonth] = useState(propMonth != null ? propMonth + 1 : getFiscalMonth());
+    }, [fiscalCurrent, year]);
 
     useEffect(() => {
         if (propYear) setYear(propYear);
@@ -56,6 +53,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     // Fetch monthly weekly OT for week selector
     const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
     useEffect(() => {
+        if (year == null || month == null) return;
         api.get('/overtime-requests/weekly-ot-status/', {
             params: { month_view: true, year, month }
         }).then(res => setMonthlyWeeklyOt(res.data)).catch(() => setMonthlyWeeklyOt(null));
@@ -109,6 +107,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
     const needsDepartments = React.useRef(true);
 
     useEffect(() => {
+        if (year == null || month == null) return; // Hook henüz yüklenmedi
         const includeDepts = needsDepartments.current;
         needsDepartments.current = false;
         fetchAllData(includeDepts);
@@ -364,10 +363,13 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
         if (fiscalPeriod.start && fiscalPeriod.end) {
             fiscalStart = new Date(fiscalPeriod.start + 'T00:00:00');
             fiscalEnd = new Date(fiscalPeriod.end + 'T00:00:00');
-        } else {
+        } else if (year != null && month != null) {
             // Fallback until backend responds (month is 1-based from API)
+            // 26-25 hardcoded — backend henüz cevap vermediyse kısa süreli
             fiscalStart = new Date(year, month - 2, 26);
             fiscalEnd = new Date(year, month - 1, 25);
+        } else {
+            return 1;
         }
         const today = getIstanbulTodayDate();
         const effectiveEnd = dateMin([today, fiscalEnd]);

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
+import useFiscalPeriods from '../hooks/useFiscalPeriods';
 
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
@@ -148,31 +149,11 @@ const groupEventsByDay = (events) => {
 const FISCAL_MONTH_NAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
-// Bugünün fiscal ay/yılını hesapla (26-25 sistemi)
-const getCurrentFiscal = () => {
-    const todayStr = getIstanbulToday();
-    const [y, m, d] = todayStr.split('-').map(Number);
-    if (d >= 26) {
-        return m === 12 ? { year: y + 1, month: 1 } : { year: y, month: m + 1 };
-    }
-    return { year: y, month: m };
-};
-
-// Fiscal ay/yıldan dönem tarihlerini hesapla
-const getFiscalPeriodDates = (year, month) => {
-    let startMonth, startYear;
-    if (month === 1) {
-        startMonth = 11; startYear = year - 1; // Dec (0-based for JS Date)
-    } else {
-        startMonth = month - 2; startYear = year; // 0-based
-    }
-    const start = new Date(startYear, startMonth, 26);
-    const end = new Date(year, month - 1, 25);
-    return {
-        startStr: format(start, 'yyyy-MM-dd'),
-        endStr: format(end, 'yyyy-MM-dd')
-    };
-};
+// NOT: Eski `getCurrentFiscal` ve `getFiscalPeriodDates` 26-25 hardcoded
+// varsayımı yapıyordu. Kullanıcı çalışma takvimi (FiscalCalendar) farklı
+// sınırlarda olabilir (22-21 vs.). Artık `useFiscalPeriods` hook'u
+// üzerinden `/api/attendance/my-fiscal-periods/` çekilir ve gerçek
+// dönemler kullanılır.
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -201,27 +182,46 @@ const Dashboard = () => {
     // UI States
     const [requestTab, setRequestTab] = useState('my_requests');
 
-    // Fiscal month navigation
-    const [selectedFiscal, setSelectedFiscal] = useState(getCurrentFiscal);
+    // Fiscal month navigation — kullanıcının çalışma takvimini esas alır
+    // (26-25 hardcoded varsayım YOK).
+    const {
+        current: currentFiscalFromHook,
+        findByYearMonth: findFiscalByYearMonth,
+        navigate: navigateFiscal,
+    } = useFiscalPeriods({ months: 24 });
+
+    const [selectedFiscal, setSelectedFiscal] = useState(null);
     const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
-    const currentFiscal = useMemo(getCurrentFiscal, []);
-    const isCurrentMonth = selectedFiscal.year === currentFiscal.year && selectedFiscal.month === currentFiscal.month;
+
+    // Hook backend'den döndüğünde initial selectedFiscal'i kur
+    useEffect(() => {
+        if (currentFiscalFromHook && !selectedFiscal) {
+            setSelectedFiscal({ year: currentFiscalFromHook.year, month: currentFiscalFromHook.month });
+        }
+    }, [currentFiscalFromHook, selectedFiscal]);
+
+    const currentFiscal = currentFiscalFromHook
+        ? { year: currentFiscalFromHook.year, month: currentFiscalFromHook.month }
+        : null;
+    const isCurrentMonth = currentFiscal && selectedFiscal &&
+        selectedFiscal.year === currentFiscal.year && selectedFiscal.month === currentFiscal.month;
 
     const goToPrevMonth = () => {
-        setSelectedFiscal(prev =>
-            prev.month === 1 ? { year: prev.year - 1, month: 12 } : { year: prev.year, month: prev.month - 1 }
-        );
+        if (!selectedFiscal) return;
+        const prev = navigateFiscal(selectedFiscal.year, selectedFiscal.month, 'prev');
+        if (prev) setSelectedFiscal({ year: prev.year, month: prev.month });
     };
     const goToNextMonth = () => {
-        const cur = getCurrentFiscal();
-        setSelectedFiscal(prev => {
-            const next = prev.month === 12 ? { year: prev.year + 1, month: 1 } : { year: prev.year, month: prev.month + 1 };
-            // Gelecek aylara gitmeyi engelle
-            if (next.year > cur.year || (next.year === cur.year && next.month > cur.month)) return prev;
-            return next;
-        });
+        if (!selectedFiscal || !currentFiscal) return;
+        const next = navigateFiscal(selectedFiscal.year, selectedFiscal.month, 'next');
+        if (!next) return;
+        // Gelecek aylara gitmeyi engelle
+        if (next.year > currentFiscal.year || (next.year === currentFiscal.year && next.month > currentFiscal.month)) return;
+        setSelectedFiscal({ year: next.year, month: next.month });
     };
-    const goToCurrentMonth = () => setSelectedFiscal(getCurrentFiscal());
+    const goToCurrentMonth = () => {
+        if (currentFiscal) setSelectedFiscal({ ...currentFiscal });
+    };
 
     // Period dates state (updated from backend response)
     const [periodDates, setPeriodDates] = useState(null);
@@ -268,8 +268,17 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
         const employeeId = user?.employee?.id || user?.id;
         if (!employeeId) { setLoading(false); return; }
+        if (!selectedFiscal) return; // Hook henüz yüklenmedi
 
-        const { startStr, endStr } = getFiscalPeriodDates(selectedFiscal.year, selectedFiscal.month);
+        // Period tarihlerini hook'tan (kullanıcı takvimi) al — hardcoded 26-25 yok
+        const periodEntry = findFiscalByYearMonth(selectedFiscal.year, selectedFiscal.month);
+        if (!periodEntry) {
+            // Periods henüz hazır değilse beklet
+            setLoading(false);
+            return;
+        }
+        const startStr = periodEntry.start_date;
+        const endStr = periodEntry.end_date;
         const calendarStart = getIstanbulToday();
         const calendarEnd = getIstanbulDateOffset(14);
 
@@ -327,10 +336,10 @@ const Dashboard = () => {
         }
     };
 
-    // Fetch on mount + when fiscal month changes
+    // Fetch on mount + when fiscal month changes (selectedFiscal hook'tan gelir)
     useEffect(() => {
-        fetchDashboardData();
-    }, [user, selectedFiscal.year, selectedFiscal.month]);
+        if (selectedFiscal) fetchDashboardData();
+    }, [user, selectedFiscal?.year, selectedFiscal?.month]);
 
     // Smart Polling (Every 60s)
     useSmartPolling(fetchDashboardData, 60000);
@@ -414,7 +423,7 @@ const Dashboard = () => {
                             }`}
                             title={isCurrentMonth ? 'Mevcut Dönem' : 'Bugüne Dön'}
                         >
-                            {FISCAL_MONTH_NAMES[selectedFiscal.month]} {selectedFiscal.year}
+                            {selectedFiscal ? `${FISCAL_MONTH_NAMES[selectedFiscal.month]} ${selectedFiscal.year}` : '—'}
                         </button>
                         <button
                             onClick={goToNextMonth}
@@ -765,8 +774,8 @@ const Dashboard = () => {
                     <AttendanceAnalyticsChart
                         logs={logs}
                         employeeId={user?.id}
-                        currentYear={selectedFiscal.year}
-                        currentMonth={selectedFiscal.month}
+                        currentYear={selectedFiscal?.year}
+                        currentMonth={selectedFiscal?.month}
                     />
                 </div>
 

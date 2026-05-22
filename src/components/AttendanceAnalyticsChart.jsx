@@ -504,7 +504,10 @@ const YearlyView = ({ data }) => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────
-const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday().split('-')[0]), currentMonth = (() => { const [, m, d] = getIstanbulToday().split('-').map(Number); return d >= 26 ? (m + 1 > 12 ? 1 : m + 1) : m; })(), employeeId, onDateClick }) => {
+// NOT: currentYear/currentMonth default'ları parent yüklenmediyse fallback olarak
+// calendar ayını kullanır. Parent (Dashboard/Attendance) artık useFiscalPeriods
+// hook'undan kullanıcı takvimine göre değer geçiyor. Default sadece edge-case.
+const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday().split('-')[0]), currentMonth = (() => { const [, m] = getIstanbulToday().split('-').map(Number); return m; })(), employeeId, onDateClick }) => {
     const [scope, setScope] = useState('WEEKLY');
     const [yearlyData, setYearlyData] = useState([]);
     const [monthlyBarData, setMonthlyBarData] = useState([]);

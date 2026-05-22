@@ -16,6 +16,7 @@ import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
+import useFiscalPeriods from '../hooks/useFiscalPeriods';
 
 const Attendance = () => {
     const { user, hasPermission } = useAuth();
@@ -35,19 +36,26 @@ const Attendance = () => {
     // Filters
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
-    // Date State (Defaults to current period)
+    // Date State — useFiscalPeriods hook'tan (kullanıcı takvimi) gelir.
+    // Eski hardcoded `_id >= 26` mantığı kaldırıldı; FiscalCalendar custom
+    // sınırlarda (22-21 vs.) olabilir.
     const todayStr = getIstanbulToday();
-    const [_iy, _im, _id] = todayStr.split('-').map(Number);
-    // Logic: If today >= 26, we are in Next Month's cycle (Start 26th this month, End 25th next month)
-    // If today < 26, we are in This Month's cycle (Start 26th prev month, End 25th this month)
-    const initialMonth = _id >= 26 ? _im : _im - 1; // 0-based month
-    // Year boundary: if today >= 26 AND we are in December, increment the year.
-    const initialYear = _id >= 26 && _im === 12 ? _iy + 1 : _iy;
-    // Wrap month index: if initialMonth overflowed to 12, reset to 0 (January).
-    const safeInitialMonth = initialMonth > 11 ? 0 : initialMonth;
+    const {
+        current: fiscalCurrent,
+        findByYearMonth: findFiscalByYearMonth,
+        findByDate: findFiscalByDate,
+    } = useFiscalPeriods({ months: 24 });
 
-    const [viewYear, setViewYear] = useState(initialYear);
-    const [viewMonth, setViewMonth] = useState(safeInitialMonth); // 0-based index
+    const [viewYear, setViewYear] = useState(null);
+    const [viewMonth, setViewMonth] = useState(null); // 0-based index
+
+    // Hook hazır olunca initial year/month'i kur
+    useEffect(() => {
+        if (fiscalCurrent && viewYear === null) {
+            setViewYear(fiscalCurrent.year);
+            setViewMonth(fiscalCurrent.month - 1); // 1-based → 0-based
+        }
+    }, [fiscalCurrent, viewYear]);
     const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
     const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
     const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
@@ -65,6 +73,7 @@ const Attendance = () => {
     // --- EFFECT: Fetch monthly weekly OT ---
     const weeklyOtEmployeeId = selectedEmployeeId || user?.employee?.id || user?.id;
     useEffect(() => {
+        if (viewYear == null || viewMonth == null) return; // Hook henüz hazır değil
         const apiMonth = viewMonth + 1; // 0-based → 1-based
         const params = { month_view: true, year: viewYear, month: apiMonth };
         if (weeklyOtEmployeeId) params.employee_id = weeklyOtEmployeeId;
@@ -74,7 +83,7 @@ const Attendance = () => {
 
     // --- EFFECT: Init ---
     useEffect(() => {
-        updateDateRange(viewYear, viewMonth, viewScope);
+        if (viewYear != null && viewMonth != null) updateDateRange(viewYear, viewMonth, viewScope);
         checkTeamVisibility();
 
         // URL'den employee_id varsa doğrudan o kişinin mesai detayına geç
@@ -90,7 +99,7 @@ const Attendance = () => {
 
     // Recalculate dates when year/month/scope changes
     useEffect(() => {
-        updateDateRange(viewYear, viewMonth, viewScope);
+        if (viewYear != null && viewMonth != null) updateDateRange(viewYear, viewMonth, viewScope);
     }, [viewYear, viewMonth, viewScope]);
 
     // --- HANDLERS ---
@@ -103,23 +112,25 @@ const Attendance = () => {
         }
     };
 
-    // Use standard 26-25 Logic. ALWAYS fetch the full period.
+    // Fiscal calendar bilinçli period range. Hook'tan (kullanıcı takvimi)
+    // okur; bulunamazsa eski 26-25 fallback (test/initial render).
     const updateDateRange = (year, month, scope) => {
-        // Even if scope is DAILY, we fetch the whole month to support the Charts & Analytics.
-        // The filtering for the "Daily View" table will happen in the render logic.
-
+        // year=int 1-based fiscal, month=0-based JS index → 1-based for lookup
+        const oneBasedMonth = month + 1;
+        const entry = findFiscalByYearMonth(year, oneBasedMonth);
         let start, end;
-
-        // Target End Date: 25th of selected month
-        end = new Date(year, month, 25);
-
-        // Target Start Date: 26th of previous month.
-        // JS Date handles month underflow: new Date(2025, -1, 26) -> Dec 26, 2024.
-        // So January (month=0) correctly produces start=Dec 26 of prev year.
-        start = new Date(year, month - 1, 26);
-
-        setStartDate(format(start, 'yyyy-MM-dd'));
-        setEndDate(format(end, 'yyyy-MM-dd'));
+        if (entry) {
+            start = entry.start_date;
+            end = entry.end_date;
+        } else {
+            // Fallback (hook henüz yüklenmedi): 26-25 varsayım
+            const e = new Date(year, month, 25);
+            const s = new Date(year, month - 1, 26);
+            start = format(s, 'yyyy-MM-dd');
+            end = format(e, 'yyyy-MM-dd');
+        }
+        setStartDate(start);
+        setEndDate(end);
     };
 
     // Separate loading states — only true on FIRST load (no data yet)
@@ -285,11 +296,19 @@ const Attendance = () => {
                                         onChange={(e) => {
                                             const newDate = e.target.value;
                                             setSelectedDate(newDate);
-                                            // Auto-sync fiscal month/year when date is outside current period
-                                            const [y, m, d] = newDate.split('-').map(Number);
-                                            let targetMonth = d >= 26 ? m : m - 1;
-                                            let targetYear = y;
-                                            if (targetMonth > 11) { targetMonth = 0; targetYear += 1; }
+                                            // Auto-sync via fiscal calendar (kullanıcı takvimi)
+                                            const period = findFiscalByDate(newDate);
+                                            let targetYear, targetMonth;
+                                            if (period) {
+                                                targetYear = period.year;
+                                                targetMonth = period.month - 1; // 1→0-based
+                                            } else {
+                                                // Hook yüklenmedi → 26-25 fallback
+                                                const [y, m, d] = newDate.split('-').map(Number);
+                                                targetMonth = d >= 26 ? m : m - 1;
+                                                targetYear = y;
+                                                if (targetMonth > 11) { targetMonth = 0; targetYear += 1; }
+                                            }
                                             if (targetMonth !== viewMonth || targetYear !== viewYear) {
                                                 setViewMonth(targetMonth);
                                                 setViewYear(targetYear);
@@ -461,19 +480,21 @@ const Attendance = () => {
                                     employeeId={selectedEmployeeId}
                                     onDateClick={(date) => {
                                         setSelectedDate(date);
-                                        // Auto-switch period if outside current range
-                                        const dp = toIstanbulParts(date);
-                                        // 26-25 rule logic:
-                                        // If date is >= 26th of Month M, it belongs to Period M+1
-                                        // If date is <= 25th of Month M, it belongs to Period M
-                                        // toIstanbulParts returns 1-indexed month, viewMonth is 0-indexed
-                                        let targetMonth = dp.day >= 26 ? dp.month : dp.month - 1; // 0-indexed
-                                        let targetYear = dp.year;
-
-                                        // Year boundary: Dec 26+ -> month becomes 12, wrap to Jan (0) of next year.
-                                        if (targetMonth > 11) {
-                                            targetMonth = 0;
-                                            targetYear += 1;
+                                        // Auto-switch period via fiscal calendar (kullanıcı takvimi)
+                                        const period = findFiscalByDate(date);
+                                        let targetYear, targetMonth;
+                                        if (period) {
+                                            targetYear = period.year;
+                                            targetMonth = period.month - 1; // 1→0-based
+                                        } else {
+                                            // Fallback: 26-25 (hook yüklenmedi)
+                                            const dp = toIstanbulParts(date);
+                                            targetMonth = dp.day >= 26 ? dp.month : dp.month - 1;
+                                            targetYear = dp.year;
+                                            if (targetMonth > 11) {
+                                                targetMonth = 0;
+                                                targetYear += 1;
+                                            }
                                         }
 
                                         // Only update if different (to avoid loop/re-fetch if not needed)
