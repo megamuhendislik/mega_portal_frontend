@@ -75,6 +75,47 @@ export default function RecalculationAuditTab() {
     const [otAuditResult, setOtAuditResult] = useState(null);
     const [otAuditFixing, setOtAuditFixing] = useState(false);
 
+    // Bağımsız Hesap Doğrulama (recalc'tan bağımsız koruma katmanı) state
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyResult, setVerifyResult] = useState(null);
+    const [verifyError, setVerifyError] = useState(null);
+
+    const runVerifyCalculations = async () => {
+        setVerifyLoading(true);
+        setVerifyError(null);
+        setVerifyResult(null);
+        try {
+            const body = { date_from: startDate, date_to: endDate, only_mismatch: false };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/verify-calculations/', body);
+            setVerifyResult(res.data);
+        } catch (e) {
+            setVerifyError(e?.response?.data?.error || e.message || 'Doğrulama başarısız');
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
+
+    const downloadVerifyTxt = async () => {
+        try {
+            const body = { date_from: startDate, date_to: endDate,
+                           only_mismatch: false, download: true };
+            if (employeeId) body.employee_id = parseInt(employeeId);
+            const res = await api.post('/system/health-check/verify-calculations/', body,
+                { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bagimsiz_dogrulama_${startDate}_${endDate}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('TXT indirme hatası: ' + (e.message || 'Bilinmeyen'));
+        }
+    };
+
     const runOtAudit = async (mode = 'scan') => {
         if (mode === 'fix' && !window.confirm(
             'Bulunan sorunlar düzeltilecek (duplikatlar silinecek, stale potansiyeller temizlenecek). Devam?'
@@ -494,6 +535,17 @@ export default function RecalculationAuditTab() {
                     >
                         <ArrowPathIcon className="w-4 h-4" />
                         {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
+                    </button>
+                    <button
+                        onClick={runVerifyCalculations}
+                        disabled={isProcessing || uniLoading || uniFixing || frcLoading || verifyLoading}
+                        title="Recalc'tan BAĞIMSIZ koruma katmanı: ham gate event'lerden hesap yapar, DB ile karşılaştırır. Mismatch = recalc engine'inde gizli bug işareti."
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            verifyLoading ? 'bg-gray-400 cursor-wait' : 'bg-amber-600 hover:bg-amber-700 active:scale-95'
+                        }`}
+                    >
+                        <CheckCircleIcon className="w-4 h-4" />
+                        {verifyLoading ? 'Doğrulanıyor...' : 'Bağımsız Doğrulama'}
                     </button>
                 </div>
             </div>
@@ -1527,6 +1579,115 @@ export default function RecalculationAuditTab() {
                     dateTo={endDate}
                     employeeId={employeeId || null}
                 />
+            )}
+
+            {/* ══════════ BAĞIMSIZ HESAP DOĞRULAMA ══════════ */}
+            {(verifyError || verifyResult || verifyLoading) && (
+                <div className="space-y-4 mt-6 border-t-2 border-amber-300 pt-6">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                            <CheckCircleIcon className="w-6 h-6 text-amber-600" />
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">
+                                    Bağımsız Hesap Doğrulama
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                    Recalc engine'inden BAĞIMSIZ koruma katmanı —
+                                    ham gate event'lerden hesap yapar, DB ile karşılaştırır.
+                                    Mismatch = recalc'ta gizli bug işareti.
+                                </p>
+                            </div>
+                        </div>
+                        {verifyResult && (
+                            <button
+                                onClick={downloadVerifyTxt}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100 active:scale-95 transition-all"
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                TXT İndir
+                            </button>
+                        )}
+                    </div>
+
+                    {verifyLoading && (
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-2">
+                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                            Bağımsız hesap çalışıyor — birkaç saniye sürebilir...
+                        </div>
+                    )}
+
+                    {verifyError && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                            <XCircleIcon className="w-5 h-5 inline mr-2" />
+                            {verifyError}
+                        </div>
+                    )}
+
+                    {verifyResult && (
+                        <>
+                            <p className="text-xs text-gray-500">
+                                {verifyResult.date_range} | Süre: {verifyResult.elapsed}s |
+                                Eşik: {Math.round((verifyResult.threshold_seconds || 1800) / 60)}dk
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="text-xs text-green-700 font-semibold">OK</div>
+                                    <div className="text-2xl font-bold text-green-800">{verifyResult.summary?.ok || 0}</div>
+                                </div>
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="text-xs text-red-700 font-semibold">MISMATCH</div>
+                                    <div className="text-2xl font-bold text-red-800">{verifyResult.summary?.mismatch || 0}</div>
+                                </div>
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <div className="text-xs text-slate-700 font-semibold">SKIP</div>
+                                    <div className="text-2xl font-bold text-slate-800">{verifyResult.summary?.skip || 0}</div>
+                                </div>
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div className="text-xs text-gray-700 font-semibold">NO_DATA</div>
+                                    <div className="text-2xl font-bold text-gray-800">{verifyResult.summary?.no_data || 0}</div>
+                                </div>
+                            </div>
+
+                            {(verifyResult.summary?.mismatch || 0) === 0 ? (
+                                <div className="p-4 bg-green-50 border border-green-300 rounded-lg text-green-800 text-sm font-bold flex items-center gap-2">
+                                    <CheckCircleIcon className="w-5 h-5" />
+                                    ✓ Hiç MISMATCH yok — bağımsız hesap DB ile uyumlu.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="p-4 bg-red-50 border border-red-300 rounded-lg text-red-800 text-sm font-bold">
+                                        🔴 {verifyResult.summary?.mismatch} adet MISMATCH bulundu — recalc engine'inde olası bug işareti.
+                                    </div>
+                                    {(verifyResult.employees || []).map(emp => {
+                                        const mmDays = (emp.days || []).filter(d => d.flag === 'MISMATCH');
+                                        if (mmDays.length === 0) return null;
+                                        return (
+                                            <div key={emp.id} className="border border-red-200 rounded-lg p-3 bg-red-50">
+                                                <div className="font-bold text-red-900 mb-2">
+                                                    [{emp.id}] {emp.name} ({emp.dept})
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {mmDays.map(d => (
+                                                        <div key={d.work_date} className="text-xs text-gray-700 font-mono">
+                                                            <span className="font-bold text-red-700">{d.work_date}</span>
+                                                            {' — '}
+                                                            <span>N: bek={fmtSeconds(d.expected_normal)} kayıt={fmtSeconds(d.actual_normal)} fark={fmtSeconds(d.diff_normal)}</span>
+                                                            {' | '}
+                                                            <span>M: bek={fmtSeconds(d.expected_missing)} kayıt={fmtSeconds(d.actual_missing)} fark={fmtSeconds(d.diff_missing)}</span>
+                                                            {d.notes?.length > 0 && (
+                                                                <div className="ml-4 text-rose-600">→ {d.notes.join(' | ')}</div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             )}
 
             {/* ══════════ HESAPLAMA SANITY CHECK ══════════ */}
