@@ -459,14 +459,14 @@ export default function RecalculationAuditTab() {
                         Tum Gunler
                     </label>
                     <button
-                        onClick={() => runFullRecalculation('dry_run')}
+                        onClick={() => runFullRecalculation('apply')}
                         disabled={isProcessing || uniLoading || uniFixing || frcLoading}
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
                             frcLoading ? 'bg-gray-400 cursor-wait' : 'bg-violet-600 hover:bg-violet-700 active:scale-95'
                         }`}
                     >
                         <ArrowPathIcon className="w-4 h-4" />
-                        {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
+                        {frcLoading ? 'Hesaplaniyor ve Uygulaniyor...' : 'Tam Yeniden Hesapla ve Uygula'}
                     </button>
                 </div>
             </div>
