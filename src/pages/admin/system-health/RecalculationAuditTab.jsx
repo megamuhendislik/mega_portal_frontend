@@ -207,14 +207,41 @@ export default function RecalculationAuditTab() {
 
         setFrcLoading(true);
         setFrcError(null);
-        setFrcResult(null);
+        // Apply with cache: sim sonucunu silme — fail durumunda kullanıcı eski raporu görebilsin
+        if (!(mode === 'apply' && frcResult?.cache_token)) {
+            setFrcResult(null);
+        }
         setFrcExpandedEmps(new Set());
         setFrcExpandedDays(new Set());
         try {
             const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
 
-            // Async endpoint — Celery task başlat
+            // FAST-PATH: Apply with sim cache_token → tekrar hesaplamadan direkt uygula
+            if (mode === 'apply' && frcResult?.cache_token) {
+                body.from_cache = true;
+                body.cache_token = frcResult.cache_token;
+                try {
+                    const fastRes = await api.post('/system/health-check/full-recalculation/', body);
+                    setFrcResult({ ...frcResult, ...fastRes.data, mode: 'apply' });
+                    setFrcLoading(false);
+                    return;
+                } catch (fastErr) {
+                    // Cache expired → full pipeline fallback
+                    const errData = fastErr?.response?.data || {};
+                    if (errData.cache_expired) {
+                        // Cache silinmiş, kullanıcıya bildir + sim tekrar çekmesini iste
+                        setFrcError('Sim cache süresi doldu (1 saat). Lütfen Tam Yeniden Hesaplama (SIMULASYON) tekrar çalıştırın, sonra Uygula\'ya basın.');
+                        setFrcLoading(false);
+                        return;
+                    }
+                    // Diğer hata → normal apply pipeline'a düş
+                    delete body.from_cache;
+                    delete body.cache_token;
+                }
+            }
+
+            // Async endpoint — Celery task başlat (sim veya cache-less apply)
             const startRes = await api.post('/system/health-check/full-recalculation-async/', body);
             const taskId = startRes.data.task_id;
             if (!taskId) throw new Error('Task ID alınamadı');
@@ -459,14 +486,14 @@ export default function RecalculationAuditTab() {
                         Tum Gunler
                     </label>
                     <button
-                        onClick={() => runFullRecalculation('apply')}
+                        onClick={() => runFullRecalculation('dry_run')}
                         disabled={isProcessing || uniLoading || uniFixing || frcLoading}
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
                             frcLoading ? 'bg-gray-400 cursor-wait' : 'bg-violet-600 hover:bg-violet-700 active:scale-95'
                         }`}
                     >
                         <ArrowPathIcon className="w-4 h-4" />
-                        {frcLoading ? 'Hesaplaniyor ve Uygulaniyor...' : 'Tam Yeniden Hesapla ve Uygula'}
+                        {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
                     </button>
                 </div>
             </div>
