@@ -106,14 +106,17 @@ export default function RecalculationAuditTab() {
         }
     };
 
-    const downloadVerifyTxt = async () => {
+    const downloadVerifyTxt = () => {
+        // Backend zaten text_log'u response'da gönderiyor — tekrar HTTP yok,
+        // mevcut state'ten direkt blob oluştur.
+        const text = verifyResult?.text_log;
+        if (!text) {
+            alert('TXT yok — önce Bağımsız Doğrulama çalıştırın.');
+            return;
+        }
         try {
-            const body = { date_from: startDate, date_to: endDate,
-                           only_mismatch: false, download: true };
-            if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/verify-calculations/', body,
-                { responseType: 'blob', timeout: VERIFY_TIMEOUT_MS });
-            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `bagimsiz_dogrulama_${startDate}_${endDate}.txt`;
@@ -1676,19 +1679,79 @@ export default function RecalculationAuditTab() {
                                                 <div className="font-bold text-red-900 mb-2">
                                                     [{emp.id}] {emp.name} ({emp.dept})
                                                 </div>
-                                                <div className="space-y-1">
-                                                    {mmDays.map(d => (
-                                                        <div key={d.work_date} className="text-xs text-gray-700 font-mono">
-                                                            <span className="font-bold text-red-700">{d.work_date}</span>
-                                                            {' — '}
-                                                            <span>N: bek={fmtSeconds(d.expected_normal)} kayıt={fmtSeconds(d.actual_normal)} fark={fmtSeconds(d.diff_normal)}</span>
-                                                            {' | '}
-                                                            <span>M: bek={fmtSeconds(d.expected_missing)} kayıt={fmtSeconds(d.actual_missing)} fark={fmtSeconds(d.diff_missing)}</span>
-                                                            {d.notes?.length > 0 && (
-                                                                <div className="ml-4 text-rose-600">→ {d.notes.join(' | ')}</div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                <div className="space-y-2">
+                                                    {mmDays.map(d => {
+                                                        const ev = d.evidence || {};
+                                                        const sr = ev.shift_rules || {};
+                                                        const c = ev.calculation || {};
+                                                        return (
+                                                            <details key={d.work_date} className="text-xs text-gray-700 font-mono bg-white rounded border border-red-200 p-2">
+                                                                <summary className="cursor-pointer hover:bg-red-50 -m-2 p-2 rounded">
+                                                                    <span className="font-bold text-red-700">{d.work_date}</span>
+                                                                    {' — '}
+                                                                    <span>N: bek={fmtSeconds(d.expected_normal)} kayıt={fmtSeconds(d.actual_normal)} <b>fark={fmtSeconds(d.diff_normal)}</b></span>
+                                                                    {' | '}
+                                                                    <span>M: bek={fmtSeconds(d.expected_missing)} kayıt={fmtSeconds(d.actual_missing)} <b>fark={fmtSeconds(d.diff_missing)}</b></span>
+                                                                    {d.notes?.length > 0 && (
+                                                                        <div className="ml-4 text-rose-600">→ {d.notes.join(' | ')}</div>
+                                                                    )}
+                                                                    <span className="ml-2 text-blue-600 text-[10px]">[kanıt için tıkla]</span>
+                                                                </summary>
+                                                                <div className="mt-3 pl-3 border-l-2 border-red-300 space-y-1">
+                                                                    <div><b>Vardiya:</b> {String(sr.shift_start || '-')}-{String(sr.shift_end || '-')} | Lunch: {String(sr.lunch_start || '-')}-{String(sr.lunch_end || '-')} | Off: {String(sr.is_off_day)} | Break: {sr.daily_break_allowance_min || 0}dk</div>
+                                                                    {ev.public_holiday && (
+                                                                        <div><b>Tatil:</b> {ev.public_holiday.name} [{ev.public_holiday.type}]</div>
+                                                                    )}
+                                                                    {ev.daily_override && (
+                                                                        <div className="text-orange-700"><b>Override:</b> #{ev.daily_override.id} is_off={String(ev.daily_override.is_off)} {ev.daily_override.start_time}-{ev.daily_override.end_time}</div>
+                                                                    )}
+                                                                    {ev.gate_events?.length > 0 && (
+                                                                        <div><b>Gate ({ev.gate_events.length}):</b> {ev.gate_events.slice(0, 12).map(e => `${e.ts} ${e.direction} ${e.status}`).join(' | ')}{ev.gate_events.length > 12 ? '…' : ''}</div>
+                                                                    )}
+                                                                    {ev.pairs?.length > 0 && (
+                                                                        <div><b>Pairs:</b> {ev.pairs.map(p => `${p.check_in || '?'}→${p.check_out || 'AÇIK'}`).join(' | ')}</div>
+                                                                    )}
+                                                                    {ev.attendance_records?.length > 0 && (
+                                                                        <div>
+                                                                            <b>Att kayıt ({ev.attendance_records.length}):</b>
+                                                                            <div className="ml-3">
+                                                                                {ev.attendance_records.map(a => (
+                                                                                    <div key={a.id}>
+                                                                                        #{a.id} {a.source}{a.is_overtime_record ? ' *OT' : ''}{a.parent_attendance_id ? ` parent=${a.parent_attendance_id}` : ''} {a.check_in || '-'}→{a.check_out || 'AÇIK'} st={a.status} N={fmtSeconds(a.normal_seconds)} OT={fmtSeconds(a.overtime_seconds)} M={fmtSeconds(a.missing_seconds)} HV={fmtSeconds(a.hospital_visit_seconds)}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {ev.leave_requests_all_status?.length > 0 && (
+                                                                        <div className="text-purple-700">
+                                                                            <b>LeaveReq ({ev.leave_requests_all_status.length}):</b>
+                                                                            <div className="ml-3">
+                                                                                {ev.leave_requests_all_status.map(lr => (
+                                                                                    <div key={lr.id}>#{lr.id} <b>{lr.status}</b> {lr.category || '-'}/{lr.request_type_name || '-'} {lr.start_date}→{lr.end_date} {lr.start_time}-{lr.end_time}</div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {ev.health_reports_all_status?.length > 0 && (
+                                                                        <div className="text-pink-700">
+                                                                            <b>HealthRep ({ev.health_reports_all_status.length}):</b>
+                                                                            <div className="ml-3">
+                                                                                {ev.health_reports_all_status.map(h => (
+                                                                                    <div key={h.id}>#{h.id} <b>{h.status}</b> {h.report_type || '-'} {h.start_date}→{h.end_date} full={String(h.is_full_day)} {h.start_time}-{h.end_time}</div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="bg-yellow-50 p-2 rounded mt-2">
+                                                                        <b>Hesap:</b> raw={fmtSeconds(c.raw_work_in_shift_s || 0)} − lunch={fmtSeconds(c.lunch_overlap_s || 0)} + hv={fmtSeconds(c.hv_credit_s || 0)} + leave={fmtSeconds(c.leave_credit_s || 0)} = <b>expected_normal={fmtSeconds(c.expected_normal_s || 0)}</b>
+                                                                        <br />
+                                                                        <b>Target:</b> {fmtSeconds(c.daily_target_s || 0)} → <b>expected_missing={fmtSeconds(c.expected_missing_s || 0)}</b>
+                                                                    </div>
+                                                                </div>
+                                                            </details>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         );
