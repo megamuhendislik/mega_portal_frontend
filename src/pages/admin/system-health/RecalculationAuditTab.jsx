@@ -602,17 +602,6 @@ export default function RecalculationAuditTab() {
                         <CheckCircleIcon className="w-4 h-4" />
                         {verifyLoading ? 'Doğrulanıyor...' : 'Bağımsız Doğrulama'}
                     </button>
-                    <button
-                        onClick={downloadWideReport}
-                        disabled={isProcessing || uniLoading || uniFixing || frcLoading || wideLoading}
-                        title="Geniş TXT: herkes (veya Sicil No doluysa tek kişi) için TÜM veri — kart giriş/çıkış, tüm kayıtlar, tüm talep statüleri (onaylı/bekleyen/red/iptal), izinler, sağlık raporları, aylık özet. TYR çalıştırmaya gerek yok."
-                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
-                            wideLoading ? 'bg-gray-400 cursor-wait' : 'bg-sky-700 hover:bg-sky-800 active:scale-95'
-                        }`}
-                    >
-                        <DocumentArrowDownIcon className="w-4 h-4" />
-                        {wideLoading ? 'Hazırlanıyor...' : (employeeId ? 'Geniş Rapor (Kişi)' : 'Geniş Rapor (Toplu)')}
-                    </button>
                 </div>
             </div>
 
@@ -1295,7 +1284,20 @@ export default function RecalculationAuditTab() {
                                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-violet-700 bg-violet-50 border border-violet-300 hover:bg-violet-100 active:scale-95 transition-all"
                             >
                                 <DocumentArrowDownIcon className="w-4 h-4" />
-                                TXT Indir
+                                TXT Indir (Kompakt)
+                            </button>
+                            <button
+                                onClick={downloadWideReport}
+                                disabled={wideLoading}
+                                title="Geniş TXT: bu tarih aralığı için herkes (veya Sicil No doluysa tek kişi) için TÜM veri — kart giriş/çıkış, tüm kayıtlar, tüm talep statüleri (onaylı/bekleyen/red/iptal), izinler, sağlık raporları, aylık özet."
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm border transition-all active:scale-95 ${
+                                    wideLoading
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
+                                        : 'text-sky-800 bg-sky-50 border-sky-300 hover:bg-sky-100'
+                                }`}
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                {wideLoading ? 'Hazırlanıyor...' : (employeeId ? 'Geniş TXT (Kişi)' : 'Geniş TXT (Toplu)')}
                             </button>
                         </div>
                         {frcResult.mode === 'apply' && (
