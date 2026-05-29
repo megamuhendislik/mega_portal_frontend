@@ -364,6 +364,37 @@ export default function RecalculationAuditTab() {
         window.URL.revokeObjectURL(url);
     };
 
+    // ── Geniş (Comprehensive) Rapor — tüm veri dökümü ──
+    const [wideLoading, setWideLoading] = useState(false);
+    const downloadWideReport = async () => {
+        // Kişi bazlı (Sicil No doluysa) veya toplu (boşsa). 30dk timeout.
+        setWideLoading(true);
+        try {
+            const body = { date_from: startDate, date_to: endDate, download: true };
+            if (employeeId) body.employee_id = employeeId;
+            const res = await api.post('/system/health-check/comprehensive-report/', body, {
+                responseType: 'blob',
+                timeout: 30 * 60 * 1000,
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            const suffix = employeeId ? `_${employeeId}` : '_toplu';
+            a.download = `genis_rapor${suffix}_${startDate}_${endDate}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            const isTimeout = (e.code === 'ECONNABORTED') || /timeout/i.test(e.message || '');
+            alert(isTimeout
+                ? 'Geniş rapor zaman aşımı — tek çalışan (Sicil No) veya daha kısa aralık deneyin.'
+                : 'Geniş rapor hatası: ' + (e?.response?.data?.error || e.message || 'Bilinmeyen'));
+        } finally {
+            setWideLoading(false);
+        }
+    };
+
     const toggleFrcEmp = (id) => {
         setFrcExpandedEmps(prev => {
             const next = new Set(prev);
@@ -570,6 +601,17 @@ export default function RecalculationAuditTab() {
                     >
                         <CheckCircleIcon className="w-4 h-4" />
                         {verifyLoading ? 'Doğrulanıyor...' : 'Bağımsız Doğrulama'}
+                    </button>
+                    <button
+                        onClick={downloadWideReport}
+                        disabled={isProcessing || uniLoading || uniFixing || frcLoading || wideLoading}
+                        title="Geniş TXT: herkes (veya Sicil No doluysa tek kişi) için TÜM veri — kart giriş/çıkış, tüm kayıtlar, tüm talep statüleri (onaylı/bekleyen/red/iptal), izinler, sağlık raporları, aylık özet. TYR çalıştırmaya gerek yok."
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            wideLoading ? 'bg-gray-400 cursor-wait' : 'bg-sky-700 hover:bg-sky-800 active:scale-95'
+                        }`}
+                    >
+                        <DocumentArrowDownIcon className="w-4 h-4" />
+                        {wideLoading ? 'Hazırlanıyor...' : (employeeId ? 'Geniş Rapor (Kişi)' : 'Geniş Rapor (Toplu)')}
                     </button>
                 </div>
             </div>
