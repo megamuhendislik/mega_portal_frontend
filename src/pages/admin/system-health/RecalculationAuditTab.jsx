@@ -301,14 +301,23 @@ export default function RecalculationAuditTab() {
             if (!taskId) throw new Error('Task ID alınamadı');
 
             // Poll task status
+            // Tüm dönem (65 çalışan × ~90 gün) TYR'si ~18-22dk sürebiliyor.
+            // Backend Celery task: soft_time_limit=3600s (60dk), time_limit=3900s (65dk).
+            // Frontend tavanı 67dk: backend hard limit'in HAFİF üstünde — böylece
+            // backend zaman aşımına uğrarsa onun FAILED durumunu gösterir, kendi
+            // generic timeout'unu değil.
             let attempts = 0;
-            const maxAttempts = 240; // 20dk max (5sn * 240)
+            const POLL_INTERVAL_MS = 5000;
+            const MAX_MINUTES = 67;
+            const maxAttempts = (MAX_MINUTES * 60 * 1000) / POLL_INTERVAL_MS; // 720
+            let consecutivePollErrors = 0;
             while (attempts < maxAttempts) {
-                await new Promise(r => setTimeout(r, 5000)); // 5sn bekle
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
                 attempts++;
                 try {
                     const statusRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${taskId}`);
                     const st = statusRes.data;
+                    consecutivePollErrors = 0;
 
                     if (st.status === 'COMPLETED') {
                         // Tam JSON sonucu al (summary + employees + text_log)
@@ -324,12 +333,14 @@ export default function RecalculationAuditTab() {
                     }
                     // RUNNING — devam et
                 } catch (pollErr) {
-                    // Network error during poll — devam et
+                    // Geçici network/poll hatası — birkaç kez tolere et, hemen iptal etme
+                    consecutivePollErrors++;
+                    if (consecutivePollErrors >= 12) throw pollErr; // ~1dk üst üste hata → vazgeç
                     if (attempts >= maxAttempts) throw pollErr;
                 }
             }
             if (attempts >= maxAttempts) {
-                throw new Error('Hesaplama zaman aşımına uğradı (20dk)');
+                throw new Error(`Hesaplama zaman aşımına uğradı (${MAX_MINUTES}dk). Daha kısa tarih aralığı veya tek çalışan deneyin.`);
             }
         } catch (e) {
             setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
