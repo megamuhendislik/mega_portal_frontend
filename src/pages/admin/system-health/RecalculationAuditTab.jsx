@@ -276,7 +276,10 @@ export default function RecalculationAuditTab() {
                 body.from_cache = true;
                 body.cache_token = frcResult.cache_token;
                 try {
-                    const fastRes = await api.post('/system/health-check/full-recalculation/', body);
+                    // Fast-path sync apply: targeted recalc + MWS cascade dakikalar
+                    // sürebilir → 67dk timeout (default 30s yetmez).
+                    const fastRes = await api.post('/system/health-check/full-recalculation/', body,
+                        { timeout: 67 * 60 * 1000 });
                     setFrcResult({ ...frcResult, ...fastRes.data, mode: 'apply' });
                     setFrcLoading(false);
                     return;
@@ -296,7 +299,10 @@ export default function RecalculationAuditTab() {
             }
 
             // Async endpoint — Celery task başlat (sim veya cache-less apply)
-            const startRes = await api.post('/system/health-check/full-recalculation-async/', body);
+            // NOT: api default timeout 30s. Backend yük altındaysa task dispatch
+            // 30s'yi aşabiliyor → açık 60s timeout ver (yoksa 'timeout of 30000ms').
+            const startRes = await api.post('/system/health-check/full-recalculation-async/', body,
+                { timeout: 60000 });
             const taskId = startRes.data.task_id;
             if (!taskId) throw new Error('Task ID alınamadı');
 
@@ -315,14 +321,18 @@ export default function RecalculationAuditTab() {
                 await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
                 attempts++;
                 try {
-                    const statusRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${taskId}`);
+                    // Her poll'a açık 60s timeout (default 30s yetmeyebilir, DB yük altında)
+                    const statusRes = await api.get(
+                        `/system/health-check/full-recalculation-status/?task_id=${taskId}`,
+                        { timeout: 60000 });
                     const st = statusRes.data;
                     consecutivePollErrors = 0;
 
                     if (st.status === 'COMPLETED') {
-                        // Tam JSON sonucu al (summary + employees + text_log)
+                        // Tam JSON sonucu al (summary + employees + text_log) — büyük olabilir
                         const fullRes = await api.get(
-                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&full=true`
+                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&full=true`,
+                            { timeout: 120000 }
                         );
                         setFrcResult(fullRes.data);
                         break;
