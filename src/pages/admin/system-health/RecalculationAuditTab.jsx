@@ -80,6 +80,10 @@ export default function RecalculationAuditTab() {
     const [verifyResult, setVerifyResult] = useState(null);
     const [verifyError, setVerifyError] = useState(null);
 
+    // Bağımsız doğrulama büyük tarih aralığında uzun sürebilir (65 emp × 90 gün)
+    // — 30 dk timeout (axios default 30sn yetmez).
+    const VERIFY_TIMEOUT_MS = 30 * 60 * 1000;
+
     const runVerifyCalculations = async () => {
         setVerifyLoading(true);
         setVerifyError(null);
@@ -87,10 +91,16 @@ export default function RecalculationAuditTab() {
         try {
             const body = { date_from: startDate, date_to: endDate, only_mismatch: false };
             if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/verify-calculations/', body);
+            const res = await api.post('/system/health-check/verify-calculations/', body,
+                { timeout: VERIFY_TIMEOUT_MS });
             setVerifyResult(res.data);
         } catch (e) {
-            setVerifyError(e?.response?.data?.error || e.message || 'Doğrulama başarısız');
+            const isTimeout = (e.code === 'ECONNABORTED') || /timeout/i.test(e.message || '');
+            setVerifyError(
+                isTimeout
+                    ? 'Timeout — tarih aralığı çok büyük olabilir. Daha kısa aralık veya tek çalışan deneyin.'
+                    : (e?.response?.data?.error || e.message || 'Doğrulama başarısız')
+            );
         } finally {
             setVerifyLoading(false);
         }
@@ -102,7 +112,7 @@ export default function RecalculationAuditTab() {
                            only_mismatch: false, download: true };
             if (employeeId) body.employee_id = parseInt(employeeId);
             const res = await api.post('/system/health-check/verify-calculations/', body,
-                { responseType: 'blob' });
+                { responseType: 'blob', timeout: VERIFY_TIMEOUT_MS });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const a = document.createElement('a');
             a.href = url;
