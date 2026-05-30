@@ -187,6 +187,28 @@ export default function RequestAnalyticsTab() {
             .slice(0, 20);
     }, [data]);
 
+    // D5 fix (2026-05-30): "Onay Oranı" sütunu paydası.
+    //   Eski: approved/total → PENDING+CANCELLED dahil tüm talepler payda olduğundan
+    //   çok bekleyeni olan kişide yapay düşük "oran" çıkıyordu ve üst KPI "Onay Oranı"
+    //   ile aynı evren değildi. Backend by_employee item'ında per-employee `rejected`
+    //   VARSA: onay BAŞARI oranı = approved / decided (decided = approved + rejected),
+    //   PENDING/CANCELLED hariç → üst KPI ile tanım birliği. YOKSA: approved/total
+    //   fallback'i korunur ("Onaylanan Pay" semantiği). Sütun başlığı kaynağa göre seçilir.
+    const hasRejectedPerEmployee = useMemo(
+        () => employeeBreakdown.some((e) => e && Object.prototype.hasOwnProperty.call(e, 'rejected')),
+        [employeeBreakdown]
+    );
+    const approvalColLabel = hasRejectedPerEmployee ? 'Onay Oranı' : 'Onaylanan Pay';
+    const computeApprovalPct = useCallback((emp) => {
+        const approved = emp.approved || 0;
+        if (Object.prototype.hasOwnProperty.call(emp, 'rejected')) {
+            const decided = approved + (emp.rejected || 0);
+            return decided > 0 ? Math.round((approved / decided) * 100) : 0;
+        }
+        // Fallback: decided bilinmiyor → onaylanan pay (eski formül)
+        return Math.round((approved / (emp.total || 1)) * 100);
+    }, []);
+
     // Leave type breakdown
     const leaveTypeData = useMemo(() => {
         if (!data?.leave_type_breakdown) return [];
@@ -587,13 +609,14 @@ export default function RequestAnalyticsTab() {
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">İzin</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Fazla Mesai</th>
                                     <th className="text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold">Onaylı</th>
-                                    <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold w-32">Oran</th>
+                                    <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold w-32">{approvalColLabel}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {employeeBreakdown.map((emp, i) => {
-                                    const total = emp.total || 1;
-                                    const approvedPct = Math.round((emp.approved || 0) / total * 100);
+                                    // D5 fix: decided (approved+rejected) paydası varsa onay başarı oranı,
+                                    // yoksa approved/total fallback ("Onaylanan Pay").
+                                    const approvedPct = computeApprovalPct(emp);
                                     return (
                                         <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                             <td className="py-2.5 px-4 text-slate-300 font-bold">{i + 1}</td>
