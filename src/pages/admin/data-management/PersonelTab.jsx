@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Select, Button, Modal, message, Spin, Empty } from 'antd';
-import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined } from '@ant-design/icons';
+import { Select, Button, Modal, message, Spin, Empty, Popconfirm, Tooltip } from 'antd';
+import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined, SaveOutlined, ClearOutlined, CloseOutlined } from '@ant-design/icons';
 import { format, addMonths, subMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
+import useStagedOps, { stripClientFields } from './useStagedOps';
 import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
@@ -20,6 +21,10 @@ export default function PersonelTab({ initialEmployee }) {
     const [loadingCalendar, setLoadingCalendar] = useState(false);
     const [balanceSummary, setBalanceSummary] = useState(null);
     const [settlementData, setSettlementData] = useState(null);
+
+    // ── Staged operations (Veri Yönetimi v2) ───────────────────────
+    const { pendingOps, addOp, removeOp, clearOps, count } = useStagedOps();
+    const [savingChangeset, setSavingChangeset] = useState(false);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -87,6 +92,7 @@ export default function PersonelTab({ initialEmployee }) {
         setSelectedEmployee(emp || null);
         setSelectedDate(null);
         setMonthlyData({});
+        clearOps();
     };
 
     const handlePrevMonth = () => {
@@ -149,6 +155,27 @@ export default function PersonelTab({ initialEmployee }) {
     const handleSaveSuccess = () => {
         fetchMonthlyData();
         fetchBalanceSummary();
+    };
+
+    // ── Staged ops: Kaydet (apply_changeset) ───────────────────────
+    const handleApplyChangeset = async () => {
+        if (!selectedEmployee || count === 0) return;
+        setSavingChangeset(true);
+        try {
+            await api.post('/system-data/apply_changeset/', {
+                employee_id: selectedEmployee.id,
+                operations: stripClientFields(pendingOps),
+                reason: '',
+            });
+            message.success('Kaydedildi');
+            clearOps();
+            fetchMonthlyData();
+            fetchBalanceSummary();
+        } catch (e) {
+            message.error('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setSavingChangeset(false);
+        }
     };
 
     const openSettlement = () => {
@@ -396,6 +423,7 @@ export default function PersonelTab({ initialEmployee }) {
                                 employee={selectedEmployee}
                                 date={selectedDate}
                                 onSaveSuccess={handleSaveSuccess}
+                                onStageOp={addOp}
                             />
                         ) : (
                             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400">
@@ -417,6 +445,69 @@ export default function PersonelTab({ initialEmployee }) {
                     onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
                 />
                 </>
+            )}
+
+            {/* ── Bekleyen Değişiklikler Aksiyon Barı (sticky footer) ─── */}
+            {selectedEmployee && count > 0 && (
+                <div className="sticky bottom-0 left-0 right-0 z-20 mt-4">
+                    <div className="bg-white/95 backdrop-blur border border-slate-200 shadow-lg rounded-xl p-3">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            {/* Sol: başlık + buttonlar */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-sm font-bold text-slate-700">
+                                    Bekleyen değişiklikler
+                                    <span className="ml-1.5 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-black">
+                                        {count}
+                                    </span>
+                                </span>
+                                <Button
+                                    type="primary"
+                                    size="middle"
+                                    icon={<SaveOutlined />}
+                                    onClick={handleApplyChangeset}
+                                    loading={savingChangeset}
+                                    disabled={count === 0}
+                                    className="!bg-green-600 !border-green-600 hover:!bg-green-700"
+                                >
+                                    Kaydet
+                                </Button>
+                                <Popconfirm
+                                    title="Tüm bekleyen değişiklikler silinsin mi?"
+                                    onConfirm={clearOps}
+                                    okText="Temizle"
+                                    cancelText="Vazgeç"
+                                    disabled={count === 0}
+                                >
+                                    <Button
+                                        size="middle"
+                                        icon={<ClearOutlined />}
+                                        disabled={count === 0}
+                                    >
+                                        Temizle
+                                    </Button>
+                                </Popconfirm>
+                            </div>
+
+                            {/* Sağ: bekleyen op listesi */}
+                            <div className="flex-1 min-w-0 flex flex-wrap gap-1.5 md:justify-end max-h-[88px] overflow-y-auto">
+                                {pendingOps.map((op, i) => (
+                                    <Tooltip key={op._clientId} title={op._label || ''}>
+                                        <span className="inline-flex items-center gap-1 max-w-[260px] bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-[11px] text-slate-600">
+                                            <span className="truncate">{op._label || `${op.record_type} ${op.op_type}`}</span>
+                                            <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<CloseOutlined />}
+                                                className="!w-4 !h-4 !min-w-0 !p-0 !text-slate-400 hover:!text-red-500"
+                                                onClick={() => removeOp(i)}
+                                            />
+                                        </span>
+                                    </Tooltip>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
