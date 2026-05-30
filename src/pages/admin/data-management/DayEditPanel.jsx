@@ -1000,7 +1000,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                             value={getTimeDayjs(rec.check_in)}
                                             onChange={(val) => setRecordTime(i, 'check_in', val)}
                                             format="HH:mm"
-                                            minuteStep={5}
+                                            minuteStep={1}
                                             className="w-full"
                                             size="middle"
                                             placeholder="Saat seçin"
@@ -1013,7 +1013,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                             value={getTimeDayjs(rec.check_out)}
                                             onChange={(val) => setRecordTime(i, 'check_out', val)}
                                             format="HH:mm"
-                                            minuteStep={5}
+                                            minuteStep={1}
                                             className="w-full"
                                             size="middle"
                                             placeholder="Saat seçin"
@@ -1137,7 +1137,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                         value={workStart}
                                         onChange={setWorkStart}
                                         format="HH:mm"
-                                        minuteStep={15}
+                                        minuteStep={1}
                                         className="w-full"
                                         size="small"
                                         placeholder="08:00"
@@ -1899,7 +1899,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                             value={newHealthTimeStart}
                                             onChange={setNewHealthTimeStart}
                                             format="HH:mm"
-                                            minuteStep={5}
+                                            minuteStep={1}
                                             className="w-full"
                                             size="small"
                                             placeholder="Saat"
@@ -1912,7 +1912,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                             value={newHealthTimeEnd}
                                             onChange={setNewHealthTimeEnd}
                                             format="HH:mm"
-                                            minuteStep={5}
+                                            minuteStep={1}
                                             className="w-full"
                                             size="small"
                                             placeholder="Saat"

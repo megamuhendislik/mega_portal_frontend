@@ -495,7 +495,7 @@ export default function BulkOperationsTab() {
                             onChange={setBulkCheckIn}
                             format="HH:mm"
                             className="w-full"
-                            minuteStep={5}
+                            minuteStep={1}
                             disabled={bulkProcessing}
                             placeholder="Giriş"
                         />
@@ -512,7 +512,7 @@ export default function BulkOperationsTab() {
                             onChange={setBulkCheckOut}
                             format="HH:mm"
                             className="w-full"
-                            minuteStep={5}
+                            minuteStep={1}
                             disabled={bulkProcessing}
                             placeholder="Çıkış"
                         />
