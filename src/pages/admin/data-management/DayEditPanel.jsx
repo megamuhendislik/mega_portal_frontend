@@ -377,15 +377,19 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         }
     };
 
-    const handleCancelLeave = async (leaveId) => {
-        try {
-            const res = await api.post('/system-data/admin_cancel_leave/', { leave_id: leaveId });
-            message.success(res.data.message || 'İzin iptal edildi');
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        }
+    /* Mevcut izni staged LEAVE DELETE op'a çevirir (anında iptal API'si YOK).
+     * Backend target_pk ile siler; payload start_date/end_date recalc penceresi
+     * için kullanılır (izin tüm aralığında günler yeniden hesaplanır). */
+    const handleCancelLeave = (leave) => {
+        const startStr = leave.start_date || dateStr;
+        const endStr = leave.end_date || leave.start_date || dateStr;
+        stage(
+            {
+                record_type: 'LEAVE', op_type: 'DELETE', target_pk: leave.id,
+                payload: { start_date: startStr, end_date: endStr },
+            },
+            `− İzin ${startStr}..${endStr} sil`
+        );
     };
 
     /* ───── entitlement handlers (staged) ───── */
@@ -562,14 +566,58 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
     };
 
-    const handleDeleteRequest = async (requestType, requestId) => {
-        try {
-            await api.post('/system-data/admin_delete_request/', {
-                request_type: requestType, request_id: requestId, override_note: overrideNote,
-            });
-            message.success('Talep silindi');
-            loadData();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
+    /* Mevcut talepleri (OT / Kartsız / Yemek / Dış görev) staged DELETE op'a
+     * çevirir. Anında API çağrısı YOK — Kaydet'te (preview→apply) atomik işlenir
+     * ve geri alınabilir. DELETE op'unda backend target_pk ile siler; payload
+     * tarihleri sadece hangi günleri recalc edeceğini belirlemek için kullanılır.
+     *
+     * Panel request type → backend record_type eşlemesi:
+     *   'overtime' → 'OT'        (tek gün; date row'da yok → seçili gün dateStr)
+     *   'cardless' → 'CARDLESS'  (tek gün; date row'da yok → seçili gün dateStr)
+     *   'meal'     → 'MEAL'      (recalc yok; date row'da yok → seçili gün dateStr)
+     *   'leave'    → 'LEAVE'     (dış görev dahil; start_date/end_date row'da var) */
+    const handleDeleteRequest = (requestType, requestId, row = {}) => {
+        let op;
+        let label;
+        switch (requestType) {
+            case 'overtime':
+                op = {
+                    record_type: 'OT', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Mesai ${row.date || dateStr} sil`;
+                break;
+            case 'cardless':
+                op = {
+                    record_type: 'CARDLESS', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Kartsız ${row.date || dateStr} sil`;
+                break;
+            case 'meal':
+                op = {
+                    record_type: 'MEAL', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Yemek ${row.date || dateStr} sil`;
+                break;
+            case 'leave': {
+                // Dış görev de bir LeaveRequest — start_date/end_date row'da gelir;
+                // yoksa seçili güne düş.
+                const startStr = row.start_date || dateStr;
+                const endStr = row.end_date || row.start_date || dateStr;
+                op = {
+                    record_type: 'LEAVE', op_type: 'DELETE', target_pk: requestId,
+                    payload: { start_date: startStr, end_date: endStr },
+                };
+                label = `− İzin ${startStr}..${endStr} sil`;
+                break;
+            }
+            default:
+                message.error('Bilinmeyen talep tipi: ' + requestType);
+                return;
+        }
+        stage(op, label);
     };
 
     /* ───── time helpers for records ───── */
@@ -1284,7 +1332,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                             {lr.status !== 'CANCELLED' && (
                                 <Popconfirm
                                     title="Bu izni iptal etmek istediğinize emin misiniz?"
-                                    onConfirm={() => handleCancelLeave(lr.id)}
+                                    onConfirm={() => handleCancelLeave(lr)}
                                     okText="İptal Et"
                                     cancelText="Vazgeç"
                                 >
@@ -1426,7 +1474,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                 ]}
                             />
                             {ot.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Bu talebi silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('overtime', ot.id)}>
+                            <Popconfirm title="Bu talebi silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('overtime', ot.id, ot)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1564,7 +1612,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                             />
                             {cr.is_admin_override && <Tag color="purple">Admin</Tag>}
                             <span className="text-xs text-gray-500 flex-1">{cr.reason}</span>
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('cardless', cr.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('cardless', cr.id, cr)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1613,7 +1661,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                 ]}
                             />
                             {mr.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('meal', mr.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('meal', mr.id, mr)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1660,7 +1708,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                                 ]}
                             />
                             {ed.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('leave', ed.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('leave', ed.id, ed)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
