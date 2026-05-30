@@ -8,6 +8,7 @@ import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
 import useStagedOps, { stripClientFields } from './useStagedOps';
+import PreviewModal from './PreviewModal';
 import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
@@ -25,6 +26,9 @@ export default function PersonelTab({ initialEmployee }) {
     // ── Staged operations (Veri Yönetimi v2) ───────────────────────
     const { pendingOps, addOp, removeOp, clearOps, count } = useStagedOps();
     const [savingChangeset, setSavingChangeset] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -157,22 +161,51 @@ export default function PersonelTab({ initialEmployee }) {
         fetchBalanceSummary();
     };
 
-    // ── Staged ops: Kaydet (apply_changeset) ───────────────────────
-    const handleApplyChangeset = async () => {
+    // ── Staged ops: Önizle → (ONAYLA) → Kaydet ─────────────────────
+    const extractErr = (e) => {
+        const d = e.response?.data;
+        if (!d) return e.message;
+        if (typeof d === 'string') return d;
+        return d.detail || d.error || (Array.isArray(d) ? d.join(', ') : JSON.stringify(d));
+    };
+
+    const handleOpenPreview = async () => {
+        if (!selectedEmployee || count === 0) return;
+        setPreviewLoading(true);
+        setPreviewData(null);
+        setPreviewOpen(true);
+        try {
+            const res = await api.post('/system-data/preview_changeset/', {
+                employee_id: selectedEmployee.id,
+                operations: stripClientFields(pendingOps),
+            });
+            setPreviewData(res.data);
+        } catch (e) {
+            message.error('Önizleme hatası: ' + extractErr(e));
+            setPreviewOpen(false);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleApplyFromModal = async ({ reason, forceOverride }) => {
         if (!selectedEmployee || count === 0) return;
         setSavingChangeset(true);
         try {
-            await api.post('/system-data/apply_changeset/', {
+            const res = await api.post('/system-data/apply_changeset/', {
                 employee_id: selectedEmployee.id,
                 operations: stripClientFields(pendingOps),
-                reason: '',
+                reason: reason || '',
+                force_override: !!forceOverride,
             });
-            message.success('Kaydedildi');
+            message.success('Kaydedildi (#' + (res.data?.changeset_id ?? '') + ')');
             clearOps();
+            setPreviewOpen(false);
+            setPreviewData(null);
             fetchMonthlyData();
             fetchBalanceSummary();
         } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
+            message.error('Hata: ' + extractErr(e));
         } finally {
             setSavingChangeset(false);
         }
@@ -464,12 +497,12 @@ export default function PersonelTab({ initialEmployee }) {
                                     type="primary"
                                     size="middle"
                                     icon={<SaveOutlined />}
-                                    onClick={handleApplyChangeset}
-                                    loading={savingChangeset}
+                                    onClick={handleOpenPreview}
+                                    loading={previewLoading || savingChangeset}
                                     disabled={count === 0}
                                     className="!bg-green-600 !border-green-600 hover:!bg-green-700"
                                 >
-                                    Kaydet
+                                    Önizle & Kaydet
                                 </Button>
                                 <Popconfirm
                                     title="Tüm bekleyen değişiklikler silinsin mi?"
@@ -509,6 +542,16 @@ export default function PersonelTab({ initialEmployee }) {
                     </div>
                 </div>
             )}
+
+            {/* ── Kaydet öncesi etki önizlemesi + kilitli dönem ONAYLA ─── */}
+            <PreviewModal
+                open={previewOpen}
+                loading={previewLoading}
+                applying={savingChangeset}
+                data={previewData}
+                onApply={handleApplyFromModal}
+                onCancel={() => { setPreviewOpen(false); setPreviewData(null); }}
+            />
         </div>
     );
 }
