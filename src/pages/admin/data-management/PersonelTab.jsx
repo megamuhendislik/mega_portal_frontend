@@ -10,6 +10,7 @@ import SettlementModal from './SettlementModal';
 import useStagedOps, { stripClientFields } from './useStagedOps';
 import PreviewModal from './PreviewModal';
 import ChangeHistoryTab from './ChangeHistoryTab';
+import MultiDayRecordsTab from './MultiDayRecordsTab';
 import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
@@ -480,6 +481,17 @@ export default function PersonelTab({ initialEmployee }) {
                     </div>
                 </div>
                                 </>
+                            ),
+                        },
+                        {
+                            key: 'multiday',
+                            label: 'Çok-günlü Kayıtlar',
+                            children: (
+                                <MultiDayRecordsTab
+                                    employee={selectedEmployee}
+                                    currentMonth={currentMonth}
+                                    onStageOp={addOp}
+                                />
                             ),
                         },
                         {
