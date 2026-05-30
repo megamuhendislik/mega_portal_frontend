@@ -10,7 +10,8 @@ import {
 import {
     PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
     CheckCircleOutlined, CloseCircleOutlined, HistoryOutlined,
-    CalendarOutlined, EditOutlined, ThunderboltOutlined
+    CalendarOutlined, EditOutlined, ThunderboltOutlined,
+    MedicineBoxOutlined, SafetyCertificateOutlined
 } from '@ant-design/icons';
 import { getIstanbulYear } from '../../../utils/dateUtils';
 
@@ -62,7 +63,7 @@ const sourceOptions = [
 ];
 
 /* ───── component ───── */
-export default function DayEditPanel({ employee, date, onSaveSuccess }) {
+export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp }) {
     // Data states
     const [records, setRecords] = useState([]);
     const [leaves, setLeaves] = useState([]);
@@ -72,7 +73,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const [dailyTarget, setDailyTarget] = useState(0);
     const [scheduleInfo, setScheduleInfo] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [deleteIds, setDeleteIds] = useState([]);
 
     // Smart Entry State
@@ -94,7 +94,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     // Entitlement editing state
     const [editingEntitlement, setEditingEntitlement] = useState(null);
     const [editEntReason, setEditEntReason] = useState('');
-    const [editEntSaving, setEditEntSaving] = useState(false);
 
     // New year addition
     const [showAddYear, setShowAddYear] = useState(false);
@@ -126,19 +125,16 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const [newOtEnd, setNewOtEnd] = useState(null);
     const [newOtStatus, setNewOtStatus] = useState('APPROVED');
     const [newOtReason, setNewOtReason] = useState('');
-    const [otCreating, setOtCreating] = useState(false);
 
     // Cardless creation form
     const [newCardlessIn, setNewCardlessIn] = useState(null);
     const [newCardlessOut, setNewCardlessOut] = useState(null);
     const [newCardlessStatus, setNewCardlessStatus] = useState('APPROVED');
     const [newCardlessReason, setNewCardlessReason] = useState('');
-    const [cardlessCreating, setCardlessCreating] = useState(false);
 
     // Meal creation form
     const [newMealStatus, setNewMealStatus] = useState('PENDING');
     const [newMealDesc, setNewMealDesc] = useState('');
-    const [mealCreating, setMealCreating] = useState(false);
 
     // External duty creation form
     const [newDutyStart, setNewDutyStart] = useState(null);
@@ -146,9 +142,56 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     const [newDutyCity, setNewDutyCity] = useState('');
     const [newDutyDesc, setNewDutyDesc] = useState('');
     const [newDutyStatus, setNewDutyStatus] = useState('APPROVED');
-    const [dutyCreating, setDutyCreating] = useState(false);
+
+    // Health report creation form
+    const [newHealthType, setNewHealthType] = useState('HEALTH_REPORT');
+    const [newHealthStart, setNewHealthStart] = useState(null);
+    const [newHealthEnd, setNewHealthEnd] = useState(null);
+    const [newHealthTimeStart, setNewHealthTimeStart] = useState(null);
+    const [newHealthTimeEnd, setNewHealthTimeEnd] = useState(null);
+
+    // Special leave creation form
+    const [newSpecialType, setNewSpecialType] = useState('PATERNITY');
+    const [newSpecialStart, setNewSpecialStart] = useState(null);
+    const [newSpecialEnd, setNewSpecialEnd] = useState(null);
+    const [newSpecialReason, setNewSpecialReason] = useState('');
 
     const dateStr = format(date, 'yyyy-MM-dd');
+
+    /* Sağlık raporu / Özel izin tür etiketleri (backend choices ile birebir) */
+    const HEALTH_TYPE_OPTIONS = [
+        { value: 'HEALTH_REPORT', label: 'Tam Gün Rapor' },
+        { value: 'HOSPITAL_VISIT', label: 'Hastane Ziyareti' },
+    ];
+    const SPECIAL_TYPE_OPTIONS = [
+        { value: 'PATERNITY', label: 'Babalık İzni' },
+        { value: 'BEREAVEMENT', label: 'Ölüm İzni' },
+        { value: 'MARRIAGE', label: 'Evlilik İzni' },
+        { value: 'UNPAID', label: 'Ücretsiz İzin' },
+    ];
+
+    /* ───── staged-op helper ─────
+     * Bir op'u kuyruğa ekler (anında API çağrısı YOK). _label kısa,
+     * insan-okur açıklama; alt aksiyon barında gösterilir. */
+    const stage = (op, label) => {
+        if (!onStageOp) {
+            message.error('Değişiklik kuyruğu kullanılamıyor');
+            return false;
+        }
+        onStageOp({ ...op, _label: label });
+        message.success('Değişiklik kuyruğa eklendi');
+        return true;
+    };
+
+    // HH:mm parçası — backend'den gelen ISO/T-string veya saat-only değerden
+    const toHHmm = (dtStr) => {
+        if (!dtStr) return null;
+        try {
+            const d = new Date(dtStr);
+            if (isNaN(d.getTime())) return null;
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        } catch { return null; }
+    };
 
     // Balance-tracked leave type detection
     const BALANCE_TRACKED_CODES = ['ANNUAL_LEAVE', 'EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'];
@@ -191,33 +234,59 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         setEditingEntitlement(null);
         setShowAddYear(false);
         setShowHistory(false);
+        setNewHealthStart(dayjs(dateStr));
+        setNewHealthEnd(dayjs(dateStr));
+        setNewHealthTimeStart(null);
+        setNewHealthTimeEnd(null);
+        setNewHealthType('HEALTH_REPORT');
+        setNewSpecialStart(dayjs(dateStr));
+        setNewSpecialEnd(dayjs(dateStr));
+        setNewSpecialReason('');
+        setNewSpecialType('PATERNITY');
     }, [employee.id, dateStr, loadData]);
 
-    /* ───── attendance handlers ───── */
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.post('/system-data/update_daily_records/', {
-                employee_id: employee.id,
+    /* ───── attendance handlers ─────
+     * Staged model: her giriş/çıkış kaydı bir ATTENDANCE op'una dönüşür.
+     * Yeni kayıt → CREATE, mevcut kayıt → UPDATE, silinen id'ler → DELETE. */
+    const handleSave = () => {
+        if (records.length === 0 && deleteIds.length === 0) {
+            message.warning('Kuyruğa eklenecek değişiklik yok');
+            return;
+        }
+        let staged = 0;
+        // Silinecekler (mevcut kayıtlar)
+        deleteIds.forEach((id) => {
+            stage(
+                { record_type: 'ATTENDANCE', op_type: 'DELETE', target_pk: id, payload: { date: dateStr } },
+                `− Kayıt sil #${id} ${dateStr}`
+            );
+            staged++;
+        });
+        // Mevcut/yeni kayıtlar
+        records.forEach((r) => {
+            const checkIn = toHHmm(r.check_in);
+            const checkOut = toHHmm(r.check_out);
+            const payload = {
                 date: dateStr,
-                records: records.map(r => ({
-                    id: r.id || undefined,
-                    check_in: r.check_in,
-                    check_out: r.check_out,
-                    source: r.source || 'MANUAL',
-                    status: r.status || 'OPEN',
-                })),
-                delete_ids: deleteIds,
-                override_note: overrideNote,
-                force_override: forceOverride,
-            });
-            message.success('Kaydedildi!');
-            if (onSaveSuccess) onSaveSuccess();
-            loadData();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        } finally {
-            setSaving(false);
+                check_in: checkIn,
+                check_out: checkOut,
+                source: r.source || 'ADMIN_ENTRY',
+                status: r.status || 'CALCULATED',
+            };
+            if (overrideNote) payload.note = overrideNote;
+            const opType = r.id ? 'UPDATE' : 'CREATE';
+            const sign = r.id ? '~' : '+';
+            stage(
+                { record_type: 'ATTENDANCE', op_type: opType, target_pk: r.id || null, payload },
+                `${sign} Kart ${dateStr} ${checkIn || '?'}→${checkOut || '?'}`
+            );
+            staged++;
+        });
+        // İşlendi olarak işaretle (UI temizliği)
+        setDeleteIds([]);
+        setOverrideNote('');
+        if (staged > 0 && onSaveSuccess) {
+            // Sadece kuyruğa eklendi — kalıcı kayıt değil; reload Kaydet'te olur.
         }
     };
 
@@ -299,7 +368,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
     };
 
     /* ───── leave handlers ───── */
-    const handleCreateLeave = async () => {
+    const handleCreateLeave = () => {
         if (!leaveTypeId || !leaveStart || !leaveEnd) {
             message.warning('Lütfen tüm alanları doldurun');
             return;
@@ -315,98 +384,95 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
             message.warning('Bakiyeden düşürülmeme nedenini yazınız');
             return;
         }
-        setSaving(true);
-        try {
-            const reasonParts = [leaveReason || 'Muhasebe tarafından oluşturuldu'];
-            if (isBalanceTracked && !deductFromBalance && noDeductReason.trim()) {
-                reasonParts.push(`[Bakiyeden düşürülmedi: ${noDeductReason.trim()}]`);
-            }
-            const res = await api.post('/system-data/admin_create_leave/', {
-                employee_id: employee.id,
-                request_type_id: leaveTypeId,
-                start_date: leaveStart.format('YYYY-MM-DD'),
-                end_date: leaveEnd.format('YYYY-MM-DD'),
-                reason: reasonParts.join(' '),
-                deduct_from_balance: deductFromBalance,
-            });
-            message.success(res.data.message || 'İzin oluşturuldu');
+        const reasonParts = [leaveReason || 'Muhasebe tarafından oluşturuldu'];
+        if (isBalanceTracked && !deductFromBalance && noDeductReason.trim()) {
+            reasonParts.push(`[Bakiyeden düşürülmedi: ${noDeductReason.trim()}]`);
+        }
+        const startStr = leaveStart.format('YYYY-MM-DD');
+        const endStr = leaveEnd.format('YYYY-MM-DD');
+        const typeName = selectedLeaveType?.name || 'İzin';
+        const ok = stage(
+            {
+                record_type: 'LEAVE',
+                op_type: 'CREATE',
+                target_pk: null,
+                payload: {
+                    request_type_id: leaveTypeId,
+                    start_date: startStr,
+                    end_date: endStr,
+                    reason: reasonParts.join(' '),
+                    deduct_from_balance: deductFromBalance,
+                },
+            },
+            `+ İzin ${typeName} ${startStr}→${endStr}`
+        );
+        if (ok) {
             setDeductFromBalance(true);
             setNoDeductReason('');
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        } finally {
-            setSaving(false);
         }
     };
 
-    const handleCancelLeave = async (leaveId) => {
-        try {
-            const res = await api.post('/system-data/admin_cancel_leave/', { leave_id: leaveId });
-            message.success(res.data.message || 'İzin iptal edildi');
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        }
+    /* Mevcut izni staged LEAVE DELETE op'a çevirir (anında iptal API'si YOK).
+     * Backend target_pk ile siler; payload start_date/end_date recalc penceresi
+     * için kullanılır (izin tüm aralığında günler yeniden hesaplanır). */
+    const handleCancelLeave = (leave) => {
+        const startStr = leave.start_date || dateStr;
+        const endStr = leave.end_date || leave.start_date || dateStr;
+        stage(
+            {
+                record_type: 'LEAVE', op_type: 'DELETE', target_pk: leave.id,
+                payload: { start_date: startStr, end_date: endStr },
+            },
+            `− İzin ${startStr}..${endStr} sil`
+        );
     };
 
-    /* ───── entitlement handlers ───── */
-    const handleSaveEntitlement = async () => {
+    /* ───── entitlement handlers (staged) ───── */
+    const handleSaveEntitlement = () => {
         if (!editingEntitlement || !editEntReason.trim()) {
             message.warning('Gerekçe zorunludur');
             return;
         }
-        setEditEntSaving(true);
-        try {
-            const payload = {
-                employee_id: employee.id,
-                year: editingEntitlement.year,
-                reason: editEntReason,
-            };
-            if (editingEntitlement.days_entitled !== undefined) {
-                payload.days_entitled = editingEntitlement.days_entitled;
-            }
-            if (editingEntitlement.days_used !== undefined) {
-                payload.days_used = editingEntitlement.days_used;
-            }
-            const res = await api.post('/system-data/adjust_entitlement/', payload);
-            message.success(res.data.message || 'Hak ediş güncellendi');
+        const payload = {
+            year: editingEntitlement.year,
+            reason: editEntReason,
+        };
+        if (editingEntitlement.days_entitled !== undefined) {
+            payload.days_entitled = editingEntitlement.days_entitled;
+        }
+        if (editingEntitlement.days_used !== undefined) {
+            payload.days_used = editingEntitlement.days_used;
+        }
+        const ok = stage(
+            { record_type: 'ENTITLEMENT', op_type: 'UPDATE', target_pk: null, payload },
+            `~ Hak Ediş ${editingEntitlement.year} (${editingEntitlement.days_entitled ?? '?'} gün)`
+        );
+        if (ok) {
             setEditingEntitlement(null);
             setEditEntReason('');
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        } finally {
-            setEditEntSaving(false);
         }
     };
 
-    const handleAddYear = async () => {
+    const handleAddYear = () => {
         if (!newYearReason.trim()) {
             message.warning('Gerekçe zorunludur');
             return;
         }
-        setEditEntSaving(true);
-        try {
-            const res = await api.post('/system-data/adjust_entitlement/', {
-                employee_id: employee.id,
-                year: newYear,
-                days_entitled: newYearDays,
-                days_used: 0,
-                reason: newYearReason || 'Yeni yıl eklendi',
-            });
-            message.success(res.data.message || 'Yıl eklendi');
+        const ok = stage(
+            {
+                record_type: 'ENTITLEMENT', op_type: 'CREATE', target_pk: null,
+                payload: {
+                    year: newYear,
+                    days_entitled: newYearDays,
+                    days_used: 0,
+                    reason: newYearReason || 'Yeni yıl eklendi',
+                },
+            },
+            `+ Yıl ${newYear} (${newYearDays} gün)`
+        );
+        if (ok) {
             setShowAddYear(false);
             setNewYearReason('');
-            loadData();
-            if (onSaveSuccess) onSaveSuccess();
-        } catch (e) {
-            message.error('Hata: ' + (e.response?.data?.error || e.message));
-        } finally {
-            setEditEntSaving(false);
         }
     };
 
@@ -450,71 +516,151 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         setRejectModal({ open: false, otId: null, reason: '' });
     };
 
-    /* ───── admin override handlers ───── */
-    const handleCreateOt = async () => {
+    /* ───── admin override handlers (staged) ───── */
+    const handleCreateOt = () => {
         if (!newOtStart || !newOtEnd) { message.warning('Başlangıç ve bitiş saati gerekli'); return; }
-        setOtCreating(true);
-        try {
-            await api.post('/system-data/admin_create_overtime/', {
-                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
-                start_time: newOtStart.format('HH:mm'), end_time: newOtEnd.format('HH:mm'),
-                status: newOtStatus, reason: newOtReason, override_note: overrideNote,
-            });
-            message.success('Ek mesai talebi oluşturuldu');
-            setNewOtStart(null); setNewOtEnd(null); setNewOtReason('');
-            loadData(); onSaveSuccess?.();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
-        finally { setOtCreating(false); }
+        const startT = newOtStart.format('HH:mm');
+        const endT = newOtEnd.format('HH:mm');
+        const ok = stage(
+            {
+                record_type: 'OT', op_type: 'CREATE', target_pk: null,
+                payload: { date: dateStr, start_time: startT, end_time: endT, status: newOtStatus, reason: newOtReason || '' },
+            },
+            `+ FM ${dateStr} ${startT}→${endT}`
+        );
+        if (ok) { setNewOtStart(null); setNewOtEnd(null); setNewOtReason(''); }
     };
 
-    const handleCreateCardless = async () => {
+    const handleCreateCardless = () => {
         if (!newCardlessIn || !newCardlessOut) { message.warning('Giriş ve çıkış saati gerekli'); return; }
-        setCardlessCreating(true);
-        try {
-            await api.post('/system-data/admin_create_cardless/', {
-                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
-                check_in_time: newCardlessIn.format('HH:mm'), check_out_time: newCardlessOut.format('HH:mm'),
-                status: newCardlessStatus, reason: newCardlessReason, override_note: overrideNote,
-            });
-            message.success('Kartsız giriş talebi oluşturuldu');
-            setNewCardlessIn(null); setNewCardlessOut(null); setNewCardlessReason('');
-            loadData(); onSaveSuccess?.();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
-        finally { setCardlessCreating(false); }
+        const inT = newCardlessIn.format('HH:mm');
+        const outT = newCardlessOut.format('HH:mm');
+        const ok = stage(
+            {
+                record_type: 'CARDLESS', op_type: 'CREATE', target_pk: null,
+                payload: { date: dateStr, check_in_time: inT, check_out_time: outT, status: newCardlessStatus, reason: newCardlessReason || '' },
+            },
+            `+ Kartsız ${dateStr} ${inT}→${outT}`
+        );
+        if (ok) { setNewCardlessIn(null); setNewCardlessOut(null); setNewCardlessReason(''); }
     };
 
-    const handleCreateMeal = async () => {
-        setMealCreating(true);
-        try {
-            await api.post('/system-data/admin_create_meal/', {
-                employee_id: employee.id, date: format(date, 'yyyy-MM-dd'),
-                status: newMealStatus, description: newMealDesc, override_note: overrideNote,
-            });
-            message.success('Yemek talebi oluşturuldu');
-            setNewMealDesc(''); loadData();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
-        finally { setMealCreating(false); }
+    const handleCreateMeal = () => {
+        const ok = stage(
+            {
+                record_type: 'MEAL', op_type: 'CREATE', target_pk: null,
+                payload: { date: dateStr, status: newMealStatus, description: newMealDesc || '' },
+            },
+            `+ Yemek ${dateStr} (${newMealStatus})`
+        );
+        if (ok) { setNewMealDesc(''); }
     };
 
-    const handleCreateDuty = async () => {
+    const handleCreateDuty = () => {
         if (!newDutyStart || !newDutyEnd) { message.warning('Başlangıç ve bitiş tarihi gerekli'); return; }
         // FIX (2026-04-27): isValid kontrolü — invalid dayjs format() "Invalid Date" döner
         if (!newDutyStart.isValid() || !newDutyEnd.isValid()) {
             message.warning('Tarih geçersiz, lütfen tekrar seçin');
             return;
         }
-        setDutyCreating(true);
-        try {
-            await api.post('/system-data/admin_create_external_duty/', {
-                employee_id: employee.id, start_date: newDutyStart.format('YYYY-MM-DD'),
-                end_date: newDutyEnd.format('YYYY-MM-DD'), status: newDutyStatus,
-                duty_city: newDutyCity, duty_description: newDutyDesc, override_note: overrideNote,
-            });
-            message.success('Dış görev talebi oluşturuldu');
-            setNewDutyStart(null); setNewDutyEnd(null); setNewDutyCity(''); setNewDutyDesc('');
-            loadData(); onSaveSuccess?.();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata oluştu'); }
-        finally { setDutyCreating(false); }
+        const startStr = newDutyStart.format('YYYY-MM-DD');
+        const endStr = newDutyEnd.format('YYYY-MM-DD');
+        // Dış görev = LEAVE op + EXTERNAL_DUTY request type id. request_types
+        // içinden EXTERNAL_DUTY kodlu türü bulup id'sini kullanırız.
+        const dutyType = requestTypes?.find(t => t.code === 'EXTERNAL_DUTY');
+        if (!dutyType) {
+            message.error('Dış görev izin türü bulunamadı (EXTERNAL_DUTY)');
+            return;
+        }
+        const reasonParts = [];
+        if (newDutyCity) reasonParts.push(newDutyCity);
+        if (newDutyDesc) reasonParts.push(newDutyDesc);
+        const ok = stage(
+            {
+                record_type: 'LEAVE', op_type: 'CREATE', target_pk: null,
+                payload: {
+                    request_type_id: dutyType.id,
+                    start_date: startStr,
+                    end_date: endStr,
+                    reason: reasonParts.join(' - ') || 'Dış görev',
+                },
+            },
+            `+ Dış Görev ${startStr}→${endStr}${newDutyCity ? ` (${newDutyCity})` : ''}`
+        );
+        if (ok) { setNewDutyStart(null); setNewDutyEnd(null); setNewDutyCity(''); setNewDutyDesc(''); }
+    };
+
+    /* ───── health report (staged HEALTH CREATE) ─────
+     * HEALTH_REPORT: tam gün rapor (is_full_day=true, saat yok).
+     * HOSPITAL_VISIT: saatli hastane ziyareti (is_full_day=false, start/end_time zorunlu).
+     * Backend save() HOSPITAL_VISIT'i tek güne sabitler ama yine de start_date'i gönderiyoruz. */
+    const handleCreateHealth = () => {
+        if (!newHealthStart || !newHealthEnd) {
+            message.warning('Başlangıç ve bitiş tarihi gerekli');
+            return;
+        }
+        if (!newHealthStart.isValid() || !newHealthEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
+        const isHospital = newHealthType === 'HOSPITAL_VISIT';
+        if (isHospital && (!newHealthTimeStart || !newHealthTimeEnd)) {
+            message.warning('Hastane ziyareti için başlangıç ve bitiş saati gerekli');
+            return;
+        }
+        const startStr = newHealthStart.format('YYYY-MM-DD');
+        // HOSPITAL_VISIT tek gün — bitiş = başlangıç
+        const endStr = isHospital ? startStr : newHealthEnd.format('YYYY-MM-DD');
+        const payload = {
+            report_type: newHealthType,
+            start_date: startStr,
+            end_date: endStr,
+            is_full_day: !isHospital,
+        };
+        if (isHospital) {
+            payload.start_time = newHealthTimeStart.format('HH:mm');
+            payload.end_time = newHealthTimeEnd.format('HH:mm');
+        }
+        const typeLabel = isHospital ? 'Hastane' : 'Rapor';
+        const ok = stage(
+            { record_type: 'HEALTH', op_type: 'CREATE', target_pk: null, payload },
+            `+ Sağlık ${typeLabel} ${startStr}..${endStr}`
+        );
+        if (ok) {
+            setNewHealthTimeStart(null);
+            setNewHealthTimeEnd(null);
+        }
+    };
+
+    /* ───── special leave (staged SPECIAL CREATE) ─────
+     * PATERNITY (5g) / BEREAVEMENT (3g) / MARRIAGE (3g): sabit süre — backend
+     * end_date'i otomatik hesaplar (start_date yeterli). UNPAID: custom aralık. */
+    const handleCreateSpecial = () => {
+        if (!newSpecialStart || !newSpecialEnd) {
+            message.warning('Başlangıç ve bitiş tarihi gerekli');
+            return;
+        }
+        if (!newSpecialStart.isValid() || !newSpecialEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
+        const startStr = newSpecialStart.format('YYYY-MM-DD');
+        const endStr = newSpecialEnd.format('YYYY-MM-DD');
+        const payload = {
+            leave_type: newSpecialType,
+            start_date: startStr,
+            end_date: endStr,
+        };
+        const reason = newSpecialReason.trim();
+        if (reason) payload.reason = reason;
+        const typeLabel = SPECIAL_TYPE_OPTIONS.find(o => o.value === newSpecialType)?.label || newSpecialType;
+        const ok = stage(
+            { record_type: 'SPECIAL', op_type: 'CREATE', target_pk: null, payload },
+            `+ Özel İzin ${typeLabel} ${startStr}..${endStr}`
+        );
+        if (ok) {
+            setNewSpecialReason('');
+        }
     };
 
     const handleUpdateRequestStatus = async (requestType, requestId, newStatus) => {
@@ -528,14 +674,58 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
         } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
     };
 
-    const handleDeleteRequest = async (requestType, requestId) => {
-        try {
-            await api.post('/system-data/admin_delete_request/', {
-                request_type: requestType, request_id: requestId, override_note: overrideNote,
-            });
-            message.success('Talep silindi');
-            loadData();
-        } catch (err) { message.error(err.response?.data?.error || 'Hata'); }
+    /* Mevcut talepleri (OT / Kartsız / Yemek / Dış görev) staged DELETE op'a
+     * çevirir. Anında API çağrısı YOK — Kaydet'te (preview→apply) atomik işlenir
+     * ve geri alınabilir. DELETE op'unda backend target_pk ile siler; payload
+     * tarihleri sadece hangi günleri recalc edeceğini belirlemek için kullanılır.
+     *
+     * Panel request type → backend record_type eşlemesi:
+     *   'overtime' → 'OT'        (tek gün; date row'da yok → seçili gün dateStr)
+     *   'cardless' → 'CARDLESS'  (tek gün; date row'da yok → seçili gün dateStr)
+     *   'meal'     → 'MEAL'      (recalc yok; date row'da yok → seçili gün dateStr)
+     *   'leave'    → 'LEAVE'     (dış görev dahil; start_date/end_date row'da var) */
+    const handleDeleteRequest = (requestType, requestId, row = {}) => {
+        let op;
+        let label;
+        switch (requestType) {
+            case 'overtime':
+                op = {
+                    record_type: 'OT', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Mesai ${row.date || dateStr} sil`;
+                break;
+            case 'cardless':
+                op = {
+                    record_type: 'CARDLESS', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Kartsız ${row.date || dateStr} sil`;
+                break;
+            case 'meal':
+                op = {
+                    record_type: 'MEAL', op_type: 'DELETE', target_pk: requestId,
+                    payload: { date: row.date || dateStr },
+                };
+                label = `− Yemek ${row.date || dateStr} sil`;
+                break;
+            case 'leave': {
+                // Dış görev de bir LeaveRequest — start_date/end_date row'da gelir;
+                // yoksa seçili güne düş.
+                const startStr = row.start_date || dateStr;
+                const endStr = row.end_date || row.start_date || dateStr;
+                op = {
+                    record_type: 'LEAVE', op_type: 'DELETE', target_pk: requestId,
+                    payload: { start_date: startStr, end_date: endStr },
+                };
+                label = `− İzin ${startStr}..${endStr} sil`;
+                break;
+            }
+            default:
+                message.error('Bilinmeyen talep tipi: ' + requestType);
+                return;
+        }
+        stage(op, label);
     };
 
     /* ───── time helpers for records ───── */
@@ -916,13 +1106,12 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 type="primary"
                 icon={<SaveOutlined />}
                 onClick={handleSave}
-                loading={saving}
                 disabled={loading}
                 block
                 size="large"
                 className="!bg-green-600 !border-green-600 hover:!bg-green-700"
             >
-                Değişiklikleri Kaydet
+                Değişiklikleri Kuyruğa Ekle
             </Button>
 
             <Divider className="!my-3">
@@ -1082,7 +1271,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                                 type="primary"
                                                 size="small"
                                                 onClick={handleSaveEntitlement}
-                                                loading={editEntSaving}
                                                 disabled={!editEntReason.trim()}
                                             >
                                                 Kaydet
@@ -1180,7 +1368,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             type="primary"
                             size="small"
                             onClick={handleAddYear}
-                            loading={editEntSaving}
                             disabled={!newYearReason.trim()}
                             className="!bg-emerald-600 !border-emerald-600"
                         >
@@ -1253,7 +1440,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             {lr.status !== 'CANCELLED' && (
                                 <Popconfirm
                                     title="Bu izni iptal etmek istediğinize emin misiniz?"
-                                    onConfirm={() => handleCancelLeave(lr.id)}
+                                    onConfirm={() => handleCancelLeave(lr)}
                                     okText="İptal Et"
                                     cancelText="Vazgeç"
                                 >
@@ -1346,7 +1533,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                         type="primary"
                         icon={<CheckCircleOutlined />}
                         onClick={handleCreateLeave}
-                        loading={saving}
                         block
                         size="small"
                         className="!bg-emerald-600 !border-emerald-600 hover:!bg-emerald-700"
@@ -1396,7 +1582,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                 ]}
                             />
                             {ot.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Bu talebi silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('overtime', ot.id)}>
+                            <Popconfirm title="Bu talebi silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('overtime', ot.id, ot)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1449,7 +1635,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                 </div>
                 <Input.TextArea rows={1} value={newOtReason} onChange={e => setNewOtReason(e.target.value)}
                     placeholder="Görev açıklaması (opsiyonel)" size="small" />
-                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateOt} loading={otCreating}>
+                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateOt}>
                     Fazla Mesai Talebi Oluştur
                 </Button>
             </div>
@@ -1534,7 +1720,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             />
                             {cr.is_admin_override && <Tag color="purple">Admin</Tag>}
                             <span className="text-xs text-gray-500 flex-1">{cr.reason}</span>
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('cardless', cr.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('cardless', cr.id, cr)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1551,7 +1737,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                     </div>
                     <Input.TextArea rows={1} value={newCardlessReason} onChange={e => setNewCardlessReason(e.target.value)}
                         placeholder="Sebep (opsiyonel)" size="small" />
-                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateCardless} loading={cardlessCreating}>
+                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateCardless}>
                         Kartsız Giriş Oluştur
                     </Button>
                 </div>
@@ -1583,7 +1769,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                 ]}
                             />
                             {mr.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('meal', mr.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('meal', mr.id, mr)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1596,7 +1782,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                         />
                         <Input value={newMealDesc} onChange={e => setNewMealDesc(e.target.value)}
                             placeholder="Açıklama (opsiyonel)" size="small" style={{ width: 200 }} />
-                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateMeal} loading={mealCreating}>
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateMeal}>
                             Yemek Talebi Oluştur
                         </Button>
                     </div>
@@ -1630,7 +1816,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                                 ]}
                             />
                             {ed.is_admin_override && <Tag color="purple">Admin</Tag>}
-                            <Popconfirm title="Silmek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('leave', ed.id)}>
+                            <Popconfirm title="Silme kuyruğuna eklemek istediğinize emin misiniz?" onConfirm={() => handleDeleteRequest('leave', ed.id, ed)}>
                                 <Button size="small" danger icon={<DeleteOutlined />} />
                             </Popconfirm>
                         </div>
@@ -1650,9 +1836,184 @@ export default function DayEditPanel({ employee, date, onSaveSuccess }) {
                             placeholder="Şehir" size="small" style={{ width: 200 }} />
                         <Input.TextArea rows={1} value={newDutyDesc} onChange={e => setNewDutyDesc(e.target.value)}
                             placeholder="Görev açıklaması" size="small" />
-                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateDuty} loading={dutyCreating}>
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateDuty}>
                             Dış Görev Oluştur
                         </Button>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'health',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <MedicineBoxOutlined className="text-rose-500" />
+                    Sağlık Raporu
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    <div className="bg-white rounded-lg border p-3">
+                        <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
+                            <PlusOutlined /> Yeni Sağlık Raporu
+                        </div>
+                        <div className="space-y-2.5">
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Rapor Türü</label>
+                                <Select
+                                    value={newHealthType}
+                                    onChange={setNewHealthType}
+                                    className="w-full"
+                                    size="small"
+                                    options={HEALTH_TYPE_OPTIONS}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç</label>
+                                    <DatePicker
+                                        value={newHealthStart}
+                                        onChange={setNewHealthStart}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş</label>
+                                    <DatePicker
+                                        value={newHealthEnd}
+                                        onChange={setNewHealthEnd}
+                                        disabled={newHealthType === 'HOSPITAL_VISIT'}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                            </div>
+                            {newHealthType === 'HOSPITAL_VISIT' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç Saati</label>
+                                        <TimePicker
+                                            value={newHealthTimeStart}
+                                            onChange={setNewHealthTimeStart}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="small"
+                                            placeholder="Saat"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş Saati</label>
+                                        <TimePicker
+                                            value={newHealthTimeEnd}
+                                            onChange={setNewHealthTimeEnd}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="small"
+                                            placeholder="Saat"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleCreateHealth}
+                                block
+                                size="small"
+                                className="!bg-rose-600 !border-rose-600 hover:!bg-rose-700"
+                            >
+                                Kuyruğa Ekle
+                            </Button>
+                            <div className="text-[10px] text-slate-400">
+                                {newHealthType === 'HOSPITAL_VISIT'
+                                    ? 'Hastane ziyareti tek gün olarak işlenir; başlangıç/bitiş saati zorunludur.'
+                                    : 'Tam gün rapor — seçilen tarih aralığı tüm gün olarak işlenir.'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'special',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <SafetyCertificateOutlined className="text-teal-500" />
+                    Özel İzin
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    <div className="bg-white rounded-lg border p-3">
+                        <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
+                            <PlusOutlined /> Yeni Özel İzin
+                        </div>
+                        <div className="space-y-2.5">
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">İzin Türü</label>
+                                <Select
+                                    value={newSpecialType}
+                                    onChange={setNewSpecialType}
+                                    className="w-full"
+                                    size="small"
+                                    options={SPECIAL_TYPE_OPTIONS}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç</label>
+                                    <DatePicker
+                                        value={newSpecialStart}
+                                        onChange={setNewSpecialStart}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş</label>
+                                    <DatePicker
+                                        value={newSpecialEnd}
+                                        onChange={setNewSpecialEnd}
+                                        disabled={newSpecialType !== 'UNPAID'}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Sebep</label>
+                                <Input
+                                    value={newSpecialReason}
+                                    onChange={(e) => setNewSpecialReason(e.target.value)}
+                                    placeholder="Opsiyonel"
+                                    size="small"
+                                />
+                            </div>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleCreateSpecial}
+                                block
+                                size="small"
+                                className="!bg-teal-600 !border-teal-600 hover:!bg-teal-700"
+                            >
+                                Kuyruğa Ekle
+                            </Button>
+                            <div className="text-[10px] text-slate-400">
+                                {newSpecialType === 'UNPAID'
+                                    ? 'Ücretsiz izin — seçilen tarih aralığı kullanılır.'
+                                    : 'Sabit süreli izin — bitiş tarihi türe göre otomatik hesaplanır (başlangıç yeterli).'}
+                            </div>
+                        </div>
                     </div>
                 </div>
             ),

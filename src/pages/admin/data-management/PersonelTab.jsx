@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Select, Button, Modal, message, Spin, Empty } from 'antd';
-import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined } from '@ant-design/icons';
+import { Select, Button, Modal, message, Spin, Empty, Popconfirm, Tooltip, Tabs } from 'antd';
+import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined, SaveOutlined, ClearOutlined, CloseOutlined } from '@ant-design/icons';
 import { format, addMonths, subMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
+import useStagedOps, { stripClientFields } from './useStagedOps';
+import PreviewModal from './PreviewModal';
+import ChangeHistoryTab from './ChangeHistoryTab';
+import MultiDayRecordsTab from './MultiDayRecordsTab';
 import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
@@ -20,6 +24,14 @@ export default function PersonelTab({ initialEmployee }) {
     const [loadingCalendar, setLoadingCalendar] = useState(false);
     const [balanceSummary, setBalanceSummary] = useState(null);
     const [settlementData, setSettlementData] = useState(null);
+    const [activeTab, setActiveTab] = useState('calendar');
+
+    // ── Staged operations (Veri Yönetimi v2) ───────────────────────
+    const { pendingOps, addOp, removeOp, clearOps, count } = useStagedOps();
+    const [savingChangeset, setSavingChangeset] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -87,6 +99,7 @@ export default function PersonelTab({ initialEmployee }) {
         setSelectedEmployee(emp || null);
         setSelectedDate(null);
         setMonthlyData({});
+        clearOps();
     };
 
     const handlePrevMonth = () => {
@@ -149,6 +162,56 @@ export default function PersonelTab({ initialEmployee }) {
     const handleSaveSuccess = () => {
         fetchMonthlyData();
         fetchBalanceSummary();
+    };
+
+    // ── Staged ops: Önizle → (ONAYLA) → Kaydet ─────────────────────
+    const extractErr = (e) => {
+        const d = e.response?.data;
+        if (!d) return e.message;
+        if (typeof d === 'string') return d;
+        return d.detail || d.error || (Array.isArray(d) ? d.join(', ') : JSON.stringify(d));
+    };
+
+    const handleOpenPreview = async () => {
+        if (!selectedEmployee || count === 0) return;
+        setPreviewLoading(true);
+        setPreviewData(null);
+        setPreviewOpen(true);
+        try {
+            const res = await api.post('/system-data/preview_changeset/', {
+                employee_id: selectedEmployee.id,
+                operations: stripClientFields(pendingOps),
+            });
+            setPreviewData(res.data);
+        } catch (e) {
+            message.error('Önizleme hatası: ' + extractErr(e));
+            setPreviewOpen(false);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleApplyFromModal = async ({ reason, forceOverride }) => {
+        if (!selectedEmployee || count === 0) return;
+        setSavingChangeset(true);
+        try {
+            const res = await api.post('/system-data/apply_changeset/', {
+                employee_id: selectedEmployee.id,
+                operations: stripClientFields(pendingOps),
+                reason: reason || '',
+                force_override: !!forceOverride,
+            });
+            message.success('Kaydedildi (#' + (res.data?.changeset_id ?? '') + ')');
+            clearOps();
+            setPreviewOpen(false);
+            setPreviewData(null);
+            fetchMonthlyData();
+            fetchBalanceSummary();
+        } catch (e) {
+            message.error('Hata: ' + extractErr(e));
+        } finally {
+            setSavingChangeset(false);
+        }
     };
 
     const openSettlement = () => {
@@ -289,8 +352,16 @@ export default function PersonelTab({ initialEmployee }) {
                     />
                 </div>
             ) : (
-                /* Personel secili: Bakiye Kartı + Takvim + Panel */
-                <>
+                /* Personel secili: Takvim sekmesi + Değişiklik Geçmişi sekmesi */
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        {
+                            key: 'calendar',
+                            label: 'Takvim',
+                            children: (
+                                <>
                 {/* ── Aylık Bakiye Özeti Kartı ──────────────────────── */}
                 {balanceSummary && (() => {
                     const target = balanceSummary.target_gross || 0;
@@ -396,6 +467,7 @@ export default function PersonelTab({ initialEmployee }) {
                                 employee={selectedEmployee}
                                 date={selectedDate}
                                 onSaveSuccess={handleSaveSuccess}
+                                onStageOp={addOp}
                             />
                         ) : (
                             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400">
@@ -408,16 +480,116 @@ export default function PersonelTab({ initialEmployee }) {
                         )}
                     </div>
                 </div>
+                                </>
+                            ),
+                        },
+                        {
+                            key: 'multiday',
+                            label: 'Çok-günlü Kayıtlar',
+                            children: (
+                                <MultiDayRecordsTab
+                                    employee={selectedEmployee}
+                                    currentMonth={currentMonth}
+                                    onStageOp={addOp}
+                                />
+                            ),
+                        },
+                        {
+                            key: 'history',
+                            label: 'Değişiklik Geçmişi',
+                            children: (
+                                <ChangeHistoryTab
+                                    employeeId={selectedEmployee?.id}
+                                    onReverted={handleSaveSuccess}
+                                />
+                            ),
+                        },
+                    ]}
+                />
+            )}
 
-                {/* Settlement Modal */}
+            {/* Settlement Modal (sekmelerden bağımsız çalışır) */}
+            {selectedEmployee && (
                 <SettlementModal
                     isOpen={settlementData?.isOpen}
                     onClose={() => setSettlementData(null)}
                     data={settlementData}
                     onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
                 />
-                </>
             )}
+
+            {/* ── Bekleyen Değişiklikler Aksiyon Barı (sticky footer) ─── */}
+            {selectedEmployee && count > 0 && (
+                <div className="sticky bottom-0 left-0 right-0 z-20 mt-4">
+                    <div className="bg-white/95 backdrop-blur border border-slate-200 shadow-lg rounded-xl p-3">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            {/* Sol: başlık + buttonlar */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-sm font-bold text-slate-700">
+                                    Bekleyen değişiklikler
+                                    <span className="ml-1.5 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-black">
+                                        {count}
+                                    </span>
+                                </span>
+                                <Button
+                                    type="primary"
+                                    size="middle"
+                                    icon={<SaveOutlined />}
+                                    onClick={handleOpenPreview}
+                                    loading={previewLoading || savingChangeset}
+                                    disabled={count === 0}
+                                    className="!bg-green-600 !border-green-600 hover:!bg-green-700"
+                                >
+                                    Önizle & Kaydet
+                                </Button>
+                                <Popconfirm
+                                    title="Tüm bekleyen değişiklikler silinsin mi?"
+                                    onConfirm={clearOps}
+                                    okText="Temizle"
+                                    cancelText="Vazgeç"
+                                    disabled={count === 0}
+                                >
+                                    <Button
+                                        size="middle"
+                                        icon={<ClearOutlined />}
+                                        disabled={count === 0}
+                                    >
+                                        Temizle
+                                    </Button>
+                                </Popconfirm>
+                            </div>
+
+                            {/* Sağ: bekleyen op listesi */}
+                            <div className="flex-1 min-w-0 flex flex-wrap gap-1.5 md:justify-end max-h-[88px] overflow-y-auto">
+                                {pendingOps.map((op, i) => (
+                                    <Tooltip key={op._clientId} title={op._label || ''}>
+                                        <span className="inline-flex items-center gap-1 max-w-[260px] bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-[11px] text-slate-600">
+                                            <span className="truncate">{op._label || `${op.record_type} ${op.op_type}`}</span>
+                                            <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<CloseOutlined />}
+                                                className="!w-4 !h-4 !min-w-0 !p-0 !text-slate-400 hover:!text-red-500"
+                                                onClick={() => removeOp(i)}
+                                            />
+                                        </span>
+                                    </Tooltip>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Kaydet öncesi etki önizlemesi + kilitli dönem ONAYLA ─── */}
+            <PreviewModal
+                open={previewOpen}
+                loading={previewLoading}
+                applying={savingChangeset}
+                data={previewData}
+                onApply={handleApplyFromModal}
+                onCancel={() => { setPreviewOpen(false); setPreviewData(null); }}
+            />
         </div>
     );
 }
