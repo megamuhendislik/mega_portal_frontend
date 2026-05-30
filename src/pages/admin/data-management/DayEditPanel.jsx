@@ -10,7 +10,8 @@ import {
 import {
     PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
     CheckCircleOutlined, CloseCircleOutlined, HistoryOutlined,
-    CalendarOutlined, EditOutlined, ThunderboltOutlined
+    CalendarOutlined, EditOutlined, ThunderboltOutlined,
+    MedicineBoxOutlined, SafetyCertificateOutlined
 } from '@ant-design/icons';
 import { getIstanbulYear } from '../../../utils/dateUtils';
 
@@ -142,7 +143,32 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
     const [newDutyDesc, setNewDutyDesc] = useState('');
     const [newDutyStatus, setNewDutyStatus] = useState('APPROVED');
 
+    // Health report creation form
+    const [newHealthType, setNewHealthType] = useState('HEALTH_REPORT');
+    const [newHealthStart, setNewHealthStart] = useState(null);
+    const [newHealthEnd, setNewHealthEnd] = useState(null);
+    const [newHealthTimeStart, setNewHealthTimeStart] = useState(null);
+    const [newHealthTimeEnd, setNewHealthTimeEnd] = useState(null);
+
+    // Special leave creation form
+    const [newSpecialType, setNewSpecialType] = useState('PATERNITY');
+    const [newSpecialStart, setNewSpecialStart] = useState(null);
+    const [newSpecialEnd, setNewSpecialEnd] = useState(null);
+    const [newSpecialReason, setNewSpecialReason] = useState('');
+
     const dateStr = format(date, 'yyyy-MM-dd');
+
+    /* Sağlık raporu / Özel izin tür etiketleri (backend choices ile birebir) */
+    const HEALTH_TYPE_OPTIONS = [
+        { value: 'HEALTH_REPORT', label: 'Tam Gün Rapor' },
+        { value: 'HOSPITAL_VISIT', label: 'Hastane Ziyareti' },
+    ];
+    const SPECIAL_TYPE_OPTIONS = [
+        { value: 'PATERNITY', label: 'Babalık İzni' },
+        { value: 'BEREAVEMENT', label: 'Ölüm İzni' },
+        { value: 'MARRIAGE', label: 'Evlilik İzni' },
+        { value: 'UNPAID', label: 'Ücretsiz İzin' },
+    ];
 
     /* ───── staged-op helper ─────
      * Bir op'u kuyruğa ekler (anında API çağrısı YOK). _label kısa,
@@ -208,6 +234,15 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         setEditingEntitlement(null);
         setShowAddYear(false);
         setShowHistory(false);
+        setNewHealthStart(dayjs(dateStr));
+        setNewHealthEnd(dayjs(dateStr));
+        setNewHealthTimeStart(null);
+        setNewHealthTimeEnd(null);
+        setNewHealthType('HEALTH_REPORT');
+        setNewSpecialStart(dayjs(dateStr));
+        setNewSpecialEnd(dayjs(dateStr));
+        setNewSpecialReason('');
+        setNewSpecialType('PATERNITY');
     }, [employee.id, dateStr, loadData]);
 
     /* ───── attendance handlers ─────
@@ -553,6 +588,79 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
             `+ Dış Görev ${startStr}→${endStr}${newDutyCity ? ` (${newDutyCity})` : ''}`
         );
         if (ok) { setNewDutyStart(null); setNewDutyEnd(null); setNewDutyCity(''); setNewDutyDesc(''); }
+    };
+
+    /* ───── health report (staged HEALTH CREATE) ─────
+     * HEALTH_REPORT: tam gün rapor (is_full_day=true, saat yok).
+     * HOSPITAL_VISIT: saatli hastane ziyareti (is_full_day=false, start/end_time zorunlu).
+     * Backend save() HOSPITAL_VISIT'i tek güne sabitler ama yine de start_date'i gönderiyoruz. */
+    const handleCreateHealth = () => {
+        if (!newHealthStart || !newHealthEnd) {
+            message.warning('Başlangıç ve bitiş tarihi gerekli');
+            return;
+        }
+        if (!newHealthStart.isValid() || !newHealthEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
+        const isHospital = newHealthType === 'HOSPITAL_VISIT';
+        if (isHospital && (!newHealthTimeStart || !newHealthTimeEnd)) {
+            message.warning('Hastane ziyareti için başlangıç ve bitiş saati gerekli');
+            return;
+        }
+        const startStr = newHealthStart.format('YYYY-MM-DD');
+        // HOSPITAL_VISIT tek gün — bitiş = başlangıç
+        const endStr = isHospital ? startStr : newHealthEnd.format('YYYY-MM-DD');
+        const payload = {
+            report_type: newHealthType,
+            start_date: startStr,
+            end_date: endStr,
+            is_full_day: !isHospital,
+        };
+        if (isHospital) {
+            payload.start_time = newHealthTimeStart.format('HH:mm');
+            payload.end_time = newHealthTimeEnd.format('HH:mm');
+        }
+        const typeLabel = isHospital ? 'Hastane' : 'Rapor';
+        const ok = stage(
+            { record_type: 'HEALTH', op_type: 'CREATE', target_pk: null, payload },
+            `+ Sağlık ${typeLabel} ${startStr}..${endStr}`
+        );
+        if (ok) {
+            setNewHealthTimeStart(null);
+            setNewHealthTimeEnd(null);
+        }
+    };
+
+    /* ───── special leave (staged SPECIAL CREATE) ─────
+     * PATERNITY (5g) / BEREAVEMENT (3g) / MARRIAGE (3g): sabit süre — backend
+     * end_date'i otomatik hesaplar (start_date yeterli). UNPAID: custom aralık. */
+    const handleCreateSpecial = () => {
+        if (!newSpecialStart || !newSpecialEnd) {
+            message.warning('Başlangıç ve bitiş tarihi gerekli');
+            return;
+        }
+        if (!newSpecialStart.isValid() || !newSpecialEnd.isValid()) {
+            message.warning('Tarih geçersiz, lütfen tekrar seçin');
+            return;
+        }
+        const startStr = newSpecialStart.format('YYYY-MM-DD');
+        const endStr = newSpecialEnd.format('YYYY-MM-DD');
+        const payload = {
+            leave_type: newSpecialType,
+            start_date: startStr,
+            end_date: endStr,
+        };
+        const reason = newSpecialReason.trim();
+        if (reason) payload.reason = reason;
+        const typeLabel = SPECIAL_TYPE_OPTIONS.find(o => o.value === newSpecialType)?.label || newSpecialType;
+        const ok = stage(
+            { record_type: 'SPECIAL', op_type: 'CREATE', target_pk: null, payload },
+            `+ Özel İzin ${typeLabel} ${startStr}..${endStr}`
+        );
+        if (ok) {
+            setNewSpecialReason('');
+        }
     };
 
     const handleUpdateRequestStatus = async (requestType, requestId, newStatus) => {
@@ -1731,6 +1839,181 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                         <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleCreateDuty}>
                             Dış Görev Oluştur
                         </Button>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'health',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <MedicineBoxOutlined className="text-rose-500" />
+                    Sağlık Raporu
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    <div className="bg-white rounded-lg border p-3">
+                        <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
+                            <PlusOutlined /> Yeni Sağlık Raporu
+                        </div>
+                        <div className="space-y-2.5">
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Rapor Türü</label>
+                                <Select
+                                    value={newHealthType}
+                                    onChange={setNewHealthType}
+                                    className="w-full"
+                                    size="small"
+                                    options={HEALTH_TYPE_OPTIONS}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç</label>
+                                    <DatePicker
+                                        value={newHealthStart}
+                                        onChange={setNewHealthStart}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş</label>
+                                    <DatePicker
+                                        value={newHealthEnd}
+                                        onChange={setNewHealthEnd}
+                                        disabled={newHealthType === 'HOSPITAL_VISIT'}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                            </div>
+                            {newHealthType === 'HOSPITAL_VISIT' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç Saati</label>
+                                        <TimePicker
+                                            value={newHealthTimeStart}
+                                            onChange={setNewHealthTimeStart}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="small"
+                                            placeholder="Saat"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş Saati</label>
+                                        <TimePicker
+                                            value={newHealthTimeEnd}
+                                            onChange={setNewHealthTimeEnd}
+                                            format="HH:mm"
+                                            minuteStep={5}
+                                            className="w-full"
+                                            size="small"
+                                            placeholder="Saat"
+                                            needConfirm={false}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleCreateHealth}
+                                block
+                                size="small"
+                                className="!bg-rose-600 !border-rose-600 hover:!bg-rose-700"
+                            >
+                                Kuyruğa Ekle
+                            </Button>
+                            <div className="text-[10px] text-slate-400">
+                                {newHealthType === 'HOSPITAL_VISIT'
+                                    ? 'Hastane ziyareti tek gün olarak işlenir; başlangıç/bitiş saati zorunludur.'
+                                    : 'Tam gün rapor — seçilen tarih aralığı tüm gün olarak işlenir.'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'special',
+            label: (
+                <span className="font-semibold text-sm flex items-center gap-1.5">
+                    <SafetyCertificateOutlined className="text-teal-500" />
+                    Özel İzin
+                </span>
+            ),
+            children: (
+                <div className="space-y-3">
+                    <div className="bg-white rounded-lg border p-3">
+                        <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
+                            <PlusOutlined /> Yeni Özel İzin
+                        </div>
+                        <div className="space-y-2.5">
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">İzin Türü</label>
+                                <Select
+                                    value={newSpecialType}
+                                    onChange={setNewSpecialType}
+                                    className="w-full"
+                                    size="small"
+                                    options={SPECIAL_TYPE_OPTIONS}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Başlangıç</label>
+                                    <DatePicker
+                                        value={newSpecialStart}
+                                        onChange={setNewSpecialStart}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Bitiş</label>
+                                    <DatePicker
+                                        value={newSpecialEnd}
+                                        onChange={setNewSpecialEnd}
+                                        disabled={newSpecialType !== 'UNPAID'}
+                                        className="w-full"
+                                        size="small"
+                                        format="YYYY-MM-DD"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Sebep</label>
+                                <Input
+                                    value={newSpecialReason}
+                                    onChange={(e) => setNewSpecialReason(e.target.value)}
+                                    placeholder="Opsiyonel"
+                                    size="small"
+                                />
+                            </div>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleCreateSpecial}
+                                block
+                                size="small"
+                                className="!bg-teal-600 !border-teal-600 hover:!bg-teal-700"
+                            >
+                                Kuyruğa Ekle
+                            </Button>
+                            <div className="text-[10px] text-slate-400">
+                                {newSpecialType === 'UNPAID'
+                                    ? 'Ücretsiz izin — seçilen tarih aralığı kullanılır.'
+                                    : 'Sabit süreli izin — bitiş tarihi türe göre otomatik hesaplanır (başlangıç yeterli).'}
+                            </div>
+                        </div>
                     </div>
                 </div>
             ),
