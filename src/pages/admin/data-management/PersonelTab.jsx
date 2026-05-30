@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Select, Button, Modal, message, Spin, Empty, Popconfirm, Tooltip } from 'antd';
+import { Select, Button, Modal, message, Spin, Empty, Popconfirm, Tooltip, Tabs } from 'antd';
 import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined, SaveOutlined, ClearOutlined, CloseOutlined } from '@ant-design/icons';
 import { format, addMonths, subMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -9,6 +9,7 @@ import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
 import useStagedOps, { stripClientFields } from './useStagedOps';
 import PreviewModal from './PreviewModal';
+import ChangeHistoryTab from './ChangeHistoryTab';
 import { getIstanbulTodayDate, toIstanbulParts } from '../../../utils/dateUtils';
 
 export default function PersonelTab({ initialEmployee }) {
@@ -22,6 +23,7 @@ export default function PersonelTab({ initialEmployee }) {
     const [loadingCalendar, setLoadingCalendar] = useState(false);
     const [balanceSummary, setBalanceSummary] = useState(null);
     const [settlementData, setSettlementData] = useState(null);
+    const [activeTab, setActiveTab] = useState('calendar');
 
     // ── Staged operations (Veri Yönetimi v2) ───────────────────────
     const { pendingOps, addOp, removeOp, clearOps, count } = useStagedOps();
@@ -349,8 +351,16 @@ export default function PersonelTab({ initialEmployee }) {
                     />
                 </div>
             ) : (
-                /* Personel secili: Bakiye Kartı + Takvim + Panel */
-                <>
+                /* Personel secili: Takvim sekmesi + Değişiklik Geçmişi sekmesi */
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        {
+                            key: 'calendar',
+                            label: 'Takvim',
+                            children: (
+                                <>
                 {/* ── Aylık Bakiye Özeti Kartı ──────────────────────── */}
                 {balanceSummary && (() => {
                     const target = balanceSummary.target_gross || 0;
@@ -469,15 +479,31 @@ export default function PersonelTab({ initialEmployee }) {
                         )}
                     </div>
                 </div>
+                                </>
+                            ),
+                        },
+                        {
+                            key: 'history',
+                            label: 'Değişiklik Geçmişi',
+                            children: (
+                                <ChangeHistoryTab
+                                    employeeId={selectedEmployee?.id}
+                                    onReverted={handleSaveSuccess}
+                                />
+                            ),
+                        },
+                    ]}
+                />
+            )}
 
-                {/* Settlement Modal */}
+            {/* Settlement Modal (sekmelerden bağımsız çalışır) */}
+            {selectedEmployee && (
                 <SettlementModal
                     isOpen={settlementData?.isOpen}
                     onClose={() => setSettlementData(null)}
                     data={settlementData}
                     onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
                 />
-                </>
             )}
 
             {/* ── Bekleyen Değişiklikler Aksiyon Barı (sticky footer) ─── */}
