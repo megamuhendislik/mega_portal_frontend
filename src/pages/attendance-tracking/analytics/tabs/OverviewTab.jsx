@@ -486,8 +486,9 @@ export default function OverviewTab() {
 
             {/* ── Ana 4 Doluluk Metriği (Saglik Skoru kalkti) ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* D4 fix (2026-05-30): yüzde metriği — pp delta (goreli-% değil) */}
                 <KPICard title="Yapılan Normal Mesai" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
-                    gradient="indigo" delta={isComparing ? deltas?.efficiency : null}
+                    gradient="indigo" delta={isComparing ? deltas?.efficiencyPp : null} deltaSuffix="pp"
                     subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => openKPI('normal_completion')} />
                 <KPICard title="Toplam Yapılan Mesai" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
@@ -529,8 +530,9 @@ export default function OverviewTab() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
                 <KPICard mini title="Ekip Üyesi" value={overview?.employee_count || 0} suffix="kişi" icon={Users} gradient="slate"
                     onClick={() => openKPI('team')} />
+                {/* D4 fix (2026-05-30): yüzde metriği — pp delta (goreli-% değil) */}
                 <KPICard mini title="Devam Oranı" value={`${kpi.attendance_rate_pct || 0}`} suffix="%" icon={CalendarCheck} gradient="blue"
-                    delta={isComparing ? deltas?.attendance : null} info={METRIC_EXPLANATIONS.attendance_rate}
+                    delta={isComparing ? deltas?.attendancePp : null} deltaSuffix="pp" info={METRIC_EXPLANATIONS.attendance_rate}
                     onClick={() => openKPI('attendance')} />
                 <KPICard mini title="Fazla Mesai/Normal" value={kpi.avg_ot_to_normal_pct == null ? '—' : `${kpi.avg_ot_to_normal_pct}`} suffix={kpi.avg_ot_to_normal_pct == null ? '' : '%'} icon={TrendingUp} gradient="violet"
                     onClick={() => openKPI('ot_to_normal')} />

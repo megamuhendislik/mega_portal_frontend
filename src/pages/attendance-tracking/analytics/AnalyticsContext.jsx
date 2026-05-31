@@ -516,17 +516,29 @@ export function AnalyticsProvider({ children }) {
 
     // Compute deltas between primary and compare data
     // K4 fix (2026-05-17): prev=0 ise pct null döner (eskiden +100 yapay zirve)
+    // D4 fix (2026-05-30): YÜZDE-tabanlı metrikler (efficiency, attendance) için
+    //   goreli-% YANLIŞTIR — bunlar zaten yüzde. Aralarındaki fark percentage-point (pp).
+    //   Örn %50→%60: goreli-% +20 (yanlış), pp +10 (doğru); %5→%10: goreli-% +100 (yanlış), pp +5.
+    //   Bu yüzden efficiencyPp/attendancePp ayrı üretilir; mini KPI'lar bunları deltaSuffix='pp'
+    //   ile gösterir. Saat metrikleri (worked/ot/missing) GÖRELİ-% kalır (doğru semantik).
+    //   `efficiency`/`attendance` (goreli-%) alanları backward-compat için korunur — silinmedi.
     const deltas = useMemo(() => {
         if (!data?.team_overview?.kpi || !compareData?.team_overview?.kpi) return null;
         const primary = data.team_overview.kpi;
         const compare = compareData.team_overview.kpi;
         const delta = (a, b) => (b !== 0 && b != null) ? Math.round((a - b) / Math.abs(b) * 100) : null;
+        // pp delta: yüzde metriklerin doğrudan farkı (zaten % oldukları için)
+        const pp = (a, b) => Math.round((a || 0) - (b || 0));
         return {
+            // Goreli-% (saat metrikleri için doğru; yüzde metrikler için BACKWARD-COMPAT — kullanma)
             efficiency: delta(primary.avg_efficiency_pct || 0, compare.avg_efficiency_pct || 0),
             worked: delta(primary.total_worked_hours || 0, compare.total_worked_hours || 0),
             overtime: delta(primary.total_overtime_hours || 0, compare.total_overtime_hours || 0),
             missing: delta(primary.total_missing_hours || 0, compare.total_missing_hours || 0),
             attendance: delta(primary.attendance_rate_pct || 0, compare.attendance_rate_pct || 0),
+            // pp delta: yüzde-tabanlı metrikler için DOĞRU gösterim (mini KPI bunları kullanır)
+            efficiencyPp: pp(primary.avg_efficiency_pct || 0, compare.avg_efficiency_pct || 0),
+            attendancePp: pp(primary.attendance_rate_pct || 0, compare.attendance_rate_pct || 0),
             health: (primary.health_score || 0) - (compare.health_score || 0),
             raw: { primary, compare },
         };
