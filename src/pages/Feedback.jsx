@@ -620,6 +620,7 @@ const Feedback = () => {
     const [showDetail, setShowDetail] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     // Fetch
     const fetchMyFeedbacks = useCallback(async () => {
@@ -687,6 +688,30 @@ const Feedback = () => {
             setDeleteLoading(false);
         }
     };
+
+    // Tüm dilek ve şikayetleri (çözülenler dahil) TXT olarak indir
+    const handleExportTxt = useCallback(async () => {
+        setExporting(true);
+        try {
+            const res = await api.get('/feedback/export_txt/', { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^"]+)"?/);
+            a.download = m ? m[1] : 'dilek_sikayetler.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } catch (err) {
+            console.error('TXT export error:', err);
+            alert('TXT dışa aktarma başarısız oldu.');
+        } finally {
+            setExporting(false);
+        }
+    }, []);
 
     const openDetail = (fb) => {
         setSelectedFeedback(fb);
@@ -855,6 +880,15 @@ const Feedback = () => {
                                     <option key={k} value={k}>{v.label}</option>
                                 ))}
                             </select>
+                            <button
+                                onClick={handleExportTxt}
+                                disabled={exporting}
+                                title="Tüm dilek ve şikayetleri (çözülenler dahil) TXT olarak indir"
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 bg-white hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/40 transition-all disabled:opacity-50"
+                            >
+                                {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                                TXT İndir
+                            </button>
                         </div>
                     )}
                 </div>
