@@ -87,9 +87,25 @@ export const AuthProvider = ({ children }) => {
         try {
             const userResponse = await api.get('/employees/me/');
             setUser(userResponse.data);
-        } catch (error) {
-            console.error("Failed to fetch user details after login", error);
-            setUser({ username });
+        } catch {
+            // Geçici hata olabilir — bir kez daha dene.
+            try {
+                const retryResp = await api.get('/employees/me/');
+                setUser(retryResp.data);
+                return response.data;
+            } catch (retryError) {
+                // {username} fallback'i YETKİSİZ bir profil bırakıyordu: hasPermission
+                // her kod için false döner, admin/yönetici tüm sayfalardan kilitlenir
+                // (manuel reload'a kadar). Yetkisiz oturuma girmek yerine token'ları
+                // temizle ve hatayı fırlat — Login.jsx 'Giriş başarısız' gösterip
+                // kullanıcı tekrar denesin.
+                console.error("Failed to fetch user details after login", retryError);
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                sessionStorage.removeItem('access_token');
+                sessionStorage.removeItem('refresh_token');
+                throw retryError;
+            }
         }
 
         return response.data;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Select, Button, Modal, message, Spin, Empty, Popconfirm, Tooltip, Tabs } from 'antd';
 import { LeftOutlined, RightOutlined, CalendarOutlined, ThunderboltOutlined, UserOutlined, SaveOutlined, ClearOutlined, CloseOutlined } from '@ant-design/icons';
 import { format, addMonths, subMonths } from 'date-fns';
@@ -28,6 +28,17 @@ export default function PersonelTab({ initialEmployee }) {
 
     // ── Staged operations (Veri Yönetimi v2) ───────────────────────
     const { pendingOps, addOp, removeOp, clearOps, count } = useStagedOps();
+    // Kuyruk-türevli DELETE seti — MultiDayRecordsTab "Silme kuyruğunda" rozetini
+    // gerçek kuyruğa bağlar; bir op aksiyon çubuğundan silinince rozet otomatik
+    // temizlenir (eski yalnız-lokal Set bayat kalıyordu).
+    const pendingDeleteIds = useMemo(
+        () => new Set(
+            pendingOps
+                .filter((o) => o.op_type === 'DELETE')
+                .map((o) => `${o.record_type}:${o.target_pk}`)
+        ),
+        [pendingOps]
+    );
     const [savingChangeset, setSavingChangeset] = useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
@@ -491,6 +502,7 @@ export default function PersonelTab({ initialEmployee }) {
                                     employee={selectedEmployee}
                                     currentMonth={currentMonth}
                                     onStageOp={addOp}
+                                    pendingDeleteIds={pendingDeleteIds}
                                 />
                             ),
                         },

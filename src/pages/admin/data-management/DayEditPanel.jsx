@@ -117,8 +117,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
     const [mealRequests, setMealRequests] = useState([]);
     const [externalDutyRequests, setExternalDutyRequests] = useState([]);
 
-    // Fiscal lock bypass
-    const [forceOverride, setForceOverride] = useState(false);
 
     // OT creation form
     const [newOtStart, setNewOtStart] = useState(null);
@@ -2050,14 +2048,14 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                 </div>
             </div>
 
-            {/* Fiscal Lock Bypass Banner */}
+            {/* Fiscal Lock Bilgi Banner'ı — kilit bypass'ı önizleme/kaydet ekranındaki
+                ONAYLA + gerekçe ile yönetilir (PreviewModal). Buradaki eski checkbox
+                hiçbir yere bağlı değildi (ölü UI), yanıltıcıydı; kaldırıldı. */}
             {scheduleInfo?.is_locked && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-2 mt-2 flex items-center gap-3">
-                    <span className="text-amber-600 font-medium text-sm">Bu tarih kilitli mali dönemde</span>
-                    <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-                        <input type="checkbox" checked={forceOverride} onChange={e => setForceOverride(e.target.checked)} className="rounded" />
-                        <span>Lock bypass ile düzenle</span>
-                    </label>
+                    <span className="text-amber-600 font-medium text-sm">
+                        Bu tarih kilitli mali dönemde — kaydederken onay (ONAYLA + gerekçe) istenecek.
+                    </span>
                 </div>
             )}
 

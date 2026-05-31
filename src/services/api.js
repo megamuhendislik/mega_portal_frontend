@@ -124,6 +124,11 @@ api.interceptors.response.use(
             // Set cross-tab lock with timestamp
             localStorage.setItem('_token_refresh_lock', String(Date.now()));
 
+            // Gerçek bir oturum var mıydı? (refresh token mevcut mu) — başarısız
+            // LOGIN denemesi (token yok) tam-sayfa /login redirect'i tetikleyip
+            // Login.jsx'in hata banner'ını yok etmesin.
+            const hadRefreshToken = !!(localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token'));
+
             try {
                 let refreshToken = localStorage.getItem('refresh_token');
                 let storage = localStorage;
@@ -177,7 +182,12 @@ api.interceptors.response.use(
                 localStorage.removeItem('refresh_token');
                 sessionStorage.removeItem('access_token');
                 sessionStorage.removeItem('refresh_token');
-                window.location.href = '/login';
+                // Yalnızca gerçek oturum sona erdiyse (sunucu mevcut refresh token'ı
+                // reddetti) ve zaten /login'de değilsek hard-redirect yap. Aksi halde
+                // (login denemesi başarısız) reject et — Login.jsx hatayı göstersin.
+                if (hadRefreshToken && window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
                 return Promise.reject(refreshError);
             }
         }
