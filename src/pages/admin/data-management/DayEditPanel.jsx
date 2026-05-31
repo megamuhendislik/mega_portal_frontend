@@ -117,8 +117,6 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
     const [mealRequests, setMealRequests] = useState([]);
     const [externalDutyRequests, setExternalDutyRequests] = useState([]);
 
-    // Fiscal lock bypass
-    const [forceOverride, setForceOverride] = useState(false);
 
     // OT creation form
     const [newOtStart, setNewOtStart] = useState(null);
@@ -183,15 +181,35 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         return true;
     };
 
-    // HH:mm parçası — backend'den gelen ISO/T-string veya saat-only değerden
-    const toHHmm = (dtStr) => {
+    // HH:mm parçası — İstanbul saatine sabitli.
+    // KRİTİK (tz bug): tarayıcı-yerel getHours() İstanbul DIŞI makinelerde backend'in
+    // tz-aware ISO saatini kaydırıyordu. İki vaka var:
+    //  - naive string ("YYYY-MM-DDTHH:mm", tz YOK): setRecordTime'ın yazdığı, kullanıcının
+    //    girdiği İstanbul duvar-saati → literal HH:mm al (çevirme yok).
+    //  - tz-aware ISO (backend "...+00:00"/"Z"): İstanbul'a çevirip HH:mm çıkar.
+    const _istHHmm = (dtStr) => {
         if (!dtStr) return null;
+        const s = String(dtStr);
+        const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
+        if (!hasTz) {
+            const m = s.match(/T(\d{2}):(\d{2})/) || s.match(/^(\d{2}):(\d{2})/);
+            if (m) return `${m[1]}:${m[2]}`;
+        }
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return null;
         try {
-            const d = new Date(dtStr);
-            if (isNaN(d.getTime())) return null;
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Istanbul',
+            }).formatToParts(d);
+            const hh = (parts.find(p => p.type === 'hour') || {}).value || '00';
+            const mm = (parts.find(p => p.type === 'minute') || {}).value || '00';
+            return `${hh}:${mm}`;
+        } catch {
             return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        } catch { return null; }
+        }
     };
+
+    const toHHmm = (dtStr) => _istHHmm(dtStr);
 
     // Balance-tracked leave type detection
     const BALANCE_TRACKED_CODES = ['ANNUAL_LEAVE', 'EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'];
@@ -285,6 +303,11 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         // İşlendi olarak işaretle (UI temizliği)
         setDeleteIds([]);
         setOverrideNote('');
+        // ÇİFT CREATE FIX: id'siz (yeni) kayıtlar kuyruğa eklendi → grid'den kaldır,
+        // aksi halde tekrar 'Kuyruğa Ekle'de aynı kayıt 2. kez CREATE olarak eklenip
+        // backend'de aynı gün için MÜKERRER Attendance satırı (çift sayım) yaratıyordu.
+        // (Mevcut kayıtların tekrar UPDATE'i idempotent — yalnızca id=null sorun.)
+        setRecords((prev) => prev.filter((r) => r.id));
         if (staged > 0 && onSaveSuccess) {
             // Sadece kuyruğa eklendi — kalıcı kayıt değil; reload Kaydet'te olur.
         }
@@ -538,7 +561,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         const ok = stage(
             {
                 record_type: 'CARDLESS', op_type: 'CREATE', target_pk: null,
-                payload: { date: dateStr, check_in_time: inT, check_out_time: outT, status: newCardlessStatus, reason: newCardlessReason || '' },
+                payload: { date: dateStr, check_in: inT, check_out: outT, status: newCardlessStatus, reason: newCardlessReason || '' },
             },
             `+ Kartsız ${dateStr} ${inT}→${outT}`
         );
@@ -730,16 +753,9 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
 
     /* ───── time helpers for records ───── */
     const getTimeDayjs = (dtStr) => {
-        if (!dtStr) return null;
-        try {
-            // Backend'den gelen saatler UTC olabilir — Date ile parse edip
-            // yerel saat (İstanbul UTC+3) olarak dayjs'e çeviriyoruz
-            const d = new Date(dtStr);
-            if (isNaN(d.getTime())) return null;
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            return dayjs(`${h}:${m}`, 'HH:mm');
-        } catch { return null; }
+        // İstanbul saatine sabitli HH:mm (tz bug fix — _istHHmm vakaları doğru ayırır).
+        const hhmm = _istHHmm(dtStr);
+        return hhmm ? dayjs(hhmm, 'HH:mm') : null;
     };
 
     const setRecordTime = (idx, field, timeValue) => {
@@ -751,15 +767,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         updateRec(idx, field, `${dateStr}T${hhmm}`);
     };
 
-    // Özet görüntüleme için de yerel saat formatı
-    const formatLocalTime = (dtStr) => {
-        if (!dtStr) return '?';
-        try {
-            const d = new Date(dtStr);
-            if (isNaN(d.getTime())) return '?';
-            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        } catch { return '?'; }
-    };
+    // Özet görüntüleme için de İstanbul saatine sabitli format
+    const formatLocalTime = (dtStr) => _istHHmm(dtStr) || '?';
 
     /* ───── computed ───── */
     const normalSeconds = records.reduce((s, r) => s + (r.normal_seconds || 0), 0);
@@ -2039,14 +2048,14 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                 </div>
             </div>
 
-            {/* Fiscal Lock Bypass Banner */}
+            {/* Fiscal Lock Bilgi Banner'ı — kilit bypass'ı önizleme/kaydet ekranındaki
+                ONAYLA + gerekçe ile yönetilir (PreviewModal). Buradaki eski checkbox
+                hiçbir yere bağlı değildi (ölü UI), yanıltıcıydı; kaldırıldı. */}
             {scheduleInfo?.is_locked && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-2 mt-2 flex items-center gap-3">
-                    <span className="text-amber-600 font-medium text-sm">Bu tarih kilitli mali dönemde</span>
-                    <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-                        <input type="checkbox" checked={forceOverride} onChange={e => setForceOverride(e.target.checked)} className="rounded" />
-                        <span>Lock bypass ile düzenle</span>
-                    </label>
+                    <span className="text-amber-600 font-medium text-sm">
+                        Bu tarih kilitli mali dönemde — kaydederken onay (ONAYLA + gerekçe) istenecek.
+                    </span>
                 </div>
             )}
 

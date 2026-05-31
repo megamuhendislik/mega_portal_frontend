@@ -149,6 +149,24 @@ export default function RequestAnalyticsTab() {
         return [];
     }, [data]);
 
+    // Team mode'da durum sayıları top-level GELMEZ (team-overview yalnızca by_type
+    // döndürür); her tür için pending/approved/rejected'ı by_type'tan topla. Böylece
+    // 'Bekleyen'/'Reddedilen' KPI'ları ve 'Durum Dağılımı' pie'ı team mode'da boş kalmaz.
+    const statusTotals = useMemo(() => {
+        if (!data) return null;
+        if (data.status_distribution || data.pending_count != null ||
+            data.rejected_count != null || data.approved_count != null) return null;
+        const bt = data.by_type;
+        if (!bt) return null;
+        let approved = 0, rejected = 0, pending = 0;
+        Object.values(bt).forEach(v => {
+            approved += v?.approved || 0;
+            rejected += v?.rejected || 0;
+            pending += v?.pending || 0;
+        });
+        return { approved, rejected, pending };
+    }, [data]);
+
     // Status distribution
     const statusDistData = useMemo(() => {
         if (!data) return [];
@@ -158,11 +176,14 @@ export default function RequestAnalyticsTab() {
             }));
         }
         const items = [];
-        if (data.approved_count) items.push({ name: 'Onaylı', value: data.approved_count, color: STATUS_COLORS.approved });
-        if (data.rejected_count) items.push({ name: 'Reddedildi', value: data.rejected_count, color: STATUS_COLORS.rejected });
-        if (data.pending_count) items.push({ name: 'Bekleyen', value: data.pending_count, color: STATUS_COLORS.pending });
+        const approvedC = data.approved_count ?? statusTotals?.approved;
+        const rejectedC = data.rejected_count ?? statusTotals?.rejected;
+        const pendingC = data.pending_count ?? statusTotals?.pending;
+        if (approvedC) items.push({ name: 'Onaylı', value: approvedC, color: STATUS_COLORS.approved });
+        if (rejectedC) items.push({ name: 'Reddedildi', value: rejectedC, color: STATUS_COLORS.rejected });
+        if (pendingC) items.push({ name: 'Bekleyen', value: pendingC, color: STATUS_COLORS.pending });
         return items;
-    }, [data]);
+    }, [data, statusTotals]);
 
     // Monthly trend
     const trendData = useMemo(() => {
@@ -260,7 +281,8 @@ export default function RequestAnalyticsTab() {
 
     const totalRequests = data?.total_requests || data?.total_received || 0;
     const approvalRate = data?.approval_rate || 0;
-    const pendingCount = data?.pending_count || data?.status_distribution?.find(s => s.status === 'Bekleyen')?.count || 0;
+    const pendingCount = data?.pending_count || data?.status_distribution?.find(s => s.status === 'Bekleyen')?.count || statusTotals?.pending || 0;
+    const rejectedCount = data?.rejected_count ?? data?.status_distribution?.find(s => s.status === 'Reddedilen')?.count ?? statusTotals?.rejected ?? 0;
 
     const hasFilter = !!(selectedType || selectedStatus || selectedMonth);
     // Tablo görünür mu? Team mode + en az bir filter aktif.
@@ -382,7 +404,7 @@ export default function RequestAnalyticsTab() {
                     info={METRIC_EXPLANATIONS.approval_rate} />
                 <KPICard title="Bekleyen" value={pendingCount} icon={Hourglass} gradient="amber"
                     onClick={mode === 'team' ? () => setSelectedStatus('PENDING') : undefined} />
-                <KPICard title="Reddedilen" value={data?.rejected_count || 0} icon={XCircle} gradient="red" />
+                <KPICard title="Reddedilen" value={rejectedCount} icon={XCircle} gradient="red" />
                 <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'Fazla Mesai Saati'}
                     value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours || 0)}
                     suffix={avgDecisionHours != null ? 'saat' : 'saat'}

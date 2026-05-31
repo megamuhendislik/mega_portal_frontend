@@ -204,12 +204,13 @@ export default function MultiDayRecordsTab({ employee, currentMonth, onStageOp, 
     };
 
     const isStaged = (row) => {
-        if (localStaged.has(`${row.kind}:${row.id}`)) return true;
-        // pendingDeleteIds: dışarıdan gelen target_pk seti (record_type ayrımı yoksa pk eşleşmesi)
+        // Kuyruk-türevli set AUTHORITATIVE: bir op aksiyon çubuğundan kaldırılınca
+        // rozet otomatik temizlenir. Anahtar `${record_type}:${target_pk}` (stageDelete
+        // op'u record_type=row.kind kullanıyor). Set yoksa lokal optimistik fallback.
         if (pendingDeleteIds && pendingDeleteIds.has) {
-            return pendingDeleteIds.has(row.id);
+            return pendingDeleteIds.has(`${row.kind}:${row.id}`);
         }
-        return false;
+        return localStaged.has(`${row.kind}:${row.id}`);
     };
 
     const columns = [

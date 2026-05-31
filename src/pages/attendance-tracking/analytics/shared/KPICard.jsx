@@ -19,9 +19,14 @@ export default function KPICard({
     subtitle, sparkline, className = '', mini = false,
     info, // { title, content } for InfoTooltip
     onClick, // optional click handler — adds cursor-pointer + hover ring
+    invertColor = false, // true: artış KÖTÜ (örn. Eksik Mesai) → yeşil/kırmızı ters
 }) {
     const isPositive = delta > 0;
     const isNegative = delta < 0;
+    // Renk semantiği: ok yönü gerçek işareti gösterir; renk 'iyi mi' sorusuna göre.
+    // invertColor=true ise artış (delta>0) kötüdür → kırmızı.
+    const isGood = invertColor ? isNegative : isPositive;
+    const isBad = invertColor ? isPositive : isNegative;
     const grad = GRADIENTS[gradient] || gradient;
     const clickable = typeof onClick === 'function';
     const clickProps = clickable ? {
@@ -56,7 +61,7 @@ export default function KPICard({
                     </div>
                 </div>
                 {delta != null && (
-                    <div className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isPositive ? 'text-emerald-600 bg-emerald-50' : isNegative ? 'text-red-600 bg-red-50' : 'text-slate-400 bg-slate-50'}`}>
+                    <div className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isGood ? 'text-emerald-600 bg-emerald-50' : isBad ? 'text-red-600 bg-red-50' : 'text-slate-400 bg-slate-50'}`}>
                         {isPositive ? <TrendingUp size={10} /> : isNegative ? <TrendingDown size={10} /> : <Minus size={10} />}
                         {isPositive ? '+' : ''}{delta}{deltaSuffix}
                     </div>
@@ -96,7 +101,7 @@ export default function KPICard({
                 </div>
 
                 {delta != null && delta !== undefined && (
-                    <div className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isPositive ? 'bg-white/15 text-emerald-200' : isNegative ? 'bg-white/15 text-red-200' : 'bg-white/10 text-white/50'}`}>
+                    <div className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-white/15 text-emerald-200' : isBad ? 'bg-white/15 text-red-200' : 'bg-white/10 text-white/50'}`}>
                         {isPositive ? <TrendingUp size={10} /> : isNegative ? <TrendingDown size={10} /> : <Minus size={10} />}
                         <span>{isPositive ? '+' : ''}{delta}{deltaSuffix}</span>
                         <span className="text-white/30 ml-0.5">önceki dönem</span>
