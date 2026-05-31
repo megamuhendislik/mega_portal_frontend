@@ -419,7 +419,9 @@ export default function OverviewTab() {
                                     label: 'Mesai Doluluğu',
                                     curr: `%${kpi.avg_efficiency_pct || 0}`,
                                     prev: `%${cmpKpi.avg_efficiency_pct || 0}`,
-                                    pct: deltas?.efficiency,
+                                    // D4: yüzde metriği için göreli-% YANLIŞ (%50→%60 göreli +%20 yanıltıcı).
+                                    // Yalnızca pp (puan farkı) göster — null ile parantezli göreli-% gizlenir.
+                                    pct: null,
                                     absDiff: round((kpi.avg_efficiency_pct || 0) - (cmpKpi.avg_efficiency_pct || 0)),
                                     unit: 'pp', // percentage points
                                     betterIsHigher: true,
@@ -522,6 +524,7 @@ export default function OverviewTab() {
                     onClick={() => openKPI('ot_hours')} />
                 <KPICard mini title="Eksik Mesai" value={Math.round(kpi.total_missing_hours || 0)} suffix="sa" icon={AlertCircle} gradient="red"
                     delta={isComparing ? deltas?.missing : kpi.vs_prev?.missing}
+                    invertColor
                     info={METRIC_EXPLANATIONS.missing_hours}
                     onClick={() => openKPI('missing_hours')} />
             </div>

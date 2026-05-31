@@ -96,6 +96,10 @@ api.interceptors.response.use(
                 return new Promise(function (resolve, reject) {
                     failedQueue.push({ resolve, reject });
                 }).then(token => {
+                    // Tek-deneme guard'ını kuyruktan tekrar oynatılan isteklere de uygula:
+                    // yeni token ile yeniden 401 alırsa SONSUZ refresh fırtınası yerine
+                    // reddedilir (direkt yol zaten _retry set ediyor; kuyruk yolu etmiyordu).
+                    originalRequest._retry = true;
                     originalRequest.headers['Authorization'] = 'Bearer ' + token;
                     return api(originalRequest);
                 }).catch(err => {
