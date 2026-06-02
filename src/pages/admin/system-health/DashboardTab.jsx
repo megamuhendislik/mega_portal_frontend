@@ -491,12 +491,56 @@ export default function DashboardTab({ stats, refresh, loading }) {
                     </div>
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <span className="text-sm font-medium text-gray-600">Gate API</span>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">LISTENING</span>
+                        <GateStatusBadge
+                            lastEventAt={stats?.last_gate_event_at}
+                            eventsToday={stats?.gate_events_today}
+                        />
                     </div>
                 </div>
             </div>
 
         </div>
+    );
+}
+
+// Gate API rozeti — hardcoded "LISTENING" yerine gerçek veriye bağlı.
+// gate_events_today > 0 ya da son olay ~6 saat içindeyse AKTİF (yeşil),
+// daha eski son olay varsa amber, hiç veri yoksa kırmızı.
+function GateStatusBadge({ lastEventAt, eventsToday }) {
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    // "now" yalnızca mount anında bir kez alınır (lazy initializer) — render
+    // sırasında impure Date.now() çağrısını önler. Rozet için saniyelik
+    // tazelik gerekmez; stats yenilendiğinde komponent zaten remount olur.
+    const [now] = useState(() => Date.now());
+
+    const lastDate = lastEventAt ? new Date(lastEventAt) : null;
+    const lastValid = lastDate && !isNaN(lastDate.getTime());
+    const isRecent = lastValid && (now - lastDate.getTime()) <= SIX_HOURS_MS;
+    const count = Number(eventsToday) || 0;
+
+    const fmt = (d) => d.toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+        timeZone: 'Europe/Istanbul',
+    });
+
+    if (count > 0 || isRecent) {
+        return (
+            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
+                {count > 0 ? `AKTİF (bugün ${count} olay)` : 'AKTİF'}
+            </span>
+        );
+    }
+    if (lastValid) {
+        return (
+            <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded">
+                SON OLAY: {fmt(lastDate)}
+            </span>
+        );
+    }
+    return (
+        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
+            VERİ YOK
+        </span>
     );
 }
 

@@ -101,6 +101,7 @@ const CATEGORY_LABELS = {
     external_duty_consistency: 'Dış Görev Tutarlılığı',
     ghost_split_records: 'Hayali Bölme Kayıtları',
     duty_lunch_deduction: 'Dış Görev Öğle Düşümü',
+    scheduled_no_record: 'Kayıtsız İş Günü (kart verisi eksik)',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -1254,8 +1255,14 @@ export default function DataIntegrityAuditTab() {
         ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count > 0 && cat.info_only)
         : [];
 
+    // count===0 + hata YOK → gerçekten temiz.
     const categoriesClean = results
-        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count === 0)
+        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count === 0 && !cat.error)
+        : [];
+
+    // count===0 ama hata VAR → "TARANAMADI" (temiz değil, taranamamış).
+    const categoriesErrored = results
+        ? Object.entries(results.categories || {}).filter(([, cat]) => cat.count === 0 && cat.error)
         : [];
 
     return (
@@ -1404,6 +1411,44 @@ export default function DataIntegrityAuditTab() {
                 </div>
             )}
 
+            {/* Sessiz kesme / taranamayan kategori uyarıları */}
+            {results?.any_truncated && (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600" />
+                    <div>
+                        <div className="font-bold">Bazı kategoriler 200 sınırına ulaştı — liste TAM DEĞİL.</div>
+                        <div className="mt-1">
+                            Sınıra ulaşan kategori(ler):{' '}
+                            <span className="font-medium">
+                                {(results.truncated_categories || [])
+                                    .map((c) => CATEGORY_LABELS[c] || c)
+                                    .join(', ') || '-'}
+                            </span>
+                            . Eksik kayıtları görmek için tarih aralığını daraltıp tekrar tarayın.
+                        </div>
+                    </div>
+                </div>
+            )}
+            {results?.had_errors && (
+                <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-sm text-red-700 flex items-start gap-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600" />
+                    <div>
+                        <div className="font-bold">Taranamayan kategori(ler) var — bunlar &quot;temiz&quot; DEĞİL.</div>
+                        <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                            {(results.errored_categories || []).map((ec, i) => (
+                                <li key={i}>
+                                    <span className="font-medium">{CATEGORY_LABELS[ec.category] || ec.category}</span>
+                                    {ec.error ? <span className="text-red-600">: {ec.error}</span> : null}
+                                </li>
+                            ))}
+                            {(!results.errored_categories || results.errored_categories.length === 0) && (
+                                <li>Detay bilgisi yok.</li>
+                            )}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
             {/* Results */}
             {results && (
                 <>
@@ -1507,6 +1552,35 @@ export default function DataIntegrityAuditTab() {
                         </div>
                     )}
 
+                    {/* Errored Categories — count 0 ama hata var (temiz DEĞİL) */}
+                    {categoriesErrored.length > 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-5">
+                            <h3 className="text-sm font-bold text-red-700 flex items-center gap-2 mb-3">
+                                <ExclamationTriangleIcon className="w-4 h-4 text-red-500" />
+                                Taranamayan Kategoriler ({categoriesErrored.length})
+                            </h3>
+                            <p className="text-xs text-red-600 mb-3">
+                                Bu kategoriler hata nedeniyle taranamadı — &quot;temiz&quot; olarak değerlendirilemez.
+                            </p>
+                            <div className="space-y-2">
+                                {categoriesErrored.map(([key, cat]) => (
+                                    <div
+                                        key={key}
+                                        className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
+                                    >
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 shrink-0">
+                                            TARANAMADI
+                                        </span>
+                                        <div className="text-xs">
+                                            <span className="font-bold text-red-800">{CATEGORY_LABELS[key] || key}</span>
+                                            {cat.error ? <span className="text-red-600"> — {cat.error}</span> : null}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Clean Categories */}
                     {categoriesClean.length > 0 && (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -1527,8 +1601,8 @@ export default function DataIntegrityAuditTab() {
                         </div>
                     )}
 
-                    {/* All clean */}
-                    {results.total_issues === 0 && (
+                    {/* All clean — yalnızca hata yokken "temiz" de */}
+                    {results.total_issues === 0 && !results.had_errors && categoriesErrored.length === 0 && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
                             <CheckCircleIcon className="w-10 h-10 text-green-500 mx-auto mb-2" />
                             <h3 className="text-sm font-bold text-green-700">Sorun Bulunamadı</h3>
