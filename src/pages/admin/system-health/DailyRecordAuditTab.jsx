@@ -20,6 +20,8 @@ export default function DailyRecordAuditTab() {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [recoveryMessage, setRecoveryMessage] = useState(null);
+    const [recoveryError, setRecoveryError] = useState(null);
+    const [recoveryLoading, setRecoveryLoading] = useState(false);
 
     useEffect(() => {
         api.get('/employees/', { params: { page_size: 500 } })
@@ -49,6 +51,7 @@ export default function DailyRecordAuditTab() {
         setError(null);
         setResult(null);
         setRecoveryMessage(null);
+        setRecoveryError(null);
         try {
             const res = await api.get(`/system/health-check/daily-record-audit/?employee_id=${selectedEmployee.id}&date=${date}`);
             setResult(res.data);
@@ -70,8 +73,50 @@ export default function DailyRecordAuditTab() {
         URL.revokeObjectURL(url);
     };
 
-    const handleRecovery = () => {
-        setRecoveryMessage('GateEventLog recovery endpoint henuz backend tarafinda eklenmedi. Bu ozellik yakin zamanda aktif edilecektir.');
+    const handleRecovery = async () => {
+        if (!selectedEmployee || !date) return;
+        if (!window.confirm(
+            `${selectedEmployee.full_name || 'Çalışan'} — ${date}\n\n` +
+            `GateEventLog kayıtlarından bu güne ait Attendance kayıtları yeniden ` +
+            `oluşturulacak/onarılacaktır. Devam edilsin mi?`
+        )) return;
+
+        setRecoveryLoading(true);
+        setRecoveryError(null);
+        setRecoveryMessage(null);
+        try {
+            const res = await api.post('/system/health-check/quick-gate-fix/', {
+                work_date: date,
+                employee_id: selectedEmployee.id,
+                dry_run: false,
+            });
+            const d = res.data || {};
+            const parts = [
+                `Yeni kayıt: ${d.total_new_records ?? 0}`,
+                `Güncellenen: ${d.total_updated_records ?? 0}`,
+                `Silinen (stale): ${d.total_deleted_stale ?? 0}`,
+                `Yeniden hesaplanan: ${d.total_recalculated ?? 0}`,
+            ];
+            const errCount = (d.errors || []).length;
+            const noChange =
+                (d.total_new_records ?? 0) === 0 &&
+                (d.total_updated_records ?? 0) === 0 &&
+                (d.total_deleted_stale ?? 0) === 0;
+            setRecoveryMessage(
+                (noChange
+                    ? 'Onarım tamamlandı — değişiklik gerekmedi (kayıtlar zaten kart verisiyle uyumlu). '
+                    : 'Kart verisinden onarım tamamlandı. ') +
+                parts.join(' · ') +
+                (errCount > 0 ? ` · ${errCount} hata` : '') +
+                '. Verileri yenilemek için tekrar "Sorgula" edin. Tutarlılık için "Tam Yeniden Hesaplama" gerekebilir.'
+            );
+        } catch (e) {
+            setRecoveryError(
+                'Onarım başarısız: ' + (e.response?.data?.error || e.message)
+            );
+        } finally {
+            setRecoveryLoading(false);
+        }
     };
 
     const formatSeconds = (s) => {
@@ -193,10 +238,11 @@ export default function DailyRecordAuditTab() {
                             {hasMissingCardDiagnosis && (
                                 <button
                                     onClick={handleRecovery}
-                                    className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 flex items-center gap-2"
+                                    disabled={recoveryLoading}
+                                    className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 >
-                                    <ArrowPathIcon className="w-4 h-4" />
-                                    GateEventLog'dan Recovery
+                                    <ArrowPathIcon className={`w-4 h-4 ${recoveryLoading ? 'animate-spin' : ''}`} />
+                                    {recoveryLoading ? 'Onarılıyor...' : "GateEventLog'dan Recovery"}
                                 </button>
                             )}
                             <button
@@ -210,9 +256,15 @@ export default function DailyRecordAuditTab() {
                     </div>
 
                     {recoveryMessage && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
-                            <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0" />
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-start gap-2">
+                            <CheckCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                             {recoveryMessage}
+                        </div>
+                    )}
+                    {recoveryError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+                            <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                            {recoveryError}
                         </div>
                     )}
 

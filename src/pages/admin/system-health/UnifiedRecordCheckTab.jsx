@@ -7,6 +7,7 @@ import {
     ChevronRightIcon,
     ClockIcon,
     DocumentTextIcon,
+    ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 
 // ---------------------------------------------------------------------------
@@ -528,6 +529,86 @@ export default function UnifiedRecordCheckTab() {
     };
 
     // -----------------------------------------------------------------------
+    // TXT İndir — ekrandaki kart-Attendance karşılaştırmasını düz metne döker
+    // (client-side; mevcut `data` state'inden okur).
+    // -----------------------------------------------------------------------
+    const downloadTxt = () => {
+        if (!data) return;
+        const s = data.summary || {};
+        const lines = [];
+        const sep = '═'.repeat(63);
+        const sub = '─'.repeat(63);
+
+        lines.push(sep);
+        lines.push('  BİRLEŞİK KAYIT KONTROLÜ — KART vs ATTENDANCE RAPORU');
+        lines.push(sep);
+        lines.push(`  Rapor Tarihi: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`);
+        lines.push(`  Tarih Aralığı: ${startDate} — ${endDate} (${s.day_count || 1} gün)`);
+        lines.push('');
+        lines.push(sub);
+        lines.push('  ÖZET');
+        lines.push(sub);
+        lines.push(`  Çalışan: ${s.total_employees ?? 0}`);
+        lines.push(`  Kart Olayı (toplam): ${s.total_gate_events ?? 0}`);
+        lines.push(`  Giriş (IN): ${s.gate_in_count ?? 0}`);
+        lines.push(`  Çıkış (OUT): ${s.gate_out_count ?? 0}`);
+        lines.push(`  Attendance Kaydı: ${s.total_attendance_records ?? 0}`);
+        lines.push(`  Uyuşmazlık: ${s.mismatch_count ?? 0}`);
+        lines.push('');
+
+        const results = data.results || [];
+        const mismatched = results.filter((r) => (r.flags || []).length > 0);
+        const clean = results.filter((r) => (r.flags || []).length === 0);
+
+        lines.push(sub);
+        lines.push(`  UYUŞMAZLIK BULUNAN ÇALIŞANLAR (${mismatched.length})`);
+        lines.push(sub);
+        if (mismatched.length === 0) {
+            lines.push('  (yok)');
+        } else {
+            mismatched.forEach((r) => {
+                const emp = r.employee || {};
+                lines.push(`  [${emp.employee_code || '—'}] ${emp.name || '—'}${emp.department ? ` (${emp.department})` : ''}`);
+                (r.flags || []).forEach((f) => {
+                    lines.push(`      • ${getFlagInfo(f).label}`);
+                });
+                if (r.flag_details && typeof r.flag_details === 'object') {
+                    Object.entries(r.flag_details).forEach(([day, det]) => {
+                        const detText = Array.isArray(det)
+                            ? det.map((x) => getFlagInfo(x).label).join(', ')
+                            : (typeof det === 'object' ? JSON.stringify(det) : String(det));
+                        lines.push(`        - ${day}: ${detText}`);
+                    });
+                }
+                lines.push('');
+            });
+        }
+
+        lines.push(sub);
+        lines.push(`  UYUMLU ÇALIŞANLAR (${clean.length})`);
+        lines.push(sub);
+        if (clean.length === 0) {
+            lines.push('  (yok)');
+        } else {
+            clean.forEach((r) => {
+                const emp = r.employee || {};
+                lines.push(`  [${emp.employee_code || '—'}] ${emp.name || '—'}${emp.department ? ` (${emp.department})` : ''}`);
+            });
+        }
+        lines.push('');
+
+        const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `birlesik_kayit_kontrolu_${startDate}_${endDate}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // -----------------------------------------------------------------------
     // Open detail drawer
     // -----------------------------------------------------------------------
     const openDetail = async (row) => {
@@ -690,6 +771,15 @@ export default function UnifiedRecordCheckTab() {
                     >
                         {loading ? 'Taranıyor...' : 'Tara'}
                     </button>
+                    {data && (
+                        <button
+                            onClick={downloadTxt}
+                            className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition flex items-center gap-2"
+                        >
+                            <ArrowDownTrayIcon className="w-4 h-4" />
+                            TXT İndir
+                        </button>
+                    )}
                 </div>
             </div>
 
