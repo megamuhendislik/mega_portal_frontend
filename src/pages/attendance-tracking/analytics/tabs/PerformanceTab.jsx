@@ -439,12 +439,12 @@ function TeamOverviewMode({ onSelectPerson }) {
                 iconGradient="from-amber-500 to-orange-600"
                 subtitle="Kişi/dept limit yakınlığı + dönem normal/OT/eksik dağılımı + karşılaştırma"
                 collapsible={true}
-                defaultOpen={false}
+                defaultOpen={true}
             >
                 <WeeklyLimitPanel />
             </SectionCard>
 
-            {/* Detay Tablosu — default kapali */}
+            {/* Detay Tablosu — default açık */}
             {/* Y10 fix (2026-05-17): duplicate collapsible prop kaldırıldı */}
             <SectionCard
                 title="Detay Tablosu"
@@ -452,7 +452,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                 iconGradient="from-slate-500 to-slate-700"
                 subtitle={`${filtered.length} / ${employeeHours.length} çalışan · 10 sütunlu satır-bazlı tablo`}
                 collapsible={true}
-                defaultOpen={false}
+                defaultOpen={true}
                 headerExtra={
                     <button
                         onClick={() => { setSearch(''); setSelectedDept(null); setSortBy('normal_completion_desc'); }}
