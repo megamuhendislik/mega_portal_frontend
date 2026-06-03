@@ -102,6 +102,8 @@ const CATEGORY_LABELS = {
     ghost_split_records: 'Hayali Bölme Kayıtları',
     duty_lunch_deduction: 'Dış Görev Öğle Düşümü',
     scheduled_no_record: 'Kayıtsız İş Günü (kart verisi eksik)',
+    inverted_attendance: 'Ters Kart Kaydı (çıkış < giriş)',
+    orphan_gate_events: 'Sahipsiz Ham Kart Olayı (işlenmemiş)',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
