@@ -104,6 +104,7 @@ const CATEGORY_LABELS = {
     scheduled_no_record: 'Kayıtsız İş Günü (kart verisi eksik)',
     inverted_attendance: 'Ters Kart Kaydı (çıkış < giriş)',
     orphan_gate_events: 'Sahipsiz Ham Kart Olayı (işlenmemiş)',
+    absurd_duration: 'Absürt Süre (>24sa çok-günlü kart kaydı)',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
