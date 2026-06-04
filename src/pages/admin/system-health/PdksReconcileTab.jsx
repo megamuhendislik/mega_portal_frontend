@@ -125,7 +125,11 @@ export default function PdksReconcileTab() {
     { title: 'Saat', dataIndex: 'time', key: 'time', width: 90, render: v => <span className="font-mono">{v}</span> },
     {
       title: 'Yön', dataIndex: 'direction', key: 'direction', width: 100,
-      render: v => <Tag color={v === 'GİRİŞ' || v === 'IN' ? 'cyan' : 'orange'}>{v}</Tag>,
+      render: v => {
+        // to_add satırları 'GIRIS'/'CIKIS' (ASCII, noktasız) gelebilir — normalize et
+        const isIn = v === 'GİRİŞ' || v === 'IN' || v === 'GIRIS';
+        return <Tag color={isIn ? 'cyan' : 'orange'}>{isIn ? 'GİRİŞ' : 'ÇIKIŞ'}</Tag>;
+      },
     },
     { title: 'Event ID', dataIndex: 'event_id', key: 'event_id', render: v => <span className="font-mono text-xs text-gray-400">{v}</span> },
   ];
