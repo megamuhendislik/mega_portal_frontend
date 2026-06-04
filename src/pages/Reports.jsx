@@ -82,7 +82,10 @@ const Reports = () => {
         };
         const fetchEmployees = async () => {
             try {
-                const res = await api.get('/employees/', { params: { page_size: 500 } });
+                // include_inactive: ayrılan personelin geçmiş dönem raporu seçilebilsin
+                const res = await api.get('/employees/', {
+                    params: { page_size: 500, include_inactive: 1 },
+                });
                 setEmployees(res.data.results || res.data || []);
             } catch (err) {
                 console.error('Employee fetch error:', err);
