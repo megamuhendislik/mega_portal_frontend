@@ -374,6 +374,32 @@ export default function PdksReconcileTab() {
             />
           )}
 
+          {/* Kilitli mali döneme düşen eventler */}
+          {summary?.locked > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              icon={<LockOutlined />}
+              message={`${summary.locked} event kilitli mali döneme düşüyor`}
+              description={
+                <>
+                  {results.locked_days?.length > 0 && (
+                    <div className="text-sm mt-1">
+                      <span className="font-medium">Kilitli günler:</span>{' '}
+                      {results.locked_days.length <= 10
+                        ? results.locked_days.join(', ')
+                        : `${results.locked_days.slice(0, 10).join(', ')} ve ${results.locked_days.length - 10} gün daha`}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-2">
+                    Bu günlere event eklemek kilitli dönemi etkiler; Tam Yeniden Hesaplama
+                    sırasında kilit guard devreye girer.
+                  </div>
+                </>
+              }
+            />
+          )}
+
           {/* Eklenecek eventler */}
           {results.to_add?.length > 0 && (
             <Card size="small" title={`Eklenecek Eventler (${summary.to_add || results.to_add.length})`} className="shadow-sm">
