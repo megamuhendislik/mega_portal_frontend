@@ -43,6 +43,7 @@ import RecalculationAuditTab from './system-health/RecalculationAuditTab';
 import GateEventPatternTab from './system-health/GateEventPatternTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
 import PdksRawImportTab from './system-health/PdksRawImportTab';
+import PdksReconcileTab from './system-health/PdksReconcileTab';
 
 // Hub tabs (alt-sekmeli paneller — eski 44 tabı kapsar)
 import TestsHubTab from './system-health/TestsHubTab';
@@ -117,6 +118,7 @@ export default function SystemHealth() {
                         // ─── 🔧 Stand-alone (özel araçlar) ───
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
                         { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
+                        { id: 'pdks_reconcile', name: 'PDKS Mutabakat', icon: IdentificationIcon },
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
@@ -159,6 +161,7 @@ export default function SystemHealth() {
                 {/* 🔧 Stand-alone */}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
                 {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
+                {activeTab === 'pdks_reconcile' && <PdksReconcileTab />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
