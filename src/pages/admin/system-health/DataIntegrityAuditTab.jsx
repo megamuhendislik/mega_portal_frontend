@@ -105,6 +105,8 @@ const CATEGORY_LABELS = {
     inverted_attendance: 'Ters Kart Kaydı (çıkış < giriş)',
     orphan_gate_events: 'Sahipsiz Ham Kart Olayı (işlenmemiş)',
     absurd_duration: 'Absürt Süre (>24sa çok-günlü kart kaydı)',
+    absent_with_ot: 'Devamsız + Onaylı Mesai Çelişkisi',
+    leave_duty_conflict: 'İzin + Dış Görev Çelişkisi (aynı gün)',
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);

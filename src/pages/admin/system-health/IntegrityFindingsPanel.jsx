@@ -30,6 +30,8 @@ const CATEGORY_LABELS = {
     external_duty_consistency: 'Dış Görev',
     ghost_split_records: 'Hayalî Split',
     duty_lunch_deduction: 'DUTY Öğle Düşümü',
+    absent_with_ot: 'Devamsız + Onaylı Mesai',
+    leave_duty_conflict: 'İzin + Dış Görev Çelişkisi',
 };
 
 const SEVERITY_STYLES = {
