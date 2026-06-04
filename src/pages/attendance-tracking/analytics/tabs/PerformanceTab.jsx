@@ -42,6 +42,52 @@ const hoursFormatter = (value, name) => {
     return [value, name];
 };
 
+// Saat (ondalık) → "Xs YYdk"
+function fmtHm(v) {
+    const x = Math.max(0, v || 0);
+    const h = Math.floor(x);
+    const m = Math.round((x - h) * 60);
+    if (h === 0 && m === 0) return '0';
+    return m ? `${h}s ${String(m).padStart(2, '0')}dk` : `${h}s`;
+}
+
+// Tooltip satırı (module seviyesinde — render sırasında bileşen oluşturmamak için)
+function TipLine({ c, label, val, bold }) {
+    return (
+        <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-slate-600">
+                {c && <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: c }} />}
+                {label}
+            </span>
+            <span className={`tabular-nums ${bold ? 'font-black text-slate-800' : 'font-semibold text-slate-700'}`}>
+                {fmtHm(val)}
+            </span>
+        </div>
+    );
+}
+
+// Günlük Çalışma Saatleri grafiği için özel tooltip — normal/FM/eksik + mola kırılımı
+function DailyHoursTooltip({ active, payload }) {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload || {};
+    return (
+        <div className="rounded-lg bg-white border border-slate-200 shadow-lg px-3 py-2 text-[11px] space-y-1 min-w-[200px]">
+            <div className="font-black text-slate-800 mb-1">{d.dayLabel}</div>
+            <TipLine c="#6366f1" label="Normal" val={d.normal} />
+            <TipLine c="#f59e0b" label="Fazla Mesai" val={d.ot} />
+            <TipLine label="Toplam Çalışma" val={d.worked} bold />
+            <TipLine c="#ef4444" label="Eksik" val={d.eksik} />
+            <div className="border-t border-slate-100 pt-1 mt-1">
+                <TipLine c="#10b981" label="Mola (öğle hariç)" val={d.molaTotal} />
+                <div className="flex items-center justify-between gap-4 text-[10px] text-slate-500 pl-3.5">
+                    <span>Kullanım: <span className="tabular-nums">{fmtHm(d.molaUsage)}</span></span>
+                    <span>Aşım: <span className="tabular-nums font-semibold text-rose-500">{fmtHm(d.molaOverage)}</span></span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const TR_NORM = (s) => String(s || '').toLocaleLowerCase('tr')
     .replace(/[şçöüğıİ]/g, c => ({ ş: 's', ç: 'c', ö: 'o', ü: 'u', ğ: 'g', ı: 'i', İ: 'i' })[c]);
 
@@ -732,18 +778,26 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
     const dailyHours = useMemo(() => {
         if (!personalData?.daily_hours) return [];
         const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+        const r1 = (v) => Math.round((v || 0) * 10) / 10;
         return personalData.daily_hours.map((d) => {
             const dt = new Date(d.date + 'T00:00:00');
             const dayName = dayNames[dt.getDay()];
+            // Backend artık gün-başına TEK toplam + ayrı alanlar gönderiyor
+            // (normal/ot/missing/break_total/break_usage/break_overage).
+            const normal = d.normal != null ? r1(d.normal) : r1((d.worked || 0) - (d.ot || 0));
             return {
                 date: `${d.date?.slice(8)}/${d.date?.slice(5, 7)}`,
                 fullDate: d.date,
                 dayLabel: `${dayName} ${d.date?.slice(8)}`,
-                normal: Math.round((d.worked - (d.ot || 0)) * 10) / 10,
-                ot: Math.round((d.ot || 0) * 10) / 10,
+                normal,
+                ot: r1(d.ot),
+                eksik: r1(d.missing),
                 hedef: d.target || 8,
+                molaTotal: r1(d.break_total),
+                molaUsage: r1(d.break_usage),
+                molaOverage: r1(d.break_overage),
                 status: d.status,
-                worked: d.worked,
+                worked: r1(d.worked),
                 _raw: d,
             };
         });
@@ -944,21 +998,23 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                     {/* Daily hours composed chart */}
                     <SectionCard
                         title="Günlük Çalışma Saatleri" icon={Clock} iconGradient="from-indigo-500 to-indigo-600"
-                        subtitle="Normal ve fazla mesai saatleri — hedef çizgisi ile"
+                        subtitle="Gün başına toplam: normal + fazla mesai (üst üste) ve eksik — mola kırılımı için üzerine gelin"
                     >
                         {dailyHours.length > 0 ? (
                             <div className="h-80">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={dailyHours} barGap={0} barSize={14}>
+                                    <ComposedChart data={dailyHours} barGap={2} barSize={12}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis dataKey="dayLabel" tick={{ fontSize: 9, fontWeight: 600 }} interval="preserveStartEnd" angle={-30} textAnchor="end" height={50} />
                                         <YAxis tick={{ fontSize: 10 }} domain={[0, 'auto']} unit="h" />
-                                        <Tooltip content={<ChartTooltip formatter={hoursFormatter} />} />
+                                        <Tooltip content={<DailyHoursTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)' }} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                                         <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
                                             label={{ value: 'Hedef 8h', position: 'right', style: { fontSize: 9, fill: '#ef4444' } }} />
+                                        {/* Normal + FM üst üste (stackId a) = toplam çalışma; Eksik ayrı çubuk (stackId b) */}
                                         <Bar dataKey="normal" name="Normal" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
                                         <Bar dataKey="ot" name="Fazla Mesai" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                                        <Bar dataKey="eksik" name="Eksik" stackId="b" fill="#ef4444" radius={[3, 3, 0, 0]} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </div>

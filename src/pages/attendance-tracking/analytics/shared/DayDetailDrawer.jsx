@@ -75,9 +75,11 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
     const worked = day?.worked ?? 0;
     const ot = day?.ot ?? 0;
     const target = day?.target ?? 8;
-    const normal = Math.max(0, worked - ot);
-    const deficit = Math.max(0, target - normal);
+    // Backend gün-başına toplam alanları gönderiyor (normal/missing/break_*)
+    const normal = day?.normal != null ? day.normal : Math.max(0, worked - ot);
+    const deficit = day?.missing != null ? day.missing : Math.max(0, target - normal);
     const efficiency = target > 0 ? Math.round((worked / target) * 100) : 0;
+    const hasBreak = day?.break_total != null;
 
     return (
         <Drawer
@@ -228,6 +230,35 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 )}
                             </div>
                         </div>
+
+                        {/* Mola — öğle hariç gerçek gün içi mola + hak içi kullanım/aşım */}
+                        {hasBreak && (
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                                        <Coffee size={11} className="text-emerald-600" /> Mola (öğle hariç)
+                                    </span>
+                                    <span className="text-[10px] font-bold text-emerald-700 tabular-nums">
+                                        Toplam {formatHours(day.break_total)}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-2.5">
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Hak İçi Kullanım</p>
+                                        <p className="text-base font-black text-indigo-800 tabular-nums mt-0.5">{formatHours(day.break_usage)}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-2.5">
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Mola Aşımı</p>
+                                        <p className="text-base font-black text-rose-700 tabular-nums mt-0.5">
+                                            {day.break_overage > 0 ? formatHours(day.break_overage) : '—'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">
+                                    Giriş/çıkışlar arası toplam dışarıda kalma (öğle arası düşülmüş). Hak içi kullanım mola hakkına sayılan kısım; aşım hakkı aşan kısımdır.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Giriş/Çıkış (entryExit varsa) */}
                         {entryExit && (entryExit.first_check_in || entryExit.last_check_out) && (
