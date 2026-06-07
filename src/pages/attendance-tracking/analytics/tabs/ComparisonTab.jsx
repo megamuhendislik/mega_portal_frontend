@@ -47,6 +47,7 @@ export default function ComparisonTab() {
     const [mode, setMode] = useState('compare');
     const [view, setView] = useState('snapshot');
     const [months, setMonths] = useState(6);
+    const [trendMetric, setTrendMetric] = useState('efficiency');
 
     const [selectedItems, setSelectedItems] = useState([]); // ['p:1', 'd:5', 'c', 'j:3']
     const [periodEmpId, setPeriodEmpId] = useState(null);
@@ -225,6 +226,8 @@ export default function ComparisonTab() {
             { key: 'normal_hours', label: 'Normal (sa)', color: '#0ea5e9' },
             { key: 'overtime_hours', label: 'Fazla Mesai (sa)', color: '#d97706' },
             { key: 'missing_hours', label: 'Eksik (sa)', color: '#dc2626' },
+            { key: 'avg_break_minutes', label: 'Ort. Mola (dk)', color: '#8b5cf6' },
+            { key: 'avg_counted_break_minutes', label: 'Düşülen Mola (dk)', color: '#a855f7' },
         ];
 
         const barData = snap.map((s) => ({
@@ -314,6 +317,14 @@ export default function ComparisonTab() {
                                         <span className="text-slate-500">Eksik:</span>{' '}
                                         <span className="font-bold tabular-nums text-red-600">{s.metrics?.missing_hours}sa</span>
                                     </div>
+                                    <div>
+                                        <span className="text-slate-500">Ort. Mola (öğle hariç):</span>{' '}
+                                        <span className="font-bold tabular-nums text-violet-600">{s.metrics?.avg_break_minutes ?? 0}dk</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">Düşülen Mola:</span>{' '}
+                                        <span className="font-bold tabular-nums text-violet-700">{s.metrics?.avg_counted_break_minutes ?? 0}dk</span>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-[11px] text-amber-700 italic py-1">
@@ -371,10 +382,21 @@ export default function ComparisonTab() {
         );
     };
 
+    // Trend'de gösterilebilecek metrikler. `field` = time_series'teki `{key}_<field>` soneki.
+    const TREND_METRICS = [
+        { value: 'efficiency', field: 'efficiency', title: 'Mesai Doluluğu Trendi (Aylık %)', unit: '%' },
+        { value: 'worked', field: 'worked', title: 'Çalışma Saati Trendi (Aylık)', unit: 'sa' },
+        { value: 'overtime', field: 'overtime', title: 'Fazla Mesai Trendi (Aylık)', unit: 'sa' },
+        { value: 'missing', field: 'missing', title: 'Eksik Saat Trendi (Aylık)', unit: 'sa' },
+        { value: 'break', field: 'break', title: 'Ort. Mola (öğle hariç) Trendi (Aylık)', unit: 'dk' },
+        { value: 'break_counted', field: 'break_counted', title: 'Düşülen Mola Trendi (Aylık)', unit: 'dk' },
+    ];
+
     const renderCompareTrend = () => {
         if (!data || data.mode !== 'compare') return null;
         const series = data.time_series || [];
         const ents = data.entities || [];
+        const metricCfg = TREND_METRICS.find((m) => m.value === trendMetric) || TREND_METRICS[0];
         // Stage66 B10 fix: has_data=false → trend'de null (boşluk) göster, 0 değil.
         // Recharts `connectNulls` default false → çizgi pre-hire aylarda kırılır.
         const lineData = series.map((p) => ({
@@ -384,20 +406,36 @@ export default function ComparisonTab() {
                     ...acc,
                     [e.key]: p[`${e.key}_has_data`] === false
                         ? null
-                        : (p[`${e.key}_efficiency`] ?? 0),
+                        : (p[`${e.key}_${metricCfg.field}`] ?? 0),
                 }),
                 {},
             ),
         }));
         return (
-            <SectionCard title="Mesai Doluluğu Trendi (Aylık %)" collapsible={false}>
+            <SectionCard title={metricCfg.title} collapsible={false}>
+                <div className="mb-3 flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Metrik:</span>
+                    <Segmented
+                        value={trendMetric}
+                        onChange={setTrendMetric}
+                        size="small"
+                        options={[
+                            { value: 'efficiency', label: 'Doluluk %' },
+                            { value: 'worked', label: 'Çalışma' },
+                            { value: 'overtime', label: 'Fazla Mesai' },
+                            { value: 'missing', label: 'Eksik' },
+                            { value: 'break', label: 'Ort. Mola' },
+                            { value: 'break_counted', label: 'Düşülen Mola' },
+                        ]}
+                    />
+                </div>
                 <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={lineData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis dataKey="ay" tick={{ fontSize: 11, fontWeight: 600 }} />
-                            <YAxis tick={{ fontSize: 10 }} unit="%" />
-                            <RTooltip content={<ChartTooltip unit="%" />} />
+                            <YAxis tick={{ fontSize: 10 }} unit={metricCfg.unit} />
+                            <RTooltip content={<ChartTooltip unit={metricCfg.unit} />} />
                             <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
                             {ents.map((e) => (
                                 <Line

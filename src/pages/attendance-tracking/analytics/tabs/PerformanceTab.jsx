@@ -288,6 +288,9 @@ function TeamOverviewMode({ onSelectPerson }) {
     const { data, queryParams, minAttendancePct, minAttendanceEnabled } = useAnalytics();
     const [employeeHoursRaw, setEmployeeHoursRaw] = useState([]);
     const [whLoading, setWhLoading] = useState(false);
+    // Mola (break) verisi — team_analytics_service (WIP) DEĞİŞTİRİLEMEZ olduğu için
+    // ayrı break-meal endpoint'inden aynı scope/tarih query'siyle çekilir (OvertimeMealTab deseni).
+    const [breakData, setBreakData] = useState(null);
     const [search, setSearch] = useState('');
     const [selectedDept, setSelectedDept] = useState(null);
     const [activePresets, setActivePresets] = useState([]);
@@ -319,6 +322,42 @@ function TeamOverviewMode({ onSelectPerson }) {
     }, [queryParams, workHoursFromBulk]);
 
     useEffect(() => { fetchWorkHours(); }, [fetchWorkHours]);
+
+    // Mola verisi — break-meal endpoint'inden ayrıca çekilir (aynı scope/tarih params).
+    // Bulk payload'da break_meal varsa onu kullan, yoksa endpoint'e git.
+    const breakFromBulk = data?.break_meal;
+    const fetchBreakData = useCallback(async () => {
+        if (breakFromBulk && Array.isArray(breakFromBulk.break_distribution)) {
+            setBreakData(breakFromBulk);
+            return;
+        }
+        if (!queryParams?.start_date) return;
+        try {
+            const res = await api.get('/attendance-analytics/break-meal/', { params: queryParams, timeout: 30000 });
+            setBreakData(res.data || null);
+        } catch {
+            setBreakData(null);
+        }
+    }, [queryParams, breakFromBulk]);
+
+    useEffect(() => { fetchBreakData(); }, [fetchBreakData]);
+
+    // employee_id -> break istatistiği map'i (kişi tablosuna merge için)
+    const breakMap = useMemo(() => {
+        const list = breakData?.break_distribution || [];
+        return Object.fromEntries(list.map((b) => [b.employee_id ?? b.id, b]));
+    }, [breakData]);
+
+    // Mola trendi (son 6 mali ay) — break_trend[]: gerçek + düşülen mola
+    const breakTrend = useMemo(() => {
+        if (!breakData?.break_trend) return [];
+        return breakData.break_trend.map((m) => ({
+            name: (m.label || '').replace(/\d{4}$/, '').trim(),
+            gerçek: Math.round(m.avg_break_minutes || 0),
+            düşülen: Math.round(m.avg_counted_minutes || 0),
+            gün: m.days || 0,
+        }));
+    }, [breakData]);
 
     // Frontend filter: Yapilan Normal Mesai/Yukumluluk < threshold ise haric tut.
     // Backend filter eksik kalsa bile UI tutarli olsun.
@@ -455,6 +494,85 @@ function TeamOverviewMode({ onSelectPerson }) {
             {/* v3 grafik-odakli yeni dizilim */}
             <KPIStrip employees={employeeHours} />
 
+            {/* ═══ MOLA (break) — KPI + trend. Mola verisi ayrı break-meal endpoint'inden gelir ═══ */}
+            {breakData && (
+                <SectionCard
+                    title="Mola Analizi"
+                    icon={Coffee}
+                    iconGradient="from-cyan-500 to-blue-600"
+                    subtitle="Öğle hariç gerçek mola + iş süresinden düşülen mola · son 6 ayın trendi"
+                    collapsible={true}
+                    defaultOpen={true}
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Mola KPI kartları */}
+                        <div className="lg:col-span-1 grid grid-cols-2 gap-3 content-start">
+                            <KPICard mini
+                                title="Ort. Mola (öğle hariç)"
+                                value={Math.round(breakData?.kpi?.avg_break_minutes ?? breakData?.avg_break_minutes ?? 0)}
+                                suffix="dk" icon={Coffee} gradient="cyan"
+                                subtitle="Gerçek mola"
+                            />
+                            <KPICard mini
+                                title="Ort. Düşülen Mola"
+                                value={Math.round(breakData?.kpi?.avg_counted_break_minutes ?? breakData?.avg_counted_break_minutes ?? 0)}
+                                suffix="dk" icon={Coffee} gradient="indigo"
+                                subtitle="İş süresinden düşülen"
+                            />
+                            {breakData?.break_ot_normal && (
+                                <>
+                                    <KPICard mini
+                                        title="OT Günü Mola"
+                                        value={Math.round(breakData.break_ot_normal.ot_day_avg_break_minutes || 0)}
+                                        suffix="dk" icon={AlarmClock} gradient="amber"
+                                        subtitle="Fazla mesai gününde"
+                                    />
+                                    <KPICard mini
+                                        title="Normal Gün Mola"
+                                        value={Math.round(breakData.break_ot_normal.normal_day_avg_break_minutes || 0)}
+                                        suffix="dk" icon={AlarmClock} gradient="blue"
+                                        subtitle="Normal mesai gününde"
+                                    />
+                                </>
+                            )}
+                        </div>
+
+                        {/* Mola Trendi (Son 6 Ay) */}
+                        <div className="lg:col-span-2">
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp size={13} className="text-cyan-500" />
+                                <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-wider">Mola Trendi (Son 6 Ay)</h4>
+                            </div>
+                            {breakTrend.length > 0 ? (
+                                <div className="h-56">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={breakTrend}>
+                                            <defs>
+                                                <linearGradient id="perfBreakGrad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.25} />
+                                                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
+                                            <YAxis tick={{ fontSize: 10 }} unit=" dk" />
+                                            <Tooltip content={<ChartTooltip />} />
+                                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                            <Area type="monotone" dataKey="gerçek" name="Gerçek Mola (öğle hariç)" stroke="#06b6d4" fill="url(#perfBreakGrad)" strokeWidth={2.5} dot={{ r: 3 }} />
+                                            <Line type="monotone" dataKey="düşülen" name="Düşülen Mola" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3, fill: '#6366f1' }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-56 flex items-center justify-center text-[11px] text-slate-400">
+                                    Mola trend verisi yok
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </SectionCard>
+            )}
+
             <SmartFilters
                 activePresets={activePresets}
                 onPresetToggle={togglePreset}
@@ -496,7 +614,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                 title="Detay Tablosu"
                 icon={Users}
                 iconGradient="from-slate-500 to-slate-700"
-                subtitle={`${filtered.length} / ${employeeHours.length} çalışan · 10 sütunlu satır-bazlı tablo`}
+                subtitle={`${filtered.length} / ${employeeHours.length} çalışan · mola dahil satır-bazlı tablo`}
                 collapsible={true}
                 defaultOpen={true}
                 headerExtra={
@@ -572,7 +690,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 overflow-x-auto">
-                        <table className="w-full text-sm min-w-[1140px]">
+                        <table className="w-full text-sm min-w-[1320px]">
                             <thead className="bg-slate-50/80">
                                 <tr className="border-b border-slate-200">
                                     <th className="py-2.5 px-2 w-8" />
@@ -582,6 +700,8 @@ function TeamOverviewMode({ onSelectPerson }) {
                                         { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (Fazla Mesai hariç)' },
                                         { key: 'ot', label: 'Fazla Mesai', align: 'right', tip: 'Fazla mesai' },
                                         { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
+                                        { key: 'real_break', label: 'Gerçek Mola', align: 'right', tip: 'Günlük ort. gerçek mola (öğle hariç), dakika' },
+                                        { key: 'counted_break', label: 'Düşülen Mola', align: 'right', tip: 'Günlük ort. iş süresinden düşülen mola, dakika' },
                                         { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük (missing-aware)' },
                                         { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Effective + Fazla Mesai) / Yükümlülük' },
                                         { key: 'ot_to_target', label: 'FM/Y', align: 'right', tip: 'Fazla Mesai / Yükümlülük' },
@@ -607,6 +727,10 @@ function TeamOverviewMode({ onSelectPerson }) {
                                     const noTarget = !(e.has_target ?? (e.target_hours > 0));
                                     const isExpanded = expandedRowId === e.employee_id;
                                     const totalParts = (e.normal_hours || 0) + (e.ot_hours || 0) + (e.missing_hours || 0);
+                                    // Mola verisi ayrı endpoint'ten employee_id ile merge edilir
+                                    const brk = breakMap[e.employee_id];
+                                    const realBreak = brk ? Math.round(brk.avg_break_minutes || 0) : null;
+                                    const countedBreak = brk ? Math.round(brk.avg_counted_minutes || 0) : null;
                                     return (
                                         <React.Fragment key={e.employee_id}>
                                             <tr
@@ -631,6 +755,13 @@ function TeamOverviewMode({ onSelectPerson }) {
                                                 <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{fmtHrs(e.normal_hours)}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{fmtHrs(e.ot_hours)}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{fmtHrs(e.missing_hours)}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]"
+                                                    style={{ color: realBreak == null ? '#cbd5e1' : realBreak > 45 ? '#ef4444' : realBreak > 30 ? '#f59e0b' : '#06b6d4' }}>
+                                                    {realBreak == null ? '—' : `${realBreak}dk`}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-indigo-500 font-semibold text-[12px]">
+                                                    {countedBreak == null ? '—' : `${countedBreak}dk`}
+                                                </td>
                                                 <td className="py-2.5 px-3">
                                                     {noTarget ? <span className="text-slate-400 text-[11px]">—</span> : (
                                                         <div className="flex items-center gap-2">
@@ -674,7 +805,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                                             </tr>
                                             {isExpanded && (
                                                 <tr className="bg-gradient-to-br from-indigo-50/40 to-slate-50/40 border-b border-indigo-100">
-                                                    <td colSpan={11} className="py-4 px-4">
+                                                    <td colSpan={13} className="py-4 px-4">
                                                         <RowDetailPanel
                                                             employee={e}
                                                             totalParts={totalParts}
