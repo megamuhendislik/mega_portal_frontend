@@ -175,12 +175,14 @@ export default function OvertimeMealTab() {
     }, [breakMeal]);
 
     // Meal trend
+    // Backend (break_absence_service.py) meal_trend öğeleri: month, label, order_count, rate_pct.
+    // (rate fallback eski payload uyumu için korunur.)
     const mealTrend = useMemo(() => {
         if (!breakMeal?.meal_trend) return [];
         return breakMeal.meal_trend.map(m => ({
             name: (m.label || '').replace(/\d{4}$/, '').trim(),
             sipariş: m.order_count || 0,
-            oran: m.order_rate_pct || 0,
+            oran: m.rate_pct ?? m.rate ?? 0,
         }));
     }, [breakMeal]);
 
@@ -239,11 +241,11 @@ export default function OvertimeMealTab() {
                 <KPICard title="Fazla Mesai Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
                 <KPICard title="Ort. Fazla Mesai / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
                 <KPICard title="FM Yemek Oranı" value={breakMeal?.meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
-                    subtitle={`${breakMeal?.meal_days_on_ot || 0}/${breakMeal?.approved_ot_days || 0} FM günü`}
+                    subtitle={`${breakMeal?.meal_days_on_ot || 0}/${breakMeal?.approved_ot_days || 0} FM günü (sipariş/teslim)`}
                     info={METRIC_EXPLANATIONS.meal_rate} />
                 <KPICard title="Saat / Yemek" value={breakMeal?.ot_hours_per_meal || 0} suffix="sa" icon={Utensils} gradient="rose"
                     subtitle={`${breakMeal?.total_meals || 0} yemek · ${breakMeal?.total_approved_ot_hours || 0} sa OT`}
-                    info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ Toplam Yemek Sayısı</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{breakMeal?.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
+                    info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ OT gününde alınan yemek sayısı (sipariş edilen/teslim edilen)</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Yalnız ORDERED/DELIVERED yemekler sayılır; bekleyen (PENDING) talepler hariçtir.</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{breakMeal?.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -370,7 +372,7 @@ export default function OvertimeMealTab() {
 
             {/* OT-Meal Correlation */}
             <SectionCard title="Fazla Mesai — Yemek Eşleştirme Analizi" icon={Utensils} iconGradient="from-orange-500 to-red-500"
-                subtitle="Fazla mesai yapılan günlerde yemek alınma durumu — kişi bazlı korelasyon"
+                subtitle="Fazla mesai yapılan günlerde sipariş edilen/teslim edilen yemek durumu — kişi bazlı korelasyon"
                 headerExtra={otMealCorrelationFull.length > 0 ? (
                     <button onClick={() => setDrilldown({ type: 'ot_meal_correlation' })}
                         className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200/60">
