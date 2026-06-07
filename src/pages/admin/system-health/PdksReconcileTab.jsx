@@ -212,7 +212,7 @@ export default function PdksReconcileTab() {
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen log CSV&apos;sini yükleyin. Önce <strong>Ön İzleme</strong> ile mutabakat raporunu inceleyin
           (eklenecek eventler, cihazda fazla CARD kayıtları, eşleşmeyen siciller), ardından <strong>Tam İçe Aktar</strong> ile uygulayın.
-          Bu işlem Attendance kayıtlarını <strong>yeniden hesaplamaz</strong> — içe aktarma sonrası &quot;Tam Yeniden Hesaplama&quot; çalıştırın.
+          Eklenen event&apos;ler en geç ~15 dakika içinde otomatik işlenmeye başlar; <strong>silmeler dahil tüm çalışma saatlerini hemen ve eksiksiz güncellemek için &quot;Tam Yeniden Hesaplama&quot; çalıştırın.</strong>
         </p>
 
         <Dragger {...uploadProps} className="mb-3">
@@ -360,7 +360,7 @@ export default function PdksReconcileTab() {
               showIcon
               icon={<ReloadOutlined />}
               message="Veri güncellendi. Çalışma saatlerini güncellemek için şimdi 'Tam Yeniden Hesaplama' çalıştırın."
-              description="Bu işlem yalnızca PDKS event kayıtlarını günceller — Attendance / puantaj saatleri otomatik yeniden hesaplanmaz."
+              description="Eklenen event'ler arka planda ~15 dk içinde otomatik işlenmeye başlar; silmeler ve eksiksiz/anlık güncelleme için 'Tam Yeniden Hesaplama' çalıştırın."
             />
           )}
 
@@ -468,14 +468,20 @@ export default function PdksReconcileTab() {
               showIcon
               message={`${summary.unmatched || results.unmatched.length} sicil numarası eşleşmedi (atlandı)`}
               description={
-                <ul className="list-disc pl-4 mt-1 text-sm">
-                  {results.unmatched.map((u, i) => (
-                    <li key={i}>
-                      <strong>Sicil {u.sicil_id}</strong>
-                      {u.name ? ` — ${u.name}` : ''} — <Tag color="orange">{u.event_count} event atlandı</Tag>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="list-disc pl-4 mt-1 text-sm">
+                    {results.unmatched.map((u, i) => (
+                      <li key={i}>
+                        <strong>Sicil {u.sicil_id}</strong>
+                        {u.name ? ` — ${u.name}` : ''} — <Tag color="orange">{u.event_count} event atlandı</Tag>
+                        {u.inactive === true && <Tag color="red">PASİF — event&apos;leri korundu</Tag>}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="text-xs text-gray-500 mt-2">
+                    Pasif (ayrılan) personelin gerçek event&apos;leri SİLİNMEZ; &quot;CSV Kapsamı Dışında — Korundu&quot; bölümünde listelenir.
+                  </div>
+                </>
               }
             />
           )}
@@ -524,27 +530,45 @@ export default function PdksReconcileTab() {
           {results.spurious?.length > 0 && (
             <Card
               size="small"
-              title={`Fazla cihaz-CARD (${summary.spurious || results.spurious.length})${deleteSpurious ? ' — silinecek' : ' — silme kapalı'}`}
+              title={`Fazla cihaz-CARD (${summary.spurious || results.spurious.length})${
+                isApplyMode
+                  ? (applied?.deleted > 0 ? ' — silindi' : '')
+                  : (deleteSpurious ? ' — silinecek' : ' — silme kapalı')
+              }`}
               className="shadow-sm"
             >
-              {!deleteSpurious && (
-                <Alert
-                  type="info"
-                  showIcon
-                  className="mb-2"
-                  message="Fazla CARD silme kapalı. Bu kayıtlar yalnızca raporlanır, silinmez. Silmek için yukarıdaki kutuyu işaretleyin."
-                />
-              )}
-              {/* FE-01: 500 truncation + silme açık → tamamının silineceğini belirgin uyar */}
-              {deleteSpurious && truncated.spurious ? (
-                <Alert
-                  type="error"
-                  showIcon
-                  className="mb-2"
-                  message={`Önizlemede yalnız ilk 500 kayıt gösteriliyor; onaylarsan TOPLAM ${summary.spurious || 0} fazla CARD'ın TAMAMI silinecek (geri alınabilir).`}
-                />
+              {/* Apply modunda: kayıtlar zaten işlendi, "silinecek" uyarıları gösterme */}
+              {isApplyMode ? (
+                applied?.deleted > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    className="mb-2"
+                    message="Bu kayıtlar silindi (Geri Al ile geri yüklenebilir)."
+                  />
+                )
               ) : (
-                truncatedNote('spurious')
+                <>
+                  {!deleteSpurious && (
+                    <Alert
+                      type="info"
+                      showIcon
+                      className="mb-2"
+                      message="Fazla CARD silme kapalı. Bu kayıtlar yalnızca raporlanır, silinmez. Silmek için yukarıdaki kutuyu işaretleyin."
+                    />
+                  )}
+                  {/* FE-01: 500 truncation + silme açık → tamamının silineceğini belirgin uyar */}
+                  {deleteSpurious && truncated.spurious ? (
+                    <Alert
+                      type="error"
+                      showIcon
+                      className="mb-2"
+                      message={`Önizlemede yalnız ilk 500 kayıt gösteriliyor; onaylarsan TOPLAM ${summary.spurious || 0} fazla CARD'ın TAMAMI silinecek (geri alınabilir).`}
+                    />
+                  ) : (
+                    truncatedNote('spurious')
+                  )}
+                </>
               )}
               <Table
                 dataSource={results.spurious}
