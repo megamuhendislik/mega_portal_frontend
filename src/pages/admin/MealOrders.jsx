@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import { getIstanbulToday } from '../../utils/dateUtils';
-import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package, Receipt } from 'lucide-react';
+import { Utensils, Check, Undo2, Pencil, X, ChevronLeft, ChevronRight, Loader2, Ban, Plus, Search, Package, Receipt, Truck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const STATUS_CONFIG = {
@@ -275,6 +275,16 @@ const MealOrders = () => {
         }
     };
 
+    const handleMarkDelivered = async (id) => {
+        try {
+            await api.post(`/meal-orders/${id}/mark_delivered/`);
+            toast.success("Yemek teslim edildi olarak işaretlendi.");
+            fetchData();
+        } catch {
+            toast.error("Teslim işlemi başarısız.");
+        }
+    };
+
     const handleCreateForEmployee = async () => {
         if (!selectedEmployee) return;
         setCreating(true);
@@ -313,9 +323,13 @@ const MealOrders = () => {
     };
 
     const changeDate = (days) => {
-        const d = new Date(date);
+        // Istanbul-güvenli: yerel tarih bileşenlerinden YYYY-MM-DD üret.
+        // toISOString() UTC'ye çevirdiği için gece yarısına yakın yanlış güne kayabilir.
+        const [y, mo, dd] = date.split('-').map(Number);
+        const d = new Date(y, mo - 1, dd);
         d.setDate(d.getDate() + days);
-        setDate(d.toISOString().split('T')[0]);
+        const p = (n) => String(n).padStart(2, '0');
+        setDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
     };
 
     const formatDate = (dateStr) => {
@@ -486,6 +500,15 @@ const MealOrders = () => {
                                                             >
                                                                 {record.is_ordered ? <><Undo2 size={13} /> Geri Al</> : <><Check size={13} /> Sipariş</>}
                                                             </button>
+                                                            {record.status === 'ORDERED' && (
+                                                                <button
+                                                                    onClick={() => handleMarkDelivered(record.id)}
+                                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                                                    title="Teslim edildi olarak işaretle"
+                                                                >
+                                                                    <Truck size={13} /> Teslim Et
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => { setCancellingRecord(record); setCancelReason(''); }}
                                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
