@@ -106,7 +106,14 @@ export default function OvertimeMealTab() {
             id: d.id,
             name: d.name || d.employee_name || '',
             department: d.department || '—',
+            // avg_break_minutes = öğle hariç GERÇEK mola (PRIMARY, backend düzeltmesi sonrası)
             avg_break_minutes: Math.round(d.avg_break_minutes || 0),
+            // avg_counted_minutes = iş süresinden DÜŞÜLEN mola
+            avg_counted_minutes: Math.round(d.avg_counted_minutes || 0),
+            // avg_potential_minutes = toplam boşluk (öğle dahil)
+            avg_potential_minutes: Math.round(d.avg_potential_minutes || 0),
+            // avg_uncounted_minutes = öğle-hariç fazla mola
+            avg_uncounted_minutes: Math.round(d.avg_uncounted_minutes || 0),
             min_break_minutes: Math.round(d.min_break_minutes || 0),
             max_break_minutes: Math.round(d.max_break_minutes || 0),
             days_count: d.days_count || 0,
@@ -163,15 +170,29 @@ export default function OvertimeMealTab() {
     }, [ot]);
 
     // Break analysis
+    // avg_break_minutes = öğle hariç GERÇEK mola (PRIMARY) · avg_counted_minutes = düşülen mola
     const breakDistribution = useMemo(() => {
         if (!breakMeal?.break_distribution) return [];
-        return breakMeal.break_distribution
+        return [...breakMeal.break_distribution]
             .sort((a, b) => (b.avg_break_minutes || 0) - (a.avg_break_minutes || 0))
             .slice(0, 20)
             .map(d => ({
                 name: (d.name || d.employee_name || '').split(' ').slice(0, 2).join(' '),
                 mola_dk: Math.round(d.avg_break_minutes || 0),
+                dusulen_dk: Math.round(d.avg_counted_minutes || 0),
             }));
+    }, [breakMeal]);
+
+    // Mola trendi (son 6 mali ay) — backend break_trend[]
+    // { month, label, avg_break_minutes (gerçek mola), avg_counted_minutes (düşülen), days }
+    const breakTrend = useMemo(() => {
+        if (!breakMeal?.break_trend) return [];
+        return breakMeal.break_trend.map(m => ({
+            name: (m.label || '').replace(/\d{4}$/, '').trim(),
+            gerçek: Math.round(m.avg_break_minutes || 0),
+            düşülen: Math.round(m.avg_counted_minutes || 0),
+            gün: m.days || 0,
+        }));
     }, [breakMeal]);
 
     // Meal trend
@@ -232,7 +253,7 @@ export default function OvertimeMealTab() {
             <BurnoutWidget />
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KPICard title="Toplam Fazla Mesai" value={totalOT} suffix="saat" icon={Clock} gradient="amber"
                     info={METRIC_EXPLANATIONS.overtime} />
                 <KPICard title="Onaylı Fazla Mesai" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
@@ -246,6 +267,12 @@ export default function OvertimeMealTab() {
                 <KPICard title="Saat / Yemek" value={breakMeal?.ot_hours_per_meal || 0} suffix="sa" icon={Utensils} gradient="rose"
                     subtitle={`${breakMeal?.total_meals || 0} yemek · ${breakMeal?.total_approved_ot_hours || 0} sa OT`}
                     info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ OT gününde alınan yemek sayısı (sipariş edilen/teslim edilen)</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Yalnız ORDERED/DELIVERED yemekler sayılır; bekleyen (PENDING) talepler hariçtir.</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{breakMeal?.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
+                <KPICard title="Ort. Gerçek Mola" value={Math.round(breakMeal?.avg_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="cyan"
+                    subtitle={`%${breakMeal?.break_over_30_pct || 0} kişi >30dk · ${breakMeal?.break_exceeding_count || 0} kişi`}
+                    info={{ title: 'Ortalama Gerçek Mola', content: <><p><strong className="text-white">Tanım:</strong> Öğle arası HARİÇ gerçek mola (boşluk) süresinin kişi başı ortalaması.</p><p className="text-slate-400">İş süresinden düşülen molayı değil, çalışanın fiilen verdiği ara molalarını gösterir.</p><p className="text-slate-400">Eşik aşımı: 30/45 dk üzeri gerçek mola.</p></> }} />
+                <KPICard title="Ort. Düşülen Mola" value={Math.round(breakMeal?.avg_counted_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="indigo"
+                    subtitle="İş süresinden düşülen"
+                    info={{ title: 'Ortalama Düşülen Mola', content: <><p><strong className="text-white">Tanım:</strong> Çalışma süresinden düşülen (sayılan) mola süresinin kişi başı ortalaması.</p><p className="text-slate-400">Toplam boşluk (öğle dahil): <strong className="text-slate-200">{Math.round(breakMeal?.avg_potential_break_minutes || 0)}</strong> dk · Öğle-hariç fazla mola: <strong className="text-slate-200">{Math.round(breakMeal?.avg_uncounted_break_minutes || 0)}</strong> dk</p></> }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -424,11 +451,11 @@ export default function OvertimeMealTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Break Analysis */}
-                {/* Y4 fix (2026-05-17): Mola metriği netleştirildi — "sayılan mola"
-                    (Attendance.break_seconds), potential boşluk (potential_break_seconds) DEĞİL.
-                    Eşik açıklaması: 60dk normal, 60-75 dk uyarı, >75 dk politika sınırı aşımı. */}
+                {/* Backend korektlik düzeltmesi (2026-06): avg_break_minutes ARTIK öğle hariç
+                    GERÇEK mola (boşluk). İkinci seri avg_counted_minutes = iş süresinden DÜŞÜLEN mola.
+                    Backend eşiği gerçek mola için 30/45 dk. */}
                 <SectionCard title="Mola Süreleri Analizi" icon={Coffee} iconGradient="from-cyan-500 to-blue-600"
-                    subtitle="Kişi bazlı ort. sayılan mola süresi · <60dk OK · 60-75 dk uyarı · >75dk politika aşımı"
+                    subtitle="Kişi bazlı ort. gerçek mola (öğle hariç) vs düşülen mola · ≤30dk OK · 30-45dk uyarı · >45dk uzun mola"
                     headerExtra={breakDistributionFull.length > 0 ? (
                         <button onClick={() => setDrilldown({ type: 'break_distribution' })}
                             className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border border-cyan-200/60">
@@ -437,25 +464,28 @@ export default function OvertimeMealTab() {
                     ) : null}>
                     {breakDistribution.length > 0 ? (
                         <>
-                            <div style={{ height: Math.max(250, breakDistribution.length * 28) }}>
+                            <div style={{ height: Math.max(250, breakDistribution.length * 32) }}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={breakDistribution} layout="vertical" barSize={14}>
+                                    <BarChart data={breakDistribution} layout="vertical" barGap={2} barSize={11}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis type="number" tick={{ fontSize: 10 }} unit=" dk" />
                                         <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} width={90} />
                                         <Tooltip content={<ChartTooltip />} />
-                                        <Bar dataKey="mola_dk" name="Ort. Sayılan Mola" radius={[0, 6, 6, 0]}>
+                                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                        <Bar dataKey="mola_dk" name="Ort. Mola (öğle hariç gerçek mola)" radius={[0, 6, 6, 0]}>
                                             {breakDistribution.map((entry, i) => (
-                                                <Cell key={i} fill={entry.mola_dk > 75 ? '#ef4444' : entry.mola_dk > 60 ? '#f59e0b' : '#06b6d4'} />
+                                                <Cell key={i} fill={entry.mola_dk > 45 ? '#ef4444' : entry.mola_dk > 30 ? '#f59e0b' : '#06b6d4'} />
                                             ))}
                                         </Bar>
+                                        <Bar dataKey="dusulen_dk" name="Düşülen Mola" fill="#a5b4fc" radius={[0, 6, 6, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                             <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-3 text-[10px] text-slate-500 flex-wrap">
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-cyan-500" /> ≤60dk normal</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> 60-75dk uyarı</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> &gt;75dk politika aşımı</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-cyan-500" /> ≤30dk normal</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> 30-45dk uyarı</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> &gt;45dk uzun mola</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: '#a5b4fc' }} /> düşülen mola</span>
                             </div>
                         </>
                     ) : <EmptyState message="Mola verisi yok" />}
@@ -483,28 +513,116 @@ export default function OvertimeMealTab() {
                 </SectionCard>
             </div>
 
+            {/* ═══ Mola Trendi (Son 6 Ay) + OT vs Normal gün mola karşılaştırması ═══ */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Mola Trendi — gerçek mola + düşülen mola (son 6 mali ay) */}
+                <div className="lg:col-span-2">
+                    <SectionCard title="Mola Trendi (Son 6 Ay)" icon={TrendingUp} iconGradient="from-cyan-500 to-blue-600"
+                        subtitle="Aylık ort. gerçek mola (öğle hariç) vs düşülen mola — trend nasıl değişiyor">
+                        {breakTrend.length > 0 ? (
+                            <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={breakTrend}>
+                                        <defs>
+                                            <linearGradient id="breakGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.25} />
+                                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
+                                        <YAxis tick={{ fontSize: 10 }} unit=" dk" />
+                                        <Tooltip content={<ChartTooltip />} />
+                                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
+                                        <Area type="monotone" dataKey="gerçek" name="Gerçek Mola (öğle hariç)" stroke="#06b6d4" fill="url(#breakGrad)" strokeWidth={2.5} dot={{ r: 3 }} />
+                                        <Line type="monotone" dataKey="düşülen" name="Düşülen Mola" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3, fill: '#6366f1' }} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : <EmptyState message="Mola trend verisi yok" />}
+                    </SectionCard>
+                </div>
+
+                {/* OT günü vs Normal gün ortalama mola */}
+                <SectionCard title="OT vs Normal Gün Mola" icon={Coffee} iconGradient="from-amber-500 to-cyan-600"
+                    subtitle="Fazla mesai günlerinde mola davranışı normal günlerden farklı mı?">
+                    {breakMeal?.break_ot_normal ? (
+                        <div className="space-y-4">
+                            <div className="h-40">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart
+                                        data={[
+                                            { name: 'OT Günü', mola: Math.round(breakMeal.break_ot_normal.ot_day_avg_break_minutes || 0), color: '#f59e0b' },
+                                            { name: 'Normal Gün', mola: Math.round(breakMeal.break_ot_normal.normal_day_avg_break_minutes || 0), color: '#06b6d4' },
+                                        ]}
+                                        barSize={48}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
+                                        <YAxis tick={{ fontSize: 10 }} unit=" dk" />
+                                        <Tooltip content={<ChartTooltip />} />
+                                        <Bar dataKey="mola" name="Ort. Gerçek Mola" radius={[6, 6, 0, 0]}>
+                                            <Cell fill="#f59e0b" />
+                                            <Cell fill="#06b6d4" />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-center">
+                                <div className="rounded-lg bg-amber-50 py-2 px-1">
+                                    <div className="text-lg font-black text-amber-600 tabular-nums">
+                                        {Math.round(breakMeal.break_ot_normal.ot_day_avg_break_minutes || 0)}<span className="text-xs font-bold"> dk</span>
+                                    </div>
+                                    <div className="text-[10px] text-amber-700/80 font-bold">OT günü · {breakMeal.break_ot_normal.ot_day_count || 0} gün</div>
+                                </div>
+                                <div className="rounded-lg bg-cyan-50 py-2 px-1">
+                                    <div className="text-lg font-black text-cyan-600 tabular-nums">
+                                        {Math.round(breakMeal.break_ot_normal.normal_day_avg_break_minutes || 0)}<span className="text-xs font-bold"> dk</span>
+                                    </div>
+                                    <div className="text-[10px] text-cyan-700/80 font-bold">Normal gün · {breakMeal.break_ot_normal.normal_day_count || 0} gün</div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : <EmptyState message="OT/normal gün mola verisi yok" />}
+                </SectionCard>
+            </div>
+
             {/* Drill-down modals */}
             {drilldown?.type === 'break_distribution' && (
                 <DrilldownModal
                     open={true}
                     onClose={() => setDrilldown(null)}
                     title="Mola Süreleri Detayı"
-                    subtitle="Tüm çalışanlar — ortalama/min/max mola süreleri"
+                    subtitle="Tüm çalışanlar — gerçek mola (öğle hariç) · düşülen mola · toplam boşluk · min/max"
                     data={breakDistributionFull}
                     columns={[
                         { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
                         { title: 'Departman', dataIndex: 'department', sorter: (a, b) => (a.department || '').localeCompare(b.department || '', 'tr') },
                         {
-                            title: 'Ort. Mola (dk)',
+                            title: 'Gerçek Mola (dk)',
                             dataIndex: 'avg_break_minutes',
                             sorter: (a, b) => a.avg_break_minutes - b.avg_break_minutes,
                             defaultSortOrder: 'descend',
                             align: 'right',
                             render: (v) => (
-                                <span className={`font-bold tabular-nums ${v > 75 ? 'text-red-600' : v > 60 ? 'text-amber-600' : 'text-cyan-600'}`}>
+                                <span className={`font-bold tabular-nums ${v > 45 ? 'text-red-600' : v > 30 ? 'text-amber-600' : 'text-cyan-600'}`}>
                                     {v}
                                 </span>
                             ),
+                        },
+                        {
+                            title: 'Düşülen (dk)',
+                            dataIndex: 'avg_counted_minutes',
+                            sorter: (a, b) => a.avg_counted_minutes - b.avg_counted_minutes,
+                            align: 'right',
+                            render: (v) => <span className="tabular-nums text-indigo-600">{v}</span>,
+                        },
+                        {
+                            title: 'Toplam Boşluk (dk)',
+                            dataIndex: 'avg_potential_minutes',
+                            sorter: (a, b) => a.avg_potential_minutes - b.avg_potential_minutes,
+                            align: 'right',
+                            render: (v) => <span className="tabular-nums text-slate-500">{v}</span>,
                         },
                         { title: 'Min (dk)', dataIndex: 'min_break_minutes', sorter: (a, b) => a.min_break_minutes - b.min_break_minutes, align: 'right' },
                         { title: 'Max (dk)', dataIndex: 'max_break_minutes', sorter: (a, b) => a.max_break_minutes - b.max_break_minutes, align: 'right' },
