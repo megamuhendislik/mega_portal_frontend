@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Upload, Button, Card, Table, Tag, Alert, Statistic, Row, Col, Popconfirm, message, Spin } from 'antd';
-import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined } from '@ant-design/icons';
+import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined, UndoOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
 // PDKS Mutabakat & Tam İçe Aktarma — dry-run mutabakat raporu + onayla→tam import.
 // Backend RECALC YAPMAZ; import sonrası kullanıcı ayrı "Tam Yeniden Hesaplama" çalıştırır.
 
 const { Dragger } = Upload;
 const ENDPOINT = '/system/health-check/pdks-reconcile/';
+const UNDO_ENDPOINT = '/system/health-check/pdks-reconcile-undo/';
 
 export default function PdksReconcileTab() {
   const [file, setFile] = useState(null);
@@ -14,6 +15,7 @@ export default function PdksReconcileTab() {
   const [applying, setApplying] = useState(false);
   const [results, setResults] = useState(null);
   const [deleteSpurious, setDeleteSpurious] = useState(false);
+  const [undoing, setUndoing] = useState(false);
 
   const buildFormData = (mode) => {
     const formData = new FormData();
@@ -43,6 +45,7 @@ export default function PdksReconcileTab() {
     }
   };
 
+  // Sadece dry_run için kullanılır — apply ile ASLA yeni POST yapma (idempotent çift-apply önleme, FE-02).
   const downloadTxt = async (mode) => {
     const formData = buildFormData(mode);
     formData.append('format', 'txt');
@@ -65,6 +68,19 @@ export default function PdksReconcileTab() {
     window.URL.revokeObjectURL(url);
   };
 
+  // Backend'in döndürdüğü hazır TXT içeriğini (BOM+CRLF dahil) doğrudan indirir — yeni POST yapmaz.
+  const downloadTxtFromString = (txt, filename) => {
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename || `pdks_mutabakat_${new Date().toISOString().slice(0, 10)}.txt`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleApply = async () => {
     if (!file) return;
     setApplying(true);
@@ -78,10 +94,12 @@ export default function PdksReconcileTab() {
       const parts = [`${a.created || 0} event eklendi`];
       if (a.deleted) parts.push(`${a.deleted} fazla cihaz-CARD silindi`);
       message.success(parts.join(', '));
-      // Otomatik TXT indir (apply sonucu)
-      try {
-        await downloadTxt('apply');
-      } catch { /* TXT indirme opsiyonel */ }
+      // Apply sonucu TXT'yi backend hazır gönderdiyse doğrudan indir — İKİNCİ apply POST'u YAPMA (FE-02).
+      if (data.txt_report) {
+        try {
+          downloadTxtFromString(data.txt_report, `pdks_mutabakat_${new Date().toISOString().slice(0, 10)}.txt`);
+        } catch { /* TXT indirme opsiyonel */ }
+      }
     } catch (err) {
       message.error(err.response?.data?.error || 'İçe aktarma sırasında hata oluştu.');
     } finally {
@@ -90,12 +108,41 @@ export default function PdksReconcileTab() {
   };
 
   const handleDownloadTxt = async () => {
+    // Apply modunda backend hazır TXT döndürdüyse onu indir — ASLA mode='apply' ile yeni POST yapma (FE-02).
+    if (results?.mode === 'apply' && results?.txt_report) {
+      try {
+        downloadTxtFromString(results.txt_report, `pdks_mutabakat_${new Date().toISOString().slice(0, 10)}.txt`);
+        message.success('TXT raporu indiriliyor...');
+      } catch {
+        message.error('TXT indirme sırasında hata oluştu.');
+      }
+      return;
+    }
     if (!file) return;
     try {
-      await downloadTxt(results?.mode || 'dry_run');
+      // dry_run zararsız (yazma yok)
+      await downloadTxt('dry_run');
       message.success('TXT raporu indiriliyor...');
     } catch {
       message.error('TXT indirme sırasında hata oluştu.');
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!results?.snapshot_id) return;
+    setUndoing(true);
+    try {
+      const { data } = await api.post(UNDO_ENDPOINT, { snapshot_id: results.snapshot_id }, {
+        timeout: 120000,
+      });
+      message.success(`Geri alındı: ${data.restored ?? 0} event geri yüklendi, ${data.removed ?? 0} eklenen event kaldırıldı.`);
+      setResults(null);
+      setFile(null);
+      message.info('Şimdi "Tam Yeniden Hesaplama" çalıştırın.');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Geri alma sırasında hata oluştu.');
+    } finally {
+      setUndoing(false);
     }
   };
 
@@ -117,6 +164,11 @@ export default function PdksReconcileTab() {
   const truncated = results?.truncated || {};
   const isApplyMode = results?.mode === 'apply';
   const applied = results?.applied;
+  const warnings = results?.warnings || [];
+  const outOfScope = results?.out_of_scope || [];
+  // Backend EventID yoksa silmeyi zorla false'a çeker (delete_spurious_effective).
+  const deleteEffective = results?.delete_spurious_effective;
+  const deleteDisabledByBackend = deleteSpurious && deleteEffective === false;
 
   const toAddColumns = [
     { title: 'Çalışan', dataIndex: 'name', key: 'name', width: 200 },
@@ -160,7 +212,7 @@ export default function PdksReconcileTab() {
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen log CSV&apos;sini yükleyin. Önce <strong>Ön İzleme</strong> ile mutabakat raporunu inceleyin
           (eklenecek eventler, cihazda fazla CARD kayıtları, eşleşmeyen siciller), ardından <strong>Tam İçe Aktar</strong> ile uygulayın.
-          Bu işlem Attendance kayıtlarını <strong>yeniden hesaplamaz</strong> — içe aktarma sonrası &quot;Tam Yeniden Hesaplama&quot; çalıştırın.
+          Eklenen event&apos;ler en geç ~15 dakika içinde otomatik işlenmeye başlar; <strong>silmeler dahil tüm çalışma saatlerini hemen ve eksiksiz güncellemek için &quot;Tam Yeniden Hesaplama&quot; çalıştırın.</strong>
         </p>
 
         <Dragger {...uploadProps} className="mb-3">
@@ -205,7 +257,7 @@ export default function PdksReconcileTab() {
           <Popconfirm
             title="Tam içe aktarma yapılsın mı?"
             description={deleteSpurious
-              ? 'Eksik eventler eklenecek ve cihazda fazla CARD kayıtları silinecek. Korunan flag-li kayıtlara dokunulmaz.'
+              ? `Eksik eventler eklenecek ve cihazda fazla ${summary.spurious || 0} CARD kaydı silinecek${truncated.spurious ? ' (önizlemede 500 gösterildi, tamamı silinecek)' : ''}. Korunan flag-li kayıtlara dokunulmaz.`
               : 'Eksik eventler eklenecek. Fazla CARD silme kapalı.'}
             onConfirm={handleApply}
             okText="Evet, İçe Aktar"
@@ -240,11 +292,65 @@ export default function PdksReconcileTab() {
 
       {results && !loading && (
         <>
+          {/* Backend uyarıları (örn. EventID'siz CSV) — özet kartlarından önce göster */}
+          {warnings.map((w, i) => (
+            <Alert key={`warn-${i}`} type="warning" showIcon message={w} />
+          ))}
+
+          {/* Kullanıcı silmeyi işaretledi ama backend bu CSV için devre dışı bıraktı */}
+          {deleteDisabledByBackend && (
+            <Alert
+              type="warning"
+              showIcon
+              message="Fazla CARD silme bu CSV için devre dışı bırakıldı (warnings'e bak)."
+              description="CSV EventID içermediği için fazla CARD kayıtlarını güvenle silmek mümkün değil; kayıtlar yalnızca raporlanır."
+            />
+          )}
+
           {isApplyMode && applied && (
             <Alert
               type="success"
               showIcon
               message={`İçe aktarma tamamlandı: ${applied.created || 0} event eklendi${applied.deleted ? `, ${applied.deleted} fazla CARD silindi` : ''}.`}
+            />
+          )}
+
+          {/* Kilitli mali döneme düşüp atlanan kayıtlar (apply) */}
+          {applied?.skipped_locked > 0 && (
+            <Alert
+              type="info"
+              showIcon
+              icon={<LockOutlined />}
+              message={`${applied.skipped_locked} kayıt kilitli mali döneme düştüğü için uygulanmadı (atlandı).`}
+            />
+          )}
+
+          {/* Geri Al (Undo) — apply başarılı ve gerçek değişiklik olduysa snapshot_id dolu (DL-4) */}
+          {isApplyMode && results?.snapshot_id && (
+            <Alert
+              type="info"
+              showIcon
+              icon={<UndoOutlined />}
+              message="Bu içe aktarmayı geri alabilirsiniz."
+              description="Geri alma; eklenen eventleri kaldırır ve silinen fazla CARD kayıtlarını geri yükler. Sonrasında 'Tam Yeniden Hesaplama' çalıştırın."
+              action={
+                <Popconfirm
+                  title="İçe aktarma geri alınsın mı?"
+                  description="Eklenen eventler kaldırılacak ve silinen fazla CARD kayıtları geri yüklenecek. Bu işlemden sonra Tam Yeniden Hesaplama çalıştırın."
+                  onConfirm={handleUndo}
+                  okText="Evet, Geri Al"
+                  cancelText="İptal"
+                  disabled={undoing}
+                >
+                  <Button
+                    danger
+                    icon={<UndoOutlined />}
+                    loading={undoing}
+                  >
+                    Geri Al (Undo)
+                  </Button>
+                </Popconfirm>
+              }
             />
           )}
 
@@ -254,7 +360,7 @@ export default function PdksReconcileTab() {
               showIcon
               icon={<ReloadOutlined />}
               message="Veri güncellendi. Çalışma saatlerini güncellemek için şimdi 'Tam Yeniden Hesaplama' çalıştırın."
-              description="Bu işlem yalnızca PDKS event kayıtlarını günceller — Attendance / puantaj saatleri otomatik yeniden hesaplanmaz."
+              description="Eklenen event'ler arka planda ~15 dk içinde otomatik işlenmeye başlar; silmeler ve eksiksiz/anlık güncelleme için 'Tam Yeniden Hesaplama' çalıştırın."
             />
           )}
 
@@ -362,14 +468,20 @@ export default function PdksReconcileTab() {
               showIcon
               message={`${summary.unmatched || results.unmatched.length} sicil numarası eşleşmedi (atlandı)`}
               description={
-                <ul className="list-disc pl-4 mt-1 text-sm">
-                  {results.unmatched.map((u, i) => (
-                    <li key={i}>
-                      <strong>Sicil {u.sicil_id}</strong>
-                      {u.name ? ` — ${u.name}` : ''} — <Tag color="orange">{u.event_count} event atlandı</Tag>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="list-disc pl-4 mt-1 text-sm">
+                    {results.unmatched.map((u, i) => (
+                      <li key={i}>
+                        <strong>Sicil {u.sicil_id}</strong>
+                        {u.name ? ` — ${u.name}` : ''} — <Tag color="orange">{u.event_count} event atlandı</Tag>
+                        {u.inactive === true && <Tag color="red">PASİF — event&apos;leri korundu</Tag>}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="text-xs text-gray-500 mt-2">
+                    Pasif (ayrılan) personelin gerçek event&apos;leri SİLİNMEZ; &quot;CSV Kapsamı Dışında — Korundu&quot; bölümünde listelenir.
+                  </div>
+                </>
               }
             />
           )}
@@ -418,18 +530,46 @@ export default function PdksReconcileTab() {
           {results.spurious?.length > 0 && (
             <Card
               size="small"
-              title={`Fazla cihaz-CARD (${summary.spurious || results.spurious.length})${deleteSpurious ? ' — silinecek' : ' — silme kapalı'}`}
+              title={`Fazla cihaz-CARD (${summary.spurious || results.spurious.length})${
+                isApplyMode
+                  ? (applied?.deleted > 0 ? ' — silindi' : '')
+                  : (deleteSpurious ? ' — silinecek' : ' — silme kapalı')
+              }`}
               className="shadow-sm"
             >
-              {!deleteSpurious && (
-                <Alert
-                  type="info"
-                  showIcon
-                  className="mb-2"
-                  message="Fazla CARD silme kapalı. Bu kayıtlar yalnızca raporlanır, silinmez. Silmek için yukarıdaki kutuyu işaretleyin."
-                />
+              {/* Apply modunda: kayıtlar zaten işlendi, "silinecek" uyarıları gösterme */}
+              {isApplyMode ? (
+                applied?.deleted > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    className="mb-2"
+                    message="Bu kayıtlar silindi (Geri Al ile geri yüklenebilir)."
+                  />
+                )
+              ) : (
+                <>
+                  {!deleteSpurious && (
+                    <Alert
+                      type="info"
+                      showIcon
+                      className="mb-2"
+                      message="Fazla CARD silme kapalı. Bu kayıtlar yalnızca raporlanır, silinmez. Silmek için yukarıdaki kutuyu işaretleyin."
+                    />
+                  )}
+                  {/* FE-01: 500 truncation + silme açık → tamamının silineceğini belirgin uyar */}
+                  {deleteSpurious && truncated.spurious ? (
+                    <Alert
+                      type="error"
+                      showIcon
+                      className="mb-2"
+                      message={`Önizlemede yalnız ilk 500 kayıt gösteriliyor; onaylarsan TOPLAM ${summary.spurious || 0} fazla CARD'ın TAMAMI silinecek (geri alınabilir).`}
+                    />
+                  ) : (
+                    truncatedNote('spurious')
+                  )}
+                </>
               )}
-              {truncatedNote('spurious')}
               <Table
                 dataSource={results.spurious}
                 columns={spuriousColumns}
@@ -458,6 +598,29 @@ export default function PdksReconcileTab() {
                 size="small"
                 pagination={{ pageSize: 20, showSizeChanger: true, showTotal: t => `${t} kayıt` }}
               />
+            </Card>
+          )}
+
+          {/* CSV kapsamı dışında kalıp korunan gerçek cihaz eventleri (DL-1/DL-2 şeffaflık) */}
+          {(outOfScope.length > 0 || summary.out_of_scope > 0) && (
+            <Card size="small" title={`CSV Kapsamı Dışında — Korundu (${summary.out_of_scope || outOfScope.length})`} className="shadow-sm">
+              <Alert
+                type="info"
+                showIcon
+                icon={<LockOutlined />}
+                className="mb-2"
+                message="Bu gerçek cihaz event'leri yüklenen CSV'nin kapsamadığı çalışan/gün'lere ait (ör. ayrılan personel veya kısmi CSV). Güvenlik için SİLİNMEDİ, yalnızca raporlanıyor."
+              />
+              {truncatedNote('out_of_scope')}
+              {outOfScope.length > 0 && (
+                <Table
+                  dataSource={outOfScope}
+                  columns={spuriousColumns}
+                  rowKey={(r) => r.event_id || `${r.employee_id}-${r.timestamp}`}
+                  size="small"
+                  pagination={{ pageSize: 20, showSizeChanger: true, showTotal: t => `${t} kayıt` }}
+                />
+              )}
             </Card>
           )}
         </>
