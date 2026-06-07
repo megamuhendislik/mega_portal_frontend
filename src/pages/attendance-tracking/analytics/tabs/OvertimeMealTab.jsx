@@ -110,8 +110,6 @@ export default function OvertimeMealTab() {
             avg_break_minutes: Math.round(d.avg_break_minutes || 0),
             // avg_counted_minutes = iş süresinden DÜŞÜLEN mola
             avg_counted_minutes: Math.round(d.avg_counted_minutes || 0),
-            // avg_potential_minutes = toplam boşluk (öğle dahil)
-            avg_potential_minutes: Math.round(d.avg_potential_minutes || 0),
             // avg_uncounted_minutes = öğle-hariç fazla mola
             avg_uncounted_minutes: Math.round(d.avg_uncounted_minutes || 0),
             min_break_minutes: Math.round(d.min_break_minutes || 0),
@@ -272,7 +270,7 @@ export default function OvertimeMealTab() {
                     info={{ title: 'Ortalama Gerçek Mola', content: <><p><strong className="text-white">Tanım:</strong> Öğle arası HARİÇ gerçek mola (boşluk) süresinin kişi başı ortalaması.</p><p className="text-slate-400">İş süresinden düşülen molayı değil, çalışanın fiilen verdiği ara molalarını gösterir.</p><p className="text-slate-400">Eşik aşımı: 30/45 dk üzeri gerçek mola.</p></> }} />
                 <KPICard title="Ort. Düşülen Mola" value={Math.round(breakMeal?.avg_counted_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="indigo"
                     subtitle="İş süresinden düşülen"
-                    info={{ title: 'Ortalama Düşülen Mola', content: <><p><strong className="text-white">Tanım:</strong> Çalışma süresinden düşülen (sayılan) mola süresinin kişi başı ortalaması.</p><p className="text-slate-400">Toplam boşluk (öğle dahil): <strong className="text-slate-200">{Math.round(breakMeal?.avg_potential_break_minutes || 0)}</strong> dk · Öğle-hariç fazla mola: <strong className="text-slate-200">{Math.round(breakMeal?.avg_uncounted_break_minutes || 0)}</strong> dk</p></> }} />
+                    info={{ title: 'Ortalama Düşülen Mola', content: <><p><strong className="text-white">Tanım:</strong> Çalışma süresinden düşülen (sayılan) mola süresinin kişi başı ortalaması.</p><p className="text-slate-400">Öğle-hariç fazla mola: <strong className="text-slate-200">{Math.round(breakMeal?.avg_uncounted_break_minutes || 0)}</strong> dk</p></> }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -593,7 +591,7 @@ export default function OvertimeMealTab() {
                     open={true}
                     onClose={() => setDrilldown(null)}
                     title="Mola Süreleri Detayı"
-                    subtitle="Tüm çalışanlar — gerçek mola (öğle hariç) · düşülen mola · toplam boşluk · min/max"
+                    subtitle="Tüm çalışanlar — gerçek mola (öğle hariç) · düşülen mola · min/max"
                     data={breakDistributionFull}
                     columns={[
                         { title: 'Ad Soyad', dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'tr') },
@@ -616,13 +614,6 @@ export default function OvertimeMealTab() {
                             sorter: (a, b) => a.avg_counted_minutes - b.avg_counted_minutes,
                             align: 'right',
                             render: (v) => <span className="tabular-nums text-indigo-600">{v}</span>,
-                        },
-                        {
-                            title: 'Toplam Boşluk (dk)',
-                            dataIndex: 'avg_potential_minutes',
-                            sorter: (a, b) => a.avg_potential_minutes - b.avg_potential_minutes,
-                            align: 'right',
-                            render: (v) => <span className="tabular-nums text-slate-500">{v}</span>,
                         },
                         { title: 'Min (dk)', dataIndex: 'min_break_minutes', sorter: (a, b) => a.min_break_minutes - b.min_break_minutes, align: 'right' },
                         { title: 'Max (dk)', dataIndex: 'max_break_minutes', sorter: (a, b) => a.max_break_minutes - b.max_break_minutes, align: 'right' },
