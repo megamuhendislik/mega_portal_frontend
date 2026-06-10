@@ -588,7 +588,7 @@ export default function PdksReconcileTab() {
                 showIcon
                 icon={<LockOutlined />}
                 className="mb-2"
-                message="Bunlar elle/admin eklenen verilerdir, silinmez."
+                message="Korunan = cihazın işleyemediği (FAILED/IGNORED) event'ler + kartsız 'Mesai Başlat/Bitir' (CARDLESS_CLOCK) girişleri. Fiziksel karttan gelmedikleri için CSV'de yer almaz → mutabakatta silinmez."
               />
               {truncatedNote('preserved')}
               <Table
