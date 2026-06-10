@@ -176,8 +176,12 @@ export default function SpecTestsTab() {
     try {
       setJune10Loading(true);
       setErrorMessage(null);
+      // Sunucu yavaş + test subprocess'i (manage.py test) senkron koşuyor; api.js'in
+      // varsayılan 30sn timeout'u yetmiyor. Endpoint subprocess limiti 1800s olduğundan
+      // bunun ÜZERİNDE bir override veriyoruz (33 dk) ki istek sunucu bitirene kadar beklesin.
       const resp = await api.get('/system/health-check/june10-fixes-txt/', {
         responseType: 'blob',
+        timeout: 1980000,
       });
       const blob = new Blob([resp.data], { type: 'text/plain;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
@@ -354,7 +358,7 @@ export default function SpecTestsTab() {
             loading={june10Loading}
             style={{ background: '#52c41a', borderColor: '#52c41a' }}
           >
-            {june10Loading ? 'Çalışıyor (1-3 dk)...' : 'Test Et & TXT İndir'}
+            {june10Loading ? 'Çalışıyor (birkaç dk sürebilir)...' : 'Test Et & TXT İndir'}
           </Button>
         </div>
       </Card>
