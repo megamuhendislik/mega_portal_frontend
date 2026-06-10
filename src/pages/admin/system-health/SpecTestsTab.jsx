@@ -16,6 +16,7 @@ import {
   LockOutlined, ScheduleOutlined, TeamOutlined,
   SafetyCertificateOutlined, ExclamationCircleOutlined,
   CodeOutlined, DownOutlined, RightOutlined,
+  SwapOutlined, BugOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -77,6 +78,27 @@ const DOMAINS = [
     icon: <SafetyCertificateOutlined />,
     color: '#faad14',
     description: 'MonthlyWorkSummary, overlap tespiti, data integrity audit',
+  },
+  {
+    key: 'substitute',
+    label: 'Vekalet Sistemi',
+    icon: <SwapOutlined />,
+    color: '#2f54eb',
+    description: 'Vekalet yetkisi, devredilen onay, karar geçmişi (acting_as_substitute_for)',
+  },
+  {
+    key: 'recent_fixes',
+    label: 'Yakın Anomali Fix\'leri',
+    icon: <BugOutlined />,
+    color: '#fa541c',
+    description: 'Yakın zamanda düzeltilen anomalilerin regresyon testleri',
+  },
+  {
+    key: 'june10',
+    label: '10 Haziran Fixleri',
+    icon: <SafetyCertificateOutlined />,
+    color: '#52c41a',
+    description: 'KRİTİK güvenlik/veri düzeltmeleri (K1-K3, #4 puantaj yazma, #5 takvim-kilit)',
   },
 ];
 
@@ -294,7 +316,7 @@ export default function SpecTestsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <Title level={5} style={{ margin: 0 }}>Spec Testleri</Title>
-          <Text type="secondary">8 domain, gerçek davranış testleri</Text>
+          <Text type="secondary">{DOMAINS.length} domain, gerçek davranış testleri</Text>
         </div>
         <Space>
           <Button
@@ -379,7 +401,7 @@ export default function SpecTestsTab() {
                 percent={progressPercent}
                 size="small"
                 style={{ marginBottom: 0, marginTop: 4 }}
-                format={() => `${completedDomains}/8 domain`}
+                format={() => `${completedDomains}/${DOMAINS.length} domain`}
               />
             </div>
           </div>
