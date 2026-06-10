@@ -101,6 +101,7 @@ export default function SpecTestsTab() {
   const [showLogs, setShowLogs] = useState(true);
   const [runningDetails, setRunningDetails] = useState([]);
   const [runningOutput, setRunningOutput] = useState('');
+  const [june10Loading, setJune10Loading] = useState(false);
   const pollingRef = useRef(null);
   const liveLogRef = useRef(null);
   const liveListRef = useRef(null);
@@ -169,6 +170,35 @@ export default function SpecTestsTab() {
     };
     poll();
   }, [results]);
+
+  // 10 HAZİRAN FIXLERİ TEST — KRİTİK düzeltmeleri çalıştırıp TXT indirir.
+  const downloadJune10Txt = async () => {
+    try {
+      setJune10Loading(true);
+      setErrorMessage(null);
+      const resp = await api.get('/system/health-check/june10-fixes-txt/', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([resp.data], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toLocaleString('sv').slice(0, 16).replace(/[: ]/g, '-');
+      a.download = `10-haziran-fixleri-test-${ts}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setErrorMessage(
+        `10 Haziran testi başarısız: ${err?.response?.status === 403
+          ? 'Yetkisiz (SYSTEM_FULL_ACCESS gerekli)'
+          : (err?.message || 'Bilinmeyen hata')}`,
+      );
+    } finally {
+      setJune10Loading(false);
+    }
+  };
 
   const runTests = async (domain = 'all') => {
     try {
@@ -296,6 +326,38 @@ export default function SpecTestsTab() {
           style={{ marginBottom: 16 }}
         />
       )}
+
+      {/* 10 HAZİRAN FIXLERİ TEST — KRİTİK güvenlik/veri düzeltmeleri doğrulama */}
+      <Card
+        size="small"
+        style={{ marginBottom: 16, borderLeft: '4px solid #52c41a', background: '#f6ffed' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <Space size={6}>
+              <SafetyCertificateOutlined style={{ color: '#52c41a', fontSize: 18 }} />
+              <Text strong>10 Haziran Fixleri Test (KRİTİK Güvenlik/Veri)</Text>
+            </Space>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                2026-06-10 denetiminde bulunan KRİTİK düzeltmelerin (K1 read-only tarama,
+                K2 ghost yetki, K3 talep silme yetki, #4 puantaj yazma, #5 takvim-kilit)
+                PRODUCTION'da aktif olduğunu doğrular ve TXT raporu indirir.
+                İzole test DB'de koşar — <b>prod verisi etkilenmez</b>.
+              </Text>
+            </div>
+          </div>
+          <Button
+            type="primary"
+            icon={june10Loading ? <LoadingOutlined spin /> : <FileTextOutlined />}
+            onClick={downloadJune10Txt}
+            loading={june10Loading}
+            style={{ background: '#52c41a', borderColor: '#52c41a' }}
+          >
+            {june10Loading ? 'Çalışıyor (1-3 dk)...' : 'Test Et & TXT İndir'}
+          </Button>
+        </div>
+      </Card>
 
       {/* Running Progress + Live Details */}
       {globalRunning && (
