@@ -751,7 +751,7 @@ const HealthReports = () => {
 
                             {detailModal.rejection_reason && (
                                 <div className="bg-red-50 p-3 rounded-lg">
-                                    <div className="text-xs text-red-600 mb-1">Red Sebebi</div>
+                                    <div className="text-xs text-red-600 mb-1">{detailModal.status === 'CANCELLED' ? 'İptal Gerekçesi' : 'Red Sebebi'}</div>
                                     <div className="text-sm text-red-800">{detailModal.rejection_reason}</div>
                                 </div>
                             )}
@@ -851,6 +851,11 @@ const HealthReports = () => {
                                     <strong>{rejectModal.employee_detail?.full_name || `${rejectModal.employee_detail?.first_name} ${rejectModal.employee_detail?.last_name}`}</strong> adlı çalışanın{' '}
                                     {formatDate(rejectModal.start_date)} - {formatDate(rejectModal.end_date)} tarihli sağlık raporunu reddetmek üzeresiniz.
                                 </p>
+                                {rejectModal.status === 'APPROVED' && (
+                                    <p className="text-xs text-red-600 mt-2">
+                                        Bu kayıt onaylı: reddedilirse rapor kaynaklı devam kayıtları silinecek ve ilgili günler otomatik olarak yeniden hesaplanacaktır.
+                                    </p>
+                                )}
                             </div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Red Sebebi *</label>
                             <textarea
