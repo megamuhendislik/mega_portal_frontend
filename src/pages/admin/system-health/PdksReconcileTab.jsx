@@ -187,13 +187,19 @@ export default function PdksReconcileTab() {
   ];
 
   const spuriousColumns = [
-    { title: 'Çalışan ID', dataIndex: 'employee_id', key: 'employee_id', width: 120 },
-    { title: 'Zaman', dataIndex: 'timestamp', key: 'timestamp', width: 200, render: v => <span className="font-mono text-xs">{v}</span> },
     {
-      title: 'Yön', dataIndex: 'direction', key: 'direction', width: 100,
+      title: 'Çalışan', key: 'employee', width: 210,
+      render: (_, r) => r.employee_name
+        ? <span>{r.employee_name}{r.employee_code ? <span className="text-gray-400 text-xs"> #{r.employee_code}</span> : null}</span>
+        : <span className="text-gray-400 text-xs">— (DB id: {r.employee_id ?? '—'})</span>,
+    },
+    { title: 'Zaman', dataIndex: 'timestamp', key: 'timestamp', width: 190, render: v => <span className="font-mono text-xs">{v}</span> },
+    {
+      title: 'Yön', dataIndex: 'direction', key: 'direction', width: 80,
       render: v => <Tag color={v === 'GİRİŞ' || v === 'IN' ? 'cyan' : 'orange'}>{v}</Tag>,
     },
-    { title: 'Durum', dataIndex: 'status', key: 'status', render: v => <Tag color="red">{v}</Tag> },
+    { title: 'Durum', dataIndex: 'status', key: 'status', width: 120, render: v => <Tag color="red">{v}</Tag> },
+    { title: 'Sebep', dataIndex: 'reason', key: 'reason', render: v => v ? <span className="text-xs">{v}</span> : <span className="text-gray-300">—</span> },
     { title: 'Event ID', dataIndex: 'event_id', key: 'event_id', render: v => <span className="font-mono text-xs text-gray-400">{v}</span> },
   ];
 
