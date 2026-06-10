@@ -61,6 +61,8 @@ const HealthReports = () => {
     const [detailModal, setDetailModal] = useState(null);
     const [rejectModal, setRejectModal] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
+    const [cancelModal, setCancelModal] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
 
     // Dosya yükleme durumu
     const [downloadingDocId, setDownloadingDocId] = useState(null);
@@ -175,6 +177,26 @@ const HealthReports = () => {
             fetchData();
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Reddetme başarısız.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!cancelReason.trim()) {
+            toast.error('İptal gerekçesi zorunludur.');
+            return;
+        }
+        setActionLoading(true);
+        try {
+            await api.post(`/health-reports/${cancelModal.id}/cancel/`, { reason: cancelReason });
+            toast.success('Rapor iptal edildi.');
+            setCancelModal(null);
+            setCancelReason('');
+            setDetailModal(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.error || error.response?.data?.detail || 'İptal başarısız.');
         } finally {
             setActionLoading(false);
         }
@@ -483,6 +505,23 @@ const HealthReports = () => {
                                                             </button>
                                                         </>
                                                     )}
+
+                                                    {report.status === 'APPROVED' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => { setRejectModal(report); setRejectReason(''); }}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                            >
+                                                                <Ban size={13} /> Reddet
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setCancelModal(report); setCancelReason(''); }}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                                                            >
+                                                                <X size={13} /> İptal Et
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -712,7 +751,7 @@ const HealthReports = () => {
 
                             {detailModal.rejection_reason && (
                                 <div className="bg-red-50 p-3 rounded-lg">
-                                    <div className="text-xs text-red-600 mb-1">Red Sebebi</div>
+                                    <div className="text-xs text-red-600 mb-1">{detailModal.status === 'CANCELLED' ? 'İptal Gerekçesi' : 'Red Sebebi'}</div>
                                     <div className="text-sm text-red-800">{detailModal.rejection_reason}</div>
                                 </div>
                             )}
@@ -773,6 +812,22 @@ const HealthReports = () => {
                                             </button>
                                         </>
                                     )}
+                                    {detailModal.status === 'APPROVED' && (
+                                        <>
+                                            <button
+                                                onClick={() => { setRejectModal(detailModal); setRejectReason(''); }}
+                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm flex items-center gap-1.5"
+                                            >
+                                                <Ban size={14} /> Reddet
+                                            </button>
+                                            <button
+                                                onClick={() => { setCancelModal(detailModal); setCancelReason(''); }}
+                                                className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 text-sm flex items-center gap-1.5"
+                                            >
+                                                <X size={14} /> İptal Et
+                                            </button>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -796,6 +851,11 @@ const HealthReports = () => {
                                     <strong>{rejectModal.employee_detail?.full_name || `${rejectModal.employee_detail?.first_name} ${rejectModal.employee_detail?.last_name}`}</strong> adlı çalışanın{' '}
                                     {formatDate(rejectModal.start_date)} - {formatDate(rejectModal.end_date)} tarihli sağlık raporunu reddetmek üzeresiniz.
                                 </p>
+                                {rejectModal.status === 'APPROVED' && (
+                                    <p className="text-xs text-red-600 mt-2">
+                                        Bu kayıt onaylı: reddedilirse rapor kaynaklı devam kayıtları silinecek ve ilgili günler otomatik olarak yeniden hesaplanacaktır.
+                                    </p>
+                                )}
                             </div>
                             <label className="text-sm font-medium text-slate-700 block mb-1">Red Sebebi *</label>
                             <textarea
@@ -820,6 +880,53 @@ const HealthReports = () => {
                             >
                                 {actionLoading && <Loader2 size={14} className="animate-spin" />}
                                 <Ban size={14} /> Reddet
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </ModalOverlay>
+
+            {/* ===== CANCEL MODAL ===== */}
+            <ModalOverlay open={!!cancelModal} onClose={() => setCancelModal(null)} level="secondary">
+                {cancelModal && (
+                    <div className="bg-white rounded-xl shadow-2xl w-[calc(100%-1rem)] sm:w-full max-w-md">
+                        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                            <h3 className="text-lg font-bold text-slate-800">Onaylı Raporu İptal Et</h3>
+                            <button onClick={() => setCancelModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-3 sm:p-5">
+                            <div className="bg-amber-50 p-3 rounded-lg mb-4">
+                                <p className="text-sm text-amber-800">
+                                    <strong>{cancelModal.employee_detail?.full_name || `${cancelModal.employee_detail?.first_name} ${cancelModal.employee_detail?.last_name}`}</strong> adlı çalışanın{' '}
+                                    {formatDate(cancelModal.start_date)} - {formatDate(cancelModal.end_date)} tarihli onaylı kaydını iptal etmek üzeresiniz.
+                                    İlgili günler otomatik olarak yeniden hesaplanacaktır.
+                                </p>
+                            </div>
+                            <label className="text-sm font-medium text-slate-700 block mb-1">İptal Gerekçesi *</label>
+                            <textarea
+                                rows={3}
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="İptal gerekçesini yazınız..."
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-400 resize-none text-sm"
+                            />
+                        </div>
+                        <div className="p-3 sm:p-5 border-t border-slate-100 flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
+                            <button
+                                onClick={() => setCancelModal(null)}
+                                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                disabled={actionLoading || !cancelReason.trim()}
+                                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm flex items-center gap-1.5"
+                            >
+                                {actionLoading && <Loader2 size={14} className="animate-spin" />}
+                                <X size={14} /> İptal Et
                             </button>
                         </div>
                     </div>
