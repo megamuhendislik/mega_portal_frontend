@@ -1,7 +1,7 @@
 /**
  * SpecTestsTab — Domain-bazlı Spec Test UI
  *
- * 8 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
+ * 12 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
  * Tüm domain loglarını detaylı gösterir (eski stage sistemi gibi).
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -99,6 +99,13 @@ const DOMAINS = [
     icon: <SafetyCertificateOutlined />,
     color: '#52c41a',
     description: 'KRİTİK güvenlik/veri düzeltmeleri (K1-K3, #4 puantaj yazma, #5 takvim-kilit)',
+  },
+  {
+    key: 'june12',
+    label: '12 Haziran Fixleri — Canlı Sapma',
+    icon: <BugOutlined />,
+    color: '#9254de',
+    description: 'Canlı sapma kök-neden düzeltmeleri: çift-recalc yarışı, hayalet OT, gece OT salınımı, gate replay (KÖK-1..7)',
   },
 ];
 
