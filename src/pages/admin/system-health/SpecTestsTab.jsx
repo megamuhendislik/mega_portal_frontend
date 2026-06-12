@@ -1,7 +1,7 @@
 /**
  * SpecTestsTab — Domain-bazlı Spec Test UI
  *
- * 8 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
+ * 12 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
  * Tüm domain loglarını detaylı gösterir (eski stage sistemi gibi).
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -105,7 +105,7 @@ const DOMAINS = [
     label: '12 Haziran Fixleri — Canlı Sapma',
     icon: <BugOutlined />,
     color: '#9254de',
-    description: 'Çift-recalc yarışı (mükerrer AUTO_SPLIT), hayalet OT, gece OT salınımı, gate replay döngüsü, sentetik 23:59 survivor, undo ping-pong, bisect/truncate (KÖK-1..7)',
+    description: 'Canlı sapma kök-neden düzeltmeleri: çift-recalc yarışı, hayalet OT, gece OT salınımı, gate replay (KÖK-1..7)',
   },
 ];
 
