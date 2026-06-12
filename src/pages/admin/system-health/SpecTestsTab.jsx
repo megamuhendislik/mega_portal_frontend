@@ -100,6 +100,13 @@ const DOMAINS = [
     color: '#52c41a',
     description: 'KRİTİK güvenlik/veri düzeltmeleri (K1-K3, #4 puantaj yazma, #5 takvim-kilit)',
   },
+  {
+    key: 'june12',
+    label: '12 Haziran Fixleri — Canlı Sapma',
+    icon: <BugOutlined />,
+    color: '#9254de',
+    description: 'Çift-recalc yarışı (mükerrer AUTO_SPLIT), hayalet OT, gece OT salınımı, gate replay döngüsü, sentetik 23:59 survivor, undo ping-pong, bisect/truncate (KÖK-1..7)',
+  },
 ];
 
 const STATUS_CONFIG = {
