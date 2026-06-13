@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
@@ -188,7 +188,13 @@ const Dashboard = () => {
         current: currentFiscalFromHook,
         findByYearMonth: findFiscalByYearMonth,
         navigate: navigateFiscal,
+        loading: fiscalLoading,   // #61
+        error: fiscalError,       // #61
+        refetch: refetchFiscal,   // #61
     } = useFiscalPeriods({ months: 24 });
+
+    // #60: bayat fetch yanıtının yeni seçimi ezmesini önleyen sıra-jetonu
+    const fetchSeqRef = useRef(0);
 
     const [selectedFiscal, setSelectedFiscal] = useState(null);
     const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
@@ -199,6 +205,12 @@ const Dashboard = () => {
             setSelectedFiscal({ year: currentFiscalFromHook.year, month: currentFiscalFromHook.month });
         }
     }, [currentFiscalFromHook, selectedFiscal]);
+
+    // #61: Hook ÇÖZÜLDÜYSE (hata VEYA başarı-ama-takvim-yok) ama selectedFiscal hâlâ null ise
+    // skeleton'ı bırak — aksi halde my-fiscal-periods başarısız ilk istekte sonsuz skeleton.
+    useEffect(() => {
+        if (!fiscalLoading && !selectedFiscal) setLoading(false);
+    }, [fiscalLoading, selectedFiscal]);
 
     const currentFiscal = currentFiscalFromHook
         ? { year: currentFiscalFromHook.year, month: currentFiscalFromHook.month }
@@ -227,7 +239,7 @@ const Dashboard = () => {
     const [periodDates, setPeriodDates] = useState(null);
 
     // Fallback: old 7-call pattern (used if consolidated endpoint is unavailable)
-    const fetchDashboardDataLegacy = async (employeeId, startStr, endStr) => {
+    const fetchDashboardDataLegacy = async (employeeId, startStr, endStr, mySeq) => {
         const [todayRes, monthRes, logsRes, reqRes, incReqRes, eventsRes, birthdayRes] = await Promise.allSettled([
             api.get('/attendance/today_summary/'),
             api.get(`/attendance/monthly_summary/?employee_id=${employeeId}&start_date=${startStr}&end_date=${endStr}`),
@@ -237,6 +249,9 @@ const Dashboard = () => {
             api.get(`/calendar-events/?start=${getIstanbulToday()}&end=${getIstanbulDateOffset(14)}&employee_id=${employeeId}&include_ot_assignments=true&include_ot_requests=true&include_leaves=true&include_health_reports=true&include_cardless=true`),
             api.get('/leave-requests/birthday-balance/')
         ]);
+
+        // #60: bayat yanıt yeni seçimi ezmesin (mySeq undefined ise eski davranış = her zaman yaz)
+        if (mySeq !== undefined && mySeq !== fetchSeqRef.current) return;
 
         if (todayRes.status === 'fulfilled') setTodaySummary(todayRes.value.data);
         if (monthRes.status === 'fulfilled') {
@@ -268,7 +283,9 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
         const employeeId = user?.employee?.id || user?.id;
         if (!employeeId) { setLoading(false); return; }
-        if (!selectedFiscal) return; // Hook henüz yüklenmedi
+        // #61: Hook ÇÖZÜLDÜYSE (başarı-ama-null VEYA hata) skeleton'dan çık; yalnız hook hâlâ
+        // yükleniyorsa beklet (aksi halde my-fiscal-periods ilk isteği başarısızsa sonsuz skeleton).
+        if (!selectedFiscal) { if (!fiscalLoading) setLoading(false); return; }
 
         // Period tarihlerini hook'tan (kullanıcı takvimi) al — hardcoded 26-25 yok
         const periodEntry = findFiscalByYearMonth(selectedFiscal.year, selectedFiscal.month);
@@ -282,6 +299,10 @@ const Dashboard = () => {
         const calendarStart = getIstanbulToday();
         const calendarEnd = getIstanbulDateOffset(14);
 
+        // #60: bu çağrının sırası — sonra başlayan bir fetch bunu geçerse setState'leri at
+        const mySeq = ++fetchSeqRef.current;
+        const isStale = () => mySeq !== fetchSeqRef.current;
+
         try {
             // Try consolidated endpoint first (single API call)
             const res = await api.get(
@@ -290,6 +311,7 @@ const Dashboard = () => {
                 `&calendar_start=${calendarStart}&calendar_end=${calendarEnd}`
             );
             const data = res.data;
+            if (isStale()) return;  // #60: daha yeni bir fetch başladı → bu yanıtı yaz(ma)
 
             if (data.today_summary) setTodaySummary(data.today_summary);
             if (data.monthly_summary) {
@@ -327,12 +349,13 @@ const Dashboard = () => {
             // Fallback to legacy 7-call pattern (backwards compatibility during deployment)
             console.warn("Consolidated dashboard endpoint failed, falling back to legacy calls", error?.response?.status);
             try {
-                await fetchDashboardDataLegacy(employeeId, startStr, endStr);
+                if (isStale()) return;  // #60
+                await fetchDashboardDataLegacy(employeeId, startStr, endStr, mySeq);
             } catch (legacyError) {
                 console.error("Dashboard Load Error (legacy fallback)", legacyError);
             }
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);  // #60: bayat fetch loading'i erken kapatmasın
         }
     };
 
@@ -382,7 +405,26 @@ const Dashboard = () => {
 
     const groupedEvents = useMemo(() => groupEventsByDay(mergeConsecutiveHolidays(calendarEvents)), [calendarEvents]);
 
-    if (loading) {
+    // #61: Mali takvim ilk isteği başarısızsa sonsuz skeleton yerine kurtarma bandı göster.
+    if (fiscalError && !selectedFiscal) {
+        return (
+            <div className="p-4 md:p-8 max-w-[1600px] mx-auto">
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center space-y-4">
+                    <p className="text-red-700 font-semibold">Çalışma takvimi verisi alınamadı.</p>
+                    <p className="text-red-500 text-sm">Bağlantınızı kontrol edip tekrar deneyin.</p>
+                    <button
+                        onClick={() => refetchFiscal()}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                        Tekrar Dene
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // #61: hata varken skeleton'ı maskeleme (hata bandı yukarıda öncelikli)
+    if (loading && !fiscalError) {
         return (
             <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-6">
                 <Skeleton className="h-10 w-48" />

@@ -345,7 +345,9 @@ export default function OTDayDetailPanel({
       {potentials.length > 0 && (() => {
         const claimable = potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status)));
         const nonClaimable = potentials.filter(p => !claimable.includes(p));
-        const totalSec = claimable.reduce((s, p) => s + (p.actual_overtime_seconds || p.duration_seconds || 0), 0);
+        // Denetim 2026-06-10 (#58): backend artık duration_seconds döndürür; duration_hours
+        // fallback'i de eklendi (savunma-derinliği — eskiden hepsi undefined → bundle '0 dk').
+        const totalSec = claimable.reduce((s, p) => s + (p.actual_overtime_seconds || p.duration_seconds || Math.round((p.duration_hours || 0) * 3600) || 0), 0);
         const minTime = claimable.length > 0 ? claimable.reduce((m, p) => (!m || (p.start_time && p.start_time < m)) ? p.start_time : m, null) : null;
         const maxTime = claimable.length > 0 ? claimable.reduce((m, p) => (!m || (p.end_time && p.end_time > m)) ? p.end_time : m, null) : null;
 

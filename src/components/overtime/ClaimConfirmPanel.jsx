@@ -94,7 +94,13 @@ export default function ClaimConfirmPanel({
 
   const totalSeconds = useMemo(() => {
     if (isIntended) {
-      return claimTarget?.actual_overtime_seconds || 0;
+      // Denetim 2026-06-10 (#56): backend min(actual, max) ile KIRPILMIŞ talep yaratıyor;
+      // panel ham actual gösteriyordu → 'Toplam:' ve willExceed şişiyordu. Backend'in
+      // yaratacağı kırpılmış değeri yansıt (max_allowed varsayılanı). actual<=0 → 0 (BE 400).
+      const actual = claimTarget?.actual_overtime_seconds || 0;
+      if (actual <= 0) return 0;
+      const maxSec = (claimTarget?.max_duration_hours || 0) * 3600;
+      return maxSec > 0 ? Math.min(actual, maxSec) : actual;
     }
     return displaySegments
       .filter(s => selectedSegIds.has(s.id))
@@ -105,8 +111,11 @@ export default function ClaimConfirmPanel({
   const willExceed = weeklyStatus && !weeklyStatus.is_unlimited
     && (weeklyStatus.used_hours + projectedHours) > weeklyStatus.limit_hours;
 
+  // Denetim 2026-06-10 (#55): willExceed artık SADECE uyarı bandı; canConfirm'i HARD-BLOCK
+  // etmez. Backend per-tarih check_weekly_ot_limit tek otorite → bayat/yanlış-pencere
+  // weeklyStatus meşru talebi engellemesin (yanlış veri zaten asla persist olamaz).
   const needsApproverSelect = !isIntended && approvers.length > 1;
-  const canConfirm = totalSeconds > 0 && !submitting && !willExceed
+  const canConfirm = totalSeconds > 0 && !submitting
     && (!needsApproverSelect || selectedApproverId)
     && reason.trim().length > 0;
 

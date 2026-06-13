@@ -374,10 +374,15 @@ export const OvertimeRequestForm = ({
         if (claimConfirm.type === 'INTENDED') {
             onClaimIntended(claimConfirm.assignment_id, claimReason);
         } else {
-            // Seçili ID'ler ve çıkarılanlar
+            // Seçili ID'ler ve çıkarılanlar. Denetim 2026-06-10 (#123-FE): boş [] truthy
+            // olduğundan eski `|| allIds` fallback hiç tetiklenmiyordu; 'date in map' ile ayır.
             const dayGroup = claimConfirm._dayGroup;
             const allIds = dayGroup ? dayGroup.items.map(i => i.overtime_request_id || i.attendance_id) : [];
-            const selectedIds = claimSelectedIds[claimConfirm.date] || allIds;
+            const selectedIds = (claimConfirm.date in claimSelectedIds) ? claimSelectedIds[claimConfirm.date] : allIds;
+            // 0 segment seçiliyken talep gönderme (backend de B.2 ile 400 döner; FE'de erken dur)
+            if (allIds.length > 0 && selectedIds.length === 0) {
+                return;
+            }
             const excludedIds = allIds.filter(id => !selectedIds.includes(id));
             onClaimPotential(claimConfirm.attendance_id, claimReason, selectedIds, excludedIds);
         }

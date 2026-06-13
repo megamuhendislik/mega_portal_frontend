@@ -30,8 +30,11 @@ export default function ManualEntryForm({
   const projected = (weeklyStatus?.used_hours || 0) + durHours;
   const willExceed = weeklyStatus && !weeklyStatus.is_unlimited && projected > weeklyStatus.limit_hours;
 
+  // Denetim 2026-06-10 (#55): willExceed yalnız uyarı; canSubmit'i HARD-BLOCK etmez. Backend
+  // per-tarih check_weekly_ot_limit tek otorite (bayat/yanlış-pencere weeklyStatus meşru
+  // geçmiş-hafta talebini engellemesin; yanlış veri persist olamaz).
   const canSubmit = form.date && form.start_time && form.end_time && form.reason?.trim() && durHours > 0
-    && !submitting && !willExceed
+    && !submitting
     && (approvers.length <= 1 || selectedApproverId);
 
   return (
