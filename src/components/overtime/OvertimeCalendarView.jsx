@@ -282,6 +282,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
       if (calRes.status === 'fulfilled') {
         setCalendarData(calRes.value.data.days || calRes.value.data.calendar || calRes.value.data || {});
+      } else {
+        // Denetim 2026-06-10 (#59 FIX-2): Promise.allSettled hatayı yutmuyordu → geçmiş dönem
+        // 400'ünde bayat özet kalıyordu. Reddedilen yanıtta veriyi temizle + kullanıcıyı uyar.
+        setCalendarData({});
+        message.error(calRes.reason?.response?.data?.error || 'Takvim verisi alınamadı.');
       }
       if (otRes.status === 'fulfilled') {
         setWeeklyOtStatus(otRes.value.data);
@@ -336,15 +341,14 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
     }
   };
 
-  // Fiscal period navigation
+  // Fiscal period navigation. Denetim 2026-06-10 (#59 FIX-1): backend geçmiş mali dönemleri
+  // 400'lüyor; eski canGoPrev cari dönemden geri gitmeye izin verip (availablePeriods boşsa
+  // SINIRSIZ) bayat-veri/swallow bug'ını tetikliyordu. Yalnız cari'nin ÖTESİNDEYKEN (ileri
+  // dönemden cari'ye dönüş) Prev'e izin ver; cari'deyken geçmişe gidiş kapalı.
   const canGoPrev = useMemo(() => {
-    if (availablePeriods.length === 0) return true;
     const cur = getCurrentFiscalPeriod();
-    // Allow going back 1 period from current
-    const prevMonth = cur.month === 1 ? 12 : cur.month - 1;
-    const prevYear = cur.month === 1 ? cur.year - 1 : cur.year;
-    return !(fiscalPeriod.month === prevMonth && fiscalPeriod.year === prevYear);
-  }, [fiscalPeriod, availablePeriods]);
+    return !(fiscalPeriod.month === cur.month && fiscalPeriod.year === cur.year);
+  }, [fiscalPeriod]);
 
   const canGoNext = useMemo(() => {
     const cur = getCurrentFiscalPeriod();

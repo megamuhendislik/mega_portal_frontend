@@ -904,6 +904,13 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     setLoading(false);
                     return;
                 }
+                // Denetim 2026-06-10 (#66): rapor belgesi zorunlu (label '*'); backend zaten
+                // koruyor ama FE'de erken-dönüş guard'ı net hata verir (HOSPITAL_VISIT deseni).
+                if (healthReportFiles.length === 0) {
+                    setError('Sağlık raporu için en az bir belge yükleyin.');
+                    setLoading(false);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('start_date', healthReportForm.start_date);
                 formData.append('end_date', healthReportForm.end_date);
@@ -1769,7 +1776,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <button
                                 form="requestForm"
                                 type="submit"
-                                disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
+                                disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (selectedType === 'HEALTH_REPORT' && healthReportFiles.length === 0) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
                                 className={`px-5 sm:px-8 py-2.5 rounded-xl text-white font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                     ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                         selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Clock, Calendar, Users, User, Filter
 } from 'lucide-react';
@@ -140,15 +140,23 @@ const Attendance = () => {
     // Consolidated loading for initial render
     const isLoading = isPeriodLoading && !logs.length;
 
+    // #60: fetch sıra-jetonları (bayat yanıt yeni seçimi ezmesin)
+    const periodSeqRef = useRef(0);
+    const dailySeqRef = useRef(0);
+
     const fetchPeriodData = useCallback(async () => {
         if (!selectedEmployeeId || !startDate || !endDate) return;
         // Only show loading if we have no data yet (first load)
         if (!logs.length) setIsPeriodLoading(true);
+        // #60: bayat yanıt yeni seçimi (kişi/dönem hızlı değişimi) ezmesin
+        const mySeq = ++periodSeqRef.current;
+        const isStale = () => mySeq !== periodSeqRef.current;
         try {
             const [logsRes, sumRes] = await Promise.all([
                 api.get(`/attendance/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}&limit=1000`),
                 api.get(`/attendance/monthly_summary/?employee_id=${selectedEmployeeId}&start_date=${startDate}&end_date=${endDate}`)
             ]);
+            if (isStale()) return;  // #60
             setLogs(logsRes.data.results || logsRes.data);
             setPeriodSummary(sumRes.data);
 
@@ -162,18 +170,21 @@ const Attendance = () => {
                             end_date: endDate,
                         }
                     });
+                    if (isStale()) return;  // #60
                     const empCoverage = coverageRes.data?.coverages?.[String(selectedEmployeeId)] || {};
                     setLeaveCoverageMap(empCoverage);
                 } catch (err) {
                     console.error('Leave coverage fetch error:', err);
-                    setLeaveCoverageMap({});
+                    if (!isStale()) setLeaveCoverageMap({});
                 }
             }
         } catch (error) {
             console.error(error);
         } finally {
-            setIsPeriodLoading(false);
-            setLoading(false);
+            if (!isStale()) {  // #60: bayat fetch loading'i erken kapatmasın
+                setIsPeriodLoading(false);
+                setLoading(false);
+            }
         }
     }, [selectedEmployeeId, startDate, endDate]);
 
@@ -183,14 +194,17 @@ const Attendance = () => {
 
         // Only show loading on first load
         if (!todaySummary) setIsDailyLoading(true);
+        const mySeq = ++dailySeqRef.current;  // #60
+        const isStale = () => mySeq !== dailySeqRef.current;
         try {
             const dateParam = viewScope === 'DAILY' && selectedDate ? `&date=${selectedDate}` : '';
             const todayRes = await api.get(`/attendance/today_summary/?employee_id=${selectedEmployeeId}${dateParam}`);
+            if (isStale()) return;  // #60
             setTodaySummary(todayRes.data);
         } catch (error) {
             console.error("Daily summary fetch error", error);
         } finally {
-            setIsDailyLoading(false);
+            if (!isStale()) setIsDailyLoading(false);  // #60
         }
     }, [selectedEmployeeId, selectedDate, viewScope, activeTab]);
 
@@ -410,17 +424,16 @@ const Attendance = () => {
                             {monthlyWeeklyOt?.weeks?.length > 0 && (() => {
                                 const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
                                 const fmtShort = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
-                                const todayTs = new Date().setHours(0, 0, 0, 0);
+                                // Denetim 2026-06-10 (#121): 'Bu Hafta'/geçmiş/gelecek tespiti lokal TZ
+                                // yerine İstanbul (todayStr, YYYY-MM-DD leksikografik=kronolojik); Pzt
+                                // sınırını straddle eden pencerede rozet doğru haftaya düşer.
                                 return (
                                     <div className="flex items-stretch justify-evenly px-3 py-2.5 border-t border-slate-100">
                                         {monthlyWeeklyOt.weeks.map((week, i) => {
                                             const isUnlimited = week.is_unlimited;
                                             const ratio = isUnlimited ? 0 : (week.used_hours / (week.limit_hours || 1));
-                                            const wsDate = new Date(week.window_start + 'T00:00:00');
-                                            const weDate = new Date(week.window_end + 'T23:59:59');
-                                            const isPast = weDate.getTime() < todayTs;
-                                            const isCurrent = wsDate.getTime() <= todayTs && weDate.getTime() >= todayTs;
-                                            const isFuture = wsDate.getTime() > todayTs;
+                                            const isPast = week.window_end < todayStr;
+                                            const isCurrent = week.window_start <= todayStr && week.window_end >= todayStr;
 
                                             // Renk: geçmiş=slate, aktif=indigo vurgulu, gelecek=slate açık
                                             let borderCls, bgCls, dotColor, textColor, dateColor;
@@ -448,7 +461,7 @@ const Attendance = () => {
                                                 <div key={i}
                                                     className={`flex-1 flex flex-col items-center gap-0.5 px-1.5 py-1.5 mx-0.5 rounded-lg border ${borderCls} ${bgCls} cursor-pointer transition-all`}
                                                     onClick={() => { setWeeklyOtDrawerRefDate(week.window_start); setWeeklyOtDrawerOpen(true); }}
-                                                    title={`${fmtShort(wsDate.toISOString().slice(0,10))} – ${fmtShort(weDate.toISOString().slice(0,10))}\n${isCurrent ? 'Bu hafta' : isPast ? 'Geçmiş' : 'Gelecek'}`}
+                                                    title={`${fmtShort(week.window_start)} – ${fmtShort(week.window_end)}\n${isCurrent ? 'Bu hafta' : isPast ? 'Geçmiş' : 'Gelecek'}`}
                                                 >
                                                     {isCurrent && <span className="text-[7px] font-bold text-indigo-500 uppercase tracking-widest leading-none">Bu Hafta</span>}
                                                     <span className={`text-[8px] font-medium whitespace-nowrap leading-none ${dateColor}`}>

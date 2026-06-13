@@ -98,6 +98,11 @@ const EffortDetailPopover = ({ stats }) => {
 
 const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
 
+    // Denetim 2026-06-10 (#62): yıllık bölüm görüntülenen mali yıl yerine bugünün yılını
+    // (getIstanbulYear) kullanıyordu → geçmiş/önceki-yıl seçilince başlık+tıklama yanlış yıla
+    // gidiyordu. periodSummary.fiscal_year istenen yılı taşır; yoksa bugüne düş (bayat-cache güvenli).
+    const displayYear = periodSummary?.fiscal_year ?? getIstanbulYear();
+
     const stats = useMemo(() => {
         if (periodSummary) {
             // Fix: Backend sends 'target_gross' and 'total_work_seconds'
@@ -625,7 +630,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                             <div>
                                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
                                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
-                                    {getIstanbulYear()} Yıllık Performans
+                                    {displayYear} Yıllık Performans
                                 </h3>
                                 <p className="text-xs text-slate-400 font-medium pl-3.5 mt-1">Yılbaşından bugüne kümülatif durum.</p>
                             </div>
@@ -772,7 +777,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                 <div
                                                     key={idx}
                                                     className={`flex-1 h-full ${containerBg} border-r border-slate-200/50 last:border-r-0 relative group transition-all duration-300 hover:bg-white hover:shadow-xl hover:z-20 hover:-translate-y-1 ${canClick ? 'cursor-pointer' : ''}`}
-                                                    onClick={canClick ? () => onMonthSelect(getIstanbulYear(), m.month) : undefined}
+                                                    onClick={canClick ? () => onMonthSelect(displayYear, m.month) : undefined}
                                                 >
                                                     {/* Normal Work Bar (Indigo) — sadece gecmis + mevcut */}
                                                     {(isPast || isCurrentMonth) && (
@@ -991,7 +996,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                                         const canClickRow = !isFuture && onMonthSelect;
                                                         return (
                                                             <tr key={m.month} className={`transition-colors group ${isFuture ? 'opacity-40' : ''} ${isCurrent ? 'bg-indigo-50/50' : 'hover:bg-slate-50/50'} ${canClickRow ? 'cursor-pointer hover:bg-indigo-50/30' : ''}`}
-                                                                onClick={canClickRow ? () => onMonthSelect(getIstanbulYear(), m.month) : undefined}>
+                                                                onClick={canClickRow ? () => onMonthSelect(displayYear, m.month) : undefined}>
                                                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
                                                                     {isPast ? (
                                                                         <span className="text-emerald-500 text-sm">&#10003;</span>

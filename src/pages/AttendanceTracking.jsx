@@ -775,7 +775,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
                 const mNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
                 const fmtD = (s) => { const d = new Date(s + 'T00:00:00'); return `${d.getDate()} ${mNames[d.getMonth()]}`; };
-                const todayTs = new Date().setHours(0, 0, 0, 0);
+                // Denetim 2026-06-10 (#121): lokal TZ yerine İstanbul (leksikografik=kronolojik)
+                const todayStr = getIstanbulToday();
 
                 const activeBuckets = otDistMode === 'hours' ? hourBuckets : pctBuckets;
                 const maxCount = Math.max(1, ...activeBuckets.map(b => b.members.length));
@@ -837,10 +838,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                             <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                                 <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Hafta</span>
                                 {monthlyWeeklyOt.weeks.map((week, wi) => {
-                                    const wsDate = new Date(week.window_start + 'T00:00:00');
-                                    const weDate = new Date(week.window_end + 'T23:59:59');
-                                    const isCurrent = wsDate.getTime() <= todayTs && weDate.getTime() >= todayTs;
-                                    const isPast = weDate.getTime() < todayTs;
+                                    const isCurrent = week.window_start <= todayStr && week.window_end >= todayStr;
+                                    const isPast = week.window_end < todayStr;
                                     const cls = isCurrent
                                         ? 'bg-indigo-100 border-indigo-300 text-indigo-700 font-bold'
                                         : isPast ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-white border-dashed border-slate-200 text-slate-400';

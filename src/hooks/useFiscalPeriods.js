@@ -24,11 +24,13 @@ export default function useFiscalPeriods({ months = 24 } = {}) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [calendarName, setCalendarName] = useState('');
+    const [reloadCounter, setReloadCounter] = useState(0);  // #61 FE-2: retry tetikleyici
 
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
-        fetchMyFiscalPeriods({ months })
+        // #61 FE-2: retry'da (reloadCounter>0) cache'i baypas et (force), ilk yüklemede cache.
+        fetchMyFiscalPeriods({ months, force: reloadCounter > 0 })
             .then(data => {
                 if (cancelled) return;
                 const list = data.periods || [];
@@ -45,7 +47,9 @@ export default function useFiscalPeriods({ months = 24 } = {}) {
                 if (!cancelled) setLoading(false);
             });
         return () => { cancelled = true; };
-    }, [months]);
+    }, [months, reloadCounter]);
+
+    const refetch = useCallback(() => setReloadCounter((c) => c + 1), []);  // #61 FE-2
 
     const findByYearMonth = useCallback(
         (year, month) => findPeriodByYearMonth(periods, year, month),
@@ -71,5 +75,6 @@ export default function useFiscalPeriods({ months = 24 } = {}) {
         findByYearMonth,
         findByDate,
         navigate,
+        refetch,
     };
 }

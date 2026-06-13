@@ -95,6 +95,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         await api.post(`/overtime-assignments/${payload.claimTarget.assignment_id}/claim/`, {
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
+          send_to_substitute: payload.send_to_substitute,  // #54: vekile de gönder
         });
       } else {
         const ids = payload.selected_ids;
@@ -103,6 +104,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
           excluded_ids: payload.excluded_ids,
+          send_to_substitute: payload.send_to_substitute,  // #54: vekile de gönder
         };
         if (payload.selected_segments) {
           body.selected_segments = payload.selected_segments;

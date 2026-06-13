@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, CreditCard, PenLine, HeartPulse, Stethoscope, Briefcase, Timer, Scissors, Settings } from 'lucide-react';
 import { LeaveBadge } from '../pages/attendance-tracking/AttendanceComponents';
+import { toIstanbulParts } from '../utils/dateUtils';
 
 const formatTime = (isoString) => {
     if (!isoString) return '-';
@@ -82,11 +83,12 @@ const RecordTypeBadgeMobile = ({ log }) => {
 };
 
 const getStatusBadge = (log) => {
-    // OT Status override: show OvertimeRequest status when available
-    // POTENTIAL guard: minimum eşik altındaki OT kayıtlarında POTENTIAL gösterme
-    const effectiveOtStatus = log.ot_status === 'POTENTIAL' && (log.overtime_minutes || 0) < 30
-        ? null
-        : log.ot_status;
+    // OT Status override: show OvertimeRequest status when available.
+    // Denetim 2026-06-10 (#63): eski hardcoded `overtime_minutes < 30` guard'ı KALDIRILDI.
+    // overtime_minutes onaylanmamış OT için backend'de daima 0 (overtime_seconds=0) →
+    // guard TÜM POTENTIAL rozetlerini gizliyordu (2sa potansiyel bile). Backend serializer
+    // _guard_potential takvim minimum_overtime_minutes eşiğini ZATEN uyguluyor (tek kaynak).
+    const effectiveOtStatus = log.ot_status;
     if (effectiveOtStatus) {
         const otStyles = {
             'POTENTIAL': 'bg-purple-50 border-purple-200 text-purple-600',
@@ -188,11 +190,14 @@ const doesCoverageOverlap = (coverage, log) => {
     const covStart = toMin(coverage.start_time);
     const covEnd = toMin(coverage.end_time);
 
-    // Kayıt check_in/check_out'tan saat çıkar
+    // Kayıt check_in/check_out'tan saat çıkar. Denetim 2026-06-10 (#122): tarayıcı-lokal saat
+    // yerine İstanbul duvar-saati — coverage start/end backend'de İstanbul %H:%M (naive). Lokal
+    // TZ İstanbul dışıysa rozet yanlış satıra düşüyordu. toIstanbulParts iki tarafı hizalar.
     const getHHMM = (iso) => {
         if (!iso) return null;
-        const d = new Date(iso);
-        return d.getHours() * 60 + d.getMinutes();
+        const p = toIstanbulParts(iso);
+        if (!p) return null;
+        return p.hour * 60 + p.minute;
     };
     const logStart = getHHMM(log.check_in);
     const logEnd = getHHMM(log.check_out);
