@@ -305,7 +305,10 @@ const WorkSchedules = () => {
                     setExecutionLogs(data.logs);
                 }
 
-                if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+                // #117: COMPLETED_WITH_ERRORS de TERMİNAL durumdur — yoksa polling sonsuz
+                // döner ve modal askıda kalır (kısmi-hata olan her recalc'ta).
+                if (data.status === 'COMPLETED' || data.status === 'FAILED'
+                        || data.status === 'COMPLETED_WITH_ERRORS') {
                     clearInterval(pollingRef.current);
                     pollingRef.current = null;
                     setSaving(false);
@@ -687,17 +690,25 @@ const WorkSchedules = () => {
                                     <div className="flex items-center gap-2">
                                         {recalcProgress?.status === 'FAILED' ? (
                                             <AlertTriangle className="text-red-500" size={24} />
+                                        ) : recalcProgress?.status === 'COMPLETED_WITH_ERRORS' ? (
+                                            <AlertTriangle className="text-amber-500" size={24} />
                                         ) : (
                                             <CheckCircle className="text-emerald-500" size={24} />
                                         )}
                                         <div>
                                             <h3 className="text-lg font-bold text-slate-800">
-                                                {recalcProgress?.status === 'FAILED' ? 'Hesaplama Başarısız' : 'İşlem Tamamlandı'}
+                                                {recalcProgress?.status === 'FAILED'
+                                                    ? 'Hesaplama Başarısız'
+                                                    : recalcProgress?.status === 'COMPLETED_WITH_ERRORS'
+                                                        ? 'Tamamlandı (Bazı Hatalarla)'
+                                                        : 'İşlem Tamamlandı'}
                                             </h3>
                                             <p className="text-xs text-slate-500">
                                                 {recalcProgress?.status === 'FAILED'
                                                     ? 'Hata detayları aşağıdadır.'
-                                                    : `${recalcProgress?.processed_employees || '?'} personel, ${recalcProgress?.processed_days || '?'} gün güncellendi.`}
+                                                    : recalcProgress?.status === 'COMPLETED_WITH_ERRORS'
+                                                        ? `${recalcProgress?.processed_days || '?'} gün güncellendi — ${recalcProgress?.error_message || 'bazı günlerde hata oluştu (loglara bakın).'}`
+                                                        : `${recalcProgress?.processed_employees || '?'} personel, ${recalcProgress?.processed_days || '?'} gün güncellendi.`}
                                             </p>
                                         </div>
                                     </div>
