@@ -121,6 +121,13 @@ const DOMAINS = [
     color: '#fa8c16',
     description: 'Her talep tipi × (onay/red/iptal) × tekrar-hesaplama: veri geldiğinde Attendance yan-etkisi + recalc yakınsaması',
   },
+  {
+    key: 'june14',
+    label: '14 Haziran Bug-Avı R6 Fixleri',
+    icon: <BugOutlined />,
+    color: '#eb2f96',
+    description: 'Round 6 taze-boyut fixleri: özel izin kredisi (hayalet eksik), excuse-leave kota cap revert, denetim fix recalc, OT-atama kütlesel-atama (405), FRC timezone',
+  },
 ];
 
 const STATUS_CONFIG = {
