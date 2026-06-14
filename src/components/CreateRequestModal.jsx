@@ -809,6 +809,10 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     start_time: overtimeForm.start_time,
                     end_time: overtimeForm.end_time,
                     reason: overtimeForm.reason,
+                    // bug-avı R4: "Vekil yöneticiye de gönder" işareti payload'a EKLENMİYORDU →
+                    // backend (#54) bu bayrağı okuyor ama UI göndermediği için vekil bildirimi
+                    // yapılmıyordu (kullanıcı eylemi yok sayılıyordu). Artık gönderiliyor.
+                    send_to_substitute: overtimeForm.send_to_substitute,
                     ...approverPayload
                 });
             } else if (selectedType === 'MEAL') {
