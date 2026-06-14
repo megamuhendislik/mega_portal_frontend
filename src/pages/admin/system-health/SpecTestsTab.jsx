@@ -1,7 +1,7 @@
 /**
  * SpecTestsTab — Domain-bazlı Spec Test UI
  *
- * 12 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
+ * 14 domain kartı ile gerçek davranış testlerini çalıştırır ve sonuçlarını gösterir.
  * Tüm domain loglarını detaylı gösterir (eski stage sistemi gibi).
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -16,7 +16,7 @@ import {
   LockOutlined, ScheduleOutlined, TeamOutlined,
   SafetyCertificateOutlined, ExclamationCircleOutlined,
   CodeOutlined, DownOutlined, RightOutlined,
-  SwapOutlined, BugOutlined,
+  SwapOutlined, BugOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -107,6 +107,20 @@ const DOMAINS = [
     color: '#9254de',
     description: 'Canlı sapma kök-neden düzeltmeleri: çift-recalc yarışı, hayalet OT, gece OT salınımı, gate replay (KÖK-1..7)',
   },
+  {
+    key: 'june13',
+    label: '13 Haziran Denetim Fixleri',
+    icon: <SafetyCertificateOutlined />,
+    color: '#13c2c2',
+    description: 'Bordro/motor/güvenlik denetim düzeltmeleri (Tier A→D), takvim-uyum, geniş rapor kuralları',
+  },
+  {
+    key: 'simulation',
+    label: 'Gerçek-Hayat Simülasyonu',
+    icon: <ExperimentOutlined />,
+    color: '#fa8c16',
+    description: 'Her talep tipi × (onay/red/iptal) × tekrar-hesaplama: veri geldiğinde Attendance yan-etkisi + recalc yakınsaması',
+  },
 ];
 
 const STATUS_CONFIG = {
@@ -122,7 +136,7 @@ export default function SpecTestsTab() {
   const [results, setResults] = useState({});
   const [runningDomains, setRunningDomains] = useState(new Set());
   const [globalRunning, setGlobalRunning] = useState(false);
-  const [summary, setSummary] = useState(null);
+  const [_summary, setSummary] = useState(null);
   const [expandedDomains, setExpandedDomains] = useState([]);
   const [errorMessage, setErrorMessage] = useState(null);
   const [currentDomain, setCurrentDomain] = useState(null);
@@ -135,7 +149,7 @@ export default function SpecTestsTab() {
   const liveLogRef = useRef(null);
   const liveListRef = useRef(null);
 
-  const pollStatus = useCallback((taskId, targetDomains) => {
+  const pollStatus = useCallback((taskId) => {
     const poll = async () => {
       try {
         const resp = await api.get(`/system/health-check/get-spec-test-status/?task_id=${taskId}`);
