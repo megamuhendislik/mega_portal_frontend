@@ -21,7 +21,7 @@ const Login = () => {
         try {
             await login(username, password, remember);
             navigate('/');
-        } catch (err) {
+        } catch {
             setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
         } finally {
             setIsLoading(false);
@@ -94,6 +94,8 @@ const Login = () => {
                                     <input
                                         type="text"
                                         required
+                                        name="username"
+                                        autoComplete="username"
                                         className="input-field pl-10"
                                         placeholder="Kullanıcı adınızı girin"
                                         value={username}
@@ -113,6 +115,8 @@ const Login = () => {
                                     <input
                                         type="password"
                                         required
+                                        name="password"
+                                        autoComplete="current-password"
                                         className="input-field pl-10"
                                         placeholder="••••••••"
                                         value={password}
