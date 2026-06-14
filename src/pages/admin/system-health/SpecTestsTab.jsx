@@ -128,6 +128,13 @@ const DOMAINS = [
     color: '#eb2f96',
     description: 'Round 6 taze-boyut fixleri: özel izin kredisi (hayalet eksik), excuse-leave kota cap revert, denetim fix recalc, OT-atama kütlesel-atama (405), FRC timezone',
   },
+  {
+    key: 'targets',
+    label: 'Hedef Hesaplama Tetikleri',
+    icon: <FieldTimeOutlined />,
+    color: '#1890ff',
+    description: 'Event-driven hedef: boot-time toplu recalc kaldırıldı; hedef yalnız çalışan kaydı/takvim/şablon değişince ilgili kapsamda hesaplanır',
+  },
 ];
 
 const STATUS_CONFIG = {
