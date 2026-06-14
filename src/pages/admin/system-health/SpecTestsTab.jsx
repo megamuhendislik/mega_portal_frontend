@@ -150,7 +150,19 @@ export default function SpecTestsTab() {
   const liveListRef = useRef(null);
 
   const pollStatus = useCallback((taskId) => {
+    // Maks. yoklama süresi: backend task hard limit (2100s) + pay. Worker ölürse / sonuç
+    // kaybolursa Celery süresiz PENDING döner; eskiden alt 'else' dalı 2sn'de bir SONSUZ
+    // yokluyordu (sessiz takılma). Bu tavan aşılırsa yoklamayı durdur + hata göster.
+    const startedAt = Date.now();
+    const MAX_POLL_MS = 2300000; // ~38 dk
     const poll = async () => {
+      if (Date.now() - startedAt > MAX_POLL_MS) {
+        setErrorMessage('Zaman aşımı: test sonucu alınamadı (worker yeniden başlatılmış veya çok uzun sürmüş olabilir). Lütfen tekrar çalıştırın.');
+        setRunningDomains(new Set());
+        setGlobalRunning(false);
+        setCurrentDomain(null);
+        return;
+      }
       try {
         const resp = await api.get(`/system/health-check/get-spec-test-status/?task_id=${taskId}`);
         const data = resp.data;
@@ -213,6 +225,11 @@ export default function SpecTestsTab() {
     };
     poll();
   }, [results]);
+
+  // Unmount'ta yoklama zamanlayıcısını temizle (sayfadan çıkınca arka planda poll kalmasın)
+  useEffect(() => () => {
+    if (pollingRef.current) clearTimeout(pollingRef.current);
+  }, []);
 
   // 10 HAZİRAN FIXLERİ TEST — KRİTİK düzeltmeleri çalıştırıp TXT indirir.
   const downloadJune10Txt = async () => {
