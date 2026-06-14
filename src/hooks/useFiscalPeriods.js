@@ -29,6 +29,7 @@ export default function useFiscalPeriods({ months = 24 } = {}) {
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
+        setError(null);  // #61 (review): retry'da eski hata bandını temizle → spinner göster (asılı hata kalmasın)
         // #61 FE-2: retry'da (reloadCounter>0) cache'i baypas et (force), ilk yüklemede cache.
         fetchMyFiscalPeriods({ months, force: reloadCounter > 0 })
             .then(data => {
