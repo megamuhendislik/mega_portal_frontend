@@ -162,7 +162,9 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
   // Fiscal period state
   const [fiscalPeriod, setFiscalPeriod] = useState(() => getCurrentFiscalPeriod());
-  const [availablePeriods, setAvailablePeriods] = useState([]);
+  // #59 sonrası availablePeriods değeri artık okunmuyor (canGoPrev cari-dönem mantığına geçti);
+  // setter ileride periyot listesi için tutuluyor → değeri _ ile işaretle (lint no-unused-vars).
+  const [_availablePeriods, setAvailablePeriods] = useState([]);
 
   // Data
   const [calendarData, setCalendarData] = useState({});
