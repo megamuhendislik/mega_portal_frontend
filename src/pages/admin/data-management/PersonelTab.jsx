@@ -256,13 +256,22 @@ export default function PersonelTab({ initialEmployee }) {
         const monthCompensated = bd?.compensated || 0;
 
         // Önceki aylardan devir (carry-into-M) + bu ayın neti = sıfırlanacak toplam
-        // birikmiş devir (= total_net_balance_seconds). Modal "Sıfırlanacak Toplam Devir"
-        // göstergesinde bunu kullanır.
+        // birikmiş devir. Bu sum, backend'in gerçekten sıfırlayıp döndürdüğü
+        // settled_amount_seconds (= cumulative_balance_seconds + net_balance_seconds)
+        // ile BİREBİR eşittir → önizleme headline'ı toast/geçmiş ile tutarlıdır.
+        //
+        // NOT: total_net_balance_seconds KULLANILMAZ — devam eden ayda pro-rata
+        // past_target kullanıp current-month compensated'ı çıkardığı için (özellikle
+        // re-settle sonrası) backend'in sıfırladığı tutardan farklı çıkar, kullanıcıyı
+        // yanıltır. Yalnız carryOver/netBal ikisi de null ise son çare olarak düşülür.
         const carryOver = (balanceSummary.cumulative?.carry_over_seconds || 0)
             + (balanceSummary.cumulative?.previous_year_balance_seconds || 0);
-        const cumulativeToDate = balanceSummary.cumulative?.total_net_balance_seconds != null
-            ? balanceSummary.cumulative.total_net_balance_seconds
-            : carryOver + netBal;
+        const _hasExactInputs = balanceSummary.cumulative?.carry_over_seconds != null
+            || balanceSummary.cumulative?.previous_year_balance_seconds != null
+            || balanceSummary.net_balance_seconds != null;
+        const cumulativeToDate = _hasExactInputs
+            ? carryOver + netBal
+            : (balanceSummary.cumulative?.total_net_balance_seconds || 0);
 
         setSettlementData({
             isOpen: true,
