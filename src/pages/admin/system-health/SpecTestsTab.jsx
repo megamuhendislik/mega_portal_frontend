@@ -222,10 +222,20 @@ export default function SpecTestsTab() {
           setRunningDomains(new Set());
           setGlobalRunning(false);
           setCurrentDomain(null);
-          // Auto-expand any domains that have results (from PROGRESS updates)
+          // Per-domain KALICI fallback (2026-06-15): task ölse bile backend her domain
+          // bitince Redis'e yazıyor → partial_results ile tamamlanan domainleri göster
+          // (sayfa yenilense / PROGRESS kaçsa bile sonuçlar kaybolmaz).
+          if (Array.isArray(data.partial_results) && data.partial_results.length) {
+            const partial = {};
+            data.partial_results.forEach(r => { partial[r.domain] = r; });
+            setResults(prev => ({ ...prev, ...partial }));
+          }
+          // Auto-expand any domains that have results (from PROGRESS updates + partial fallback)
           setExpandedDomains(prev => {
             const existingKeys = Object.keys(results);
-            return [...new Set([...prev, ...existingKeys])];
+            const partialKeys = Array.isArray(data.partial_results)
+              ? data.partial_results.map(r => r.domain) : [];
+            return [...new Set([...prev, ...existingKeys, ...partialKeys])];
           });
         } else {
           pollingRef.current = setTimeout(poll, 2000);
