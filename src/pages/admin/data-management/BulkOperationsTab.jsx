@@ -281,20 +281,20 @@ export default function BulkOperationsTab() {
                 <div>
                     <p>
                         <strong>{settleEmps.length}</strong> personel için{' '}
-                        <strong>{monthLabel}</strong> ayı bakiyesi sıfırlanacak.
+                        <strong>{monthLabel}</strong> sonuna kadar birikmiş{' '}
+                        <strong>toplam devir</strong> (önceki aylardan gelen dahil) sıfırlanacak.
                     </p>
                     <Alert
-                        type="warning"
+                        type="info"
                         showIcon
                         className="mt-3"
-                        message="Bu işlem geri alınamaz"
-                        description="Tüm seçili personellerin bakiyeleri sıfırlanacak ve bir sonraki aya devretmeyecek."
+                        message="Toplam kümülatif devir sıfırlanır"
+                        description="Her personelin o aya kadar birikmiş toplam bakiyesi (yalnız o ayın neti değil) sıfırlanır ve sonraki aylara devretmez. Mutabakat geri alınabilir (kişi bazında Personel sekmesinden)."
                     />
                 </div>
             ),
             okText: 'Evet, Mutabakat Yap',
             cancelText: 'Vazgeç',
-            okType: 'danger',
             onOk: () => executeSettle(),
         });
     };
@@ -647,7 +647,7 @@ export default function BulkOperationsTab() {
                     'bg-rose-500/10',
                     'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
                     'Toplu Bakiye Sıfırlama (Mutabakat)',
-                    'Seçilen personellerin ay bakiyesini sıfırla'
+                    'Seçilen personellerin o aya kadar birikmiş toplam devrini sıfırla'
                 )}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

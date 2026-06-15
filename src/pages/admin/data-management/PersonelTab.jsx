@@ -23,6 +23,7 @@ export default function PersonelTab({ initialEmployee }) {
     const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [loadingCalendar, setLoadingCalendar] = useState(false);
     const [balanceSummary, setBalanceSummary] = useState(null);
+    const [settlementHistory, setSettlementHistory] = useState([]);
     const [settlementData, setSettlementData] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
 
@@ -97,12 +98,24 @@ export default function PersonelTab({ initialEmployee }) {
             .catch(() => setBalanceSummary(null));
     }, [selectedEmployee, currentMonth]);
 
+    // ── Mutabakat geçmişini yükle (bakiye kartı zengin göstergesi için) ──
+    const fetchSettlementHistory = useCallback(() => {
+        if (!selectedEmployee) return;
+        const { year } = toIstanbulParts(currentMonth);
+        api.get('/system-data/settlement_history/', {
+            params: { employee_id: selectedEmployee.id, year }
+        })
+            .then((res) => setSettlementHistory(res.data?.results || []))
+            .catch(() => setSettlementHistory([]));
+    }, [selectedEmployee, currentMonth]);
+
     useEffect(() => {
         if (selectedEmployee) {
             fetchMonthlyData();
             fetchBalanceSummary();
+            fetchSettlementHistory();
         }
-    }, [selectedEmployee, currentMonth, fetchMonthlyData, fetchBalanceSummary]);
+    }, [selectedEmployee, currentMonth, fetchMonthlyData, fetchBalanceSummary, fetchSettlementHistory]);
 
     // ── Handlers ───────────────────────────────────────────────────
     const handleEmployeeChange = (empId) => {
@@ -173,6 +186,7 @@ export default function PersonelTab({ initialEmployee }) {
     const handleSaveSuccess = () => {
         fetchMonthlyData();
         fetchBalanceSummary();
+        fetchSettlementHistory();
     };
 
     // ── Staged ops: Önizle → (ONAYLA) → Kaydet ─────────────────────
@@ -231,11 +245,19 @@ export default function PersonelTab({ initialEmployee }) {
         const _cmParts = toIstanbulParts(currentMonth);
         const fiscalMonth = balanceSummary.fiscal_month || _cmParts.month;
         const fiscalYear = balanceSummary.fiscal_year || _cmParts.year;
-        const compensated = balanceSummary.cumulative?.ytd_compensated_seconds || 0;
 
         // Check current month's compensated from breakdown
         const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
         const monthCompensated = bd?.compensated || 0;
+
+        // Önceki aylardan devir (carry-into-M) + bu ayın neti = sıfırlanacak toplam
+        // birikmiş devir (= total_net_balance_seconds). Modal "Sıfırlanacak Toplam Devir"
+        // göstergesinde bunu kullanır.
+        const carryOver = (balanceSummary.cumulative?.carry_over_seconds || 0)
+            + (balanceSummary.cumulative?.previous_year_balance_seconds || 0);
+        const cumulativeToDate = balanceSummary.cumulative?.total_net_balance_seconds != null
+            ? balanceSummary.cumulative.total_net_balance_seconds
+            : carryOver + netBal;
 
         setSettlementData({
             isOpen: true,
@@ -243,6 +265,8 @@ export default function PersonelTab({ initialEmployee }) {
             year: fiscalYear,
             month: fiscalMonth,
             netBalance: netBal,
+            carryOver,
+            cumulativeToDate,
             compensated: monthCompensated,
             isSettled: monthCompensated !== 0,
         });
@@ -391,6 +415,14 @@ export default function PersonelTab({ initialEmployee }) {
                     const sign = (sec) => sec >= 0 ? '+' : '-';
                     const MNAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
+                    // Mutabakat göstergesi — settlement_history'den türetilir: aktif
+                    // (geri alınmamış) mutabakat sayısı + sıfırlanan toplam saat.
+                    const activeSettlements = (settlementHistory || []).filter(s => !s.is_undone);
+                    const settledCount = activeSettlements.length;
+                    const settledTotalSec = activeSettlements.reduce(
+                        (sum, s) => sum + Math.abs(s.settled_amount_seconds || 0), 0
+                    );
+
                     return (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
                             <div className="flex items-center justify-between mb-3">
@@ -399,9 +431,13 @@ export default function PersonelTab({ initialEmployee }) {
                                     <h3 className="font-bold text-slate-700 text-sm">
                                         Aylık Bakiye Özeti — {MNAMES[fiscalMonth]} {balanceSummary.fiscal_year || _renderCmParts.year}
                                     </h3>
-                                    {isSettled && (
+                                    {settledCount > 0 ? (
                                         <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                                            &#10003; Mutabakat Yapılmış
+                                            &#10003; Mutabakat: {settledCount} kez · toplam {(settledTotalSec / 3600).toFixed(1)} sa sıfırlandı
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                                            Mutabakat yok
                                         </span>
                                     )}
                                 </div>
@@ -526,7 +562,7 @@ export default function PersonelTab({ initialEmployee }) {
                     isOpen={settlementData?.isOpen}
                     onClose={() => setSettlementData(null)}
                     data={settlementData}
-                    onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
+                    onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); fetchSettlementHistory(); }}
                 />
             )}
 
