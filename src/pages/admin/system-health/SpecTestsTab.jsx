@@ -135,6 +135,13 @@ const DOMAINS = [
     color: '#1890ff',
     description: 'Event-driven hedef: boot-time toplu recalc kaldırıldı; hedef yalnız çalışan kaydı/takvim/şablon değişince ilgili kapsamda hesaplanır',
   },
+  {
+    key: 'june15',
+    label: '15 Haziran Fixleri',
+    icon: <SafetyCertificateOutlined />,
+    color: '#2f54eb',
+    description: '2 mali ay retroaktif pencere off-by-one (OT atama 1 ay erken expire + talep 1 ay erken kilit) + kartsız türev ADMIN_ENTRY izole silme (aynı gün çift onayda veri kaybı)',
+  },
 ];
 
 const STATUS_CONFIG = {
