@@ -44,6 +44,9 @@ export default function PersonelTab({ initialEmployee }) {
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewData, setPreviewData] = useState(null);
+    // B4: kart verisinden tespit edilen fazla mesaiyi otomatik onayla (apply_changeset
+    // gövdesinde auto_approve_ot). DayEditPanel toggle'ı bu state'i kontrol eder.
+    const [autoApproveOt, setAutoApproveOt] = useState(true);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -206,6 +209,7 @@ export default function PersonelTab({ initialEmployee }) {
             const res = await api.post('/system-data/preview_changeset/', {
                 employee_id: selectedEmployee.id,
                 operations: stripClientFields(pendingOps),
+                auto_approve_ot: autoApproveOt,
             });
             setPreviewData(res.data);
         } catch (e) {
@@ -225,6 +229,7 @@ export default function PersonelTab({ initialEmployee }) {
                 operations: stripClientFields(pendingOps),
                 reason: reason || '',
                 force_override: !!forceOverride,
+                auto_approve_ot: autoApproveOt,
             });
             message.success('Kaydedildi (#' + (res.data?.changeset_id ?? '') + ')');
             clearOps();
@@ -515,6 +520,8 @@ export default function PersonelTab({ initialEmployee }) {
                                 date={selectedDate}
                                 onSaveSuccess={handleSaveSuccess}
                                 onStageOp={addOp}
+                                autoApproveOt={autoApproveOt}
+                                onAutoApproveOtChange={setAutoApproveOt}
                             />
                         ) : (
                             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400">

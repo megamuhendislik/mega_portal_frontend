@@ -5,7 +5,7 @@ import { tr } from 'date-fns/locale';
 import dayjs from 'dayjs';
 import {
     Collapse, TimePicker, DatePicker, Select, InputNumber, Input, Button,
-    Statistic, Tag, Popconfirm, Modal, message, Spin, Empty, Divider, Space, Card
+    Statistic, Tag, Popconfirm, Modal, message, Spin, Empty, Divider, Space, Card, Switch
 } from 'antd';
 import {
     PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
@@ -63,7 +63,7 @@ const sourceOptions = [
 ];
 
 /* ───── component ───── */
-export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp }) {
+export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp, autoApproveOt = true, onAutoApproveOtChange }) {
     // Data states
     const [records, setRecords] = useState([]);
     const [leaves, setLeaves] = useState([]);
@@ -948,9 +948,17 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
         </div>
     );
 
-    /* ====== Section 2: Giriş/Çıkış ====== */
+    /* ====== Section 2: Çalışma Girişi (kart verisi) ====== */
     const renderAttendance = () => (
         <div className="space-y-4">
+            {/* Yardımcı metin — kart verisi giriş açıklaması */}
+            <div className="flex items-start gap-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                <ClockCircleOutlined className="mt-0.5" />
+                <span>
+                    Çalışma saatlerini girin; molalar, öğle ve fazla mesai otomatik hesaplanır.
+                </span>
+            </div>
+
             {/* ── Mevcut Kayıtlar ── */}
             <div>
                 <div className="flex justify-between items-center mb-2">
@@ -1109,6 +1117,29 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
                     {deleteIds.length} kayıt silinecek
                 </div>
             )}
+
+            {/* ── Fazla Mesai Oto-Onay Anahtarı ──
+                Kaydederken (apply_changeset) gönderilen auto_approve_ot bayrağını
+                kontrol eder. Açıkken motor tespit ettiği fazla mesaiyi otomatik
+                onaylar → bordroya yansır. Değer PersonelTab'a aittir (tek apply
+                çağrısını besler). */}
+            <div className="flex items-start justify-between gap-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                <div className="min-w-0">
+                    <div className="text-xs font-semibold text-amber-800">
+                        Tespit edilen fazla mesaiyi otomatik onayla
+                    </div>
+                    <div className="text-[11px] text-amber-700/80 mt-0.5">
+                        Açıkken, kart verisinden hesaplanan fazla mesai otomatik onaylanır ve
+                        bordroda sayılır. Kapalıyken yönetici onayı bekler.
+                    </div>
+                </div>
+                <Switch
+                    checked={autoApproveOt}
+                    onChange={onAutoApproveOtChange}
+                    checkedChildren="Açık"
+                    unCheckedChildren="Kapalı"
+                />
+            </div>
 
             {/* ── Kaydet Butonu ── */}
             <Button
@@ -1668,7 +1699,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp 
             label: (
                 <span className="font-semibold text-sm flex items-center gap-1.5">
                     <EditOutlined className="text-slate-500" />
-                    Giriş/Çıkış
+                    Çalışma Girişi (kart verisi)
                     {records.length > 0 && (
                         <Tag className="!text-[10px] !m-0 !ml-1" color="blue">{records.length}</Tag>
                     )}
