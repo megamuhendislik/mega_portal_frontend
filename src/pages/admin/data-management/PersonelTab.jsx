@@ -7,6 +7,7 @@ import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
+import InitialBalanceModal from './InitialBalanceModal';
 import useStagedOps, { stripClientFields } from './useStagedOps';
 import PreviewModal from './PreviewModal';
 import ChangeHistoryTab from './ChangeHistoryTab';
@@ -25,6 +26,7 @@ export default function PersonelTab({ initialEmployee }) {
     const [balanceSummary, setBalanceSummary] = useState(null);
     const [settlementHistory, setSettlementHistory] = useState([]);
     const [settlementData, setSettlementData] = useState(null);
+    const [initialBalanceData, setInitialBalanceData] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
 
     // ── Staged operations (Veri Yönetimi v2) ───────────────────────
@@ -286,6 +288,49 @@ export default function PersonelTab({ initialEmployee }) {
         });
     };
 
+    // ── Başlangıç (t=0) ay verisi ──────────────────────────────────
+    // Kart verisi olmayan ay için tek NET bakiye girişi. Modal'ı seçili
+    // personel + görüntülenen ay (fiscal varsa onunla) için açar.
+    const openInitialBalance = () => {
+        if (!selectedEmployee || !balanceSummary) return;
+        const _cmParts = toIstanbulParts(currentMonth);
+        setInitialBalanceData({
+            isOpen: true,
+            employee: selectedEmployee,
+            year: balanceSummary.fiscal_year || _cmParts.year,
+            month: balanceSummary.fiscal_month || _cmParts.month,
+            initialBalanceSeconds: balanceSummary.initial_balance_seconds ?? null,
+        });
+    };
+
+    const handleClearInitialBalance = () => {
+        if (!selectedEmployee || !balanceSummary) return;
+        const _cmParts = toIstanbulParts(currentMonth);
+        const year = balanceSummary.fiscal_year || _cmParts.year;
+        const month = balanceSummary.fiscal_month || _cmParts.month;
+        Modal.confirm({
+            title: 'Başlangıç Verisini Kaldır',
+            content: 'Bu ay için girilen başlangıç (t=0) net bakiyesi kaldırılacak ve ay normal hesaplamaya dönecek. Devam edilsin mi?',
+            okText: 'Kaldır',
+            okButtonProps: { danger: true },
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post('/system-data/clear_initial_balance/', {
+                        employee_id: selectedEmployee.id,
+                        year,
+                        month,
+                    });
+                    message.success('Başlangıç verisi kaldırıldı.');
+                    fetchBalanceSummary();
+                    fetchSettlementHistory();
+                } catch (e) {
+                    message.error('Hata: ' + extractErr(e));
+                }
+            },
+        });
+    };
+
     // ── Select options ─────────────────────────────────────────────
     const employeeOptions = employees.map((e) => ({
         value: e.id,
@@ -425,6 +470,11 @@ export default function PersonelTab({ initialEmployee }) {
                     const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
                     const isSettled = bd && bd.compensated !== 0;
 
+                    // Başlangıç (t=0) verisi: null = normal ay; non-null = bu ay için
+                    // girilmiş NET bakiye (saniye, +/-) — devire taşınan başlangıç değeri.
+                    const initialBalSec = balanceSummary.initial_balance_seconds;
+                    const hasInitialBalance = initialBalSec != null;
+
                     const fmtH = (sec) => { const totalMin = Math.round(Math.abs(sec) / 60); const h = Math.floor(totalMin / 60); const m = totalMin % 60; return `${h}:${String(m).padStart(2, '0')}`; };
                     const sign = (sec) => sec >= 0 ? '+' : '-';
                     const MNAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -463,6 +513,32 @@ export default function PersonelTab({ initialEmployee }) {
                                 >
                                     {isSettled ? 'Mutabakat Düzenle' : 'Mutabakat Yap'}
                                 </Button>
+                            </div>
+
+                            {/* ── Başlangıç (t=0) ay verisi kontrolü ──────────── */}
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                {hasInitialBalance ? (
+                                    <>
+                                        <span className="text-[11px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
+                                            Başlangıç (t=0): net {sign(initialBalSec)}{(Math.abs(initialBalSec) / 3600).toFixed(1)} sa
+                                        </span>
+                                        <Button size="small" onClick={openInitialBalance}>
+                                            Düzenle
+                                        </Button>
+                                        <Button size="small" danger onClick={handleClearInitialBalance}>
+                                            Kaldır
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        size="small"
+                                        type="dashed"
+                                        onClick={openInitialBalance}
+                                        className="!text-slate-500"
+                                    >
+                                        Başlangıç (t=0) Verisi Gir
+                                    </Button>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -579,6 +655,16 @@ export default function PersonelTab({ initialEmployee }) {
                     onClose={() => setSettlementData(null)}
                     data={settlementData}
                     onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); fetchSettlementHistory(); }}
+                />
+            )}
+
+            {/* Başlangıç (t=0) ay verisi modal'ı */}
+            {selectedEmployee && (
+                <InitialBalanceModal
+                    isOpen={initialBalanceData?.isOpen}
+                    onClose={() => setInitialBalanceData(null)}
+                    data={initialBalanceData}
+                    onSaveSuccess={() => { fetchBalanceSummary(); fetchSettlementHistory(); }}
                 />
             )}
 
