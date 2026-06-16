@@ -559,10 +559,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (!r.status || r.status === 'PENDING') return;
             items.push(buildItem(r, 'OVERTIME', { start_date: r.date }));
         });
-        (substituteData.cardless_entry_requests || []).forEach(r => {
-            if (!r.status || r.status === 'PENDING') return;
-            items.push(buildItem(r, 'CARDLESS_ENTRY', { start_date: r.date }));
-        });
+        // NOT: Karar verilmiş CARDLESS_ENTRY override edilemez — backend cardless
+        // approve/reject non-PENDING'i HTTP 400 ile reddeder (cardless'ta override
+        // yolu YOK, leave/OT'den farklı). Bu yüzden "Değiştir" bölümüne hiç eklenmez.
+        // PENDING cardless aynen Onay Bekleyen tablosunda Onayla/Reddet ile çalışır.
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
     }, [substituteData]);
