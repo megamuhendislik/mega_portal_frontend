@@ -10,6 +10,7 @@ import {
     ExclamationTriangleIcon,
     UsersIcon,
     CakeIcon,
+    WalletIcon,
 } from '@heroicons/react/24/outline';
 
 import ServiceHealthTab from './ServiceHealthTab';
@@ -19,6 +20,7 @@ import OrgAuditTab from './OrgAuditTab';
 import DataBrowserTab from './DataBrowserTab';
 import BirthdayTab from './BirthdayTab';
 import PasswordResetTab from './PasswordResetTab';
+import BalanceHealthTab from './BalanceHealthTab';
 
 const SUB_TABS = [
     { id: 'service', name: 'Servis Sağlığı', icon: ServerStackIcon, Component: ServiceHealthTab,
@@ -35,6 +37,8 @@ const SUB_TABS = [
       desc: 'Çift onaylı toplu şifre sıfırlama → XLSX indir' },
     { id: 'birthdays', name: 'Doğum Günleri', icon: CakeIcon, Component: BirthdayTab,
       desc: 'Aylık doğum günü listesi + yıllık istatistik + manuel bildirim' },
+    { id: 'balance', name: 'Bakiye Sağlığı', icon: WalletIcon, Component: BalanceHealthTab,
+      desc: 'İzin bakiye sayaçları (mazeret/yıllık/avans) drift denetimi + Düzelt + avans izin tanımlama' },
 ];
 
 // Aşağıdaki 3 tab burada (deferred — kullanıcı talebine göre eklendi):
