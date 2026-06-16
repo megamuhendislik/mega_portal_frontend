@@ -16,7 +16,7 @@ import {
   LockOutlined, ScheduleOutlined, TeamOutlined,
   SafetyCertificateOutlined, ExclamationCircleOutlined,
   CodeOutlined, DownOutlined, RightOutlined,
-  SwapOutlined, BugOutlined, ExperimentOutlined,
+  SwapOutlined, BugOutlined, ExperimentOutlined, WalletOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -141,6 +141,13 @@ const DOMAINS = [
     icon: <SafetyCertificateOutlined />,
     color: '#2f54eb',
     description: '2 mali ay retroaktif pencere off-by-one (OT atama 1 ay erken expire + talep 1 ay erken kilit) + kartsız türev ADMIN_ENTRY izole silme (aynı gün çift onayda veri kaybı)',
+  },
+  {
+    key: 'balance',
+    label: 'Bakiye Sağlığı',
+    icon: <WalletOutlined />,
+    color: '#13c2c2',
+    description: 'İzin bakiye sayaçları (mazeret/yıllık/avans) drift tespiti + recompute "Düzelt"; onaylı izin PUT/DELETE guard; avans izin grant + 1-yıl expiry + yıldönümü limit-sıfır/borç-carry + negatif bakiye',
   },
 ];
 
