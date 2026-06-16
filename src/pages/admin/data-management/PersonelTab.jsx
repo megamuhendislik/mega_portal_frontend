@@ -7,6 +7,7 @@ import api from '../../../services/api';
 import CalendarGrid from './CalendarGrid';
 import DayEditPanel from './DayEditPanel';
 import SettlementModal from './SettlementModal';
+import InitialBalanceModal from './InitialBalanceModal';
 import useStagedOps, { stripClientFields } from './useStagedOps';
 import PreviewModal from './PreviewModal';
 import ChangeHistoryTab from './ChangeHistoryTab';
@@ -23,7 +24,9 @@ export default function PersonelTab({ initialEmployee }) {
     const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [loadingCalendar, setLoadingCalendar] = useState(false);
     const [balanceSummary, setBalanceSummary] = useState(null);
+    const [settlementHistory, setSettlementHistory] = useState([]);
     const [settlementData, setSettlementData] = useState(null);
+    const [initialBalanceData, setInitialBalanceData] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
 
     // ── Staged operations (Veri Yönetimi v2) ───────────────────────
@@ -43,6 +46,9 @@ export default function PersonelTab({ initialEmployee }) {
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewData, setPreviewData] = useState(null);
+    // B4: kart verisinden tespit edilen fazla mesaiyi otomatik onayla (apply_changeset
+    // gövdesinde auto_approve_ot). DayEditPanel toggle'ı bu state'i kontrol eder.
+    const [autoApproveOt, setAutoApproveOt] = useState(true);
 
     // ── Personel listesini yükle ───────────────────────────────────
     useEffect(() => {
@@ -97,12 +103,24 @@ export default function PersonelTab({ initialEmployee }) {
             .catch(() => setBalanceSummary(null));
     }, [selectedEmployee, currentMonth]);
 
+    // ── Mutabakat geçmişini yükle (bakiye kartı zengin göstergesi için) ──
+    const fetchSettlementHistory = useCallback(() => {
+        if (!selectedEmployee) return;
+        const { year } = toIstanbulParts(currentMonth);
+        api.get('/system-data/settlement_history/', {
+            params: { employee_id: selectedEmployee.id, year }
+        })
+            .then((res) => setSettlementHistory(res.data?.results || []))
+            .catch(() => setSettlementHistory([]));
+    }, [selectedEmployee, currentMonth]);
+
     useEffect(() => {
         if (selectedEmployee) {
             fetchMonthlyData();
             fetchBalanceSummary();
+            fetchSettlementHistory();
         }
-    }, [selectedEmployee, currentMonth, fetchMonthlyData, fetchBalanceSummary]);
+    }, [selectedEmployee, currentMonth, fetchMonthlyData, fetchBalanceSummary, fetchSettlementHistory]);
 
     // ── Handlers ───────────────────────────────────────────────────
     const handleEmployeeChange = (empId) => {
@@ -173,6 +191,7 @@ export default function PersonelTab({ initialEmployee }) {
     const handleSaveSuccess = () => {
         fetchMonthlyData();
         fetchBalanceSummary();
+        fetchSettlementHistory();
     };
 
     // ── Staged ops: Önizle → (ONAYLA) → Kaydet ─────────────────────
@@ -192,6 +211,7 @@ export default function PersonelTab({ initialEmployee }) {
             const res = await api.post('/system-data/preview_changeset/', {
                 employee_id: selectedEmployee.id,
                 operations: stripClientFields(pendingOps),
+                auto_approve_ot: autoApproveOt,
             });
             setPreviewData(res.data);
         } catch (e) {
@@ -211,6 +231,7 @@ export default function PersonelTab({ initialEmployee }) {
                 operations: stripClientFields(pendingOps),
                 reason: reason || '',
                 force_override: !!forceOverride,
+                auto_approve_ot: autoApproveOt,
             });
             message.success('Kaydedildi (#' + (res.data?.changeset_id ?? '') + ')');
             clearOps();
@@ -231,11 +252,28 @@ export default function PersonelTab({ initialEmployee }) {
         const _cmParts = toIstanbulParts(currentMonth);
         const fiscalMonth = balanceSummary.fiscal_month || _cmParts.month;
         const fiscalYear = balanceSummary.fiscal_year || _cmParts.year;
-        const compensated = balanceSummary.cumulative?.ytd_compensated_seconds || 0;
 
         // Check current month's compensated from breakdown
         const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
         const monthCompensated = bd?.compensated || 0;
+
+        // Önceki aylardan devir (carry-into-M) + bu ayın neti = sıfırlanacak toplam
+        // birikmiş devir. Bu sum, backend'in gerçekten sıfırlayıp döndürdüğü
+        // settled_amount_seconds (= cumulative_balance_seconds + net_balance_seconds)
+        // ile BİREBİR eşittir → önizleme headline'ı toast/geçmiş ile tutarlıdır.
+        //
+        // NOT: total_net_balance_seconds KULLANILMAZ — devam eden ayda pro-rata
+        // past_target kullanıp current-month compensated'ı çıkardığı için (özellikle
+        // re-settle sonrası) backend'in sıfırladığı tutardan farklı çıkar, kullanıcıyı
+        // yanıltır. Yalnız carryOver/netBal ikisi de null ise son çare olarak düşülür.
+        const carryOver = (balanceSummary.cumulative?.carry_over_seconds || 0)
+            + (balanceSummary.cumulative?.previous_year_balance_seconds || 0);
+        const _hasExactInputs = balanceSummary.cumulative?.carry_over_seconds != null
+            || balanceSummary.cumulative?.previous_year_balance_seconds != null
+            || balanceSummary.net_balance_seconds != null;
+        const cumulativeToDate = _hasExactInputs
+            ? carryOver + netBal
+            : (balanceSummary.cumulative?.total_net_balance_seconds || 0);
 
         setSettlementData({
             isOpen: true,
@@ -243,8 +281,53 @@ export default function PersonelTab({ initialEmployee }) {
             year: fiscalYear,
             month: fiscalMonth,
             netBalance: netBal,
+            carryOver,
+            cumulativeToDate,
             compensated: monthCompensated,
             isSettled: monthCompensated !== 0,
+        });
+    };
+
+    // ── Başlangıç (t=0) ay verisi ──────────────────────────────────
+    // Kart verisi olmayan ay için tek NET bakiye girişi. Modal'ı seçili
+    // personel + görüntülenen ay (fiscal varsa onunla) için açar.
+    const openInitialBalance = () => {
+        if (!selectedEmployee || !balanceSummary) return;
+        const _cmParts = toIstanbulParts(currentMonth);
+        setInitialBalanceData({
+            isOpen: true,
+            employee: selectedEmployee,
+            year: balanceSummary.fiscal_year || _cmParts.year,
+            month: balanceSummary.fiscal_month || _cmParts.month,
+            initialBalanceSeconds: balanceSummary.initial_balance_seconds ?? null,
+        });
+    };
+
+    const handleClearInitialBalance = () => {
+        if (!selectedEmployee || !balanceSummary) return;
+        const _cmParts = toIstanbulParts(currentMonth);
+        const year = balanceSummary.fiscal_year || _cmParts.year;
+        const month = balanceSummary.fiscal_month || _cmParts.month;
+        Modal.confirm({
+            title: 'Başlangıç Verisini Kaldır',
+            content: 'Bu ay için girilen başlangıç (t=0) net bakiyesi kaldırılacak ve ay normal hesaplamaya dönecek. Devam edilsin mi?',
+            okText: 'Kaldır',
+            okButtonProps: { danger: true },
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post('/system-data/clear_initial_balance/', {
+                        employee_id: selectedEmployee.id,
+                        year,
+                        month,
+                    });
+                    message.success('Başlangıç verisi kaldırıldı.');
+                    fetchBalanceSummary();
+                    fetchSettlementHistory();
+                } catch (e) {
+                    message.error('Hata: ' + extractErr(e));
+                }
+            },
         });
     };
 
@@ -387,9 +470,22 @@ export default function PersonelTab({ initialEmployee }) {
                     const bd = (balanceSummary.cumulative?.breakdown || []).find(b => b.month === fiscalMonth);
                     const isSettled = bd && bd.compensated !== 0;
 
+                    // Başlangıç (t=0) verisi: null = normal ay; non-null = bu ay için
+                    // girilmiş NET bakiye (saniye, +/-) — devire taşınan başlangıç değeri.
+                    const initialBalSec = balanceSummary.initial_balance_seconds;
+                    const hasInitialBalance = initialBalSec != null;
+
                     const fmtH = (sec) => { const totalMin = Math.round(Math.abs(sec) / 60); const h = Math.floor(totalMin / 60); const m = totalMin % 60; return `${h}:${String(m).padStart(2, '0')}`; };
                     const sign = (sec) => sec >= 0 ? '+' : '-';
                     const MNAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+                    // Mutabakat göstergesi — settlement_history'den türetilir: aktif
+                    // (geri alınmamış) mutabakat sayısı + sıfırlanan toplam saat.
+                    const activeSettlements = (settlementHistory || []).filter(s => !s.is_undone);
+                    const settledCount = activeSettlements.length;
+                    const settledTotalSec = activeSettlements.reduce(
+                        (sum, s) => sum + Math.abs(s.settled_amount_seconds || 0), 0
+                    );
 
                     return (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
@@ -399,9 +495,13 @@ export default function PersonelTab({ initialEmployee }) {
                                     <h3 className="font-bold text-slate-700 text-sm">
                                         Aylık Bakiye Özeti — {MNAMES[fiscalMonth]} {balanceSummary.fiscal_year || _renderCmParts.year}
                                     </h3>
-                                    {isSettled && (
+                                    {settledCount > 0 ? (
                                         <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                                            &#10003; Mutabakat Yapılmış
+                                            &#10003; Mutabakat: {settledCount} kez · toplam {(settledTotalSec / 3600).toFixed(1)} sa sıfırlandı
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                                            Mutabakat yok
                                         </span>
                                     )}
                                 </div>
@@ -413,6 +513,32 @@ export default function PersonelTab({ initialEmployee }) {
                                 >
                                     {isSettled ? 'Mutabakat Düzenle' : 'Mutabakat Yap'}
                                 </Button>
+                            </div>
+
+                            {/* ── Başlangıç (t=0) ay verisi kontrolü ──────────── */}
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                {hasInitialBalance ? (
+                                    <>
+                                        <span className="text-[11px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
+                                            Başlangıç (t=0): net {sign(initialBalSec)}{(Math.abs(initialBalSec) / 3600).toFixed(1)} sa
+                                        </span>
+                                        <Button size="small" onClick={openInitialBalance}>
+                                            Düzenle
+                                        </Button>
+                                        <Button size="small" danger onClick={handleClearInitialBalance}>
+                                            Kaldır
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        size="small"
+                                        type="dashed"
+                                        onClick={openInitialBalance}
+                                        className="!text-slate-500"
+                                    >
+                                        Başlangıç (t=0) Verisi Gir
+                                    </Button>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -479,6 +605,8 @@ export default function PersonelTab({ initialEmployee }) {
                                 date={selectedDate}
                                 onSaveSuccess={handleSaveSuccess}
                                 onStageOp={addOp}
+                                autoApproveOt={autoApproveOt}
+                                onAutoApproveOtChange={setAutoApproveOt}
                             />
                         ) : (
                             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400">
@@ -526,7 +654,17 @@ export default function PersonelTab({ initialEmployee }) {
                     isOpen={settlementData?.isOpen}
                     onClose={() => setSettlementData(null)}
                     data={settlementData}
-                    onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); }}
+                    onSaveSuccess={() => { fetchMonthlyData(); fetchBalanceSummary(); fetchSettlementHistory(); }}
+                />
+            )}
+
+            {/* Başlangıç (t=0) ay verisi modal'ı */}
+            {selectedEmployee && (
+                <InitialBalanceModal
+                    isOpen={initialBalanceData?.isOpen}
+                    onClose={() => setInitialBalanceData(null)}
+                    data={initialBalanceData}
+                    onSaveSuccess={() => { fetchBalanceSummary(); fetchSettlementHistory(); }}
                 />
             )}
 
