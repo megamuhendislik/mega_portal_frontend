@@ -4,6 +4,7 @@ import {
     Layers, ArrowDownLeft, CalendarCheck, Search, X
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
@@ -41,6 +42,7 @@ const TAB_ALIASES = {
 };
 
 const Requests = () => {
+    const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -60,6 +62,7 @@ const Requests = () => {
     // APPROVAL_* tüm rollere verildiği için yönetici tespitinde kullanılmaz;
     // gerçek yönetici = subordinate'i olan kişi
     const isManager = hasAnyTeam;
+    const isSubstitute = (user?.substitute_delegated_employee_ids?.length || 0) > 0;
 
     // Badge for incoming tab
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);
@@ -147,7 +150,7 @@ const Requests = () => {
                     Kendi Taleplerim
                 </TabButton>
 
-                {(isManager || teamCountsLoading) && (
+                {(isManager || isSubstitute || teamCountsLoading) && (
                     <TabButton
                         active={activeTab === 'incoming_requests'}
                         onClick={() => handleTabChange('incoming_requests')}
@@ -181,7 +184,7 @@ const Requests = () => {
                     )}
                 </div>
 
-                {(isManager || teamCountsLoading) && (
+                {(isManager || isSubstitute || teamCountsLoading) && (
                     <div style={{ display: activeTab === 'incoming_requests' ? 'block' : 'none' }}>
                         {mountedTabs.incoming_requests && (
                             <IncomingRequestsTab
