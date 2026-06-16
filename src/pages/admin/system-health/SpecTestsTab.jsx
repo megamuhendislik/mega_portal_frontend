@@ -158,10 +158,10 @@ const DOMAINS = [
   },
   {
     key: 'gate_anomaly',
-    label: 'Gate Anomali Temizliği',
+    label: 'Gate Eşleştirme (Çift-IN Önleme)',
     icon: <SafetyCertificateOutlined />,
     color: '#d4380d',
-    description: 'Çift-IN/aynı-OUT overlapping duplicate + saniyelik gürültü kart kayıtları: TYR + gece-02:30 temizler (apaçık-imkansız çöp, no_card_guessing uyumlu); gate ingestion içerdeyken 2. IN ignore + self-heal consumed-guard (kaynakta önler)',
+    description: 'Çift-IN/aynı-OUT overlapping phantom KAYNAKTA önlenir: içerdeyken gelen sahte 2. IN ignore + self-heal consumed-guard. KART VERİSİ SİLİNMEZ — mevcut çakışan kayıtlar recalc\'ta hesaba katılmaz (parent tam, kopya 0/0/0) ama korunur',
   },
 ];
 
