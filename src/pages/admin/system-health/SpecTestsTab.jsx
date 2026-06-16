@@ -149,6 +149,13 @@ const DOMAINS = [
     color: '#13c2c2',
     description: 'İzin bakiye sayaçları (mazeret/yıllık/avans) drift tespiti + recompute "Düzelt"; onaylı izin PUT/DELETE guard; avans izin grant + 1-yıl expiry + yıldönümü limit-sıfır/borç-carry + negatif bakiye',
   },
+  {
+    key: 'holiday_ot',
+    label: 'Tatil Çoklu OT',
+    icon: <FieldTimeOutlined />,
+    color: '#08979c',
+    description: 'Tatil/off-day çoklu OT seansı: onaylı OT dağıtımı pencereyle sınırlı — pencere dışı POTENTIAL seans onaylı havuzdan pay çalmaz, onaylı seans tam payını alır (256→72dk bug fix)',
+  },
 ];
 
 const STATUS_CONFIG = {
