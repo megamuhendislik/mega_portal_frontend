@@ -156,6 +156,13 @@ const DOMAINS = [
     color: '#08979c',
     description: 'Tatil/off-day çoklu OT seansı: onaylı OT dağıtımı pencereyle sınırlı — pencere dışı POTENTIAL seans onaylı havuzdan pay çalmaz, onaylı seans tam payını alır (256→72dk bug fix)',
   },
+  {
+    key: 'gate_anomaly',
+    label: 'Gate Anomali Temizliği',
+    icon: <SafetyCertificateOutlined />,
+    color: '#d4380d',
+    description: 'Çift-IN/aynı-OUT overlapping duplicate + saniyelik gürültü kart kayıtları: TYR + gece-02:30 temizler (apaçık-imkansız çöp, no_card_guessing uyumlu); gate ingestion içerdeyken 2. IN ignore + self-heal consumed-guard (kaynakta önler)',
+  },
 ];
 
 const STATUS_CONFIG = {
