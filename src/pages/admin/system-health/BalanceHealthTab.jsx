@@ -366,6 +366,31 @@ function DetailPanel({ detail, fixing, onFix, grantLimit, setGrantLimit, grantin
         ]}
       />
 
+      {(excuse?.cancelled_rejected?.length > 0) && (
+        <Table
+          size="small"
+          rowKey="request_id"
+          style={{ marginTop: 12 }}
+          title={() => (
+            <Text type="secondary">
+              İptal / Red edilen mazeret talepleri ({excuse?.focus_year}) — bakiyeleri iade
+              edilmiş olmalı; sapma varsa "Düzelt" gerçeğe eşitler
+            </Text>
+          )}
+          dataSource={excuse.cancelled_rejected}
+          pagination={{ pageSize: 5, hideOnSinglePage: true }}
+          columns={[
+            { title: 'Tarih', dataIndex: 'date', key: 'date' },
+            {
+              title: 'Durum', dataIndex: 'status', key: 'st',
+              render: (s) => <Tag color={s === 'CANCELLED' ? 'orange' : 'red'}>{s === 'CANCELLED' ? 'İptal' : 'Red'}</Tag>,
+            },
+            { title: 'Düşülmüştü', dataIndex: 'deducted_hours', key: 'd', render: fmtH },
+            { title: 'Sebep', dataIndex: 'reason', key: 'reason', ellipsis: true },
+          ]}
+        />
+      )}
+
       {/* ---- YILLIK + AVANS ---- */}
       <Divider orientation="left" style={{ margin: '20px 0 12px' }}>
         <Space><WalletOutlined /> Yıllık İzin & Avans</Space>
