@@ -325,9 +325,68 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Override detail modal (from ExpandableRequestRow "Karar Değiştir" button)
     const handleViewDetail = (req) => {
+        // Vekil (substitute) kalemleri için karar değiştirme: generic override_decision
+        // endpoint'i vekil bağlamını (acting_as_substitute_for) taşımadığından,
+        // mevcut handleSubstitute* handler'larıyla kararı TERS çeviririz.
+        if (req._isSubstitute) {
+            return handleSubstituteOverride(req);
+        }
         setSelectedRequest(req);
         setSelectedRequestType(req._type || req.type);
         setShowDetailModal(true);
+    };
+
+    // Vekil karar değiştirme: APPROVED → REJECT, REJECTED → APPROVE (zıt aksiyon).
+    // Normal override akışındaki gibi reddetmede gerekçe ister.
+    const handleSubstituteOverride = (req) => {
+        const isApproved = req.status === 'APPROVED';
+        if (isApproved) {
+            // Onaylı → Reddet (gerekçe iste)
+            let reasonVal = '';
+            Modal.confirm({
+                title: 'Vekil Kararını Değiştir',
+                content: (
+                    <div className="space-y-2">
+                        <p className="text-sm text-slate-600">
+                            Bu talep şu an <strong>onaylı</strong>. Değiştirildiğinde <strong>reddedilecek</strong>.
+                        </p>
+                        <input
+                            type="text"
+                            autoFocus
+                            placeholder="Reddetme gerekçesi..."
+                            onChange={(e) => { reasonVal = e.target.value; }}
+                            className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                        />
+                    </div>
+                ),
+                okText: 'Değiştir (Reddet)',
+                cancelText: 'Vazgeç',
+                okButtonProps: { danger: true },
+                onOk: async () => {
+                    if (!reasonVal.trim()) {
+                        message.warning('Gerekçe zorunludur');
+                        return Promise.reject(new Error('reason required'));
+                    }
+                    await handleSubstituteReject(req, reasonVal.trim());
+                    await fetchAllData(undefined, { forceRefresh: true });
+                    onDataChange?.();
+                },
+            });
+        } else {
+            // Reddedilmiş → Onayla
+            Modal.confirm({
+                title: 'Vekil Kararını Değiştir',
+                content: 'Bu talep şu an reddedilmiş. Değiştirildiğinde onaylanacak. Onaylamak istediğinize emin misiniz?',
+                okText: 'Değiştir (Onayla)',
+                cancelText: 'Vazgeç',
+                okButtonProps: { danger: false },
+                onOk: async () => {
+                    await handleSubstituteApprove(req);
+                    await fetchAllData(undefined, { forceRefresh: true });
+                    onDataChange?.();
+                },
+            });
+        }
     };
 
     // --- Normalize helper ---
@@ -386,19 +445,23 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
         });
 
-        // Substitute requests (always in pending section)
+        // Substitute requests (always in pending section) — ONLY still-pending ones.
+        // Decided substitute items (can_override) are surfaced separately via substituteDecided.
         if (substituteData) {
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
+                if (r.status && r.status !== 'PENDING') return; // decided → substituteDecided
                 const key = `LEAVE-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     const principal = authorities.find(a => a.principal === r.principal_id);
+                    const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
+                    const realDept = r.employee_department || r.employee_detail?.department_name || '';
                     items.push({
                         ...r,
                         type: 'LEAVE',
                         employee_name: r.employee_name || r.employee_detail?.full_name || '',
-                        employee_department: r.employee_department || r.employee_detail?.department_name || '',
+                        employee_department: realDept ? `${subLabel} · ${realDept}` : subLabel,
                         target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
                         start_date: r.start_date || r.date,
                         leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
@@ -410,15 +473,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 }
             });
             (substituteData.overtime_requests || []).forEach(r => {
+                if (r.status && r.status !== 'PENDING') return; // decided → substituteDecided
                 const key = `OVERTIME-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     const principal = authorities.find(a => a.principal === r.principal_id);
+                    const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
                     items.push({
                         ...r,
                         type: 'OVERTIME',
                         employee_name: r.employee_name || r.employee_detail?.full_name || '',
-                        employee_department: '',
+                        employee_department: subLabel,
                         target_approver_name: r.target_approver_name || '',
                         start_date: r.date,
                         _source: 'SUBSTITUTE',
@@ -429,15 +494,17 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 }
             });
             (substituteData.cardless_entry_requests || []).forEach(r => {
+                if (r.status && r.status !== 'PENDING') return; // decided → substituteDecided
                 const key = `CARDLESS_ENTRY-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     const principal = authorities.find(a => a.principal === r.principal_id);
+                    const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
                     items.push({
                         ...r,
                         type: 'CARDLESS_ENTRY',
                         employee_name: r.employee_name || r.employee_detail?.full_name || '',
-                        employee_department: '',
+                        employee_department: subLabel,
                         target_approver_name: r.target_approver_name || '',
                         start_date: r.date,
                         _source: 'SUBSTITUTE',
@@ -452,6 +519,53 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
     }, [allTeamNormalized, substituteData]);
+
+    // --- SUBSTITUTE DECIDED: vekil kalemlerinden karar verilmiş (APPROVED/REJECTED) olanlar ---
+    // Bunlar Onayla/Reddet yerine mevcut durumlarını + "Değiştir" (kararı ters çevir) gösterir.
+    const substituteDecided = useMemo(() => {
+        if (!substituteData) return [];
+        const authorities = substituteData.authorities || [];
+        const items = [];
+        const buildItem = (r, type, extra = {}) => {
+            const principal = authorities.find(a => a.principal === r.principal_id);
+            const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
+            return {
+                ...r,
+                type,
+                employee_name: r.employee_name || r.employee_detail?.full_name || '',
+                employee_department: subLabel,
+                target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
+                _source: 'SUBSTITUTE',
+                _isSubstitute: true,
+                _principalName: principal?.principal_name || '',
+                // Decided items: not plain-actionable; override via "Değiştir".
+                is_actionable: false,
+                can_override: true,
+                ...extra,
+            };
+        };
+        (substituteData.leave_requests || []).forEach(r => {
+            if (!r.status || r.status === 'PENDING') return;
+            const principal = authorities.find(a => a.principal === r.principal_id);
+            const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
+            const realDept = r.employee_department || r.employee_detail?.department_name || '';
+            items.push(buildItem(r, 'LEAVE', {
+                employee_department: realDept ? `${subLabel} · ${realDept}` : subLabel,
+                start_date: r.start_date || r.date,
+                leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
+            }));
+        });
+        (substituteData.overtime_requests || []).forEach(r => {
+            if (!r.status || r.status === 'PENDING') return;
+            items.push(buildItem(r, 'OVERTIME', { start_date: r.date }));
+        });
+        (substituteData.cardless_entry_requests || []).forEach(r => {
+            if (!r.status || r.status === 'PENDING') return;
+            items.push(buildItem(r, 'CARDLESS_ENTRY', { start_date: r.date }));
+        });
+        items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
+        return items;
+    }, [substituteData]);
 
     // Notify parent about pending count
     const pendingCount = useMemo(() => {
@@ -655,6 +769,43 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             return true;
         });
     }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter]);
+
+    // Filtered decided substitute items (for "Vekâleten — Karar Verilmiş" section)
+    const filteredSubstituteDecided = useMemo(() => {
+        // Vekil karar-verilmiş kalemler yalnız birincil ekipte gösterilir (vekalet akışı)
+        if (activeSubTab !== 'primary_team') return [];
+        return substituteDecided.filter(r => {
+            if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
+            if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
+            if (statusFilter !== 'ALL') {
+                const statusGroup = { 'ORDERED': 'APPROVED' };
+                const effectiveStatus = statusGroup[r.status] || r.status;
+                if (effectiveStatus !== statusFilter) return false;
+            }
+            if (effectiveSearch) {
+                const s = effectiveSearch.toLowerCase();
+                const fields = [
+                    r.employee_name, r.employee_department, r.leave_type_name,
+                    r.reason, r.target_approver_name, r.approved_by_name,
+                    String(r.request_id || r.id || ''),
+                ];
+                if (!fields.some(f => f && String(f).toLowerCase().includes(s))) return false;
+            }
+            if (dateFrom) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr < dateFrom) return false;
+            }
+            if (dateTo) {
+                const reqDateStr = (r.start_date || r.date || r.created_at || '').substring(0, 10);
+                if (reqDateStr && reqDateStr > dateTo) return false;
+            }
+            if (personFilter !== 'ALL') {
+                const empId = String(r.employee_id || r.employee || '');
+                if (empId !== personFilter) return false;
+            }
+            return true;
+        });
+    }, [activeSubTab, substituteDecided, typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // All team filtered items (for "Ekip Talepleri" section — ALL statuses)
     const allTeamFiltered = useMemo(() => {
@@ -906,7 +1057,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             </div>
 
             {/* Request list */}
-            {filteredPendingActionable.length === 0 && allTeamFiltered.length === 0 ? (
+            {filteredPendingActionable.length === 0 && allTeamFiltered.length === 0 && filteredSubstituteDecided.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
                         <Users size={32} className="text-slate-300" />
@@ -996,6 +1147,57 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Vekâleten — Karar Verilmiş: status + "Değiştir" (kararı ters çevir) */}
+                    {filteredSubstituteDecided.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+                            <div className="px-4 py-3 border-b border-blue-100 bg-blue-50/40">
+                                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                                    <Shield size={14} />
+                                    Vekâleten — Karar Verilmiş ({filteredSubstituteDecided.length})
+                                    <Tooltip title="Vekil olarak karar verdiğiniz talepler. 'Değiştir' butonu ile önceki kararı ters çevirebilirsiniz (onaylıyı reddet, reddedileni onayla).">
+                                        <Info size={14} className="text-slate-400 cursor-help inline-block ml-1" />
+                                    </Tooltip>
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider">
+                                            <th className="pl-3 pr-1 py-2 w-8"></th>
+                                            <th className="px-3 py-2 font-bold">Talep Eden</th>
+                                            <th className="px-3 py-2 font-bold">Tür</th>
+                                            <th className="px-3 py-2 font-bold">Tarih</th>
+                                            <th className="px-3 py-2 font-bold">Saat Aralığı</th>
+                                            <th className="px-3 py-2 font-bold">Süre</th>
+                                            <th className="px-3 py-2 font-bold">Durum</th>
+                                            <th className="px-3 py-2 font-bold">Talep Edilen</th>
+                                            <th className="px-3 py-2 font-bold text-right">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredSubstituteDecided.map(req => (
+                                            <ExpandableRequestRow
+                                                key={`subdec-${req.type}-${req.id}`}
+                                                req={req}
+                                                isExpanded={expandedId === `subdec-${req.type}-${req.id}`}
+                                                onToggle={() => {
+                                                    const key = `subdec-${req.type}-${req.id}`;
+                                                    setExpandedId(prev => prev === key ? null : key);
+                                                }}
+                                                onViewDetails={handleViewDetails}
+                                                onViewDetail={handleViewDetail}
+                                                onApprove={wrapApprove}
+                                                onReject={wrapReject}
+                                                showEmployeeColumn={true}
+                                                mode="incoming"
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
