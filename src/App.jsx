@@ -18,6 +18,7 @@ const PublicHolidays = lazyRetry(() => import('./pages/PublicHolidays'));
 const AttendanceTracking = lazyRetry(() => import('./pages/AttendanceTracking'));
 const TeamAnalytics = lazyRetry(() => import('./pages/attendance-tracking/analytics/TeamAnalytics'));
 const Reports = lazyRetry(() => import('./pages/Reports'));
+const AccountingPanel = lazyRetry(() => import('./pages/AccountingPanel'));
 const SystemHealth = lazyRetry(() => import('./pages/admin/SystemHealth'));
 const AttendanceDebugger = lazyRetry(() => import('./pages/admin/AttendanceDebugger'));
 const ServiceControl = lazyRetry(() => import('./pages/ServiceControl'));
@@ -129,6 +130,9 @@ function App() {
 
             {/* Reports - Requires PAGE_REPORTS */}
             <Route path="reports" element={<ProtectedRoute requiredPermission="PAGE_REPORTS"><Suspense fallback={<PageLoader />}><Reports /></Suspense></ProtectedRoute>} />
+
+            {/* Accounting Panel - Requires PAGE_ACCOUNTING */}
+            <Route path="accounting" element={<ProtectedRoute requiredPermission="PAGE_ACCOUNTING"><Suspense fallback={<PageLoader />}><AccountingPanel /></Suspense></ProtectedRoute>} />
 
 
 
