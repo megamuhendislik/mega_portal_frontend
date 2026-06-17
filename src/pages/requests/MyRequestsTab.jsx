@@ -88,6 +88,9 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     const [hideCancelled, setHideCancelled] = useState(() => {
         try { return localStorage.getItem('myreqs_hide_cancelled') !== 'false'; } catch { return true; /* ignore */ }
     });
+    const [hideRejected, setHideRejected] = useState(() => {
+        try { return localStorage.getItem('myreqs_hide_rejected') === 'true'; } catch { return false; /* default: göster */ }
+    });
     const [claimingId, setClaimingId] = useState(null);
 
     // Modal states
@@ -473,9 +476,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             }
             if (!showPotential && r.status === 'POTENTIAL') return false;
             if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
+            if (hideRejected && r.status === 'REJECTED') return false;
             return true;
         });
-    }, [allMyRequests, typeFilter, statusFilter, showPotential, hideCancelled, dateFrom, dateTo, searchText]);
+    }, [allMyRequests, typeFilter, statusFilter, showPotential, hideCancelled, hideRejected, dateFrom, dateTo, searchText]);
 
     const counts = useMemo(() => {
         const dateFiltered = allMyRequests.filter(r => {
@@ -518,7 +522,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     }, [handleEditOvertimeClick, handleViewDetails]);
 
     // Reset page when filters change
-    useEffect(() => { setCurrentPage(1); }, [typeFilter, statusFilter, showPotential, dateFrom, dateTo, searchText]);
+    useEffect(() => { setCurrentPage(1); }, [typeFilter, statusFilter, showPotential, hideCancelled, hideRejected, dateFrom, dateTo, searchText]);
 
     // Pagination
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -631,6 +635,10 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
                         <input type="checkbox" checked={hideCancelled} onChange={(e) => { setHideCancelled(e.target.checked); try { localStorage.setItem('myreqs_hide_cancelled', e.target.checked); } catch { /* ignore */ } }} className="w-3.5 h-3.5 text-blue-600 rounded" />
                         İptal Edilenleri Gizle
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-full cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                        <input type="checkbox" checked={hideRejected} onChange={(e) => { setHideRejected(e.target.checked); try { localStorage.setItem('myreqs_hide_rejected', e.target.checked); } catch { /* ignore */ } }} className="w-3.5 h-3.5 text-blue-600 rounded" />
+                        Reddedilenleri Gizle
                     </label>
                 </div>
             </div>
