@@ -42,6 +42,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const [hideCancelled, setHideCancelled] = useState(() => {
         try { return localStorage.getItem('incoming_hide_cancelled') !== 'false'; } catch { return true; }
     });
+    const [hideRejected, setHideRejected] = useState(() => {
+        try { return localStorage.getItem('incoming_hide_rejected') === 'true'; } catch { return false; /* default: göster */ }
+    });
     const [searchText, setSearchText] = useState('');
     const [dateFrom, setDateFrom] = useState(null);
     const [dateTo, setDateTo] = useState(null);
@@ -696,6 +699,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (r.status === 'POTENTIAL') return false;
             // Hide cancelled when checkbox is checked
             if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
+            // Hide rejected when checkbox is checked
+            if (hideRejected && r.status === 'REJECTED') return false;
             if (statusFilter !== 'ALL') {
                 const statusGroup = { 'ORDERED': 'APPROVED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
@@ -727,7 +732,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [currentItems, typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter]);
+    }, [currentItems, typeFilter, statusFilter, hideCancelled, hideRejected, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // Filtered pending actionable items (for "Onay Bekleyen" section)
     const filteredPendingActionable = useMemo(() => {
@@ -739,6 +744,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
             if (r.status === 'POTENTIAL') return false;
             if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
+            if (hideRejected && r.status === 'REJECTED') return false;
             if (statusFilter !== 'ALL') {
                 const statusGroup = { 'ORDERED': 'APPROVED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
@@ -768,7 +774,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter]);
+    }, [activeSubTab, filtered, pendingActionable, typeFilter, statusFilter, hideCancelled, hideRejected, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // Filtered decided substitute items (for "Vekâleten — Karar Verilmiş" section)
     const filteredSubstituteDecided = useMemo(() => {
@@ -777,6 +783,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         return substituteDecided.filter(r => {
             if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
             if (hideCancelled && ['CANCELLED', 'CANCELED'].includes(r.status)) return false;
+            if (hideRejected && r.status === 'REJECTED') return false;
             if (statusFilter !== 'ALL') {
                 const statusGroup = { 'ORDERED': 'APPROVED' };
                 const effectiveStatus = statusGroup[r.status] || r.status;
@@ -805,7 +812,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             }
             return true;
         });
-    }, [activeSubTab, substituteDecided, typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter]);
+    }, [activeSubTab, substituteDecided, typeFilter, statusFilter, hideCancelled, hideRejected, effectiveSearch, dateFrom, dateTo, personFilter]);
 
     // All team filtered items (for "Ekip Talepleri" section — ALL statuses)
     const allTeamFiltered = useMemo(() => {
@@ -817,7 +824,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     }, [activeSubTab, filtered]);
 
     // Reset pagination when filters change
-    useEffect(() => { setPendingPage(1); setTeamPage(1); }, [typeFilter, statusFilter, hideCancelled, effectiveSearch, dateFrom, dateTo, personFilter, activeSubTab]);
+    useEffect(() => { setPendingPage(1); setTeamPage(1); }, [typeFilter, statusFilter, hideCancelled, hideRejected, effectiveSearch, dateFrom, dateTo, personFilter, activeSubTab]);
 
     // Paginated pending
     const pendingTotalPages = Math.max(1, Math.ceil(filteredPendingActionable.length / PAGE_SIZE));
@@ -1052,6 +1059,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
                         <input type="checkbox" checked={hideCancelled} onChange={(e) => { setHideCancelled(e.target.checked); try { localStorage.setItem('incoming_hide_cancelled', e.target.checked); } catch { /* ignore */ } }} className="w-3.5 h-3.5 text-blue-600 rounded" />
                         İptal Edilenleri Gizle
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                        <input type="checkbox" checked={hideRejected} onChange={(e) => { setHideRejected(e.target.checked); try { localStorage.setItem('incoming_hide_rejected', e.target.checked); } catch { /* ignore */ } }} className="w-3.5 h-3.5 text-blue-600 rounded" />
+                        Reddedilenleri Gizle
                     </label>
                 </div>
             </div>
