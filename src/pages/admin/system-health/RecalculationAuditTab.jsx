@@ -67,6 +67,7 @@ export default function RecalculationAuditTab() {
     const [frcResult, setFrcResult] = useState(null);
     const [frcError, setFrcError] = useState(null);
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
+    const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
     const [showAllDays, setShowAllDays] = useState(false);
 
@@ -453,6 +454,14 @@ export default function RecalculationAuditTab() {
 
     const toggleFrcDay = (key) => {
         setFrcExpandedDays(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    };
+
+    const toggleFrcMonth = (key) => {
+        setFrcExpandedMonths(prev => {
             const next = new Set(prev);
             next.has(key) ? next.delete(key) : next.add(key);
             return next;
@@ -1581,173 +1590,70 @@ export default function RecalculationAuditTab() {
 
                                     {/* Employee Detail */}
                                     {frcExpandedEmps.has(emp.id) && (
-                                        <div className="p-4 space-y-4 bg-white">
-                                            {/* Days */}
-                                            {emp.days?.map((day) => {
-                                                const dayKey = `${emp.id}-${day.date}`;
-                                                return (
-                                                    <div key={day.date} className="border border-gray-200 rounded-lg overflow-hidden">
-                                                        {/* Day Header */}
-                                                        <button
-                                                            onClick={() => toggleFrcDay(dayKey)}
-                                                            className="w-full flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-                                                        >
-                                                            <div className="flex items-center gap-2 text-xs">
-                                                                <span className="font-bold text-gray-800">{day.date}</span>
-                                                                <span className="text-gray-500">{day.wd}</span>
-                                                                {day.rules?.off && (
-                                                                    <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[9px] font-bold">TATIL</span>
-                                                                )}
-                                                                {day.rules?.hol && (
-                                                                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold">{day.rules.hol}</span>
-                                                                )}
-                                                                <span className="text-gray-400">|</span>
-                                                                {day.ch?.map((c, ci) => (
-                                                                    <span key={ci} className="text-gray-600">{c}</span>
-                                                                ))}
-                                                            </div>
-                                                            {frcExpandedDays.has(dayKey) ?
-                                                                <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" /> :
-                                                                <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" />
-                                                            }
-                                                        </button>
-
-                                                        {/* Day Detail */}
-                                                        {frcExpandedDays.has(dayKey) && (
-                                                            <div className="p-3 space-y-3 border-t border-gray-100">
-                                                                {/* Rules */}
-                                                                <div className="flex flex-wrap gap-3 text-[11px] text-gray-600 bg-slate-50 p-2 rounded">
-                                                                    <span>Vardiya: {day.rules?.shift || '-'}</span>
-                                                                    <span>Ogle: {day.rules?.lunch || '-'}</span>
-                                                                    <span>Tolerans: {day.rules?.tol || 0}dk</span>
-                                                                    <span>Mola: {day.rules?.brk || 0}dk</span>
+                                        <div className="p-4 space-y-3 bg-white">
+                                            {/* Çalışan → Aylar (geçmiş dahil) → Günler ağacı */}
+                                            {(() => {
+                                                const dayMonths = (emp.days || []).map(d => (d.date || '').slice(0, 7));
+                                                const sumMonths = [...Object.keys(emp.mb || {}), ...Object.keys(emp.ma || {})];
+                                                const months = [...new Set([...dayMonths, ...sumMonths].filter(Boolean))].sort();
+                                                if (months.length === 0) {
+                                                    return <div className="text-[11px] text-gray-400 italic">Bu aralikta veri yok.</div>;
+                                                }
+                                                return months.map((mk) => {
+                                                    const monthKey = `${emp.id}-${mk}`;
+                                                    const a = emp.ma?.[mk];
+                                                    const b = emp.mb?.[mk];
+                                                    const monthDays = (emp.days || []).filter(d => (d.date || '').slice(0, 7) === mk);
+                                                    const mExpanded = frcExpandedMonths.has(monthKey);
+                                                    return (
+                                                        <div key={mk} className="border border-indigo-200 rounded-lg overflow-hidden">
+                                                            {/* Ay Başlığı — kümülatif (devir) + net + özet rozetleri */}
+                                                            <button
+                                                                onClick={() => toggleFrcMonth(monthKey)}
+                                                                className="w-full flex items-center justify-between p-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
+                                                            >
+                                                                <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                                                                    <span className="font-bold text-indigo-900 text-xs">{mk}</span>
+                                                                    <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-800 rounded-full text-[9px] font-bold">{monthDays.length} gün</span>
+                                                                    {a && (
+                                                                        <>
+                                                                            <span className="text-indigo-700">Kümülatif (devir): <b>{fmtSeconds(a.cum)}</b></span>
+                                                                            <span className="text-indigo-700">Net: <b>{fmtSeconds(a.nb)}</b></span>
+                                                                            <span className="text-gray-600">Mesai: {fmtSeconds(a.ot)}</span>
+                                                                            <span className="text-gray-600">Eksik: {fmtSeconds(a.mis)}</span>
+                                                                            <span className="text-gray-600">Toplam İş: {fmtSeconds(a.tw)}</span>
+                                                                        </>
+                                                                    )}
                                                                 </div>
-
-                                                                {/* Requests */}
-                                                                {day.reqs?.length > 0 && (
-                                                                    <div>
-                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Talepler</h6>
-                                                                        <div className="flex flex-wrap gap-1.5">
-                                                                            {day.reqs.map((r, ri) => (
-                                                                                <span key={ri} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                                                    r.st === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                                                                    r.st === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                                                                    r.st === 'POTENTIAL' ? 'bg-blue-100 text-blue-700' :
-                                                                                    r.st === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                                                                                    'bg-gray-100 text-gray-700'
-                                                                                }`}>
-                                                                                    [{r.st}] {r.tp}{r.nm ? ` ${r.nm}` : ''} {r.s}-{r.e}
-                                                                                    {r.d ? ` (${fmtSeconds(r.d)})` : ''}
-                                                                                </span>
+                                                                {mExpanded ?
+                                                                    <ChevronUpIcon className="w-4 h-4 text-indigo-400" /> :
+                                                                    <ChevronDownIcon className="w-4 h-4 text-indigo-400" />
+                                                                }
+                                                            </button>
+                                                            {/* Ay Detayı — aylık özet (hesap dökümü) + günler */}
+                                                            {mExpanded && (
+                                                                <div className="p-3 space-y-3 border-t border-indigo-100 bg-white">
+                                                                    <FrcMonthSummary b={b} a={a} />
+                                                                    {monthDays.length > 0 ? (
+                                                                        <div className="space-y-2">
+                                                                            {monthDays.map((day) => (
+                                                                                <FrcDayCard
+                                                                                    key={day.date}
+                                                                                    day={day}
+                                                                                    expanded={frcExpandedDays.has(`${emp.id}-${day.date}`)}
+                                                                                    onToggle={() => toggleFrcDay(`${emp.id}-${day.date}`)}
+                                                                                />
                                                                             ))}
                                                                         </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Before / After Tables */}
-                                                                <div className="grid grid-cols-2 gap-3">
-                                                                    <FrcRecordTable title="ONCE" data={day.before} color="gray" />
-                                                                    <FrcRecordTable title="SONRA" data={day.after} color="violet" />
+                                                                    ) : (
+                                                                        <div className="text-[11px] text-gray-400 italic">Bu ay icin gun detayi yok (yalnizca aylik ozet).</div>
+                                                                    )}
                                                                 </div>
-
-                                                                {/* Changes */}
-                                                                {day.ch?.length > 0 && (
-                                                                    <div className="p-2 bg-amber-50 border border-amber-200 rounded">
-                                                                        <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1">Degisiklikler</h6>
-                                                                        {day.ch.map((c, ci) => (
-                                                                            <div key={ci} className="text-[11px] text-amber-800 font-mono">{c}</div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Ham Kart Olaylari (Gate) — elle dogrulama icin */}
-                                                                {day.gate_events?.length > 0 && (
-                                                                    <div>
-                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                                                            Ham Kart (Gate) — {day.gate_events.length} olay
-                                                                        </h6>
-                                                                        <div className="flex flex-wrap gap-1.5">
-                                                                            {day.gate_events.map((g, gi) => (
-                                                                                <span key={gi} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                                                                                    g.dir === 'IN' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                                                                    'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                                }`}>
-                                                                                    {g.ts} {g.dir}{g.st && g.st !== 'PROCESSED' ? ` (${g.st})` : ''}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Hesap Detayi (motor loglari) — bucket/deficit/split/mola, elle dogrulama */}
-                                                                {day.logs?.length > 0 && (
-                                                                    <details className="bg-slate-900 rounded">
-                                                                        <summary className="cursor-pointer text-[10px] font-bold text-slate-300 uppercase px-2 py-1.5 select-none">
-                                                                            Hesap Detayi (motor) — {day.logs.length} satir
-                                                                        </summary>
-                                                                        <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono p-2 overflow-x-auto whitespace-pre-wrap">
-{day.logs.join('\n')}
-                                                                        </pre>
-                                                                    </details>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {/* Monthly Summary Diff */}
-                                            {emp.mb && emp.ma && (
-                                                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                                    <h6 className="text-[10px] font-bold text-indigo-700 uppercase mb-2">Aylik Ozet Degisiklikleri</h6>
-                                                    {Object.keys({ ...emp.mb, ...emp.ma }).sort().map((key) => {
-                                                        const b = emp.mb[key];
-                                                        const a = emp.ma[key];
-                                                        if (!b && !a) return null;
-                                                        return (
-                                                            <div key={key} className="mb-2">
-                                                                <div className="text-xs font-bold text-indigo-800 mb-1">{key}</div>
-                                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                                                                    <FrcMonthlyField label="Tamamlanan" before={b?.cmp} after={a?.cmp} />
-                                                                    <FrcMonthlyField label="Mesai" before={b?.ot} after={a?.ot} />
-                                                                    <FrcMonthlyField label="Eksik" before={b?.mis} after={a?.mis} />
-                                                                    <FrcMonthlyField label="Net Bakiye" before={b?.nb} after={a?.nb} />
-                                                                    <FrcMonthlyField label="Toplam Is" before={b?.tw} after={a?.tw} />
-                                                                    <FrcMonthlyField label="Kumulatif" before={b?.cum} after={a?.cum} />
-                                                                    <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} />
-                                                                    <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} />
-                                                                </div>
-                                                                {/* Hesap Dökümü (justification) — her metriğin nasıl hesaplandığı, elle doğrulama */}
-                                                                {a?.breakdown && (
-                                                                    <details className="mt-1.5">
-                                                                        <summary className="text-[10px] font-bold text-indigo-600 uppercase cursor-pointer select-none hover:text-indigo-800">
-                                                                            Hesap Dökümü (nasıl hesaplandı?)
-                                                                        </summary>
-                                                                        <div className="mt-1 p-2 bg-white/70 border border-indigo-100 rounded space-y-1">
-                                                                            {[
-                                                                                ['Hedef', a.breakdown.tgt],
-                                                                                ['Tamamlanan', a.breakdown.cmp],
-                                                                                ['Mesai', a.breakdown.ot],
-                                                                                ['Eksik', a.breakdown.mis],
-                                                                                ['Izin', a.breakdown.lv],
-                                                                                ['Rapor', a.breakdown.hr],
-                                                                                ['Gorev', a.breakdown.duty],
-                                                                                ['Ozel Izin', a.breakdown.sl],
-                                                                                ['Net Bakiye', a.breakdown.nb],
-                                                                                ['Kumulatif', a.breakdown.cum],
-                                                                            ].filter(([, v]) => v).map(([lbl, v], bi) => (
-                                                                                <div key={bi} className="text-[11px] font-mono text-indigo-900 leading-snug">
-                                                                                    <span className="font-bold text-indigo-500">{lbl}:</span> {v}
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </details>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                                            )}
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     )}
                                 </div>
@@ -2149,6 +2055,150 @@ const SRC_COLORS = {
     SYSTEM: 'bg-slate-100 text-slate-700',
     SPECIAL_LEAVE: 'bg-teal-100 text-teal-700',
 };
+
+// Tek gün kartı (Ay → Gün ağacında kullanılır). expanded/onToggle dışarıdan.
+function FrcDayCard({ day, expanded, onToggle }) {
+    return (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+            >
+                <div className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-gray-800">{day.date}</span>
+                    <span className="text-gray-500">{day.wd}</span>
+                    {day.rules?.off && (
+                        <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[9px] font-bold">TATIL</span>
+                    )}
+                    {day.rules?.hol && (
+                        <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold">{day.rules.hol}</span>
+                    )}
+                    <span className="text-gray-400">|</span>
+                    {day.ch?.map((c, ci) => (
+                        <span key={ci} className="text-gray-600">{c}</span>
+                    ))}
+                </div>
+                {expanded ?
+                    <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" /> :
+                    <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" />
+                }
+            </button>
+            {expanded && (
+                <div className="p-3 space-y-3 border-t border-gray-100">
+                    <div className="flex flex-wrap gap-3 text-[11px] text-gray-600 bg-slate-50 p-2 rounded">
+                        <span>Vardiya: {day.rules?.shift || '-'}</span>
+                        <span>Ogle: {day.rules?.lunch || '-'}</span>
+                        <span>Tolerans: {day.rules?.tol || 0}dk</span>
+                        <span>Mola: {day.rules?.brk || 0}dk</span>
+                    </div>
+                    {day.reqs?.length > 0 && (
+                        <div>
+                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Talepler</h6>
+                            <div className="flex flex-wrap gap-1.5">
+                                {day.reqs.map((r, ri) => (
+                                    <span key={ri} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        r.st === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                        r.st === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                        r.st === 'POTENTIAL' ? 'bg-blue-100 text-blue-700' :
+                                        r.st === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }`}>
+                                        [{r.st}] {r.tp}{r.nm ? ` ${r.nm}` : ''} {r.s}-{r.e}
+                                        {r.d ? ` (${fmtSeconds(r.d)})` : ''}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                        <FrcRecordTable title="ONCE" data={day.before} color="gray" />
+                        <FrcRecordTable title="SONRA" data={day.after} color="violet" />
+                    </div>
+                    {day.ch?.length > 0 && (
+                        <div className="p-2 bg-amber-50 border border-amber-200 rounded">
+                            <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1">Degisiklikler</h6>
+                            {day.ch.map((c, ci) => (
+                                <div key={ci} className="text-[11px] text-amber-800 font-mono">{c}</div>
+                            ))}
+                        </div>
+                    )}
+                    {day.gate_events?.length > 0 && (
+                        <div>
+                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                                Ham Kart (Gate) — {day.gate_events.length} olay
+                            </h6>
+                            <div className="flex flex-wrap gap-1.5">
+                                {day.gate_events.map((g, gi) => (
+                                    <span key={gi} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                        g.dir === 'IN' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                        'bg-rose-50 text-rose-700 border border-rose-200'
+                                    }`}>
+                                        {g.ts} {g.dir}{g.st && g.st !== 'PROCESSED' ? ` (${g.st})` : ''}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {day.logs?.length > 0 && (
+                        <details className="bg-slate-900 rounded">
+                            <summary className="cursor-pointer text-[10px] font-bold text-slate-300 uppercase px-2 py-1.5 select-none">
+                                Hesap Detayi (motor) — {day.logs.length} satir
+                            </summary>
+                            <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono p-2 overflow-x-auto whitespace-pre-wrap">
+{day.logs.join('\n')}
+                            </pre>
+                        </details>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Aylık özet bloğu (Ay detayında): before→after diff grid + Hesap Dökümü.
+function FrcMonthSummary({ b, a }) {
+    if (!b && !a) return null;
+    return (
+        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <h6 className="text-[10px] font-bold text-indigo-700 uppercase mb-2">Aylik Ozet (Onceki → Sonraki)</h6>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <FrcMonthlyField label="Tamamlanan" before={b?.cmp} after={a?.cmp} />
+                <FrcMonthlyField label="Mesai" before={b?.ot} after={a?.ot} />
+                <FrcMonthlyField label="Eksik" before={b?.mis} after={a?.mis} />
+                <FrcMonthlyField label="Net Bakiye" before={b?.nb} after={a?.nb} />
+                <FrcMonthlyField label="Toplam Is" before={b?.tw} after={a?.tw} />
+                <FrcMonthlyField label="Kumulatif" before={b?.cum} after={a?.cum} />
+                <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} />
+                <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} />
+            </div>
+            {a?.breakdown && (
+                <details className="mt-1.5" open>
+                    <summary className="text-[10px] font-bold text-indigo-600 uppercase cursor-pointer select-none hover:text-indigo-800">
+                        Hesap Dökümü (nasıl hesaplandı?)
+                    </summary>
+                    <div className="mt-1 p-2 bg-white/70 border border-indigo-100 rounded space-y-1">
+                        {[
+                            ['Hedef', a.breakdown.tgt],
+                            ['Tamamlanan', a.breakdown.cmp],
+                            ['Mesai', a.breakdown.ot],
+                            ['Eksik', a.breakdown.mis],
+                            ['Izin', a.breakdown.lv],
+                            ['Rapor', a.breakdown.hr],
+                            ['Gorev', a.breakdown.duty],
+                            ['Ozel Izin', a.breakdown.sl],
+                            ['Net Bakiye', a.breakdown.nb],
+                            ['Kumulatif', a.breakdown.cum],
+                        ].filter(([, v]) => v).map(([lbl, v], bi) => (
+                            <div key={bi} className="text-[11px] font-mono text-indigo-900 leading-snug">
+                                <span className="font-bold text-indigo-500">{lbl}:</span> {v}
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            )}
+        </div>
+    );
+}
 
 // OT (fazla mesai) onay durumu rozeti — kullanıcı isteği: onaylı → "Onaylanmış",
 // onaysız/talepsiz → "Talep edilmemiş", bekleyen → "Onay bekliyor".
