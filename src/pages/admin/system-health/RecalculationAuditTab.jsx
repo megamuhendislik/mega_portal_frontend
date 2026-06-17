@@ -2150,6 +2150,15 @@ const SRC_COLORS = {
     SPECIAL_LEAVE: 'bg-teal-100 text-teal-700',
 };
 
+// OT (fazla mesai) onay durumu rozeti — kullanıcı isteği: onaylı → "Onaylanmış",
+// onaysız/talepsiz → "Talep edilmemiş", bekleyen → "Onay bekliyor".
+const OT_STATUS_INFO = {
+    approved: { label: 'Onaylanmış', cls: 'bg-green-100 text-green-700' },
+    pending: { label: 'Onay bekliyor', cls: 'bg-amber-100 text-amber-700' },
+    potential: { label: 'Talep edilmemiş', cls: 'bg-blue-100 text-blue-700' },
+    none: { label: 'Talep edilmemiş', cls: 'bg-gray-100 text-gray-600' },
+};
+
 function FrcRecordTable({ title, data, color }) {
     if (!data) return null;
     const borderCls = color === 'violet' ? 'border-violet-200' : 'border-gray-200';
@@ -2184,7 +2193,16 @@ function FrcRecordTable({ title, data, color }) {
                                     </span>
                                 </td>
                                 <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.ns)}</td>
-                                <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.os)}</td>
+                                <td className="py-0.5 px-1 text-right font-mono">
+                                    <div className="flex flex-col items-end gap-0.5">
+                                        <span>{fmtSeconds(r.os)}</span>
+                                        {r.ot_status && (r.os > 0 || r.ot) && (
+                                            <span className={`px-1 py-0 rounded text-[8px] font-bold whitespace-nowrap ${(OT_STATUS_INFO[r.ot_status] || OT_STATUS_INFO.none).cls}`}>
+                                                {(OT_STATUS_INFO[r.ot_status] || OT_STATUS_INFO.none).label}
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td className="py-0.5 px-1 text-right font-mono">{fmtSeconds(r.ms)}</td>
                             </tr>
                         ))}
