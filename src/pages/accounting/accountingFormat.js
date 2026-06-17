@@ -36,6 +36,25 @@ export const DIRECTION_LABELS = {
     OUT: { label: 'Çıkış', color: 'volcano' },
 };
 
+// =========== SABITLER ===========
+
+// Ortak tarih/saat aralığı ayıracı (en-dash, çevresi boşluklu): "09:00 – 18:00"
+export const RANGE_SEP = ' – ';
+
+// =========== EMPTY-STATE METNI ===========
+
+/**
+ * Tablo boş-durum açıklaması (3 durum):
+ *   - dönem seçili değil (!ready)      -> "Dönem seçin"
+ *   - dönem seçili, henüz yüklenmedi   -> "Yükleniyor…"
+ *   - yüklendi, sonuç boş              -> "Kayıt bulunamadı" (özelleştirilebilir)
+ */
+export const emptyStateText = (ready, loaded, emptyLabel = 'Kayıt bulunamadı') => {
+    if (!ready) return 'Dönem seçin';
+    if (!loaded) return 'Yükleniyor…';
+    return emptyLabel;
+};
+
 // =========== FORMATLAYICILAR ===========
 
 // "2026-03-12" -> "12.03.2026"
@@ -70,7 +89,7 @@ export const fmtTime = (s) => {
 export const fmtRange = (start, end) => {
     if (!start && !end) return '—';
     if (!end || start === end) return fmtDate(start);
-    return `${fmtDate(start)} – ${fmtDate(end)}`;
+    return `${fmtDate(start)}${RANGE_SEP}${fmtDate(end)}`;
 };
 
 // Saniye -> "Xs Ydk" (örn 3900 -> "1s 5dk", 1800 -> "30dk")

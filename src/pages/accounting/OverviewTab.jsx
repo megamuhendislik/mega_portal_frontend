@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Table, Empty, message } from 'antd';
+import { Table, Empty, message, Tag } from 'antd';
 import { Users, CalendarDays, Clock, Building2 } from 'lucide-react';
 import api from '../../services/api';
 import { RosterStatusTag } from './accountingTags';
-import { fmtHours } from './accountingFormat';
+import { fmtHours, emptyStateText } from './accountingFormat';
 
 const StatCard = ({ icon: Icon, label, value, accent }) => (
     <div className="stat-card flex items-center justify-between p-4">
@@ -22,9 +22,12 @@ const StatCard = ({ icon: Icon, label, value, accent }) => (
  * Props:
  *   - params: dönem parametreleri
  *   - ready: parametreler hazır mı
- *   - search: global arama metni (server'a q olarak gider + client filtre)
+ *   - search: global arama metni (yalnız client-side süzme; backend'e gönderilmez)
  *   - active: sekme aktif mi (lazy fetch)
  *   - onSelectEmployee(employeeId): satır tıklaması -> kişi drawer'ı
+ *
+ * Not: roster TÜM dönem verisini tek seferde döner (backend pagination yok),
+ * bu yüzden fetch yalnız dönem değişiminde olur; arama tamamen client-side.
  */
 export default function OverviewTab({ params, ready, search, active, onSelectEmployee }) {
     const [rows, setRows] = useState([]);
@@ -34,9 +37,10 @@ export default function OverviewTab({ params, ready, search, active, onSelectEmp
     const fetchRoster = useCallback(async () => {
         if (!ready) return;
         setLoading(true);
+        setLoaded(false); // başarısız refetch stale "Kayıt bulunamadı" göstermesin
         try {
             const res = await api.get('/accounting/roster/', {
-                params: { ...params, q: search || undefined, include_inactive: true },
+                params: { ...params, include_inactive: true },
             });
             setRows(res.data.results || []);
             setLoaded(true);
@@ -46,14 +50,14 @@ export default function OverviewTab({ params, ready, search, active, onSelectEmp
         } finally {
             setLoading(false);
         }
-    }, [params, ready, search]);
+    }, [params, ready]);
 
-    // Aktif olduğunda + parametre/arama değişiminde çek
+    // Aktif olduğunda + dönem parametresi değişiminde çek (arama tetiklemez)
     useEffect(() => {
         if (active && ready) fetchRoster();
     }, [active, ready, fetchRoster]);
 
-    // Client-side arama (server q'ya ek hızlı süzme)
+    // Arama tamamen client-side
     const filtered = useMemo(() => {
         const q = (search || '').trim().toLocaleLowerCase('tr');
         if (!q) return rows;
@@ -76,17 +80,29 @@ export default function OverviewTab({ params, ready, search, active, onSelectEmp
             title: 'Çalışan',
             key: 'name',
             ellipsis: true,
-            render: (_, r) => (
-                <button
-                    onClick={() => onSelectEmployee?.(r.employee_id)}
-                    className="text-left text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
-                >
-                    {r.name}
-                    {r.employee_code ? (
-                        <span className="text-slate-400 font-normal"> · {r.employee_code}</span>
-                    ) : null}
-                </button>
-            ),
+            render: (_, r) => {
+                // M-7: roster yanıtında is_active alanı varsa pasif çalışanı işaretle
+                // (alan yoksa koşul hiç tetiklenmez — zararsız/defensive).
+                const inactive = r.is_active === false;
+                return (
+                    <span className="flex items-center gap-1.5">
+                        <button
+                            onClick={() => onSelectEmployee?.(r.employee_id)}
+                            className={`text-left font-medium hover:underline transition-colors ${
+                                inactive
+                                    ? 'text-slate-400 hover:text-slate-600'
+                                    : 'text-blue-600 hover:text-blue-800'
+                            }`}
+                        >
+                            {r.name}
+                            {r.employee_code ? (
+                                <span className="text-slate-400 font-normal"> · {r.employee_code}</span>
+                            ) : null}
+                        </button>
+                        {inactive ? <Tag color="default" className="!text-[10px]">ayrıldı</Tag> : null}
+                    </span>
+                );
+            },
             sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'tr'),
         },
         {
@@ -165,7 +181,7 @@ export default function OverviewTab({ params, ready, search, active, onSelectEmp
                     locale={{
                         emptyText: (
                             <Empty
-                                description={loaded ? 'Kayıt bulunamadı' : 'Yükleniyor…'}
+                                description={emptyStateText(ready, loaded, 'Kayıt bulunamadı')}
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                             />
                         ),

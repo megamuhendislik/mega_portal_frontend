@@ -3,7 +3,9 @@ import { Table, Empty, message, Select, Tag, Alert } from 'antd';
 import { CreditCard, ClipboardList, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { DirectionTag } from './accountingTags';
-import { fmtDate, fmtDateTime, fmtTime, fmtHourMin } from './accountingFormat';
+import {
+    fmtDate, fmtDateTime, fmtTime, fmtHourMin, emptyStateText,
+} from './accountingFormat';
 
 const ATT_SOURCE_COLORS = {
     CARD: 'blue',
@@ -37,6 +39,10 @@ export default function CardDataTab({
         const fetchEmployees = async () => {
             setEmpLoading(true);
             try {
+                // M-4: page_size=500 — kurum çalışan sayısı bunun altında olduğundan
+                // tek sayfa yeterli. Personel sayısı 500'ü aşarsa seçicide eksik
+                // görünür; o noktada server-side aramalı (showSearch + onSearch) bir
+                // çalışan picker'a geçilmeli.
                 const res = await api.get('/employees/', {
                     params: { page_size: 500, include_inactive: 1 },
                 });
@@ -61,6 +67,7 @@ export default function CardDataTab({
     const fetchCardData = useCallback(async () => {
         if (!ready) return;
         setLoading(true);
+        setLoaded(false); // başarısız refetch stale "kayıt yok" göstermesin
         try {
             const reqParams = { ...params };
             if (selectedEmpId) reqParams.employee_id = selectedEmpId;
@@ -269,7 +276,7 @@ export default function CardDataTab({
                     locale={{
                         emptyText: (
                             <Empty
-                                description={loaded ? 'Ham kart olayı yok' : 'Yükleniyor…'}
+                                description={emptyStateText(ready, loaded, 'Ham kart olayı yok')}
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                             />
                         ),
@@ -297,7 +304,7 @@ export default function CardDataTab({
                     locale={{
                         emptyText: (
                             <Empty
-                                description={loaded ? 'Puantaj kaydı yok' : 'Yükleniyor…'}
+                                description={emptyStateText(ready, loaded, 'Puantaj kaydı yok')}
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                             />
                         ),

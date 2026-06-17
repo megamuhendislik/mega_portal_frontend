@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Empty, message, Tag, Tooltip } from 'antd';
 import api from '../../services/api';
 import { RequestStatusTag } from './accountingTags';
-import { fmtDate, fmtTime, fmtDurationFromMinutes } from './accountingFormat';
+import {
+    fmtDate, fmtTime, fmtDurationFromMinutes, emptyStateText, RANGE_SEP,
+} from './accountingFormat';
 
 const SOURCE_LABELS = {
     POTENTIAL: { label: 'Algılanan', color: 'cyan' },
@@ -14,6 +16,9 @@ const SOURCE_LABELS = {
 /**
  * Mesailer sekmesi — /accounting/overtime/
  * Props: params, ready, search, active, onSelectEmployee
+ *
+ * Not: overtime TÜM dönem verisini tek seferde döner (backend pagination yok),
+ * bu yüzden fetch yalnız dönem değişiminde olur; arama tamamen client-side.
  */
 export default function OvertimeTab({ params, ready, search, active, onSelectEmployee }) {
     const [rows, setRows] = useState([]);
@@ -23,9 +28,10 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
     const fetchOvertime = useCallback(async () => {
         if (!ready) return;
         setLoading(true);
+        setLoaded(false); // başarısız refetch stale "Kayıt bulunamadı" göstermesin
         try {
             const res = await api.get('/accounting/overtime/', {
-                params: { ...params, q: search || undefined },
+                params: { ...params },
             });
             setRows(res.data.results || []);
             setLoaded(true);
@@ -35,8 +41,9 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
         } finally {
             setLoading(false);
         }
-    }, [params, ready, search]);
+    }, [params, ready]);
 
+    // Aktif olduğunda + dönem parametresi değişiminde çek (arama tetiklemez)
     useEffect(() => {
         if (active && ready) fetchOvertime();
     }, [active, ready, fetchOvertime]);
@@ -85,7 +92,7 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
             key: 'time',
             width: 140,
             render: (_, r) => (
-                <span className="tabular-nums">{fmtTime(r.start_time)} – {fmtTime(r.end_time)}</span>
+                <span className="tabular-nums">{fmtTime(r.start_time)}{RANGE_SEP}{fmtTime(r.end_time)}</span>
             ),
         },
         {
@@ -153,7 +160,7 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
                 locale={{
                     emptyText: (
                         <Empty
-                            description={loaded ? 'Fazla mesai kaydı bulunamadı' : 'Yükleniyor…'}
+                            description={emptyStateText(ready, loaded, 'Fazla mesai kaydı bulunamadı')}
                             image={Empty.PRESENTED_IMAGE_SIMPLE}
                         />
                     ),

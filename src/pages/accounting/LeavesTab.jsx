@@ -2,11 +2,14 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Empty, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import { RequestStatusTag } from './accountingTags';
-import { fmtRange, fmtDate } from './accountingFormat';
+import { fmtRange, fmtDate, emptyStateText } from './accountingFormat';
 
 /**
  * İzinler sekmesi — /accounting/leaves/
  * Props: params, ready, search, active, onSelectEmployee
+ *
+ * Not: leaves TÜM dönem verisini tek seferde döner (backend pagination yok),
+ * bu yüzden fetch yalnız dönem değişiminde olur; arama tamamen client-side.
  */
 export default function LeavesTab({ params, ready, search, active, onSelectEmployee }) {
     const [rows, setRows] = useState([]);
@@ -16,9 +19,10 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
     const fetchLeaves = useCallback(async () => {
         if (!ready) return;
         setLoading(true);
+        setLoaded(false); // başarısız refetch stale "Kayıt bulunamadı" göstermesin
         try {
             const res = await api.get('/accounting/leaves/', {
-                params: { ...params, q: search || undefined },
+                params: { ...params },
             });
             setRows(res.data.results || []);
             setLoaded(true);
@@ -28,8 +32,9 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
         } finally {
             setLoading(false);
         }
-    }, [params, ready, search]);
+    }, [params, ready]);
 
+    // Aktif olduğunda + dönem parametresi değişiminde çek (arama tetiklemez)
     useEffect(() => {
         if (active && ready) fetchLeaves();
     }, [active, ready, fetchLeaves]);
@@ -160,7 +165,7 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
                 locale={{
                     emptyText: (
                         <Empty
-                            description={loaded ? 'İzin kaydı bulunamadı' : 'Yükleniyor…'}
+                            description={emptyStateText(ready, loaded, 'İzin kaydı bulunamadı')}
                             image={Empty.PRESENTED_IMAGE_SIMPLE}
                         />
                     ),
