@@ -1659,6 +1659,37 @@ export default function RecalculationAuditTab() {
                                                                         ))}
                                                                     </div>
                                                                 )}
+
+                                                                {/* Ham Kart Olaylari (Gate) — elle dogrulama icin */}
+                                                                {day.gate_events?.length > 0 && (
+                                                                    <div>
+                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                                                                            Ham Kart (Gate) — {day.gate_events.length} olay
+                                                                        </h6>
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {day.gate_events.map((g, gi) => (
+                                                                                <span key={gi} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                                                                    g.dir === 'IN' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                                                                    'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                                }`}>
+                                                                                    {g.ts} {g.dir}{g.st && g.st !== 'PROCESSED' ? ` (${g.st})` : ''}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Hesap Detayi (motor loglari) — bucket/deficit/split/mola, elle dogrulama */}
+                                                                {day.logs?.length > 0 && (
+                                                                    <details className="bg-slate-900 rounded">
+                                                                        <summary className="cursor-pointer text-[10px] font-bold text-slate-300 uppercase px-2 py-1.5 select-none">
+                                                                            Hesap Detayi (motor) — {day.logs.length} satir
+                                                                        </summary>
+                                                                        <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono p-2 overflow-x-auto whitespace-pre-wrap">
+{day.logs.join('\n')}
+                                                                        </pre>
+                                                                    </details>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
