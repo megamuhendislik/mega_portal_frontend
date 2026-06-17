@@ -149,3 +149,19 @@
 .animate-slideInRight {
   animation: slideInRight 250ms ease-out;
 }
+
+/* Rapor indirme — belirsiz (indeterminate) ilerleme çubuğu */
+@keyframes reportProgressSlide {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+.report-progress-bar {
+  animation: reportProgressSlide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .report-progress-bar {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

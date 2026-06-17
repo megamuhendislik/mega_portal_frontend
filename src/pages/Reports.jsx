@@ -1,44 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-    FileDown, FileText, FileSpreadsheet, Calendar, Clock,
-    CalendarDays, Building2,
+    FileDown, FileText, FileSpreadsheet, Calendar, Building2, Loader2,
 } from 'lucide-react';
 import api from '../services/api';
+import ModalOverlay from '../components/ui/ModalOverlay';
 import { getIstanbulToday } from '../utils/dateUtils';
 
-// Rapor türleri — her biri Excel + PDF endpoint'lerine bağlı
-const REPORTS = [
-    {
-        key: 'monthly',
-        title: 'Aylık Mutabakat Raporu',
-        desc: 'Personel bazlı günlük mesai, izin/mazeret, fazla mesai ve dönem bakiyesi özeti.',
-        icon: FileSpreadsheet,
-        color: 'green',
-        excel: 'export_excel',
-        pdf: 'export_pdf',
-        file: 'Mesai_Raporu',
-    },
-    {
-        key: 'overtime',
-        title: 'Fazla Mesai Raporu',
-        desc: 'Onaylı/bekleyen fazla mesai detayı: tarih, saat, süre, kaynak, onaylayan.',
-        icon: Clock,
-        color: 'amber',
-        excel: 'overtime_excel',
-        pdf: 'overtime_pdf',
-        file: 'Fazla_Mesai_Raporu',
-    },
-    {
-        key: 'leave',
-        title: 'İzin & Bakiye Raporu',
-        desc: 'Yıllık izin bakiyesi, kullanım, devir/yanma ve mazeret izni kotası.',
-        icon: CalendarDays,
-        color: 'blue',
-        excel: 'leave_balance_excel',
-        pdf: 'leave_balance_pdf',
-        file: 'Izin_Bakiye_Raporu',
-    },
-];
+// Tek rapor: Aylık Mutabakat (Excel + PDF endpoint'lerine bağlı)
+const MONTHLY_REPORT = {
+    key: 'monthly',
+    title: 'Aylık Mutabakat Raporu',
+    desc: 'Personel bazlı günlük mesai, izin/mazeret, fazla mesai ve dönem bakiyesi özeti.',
+    icon: FileSpreadsheet,
+    excel: 'export_excel',
+    pdf: 'export_pdf',
+    file: 'Mesai_Raporu',
+};
+
+// İndirme timeout'ları (ms). Tüm şirket raporu ~300 çalışan için dakikalarca sürebilir;
+// gunicorn tarafı 3600sn'e kadar bekler, bu yüzden frontend timeout'unu kapsama göre
+// ölçeklendiriyoruz (varsayılan axios 30sn tüm-şirketi indirirken yetmiyordu).
+const TIMEOUT_WHOLE_COMPANY = 30 * 60 * 1000; // 30 dk — tüm şirket
+const TIMEOUT_DEPARTMENT = 10 * 60 * 1000;    // 10 dk — departman
+const TIMEOUT_SINGLE = 3 * 60 * 1000;         // 3 dk — tek personel
 
 const trMonths = {
     1: 'Ocak', 2: 'Şubat', 3: 'Mart', 4: 'Nisan', 5: 'Mayıs', 6: 'Haziran',
@@ -54,9 +38,10 @@ const Reports = () => {
     const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
     const [employees, setEmployees] = useState([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-    const [activeReport, setActiveReport] = useState('monthly');
-    const [loadingKey, setLoadingKey] = useState(null); // `${reportKey}-${format}`
+    // İndirme durumu: { format: 'excel'|'pdf', scope: 'company'|'department'|'single' } | null
+    const [downloading, setDownloading] = useState(null);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
+    const abortRef = useRef(null); // devam eden indirmeyi iptal etmek için
 
     // İlk yükleme: takvimler, departmanlar, çalışanlar
     useEffect(() => {
@@ -135,22 +120,47 @@ const Reports = () => {
         return params;
     };
 
-    const handleDownload = async (report, format) => {
-        if (!selectedPeriod) return;
+    // Tek personel seçili → 'single'; departman seçili → 'department'; ikisi de yok → 'company'
+    const resolveScope = () => {
+        if (selectedEmployeeId) return 'single';
+        if (selectedDepartmentId) return 'department';
+        return 'company';
+    };
+
+    const timeoutForScope = (scope) => {
+        if (scope === 'company') return TIMEOUT_WHOLE_COMPANY;
+        if (scope === 'department') return TIMEOUT_DEPARTMENT;
+        return TIMEOUT_SINGLE;
+    };
+
+    const handleCancelDownload = () => {
+        abortRef.current?.abort();
+    };
+
+    const handleDownload = async (format) => {
+        if (!selectedPeriod || downloading) return;
+        const report = MONTHLY_REPORT;
         const action = format === 'excel' ? report.excel : report.pdf;
         const ext = format === 'excel' ? 'xlsx' : 'pdf';
-        setLoadingKey(`${report.key}-${format}`);
+        const scope = resolveScope();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setDownloading({ format, scope });
         try {
             const response = await api.get(`/monthly-reports/${action}/`, {
                 params: buildParams(),
                 responseType: 'blob',
+                timeout: timeoutForScope(scope),
+                signal: controller.signal,
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            const suffix =
-                (selectedEmployeeId ? `_emp${selectedEmployeeId}` : '') +
-                (selectedDepartmentId ? `_dep${selectedDepartmentId}` : '');
+            // Dosya adı kapsamla tutarlı: tek personel seçiliyse departman eki yok
+            // (backend tek personelde department_id'yi yok sayar).
+            const suffix = selectedEmployeeId
+                ? `_emp${selectedEmployeeId}`
+                : (selectedDepartmentId ? `_dep${selectedDepartmentId}` : '');
             link.setAttribute(
                 'download',
                 `${report.file}_${selectedPeriod.year}_${selectedPeriod.month}${suffix}.${ext}`
@@ -160,24 +170,39 @@ const Reports = () => {
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            // Backend hata gövdesi blob olarak gelir — gerçek mesajı oku
+            // Kullanıcı iptal ettiyse sessiz geç (finally yükleme ekranını kapatır)
+            if (error?.code === 'ERR_CANCELED') {
+                return;
+            }
+            // Timeout hatası ayrı mesaj (blob gövdesi yok)
             let msg = 'Rapor indirilemedi.';
-            const data = error?.response?.data;
-            if (data instanceof Blob) {
-                try {
-                    const txt = await data.text();
-                    const j = JSON.parse(txt);
-                    if (j?.error) msg = j.error;
-                } catch {
-                    /* JSON değilse genel mesaj kalır */
+            if (error?.code === 'ECONNABORTED') {
+                msg = 'Rapor hazırlanması çok uzun sürdü (zaman aşımı). Lütfen departman veya personel filtresiyle daraltıp tekrar deneyin.';
+            } else {
+                // Backend hata gövdesi blob olarak gelir — gerçek mesajı oku
+                const data = error?.response?.data;
+                if (data instanceof Blob) {
+                    try {
+                        const txt = await data.text();
+                        const j = JSON.parse(txt);
+                        if (j?.error) msg = j.error;
+                    } catch {
+                        /* JSON değilse genel mesaj kalır */
+                    }
+                } else if (data?.error) {
+                    msg = data.error;
                 }
-            } else if (data?.error) {
-                msg = data.error;
             }
             console.error('Download failed:', error);
+            // Önce yükleme ekranını kapat, sonra uyarıyı göster (alert bloklarken
+            // modal altta asılı kalmasın)
+            abortRef.current = null;
+            setDownloading(null);
             alert(msg);
+            return;
         } finally {
-            setLoadingKey(null);
+            abortRef.current = null;
+            setDownloading(null);
         }
     };
 
@@ -189,14 +214,6 @@ const Reports = () => {
         });
     };
 
-    const colorClasses = {
-        green: 'bg-green-50 text-green-600',
-        amber: 'bg-amber-50 text-amber-600',
-        blue: 'bg-blue-50 text-blue-600',
-    };
-
-    const activeCfg = REPORTS.find((r) => r.key === activeReport) || REPORTS[0];
-
     // Departman seçiliyse çalışan listesini o departmana göre süz (UI kolaylığı)
     const filteredEmployees = employees.filter((e) => {
         if (!selectedDepartmentId) return true;
@@ -204,45 +221,33 @@ const Reports = () => {
         return String(depId) === String(selectedDepartmentId);
     });
 
+    const ReportIcon = MONTHLY_REPORT.icon;
+    const scopeLabel = {
+        company: 'Tüm şirket',
+        department: 'Seçili departman',
+        single: 'Tek personel',
+    };
+
     return (
         <div className="space-y-6">
             <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Raporlar</h1>
                 <p className="text-sm text-slate-500 mt-1">
-                    Mali dönem bazlı mesai, fazla mesai ve izin raporlarını Excel/PDF indirin.
+                    Mali dönem bazlı Aylık Mutabakat Raporunu Excel/PDF olarak indirin.
                 </p>
-            </div>
-
-            {/* Rapor türü seçici */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {REPORTS.map((r) => {
-                    const Icon = r.icon;
-                    const active = r.key === activeReport;
-                    return (
-                        <button
-                            key={r.key}
-                            onClick={() => setActiveReport(r.key)}
-                            className={`text-left p-4 rounded-xl border transition-all ${
-                                active
-                                    ? 'border-blue-500 ring-2 ring-blue-100 bg-white shadow-sm'
-                                    : 'border-slate-200 bg-white hover:border-slate-300'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className={`p-2 rounded-lg ${colorClasses[r.color]}`}>
-                                    <Icon size={20} />
-                                </div>
-                                <span className="font-semibold text-slate-800 text-sm">{r.title}</span>
-                            </div>
-                            <p className="text-xs text-slate-500 leading-snug">{r.desc}</p>
-                        </button>
-                    );
-                })}
             </div>
 
             {/* Filtreler + indirme */}
             <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="font-semibold text-lg text-slate-800 mb-4">{activeCfg.title}</h3>
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-green-50 text-green-600">
+                        <ReportIcon size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg text-slate-800">{MONTHLY_REPORT.title}</h3>
+                        <p className="text-xs text-slate-500 leading-snug">{MONTHLY_REPORT.desc}</p>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     {/* Takvim */}
@@ -335,34 +340,91 @@ const Reports = () => {
                 {/* İndirme butonları */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-5">
                     <button
-                        onClick={() => handleDownload(activeCfg, 'excel')}
-                        disabled={loadingKey !== null || !selectedPeriod}
+                        onClick={() => handleDownload('excel')}
+                        disabled={downloading !== null || !selectedPeriod}
                         className="py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                        {loadingKey === `${activeCfg.key}-excel` ? 'Hazırlanıyor...' : (
+                        {downloading?.format === 'excel' ? (
+                            <><Loader2 size={18} className="animate-spin" /> Hazırlanıyor...</>
+                        ) : (
                             <><FileDown size={18} /> Excel İndir</>
                         )}
                     </button>
                     <button
-                        onClick={() => handleDownload(activeCfg, 'pdf')}
-                        disabled={loadingKey !== null || !selectedPeriod}
+                        onClick={() => handleDownload('pdf')}
+                        disabled={downloading !== null || !selectedPeriod}
                         className="py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                        {loadingKey === `${activeCfg.key}-pdf` ? 'Hazırlanıyor...' : (
+                        {downloading?.format === 'pdf' ? (
+                            <><Loader2 size={18} className="animate-spin" /> Hazırlanıyor...</>
+                        ) : (
                             <><FileText size={18} /> PDF İndir</>
                         )}
                     </button>
                 </div>
 
-                {(selectedDepartmentId || selectedEmployeeId) && (
+                {(selectedDepartmentId || selectedEmployeeId) ? (
                     <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
                         <Building2 size={12} />
                         {selectedEmployeeId
                             ? 'Tek personel raporu (departman filtresi yok sayılır).'
                             : 'Seçili departman için rapor üretilecek.'}
                     </p>
+                ) : (
+                    <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <Building2 size={12} />
+                        Tüm şirket raporu üretilecek — kişi sayısına göre birkaç dakika veya daha uzun sürebilir.
+                    </p>
                 )}
             </div>
+
+            {/* Yükleme ekranı (indirme sırasında) */}
+            <ModalOverlay
+                open={downloading !== null}
+                closeOnOverlayClick={false}
+                closeOnEsc={false}
+            >
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true"
+                    className="bg-white rounded-xl shadow-xl border border-slate-200 px-8 py-7 max-w-sm w-full mx-auto text-center"
+                >
+                    <div
+                        aria-hidden="true"
+                        className="mx-auto w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4"
+                    >
+                        <Loader2 size={28} className="text-blue-600 animate-spin" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-800">Rapor Hazırlanıyor</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                        {scopeLabel[downloading?.scope] || 'Rapor'} ·{' '}
+                        {downloading?.format === 'excel' ? 'Excel' : 'PDF'} dosyası oluşturuluyor…
+                    </p>
+                    {downloading?.scope === 'company' && (
+                        <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
+                            <p className="text-xs text-amber-700 leading-relaxed">
+                                Tüm şirket için tüm personel işleniyor. Bu işlem kişi sayısına göre
+                                {' '}<strong>birkaç dakika veya daha uzun</strong> sürebilir — lütfen sayfayı
+                                kapatmayın veya yenilemeyin.
+                            </p>
+                        </div>
+                    )}
+                    <div
+                        aria-hidden="true"
+                        className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"
+                    >
+                        <div className="h-full w-1/3 bg-blue-500 rounded-full report-progress-bar" />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleCancelDownload}
+                        className="mt-5 text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2"
+                    >
+                        İptal
+                    </button>
+                </div>
+            </ModalOverlay>
         </div>
     );
 };
