@@ -1593,7 +1593,9 @@ export default function RecalculationAuditTab() {
                                         <div className="p-4 space-y-3 bg-white">
                                             {/* Çalışan → Aylar (geçmiş dahil) → Günler ağacı */}
                                             {(() => {
-                                                const dayMonths = (emp.days || []).map(d => (d.date || '').slice(0, 7));
+                                                // Mali döneme göre grupla (gün.fp = çalışma takvimi periyodu,
+                                                // 26-25 vb.); fp yoksa takvim-ayına düş (geriye-uyum)
+                                                const dayMonths = (emp.days || []).map(d => d.fp || (d.date || '').slice(0, 7));
                                                 const sumMonths = [...Object.keys(emp.mb || {}), ...Object.keys(emp.ma || {})];
                                                 const months = [...new Set([...dayMonths, ...sumMonths].filter(Boolean))].sort();
                                                 if (months.length === 0) {
@@ -1603,8 +1605,10 @@ export default function RecalculationAuditTab() {
                                                     const monthKey = `${emp.id}-${mk}`;
                                                     const a = emp.ma?.[mk];
                                                     const b = emp.mb?.[mk];
-                                                    const monthDays = (emp.days || []).filter(d => (d.date || '').slice(0, 7) === mk);
+                                                    const monthDays = (emp.days || []).filter(d => (d.fp || (d.date || '').slice(0, 7)) === mk);
                                                     const mExpanded = frcExpandedMonths.has(monthKey);
+                                                    // Sonraki aya devir = bu ay devri + (net − mutabakat/mahsup)
+                                                    const carryNext = a ? ((a.cum || 0) + (a.nb || 0) - (a.comp || 0)) : null;
                                                     return (
                                                         <div key={mk} className="border border-indigo-200 rounded-lg overflow-hidden">
                                                             {/* Ay Başlığı — kümülatif (devir) + net + özet rozetleri */}
@@ -1617,11 +1621,14 @@ export default function RecalculationAuditTab() {
                                                                     <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-800 rounded-full text-[9px] font-bold">{monthDays.length} gün</span>
                                                                     {a && (
                                                                         <>
-                                                                            <span className="text-indigo-700">Kümülatif (devir): <b>{fmtSeconds(a.cum)}</b></span>
+                                                                            <span className="text-indigo-700">Devir (gelen): <b>{fmtSeconds(a.cum)}</b></span>
+                                                                            <span className="text-gray-600">Toplam Fazla: {fmtSeconds(a.ot)}</span>
+                                                                            <span className="text-gray-600">Toplam Eksik: {fmtSeconds(a.mis)}</span>
                                                                             <span className="text-indigo-700">Net: <b>{fmtSeconds(a.nb)}</b></span>
-                                                                            <span className="text-gray-600">Mesai: {fmtSeconds(a.ot)}</span>
-                                                                            <span className="text-gray-600">Eksik: {fmtSeconds(a.mis)}</span>
-                                                                            <span className="text-gray-600">Toplam İş: {fmtSeconds(a.tw)}</span>
+                                                                            {(a.comp || 0) !== 0 && (
+                                                                                <span className="text-rose-700">Mutabakat (mahsup): <b>{fmtSeconds(a.comp)}</b></span>
+                                                                            )}
+                                                                            <span className="text-emerald-700">Sonraki aya devir: <b>{fmtSeconds(carryNext)}</b></span>
                                                                         </>
                                                                     )}
                                                                 </div>
