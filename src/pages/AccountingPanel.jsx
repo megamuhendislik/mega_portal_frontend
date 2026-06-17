@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { message } from 'antd';
 import {
     Calculator,
@@ -78,16 +78,27 @@ const AccountingPanel = () => {
         setPeriodState(next);
     }, []);
 
-    const handleTabChange = (key) => {
+    const handleTabChange = useCallback((key) => {
         setActiveTab(key);
         setMounted((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
-    };
+    }, []);
 
     const openPerson = useCallback((employeeId) => {
         if (!employeeId) return;
         setDrawerEmpId(employeeId);
         setDrawerOpen(true);
     }, []);
+
+    // Drawer'dan "Kart Verilerini Gör": kişiyi Kart Verileri sekmesine taşı
+    const handleViewCardData = useCallback((employeeId) => {
+        if (!employeeId) return;
+        setCardEmpId(employeeId);     // CardDataTab externalEmployeeId olarak alır
+        handleTabChange('cards');     // sekmeyi mount et + aktif et
+        setDrawerOpen(false);         // drawer'ı kapat
+    }, [handleTabChange]);
+
+    // CardDataTab dış seçimi tükettiğinde tek-atımlık state'i sıfırla
+    const consumeCardExternal = useCallback(() => setCardEmpId(null), []);
 
     // Ortak blob indirme
     const blobDownload = async (params, fallbackName, setBusy) => {
@@ -148,8 +159,6 @@ const AccountingPanel = () => {
         );
     };
 
-    // Kart verileri sekmesine dış seçim "consumed" callback'i (referans sabit)
-    const consumeCardExternal = useRef(() => setCardEmpId(null)).current;
 
     const { params, ready } = periodState;
 
@@ -251,6 +260,7 @@ const AccountingPanel = () => {
                 params={params}
                 onExportPerson={handleExportPerson}
                 exportingPerson={exportingPerson}
+                onViewCardData={handleViewCardData}
             />
         </div>
     );

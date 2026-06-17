@@ -52,9 +52,10 @@ const compactTable = (dataSource, columns, rowKey = 'id') => (
  *   - params: dönem parametreleri
  *   - onExportPerson(employeeId): kişi TXT indir
  *   - exportingPerson: indirme yükleme durumu
+ *   - onViewCardData(employeeId): kişiyi Kart Verileri sekmesine taşı
  */
 export default function PersonDrawer({
-    open, onClose, employeeId, params, onExportPerson, exportingPerson,
+    open, onClose, employeeId, params, onExportPerson, exportingPerson, onViewCardData,
 }) {
     const [detail, setDetail] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -191,17 +192,27 @@ export default function PersonDrawer({
             </div>
 
             {/* Footer */}
-            <div className="absolute bottom-0 left-0 right-0 px-5 py-3 border-t border-slate-200 bg-white/95 backdrop-blur-sm flex items-center justify-end gap-2">
+            <div className="absolute bottom-0 left-0 right-0 px-5 py-3 border-t border-slate-200 bg-white/95 backdrop-blur-sm flex items-center justify-between gap-2">
                 <Button onClick={onClose} size="middle">Kapat</Button>
-                <Button
-                    type="primary"
-                    size="middle"
-                    disabled={!emp || exportingPerson}
-                    icon={exportingPerson ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                    onClick={() => onExportPerson?.(employeeId)}
-                >
-                    Kişi TXT İndir
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        size="middle"
+                        disabled={!emp}
+                        icon={<CreditCard size={14} />}
+                        onClick={() => onViewCardData?.(employeeId)}
+                    >
+                        Kart Verilerini Gör
+                    </Button>
+                    <Button
+                        type="primary"
+                        size="middle"
+                        disabled={!emp || exportingPerson}
+                        icon={exportingPerson ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                        onClick={() => onExportPerson?.(employeeId)}
+                    >
+                        Kişi TXT İndir
+                    </Button>
+                </div>
             </div>
         </Drawer>
     );
