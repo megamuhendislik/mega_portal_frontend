@@ -1717,6 +1717,32 @@ export default function RecalculationAuditTab() {
                                                                     <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} />
                                                                     <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} />
                                                                 </div>
+                                                                {/* Hesap Dökümü (justification) — her metriğin nasıl hesaplandığı, elle doğrulama */}
+                                                                {a?.breakdown && (
+                                                                    <details className="mt-1.5">
+                                                                        <summary className="text-[10px] font-bold text-indigo-600 uppercase cursor-pointer select-none hover:text-indigo-800">
+                                                                            Hesap Dökümü (nasıl hesaplandı?)
+                                                                        </summary>
+                                                                        <div className="mt-1 p-2 bg-white/70 border border-indigo-100 rounded space-y-1">
+                                                                            {[
+                                                                                ['Hedef', a.breakdown.tgt],
+                                                                                ['Tamamlanan', a.breakdown.cmp],
+                                                                                ['Mesai', a.breakdown.ot],
+                                                                                ['Eksik', a.breakdown.mis],
+                                                                                ['Izin', a.breakdown.lv],
+                                                                                ['Rapor', a.breakdown.hr],
+                                                                                ['Gorev', a.breakdown.duty],
+                                                                                ['Ozel Izin', a.breakdown.sl],
+                                                                                ['Net Bakiye', a.breakdown.nb],
+                                                                                ['Kumulatif', a.breakdown.cum],
+                                                                            ].filter(([, v]) => v).map(([lbl, v], bi) => (
+                                                                                <div key={bi} className="text-[11px] font-mono text-indigo-900 leading-snug">
+                                                                                    <span className="font-bold text-indigo-500">{lbl}:</span> {v}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </details>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
