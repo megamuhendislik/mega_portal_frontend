@@ -405,6 +405,44 @@ export default function RecalculationAuditTab() {
         }
     };
 
+    // ── Tam Detaylı Rapor — her talebin TÜM yaşam döngüsü + off dahil her gün kuralı ──
+    const [fullDetailLoading, setFullDetailLoading] = useState(false);
+    const downloadFullDetailReport = async () => {
+        // Kişi bazlı (Sicil No doluysa) veya toplu (boşsa). Tam detay büyük olur →
+        // toplu modda tek-kişi önerilir. 30dk timeout.
+        if (!employeeId && !window.confirm(
+            'Tam Detaylı Rapor (TOPLU)\n\n' +
+            'Tüm çalışanlar için her talebin tüm yaşam döngüsü + her gün kuralı çok ' +
+            'büyük bir dosya üretir ve uzun sürebilir.\n\n' +
+            'Tek kişi için Sicil No girmeniz önerilir. Yine de devam edilsin mi?'
+        )) return;
+        setFullDetailLoading(true);
+        try {
+            const body = { date_from: startDate, date_to: endDate, download: true, full_detail: true };
+            if (employeeId) body.employee_id = employeeId;
+            const res = await api.post('/system/health-check/comprehensive-report/', body, {
+                responseType: 'blob',
+                timeout: 30 * 60 * 1000,
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            const suffix = employeeId ? `_${employeeId}` : '_toplu';
+            a.download = `tam_detayli_rapor${suffix}_${startDate}_${endDate}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            const isTimeout = (e.code === 'ECONNABORTED') || /timeout/i.test(e.message || '');
+            alert(isTimeout
+                ? 'Tam detaylı rapor zaman aşımı — tek çalışan (Sicil No) veya daha kısa aralık deneyin.'
+                : 'Tam detaylı rapor hatası: ' + (e?.response?.data?.error || e.message || 'Bilinmeyen'));
+        } finally {
+            setFullDetailLoading(false);
+        }
+    };
+
     const toggleFrcEmp = (id) => {
         setFrcExpandedEmps(prev => {
             const next = new Set(prev);
@@ -1308,6 +1346,19 @@ export default function RecalculationAuditTab() {
                             >
                                 <DocumentArrowDownIcon className="w-4 h-4" />
                                 {wideLoading ? 'Hazırlanıyor...' : (employeeId ? 'Geniş TXT (Kişi)' : 'Geniş TXT (Toplu)')}
+                            </button>
+                            <button
+                                onClick={downloadFullDetailReport}
+                                disabled={fullDetailLoading}
+                                title="Tam Detaylı TXT: Geniş rapora ek olarak HER talebin tüm yaşam döngüsü (kaynak: otomatik/manuel/atama, kim oluşturdu/onayladı/reddetti + ne zaman, sebep, red sebebi, escalation, bakiye dökümü, segmentler, kilit) ve off günler dahil HER gün için takvim kuralı. Büyük dosya — tek kişi (Sicil No) önerilir."
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm border transition-all active:scale-95 ${
+                                    fullDetailLoading
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
+                                        : 'text-indigo-800 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
+                                }`}
+                            >
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                                {fullDetailLoading ? 'Hazırlanıyor...' : (employeeId ? 'Tam Detaylı TXT (Kişi)' : 'Tam Detaylı TXT (Toplu)')}
                             </button>
                         </div>
                         {frcResult.mode === 'apply' && (
