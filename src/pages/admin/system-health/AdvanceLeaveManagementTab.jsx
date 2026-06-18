@@ -114,9 +114,11 @@ export default function AdvanceLeaveManagementTab() {
           const data = res.data || {};
           message.success(`${data.reverted_count || 0} tanımlama geri alındı`);
           if (data.errors?.length > 0) {
-            message.error(`${data.errors.length} hata`);
+            // Kısmi hata: lastDetails KORUNUR → başarısız kalanlar için tekrar deneme mümkün
+            message.warning(`${data.errors.length} kayıt geri alınamadı, tekrar deneyebilirsiniz`);
+          } else {
+            setLastDetails(null);
           }
-          setLastDetails(null);
           await fetchEligible();
         } catch (err) {
           message.error(err.response?.data?.error || 'İşlem başarısız');
@@ -203,7 +205,7 @@ export default function AdvanceLeaveManagementTab() {
             min={1}
             max={365}
             value={limit}
-            onChange={(v) => setLimit(v)}
+            onChange={(v) => setLimit(v ?? 0)}
             style={{ width: 110 }}
           />
           <Button
