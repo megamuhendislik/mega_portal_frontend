@@ -48,7 +48,7 @@
 
     /* Specialized Cards */
     .stat-card {
-        @apply bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(6, 81, 237, 0.1)] hover:shadow-[0_8px_30px_-4px_rgba(6, 81, 237, 0.1)] transition-all duration-300;
+        @apply bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300;
     }
 }
 

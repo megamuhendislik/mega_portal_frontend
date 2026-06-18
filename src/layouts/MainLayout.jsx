@@ -31,7 +31,8 @@ import {
     HeartPulse,
     HeartHandshake,
     ShoppingCart,
-    BarChart3
+    BarChart3,
+    Calculator
 } from 'lucide-react';
 import clsx from 'clsx';
 import { message } from 'antd';
@@ -177,6 +178,7 @@ const MainLayout = () => {
         { path: '/feedback', label: 'Dilek ve Şikayetler', icon: MessageSquare, permission: null },
         { path: '/substitute-management', label: 'Vekalet Yönetimi', icon: UserCog, permission: null, visibleWhen: (u) => u?.has_substitute_context || u?.is_manager || u?.user?.is_superuser },
         { path: '/reports', label: 'Raporlar', icon: Flag, permission: 'PAGE_REPORTS' },
+        { path: '/accounting', label: 'Muhasebe Paneli', icon: Calculator, permission: 'PAGE_ACCOUNTING' },
         { path: '/admin/service-control', label: 'Servis Yönetimi', icon: Monitor, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
         { path: '/health-reports', label: 'Sağlık Raporları', icon: HeartPulse, permission: 'PAGE_HEALTH_REPORTS' },
