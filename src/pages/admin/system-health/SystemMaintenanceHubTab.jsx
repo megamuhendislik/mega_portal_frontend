@@ -11,6 +11,7 @@ import {
     UsersIcon,
     CakeIcon,
     WalletIcon,
+    BanknotesIcon,
 } from '@heroicons/react/24/outline';
 
 import ServiceHealthTab from './ServiceHealthTab';
@@ -21,6 +22,7 @@ import DataBrowserTab from './DataBrowserTab';
 import BirthdayTab from './BirthdayTab';
 import PasswordResetTab from './PasswordResetTab';
 import BalanceHealthTab from './BalanceHealthTab';
+import AdvanceLeaveManagementTab from './AdvanceLeaveManagementTab';
 
 const SUB_TABS = [
     { id: 'service', name: 'Servis Sağlığı', icon: ServerStackIcon, Component: ServiceHealthTab,
@@ -39,6 +41,8 @@ const SUB_TABS = [
       desc: 'Aylık doğum günü listesi + yıllık istatistik + manuel bildirim' },
     { id: 'balance', name: 'Bakiye Sağlığı', icon: WalletIcon, Component: BalanceHealthTab,
       desc: 'İzin bakiye sayaçları (mazeret/yıllık/avans) drift denetimi + Düzelt + avans izin tanımlama' },
+    { id: 'advance', name: 'Avans İzin Yönetimi', icon: BanknotesIcon, Component: AdvanceLeaveManagementTab,
+      desc: 'Son 12 ayda işe başlamış çalışanlara toplu avans izin tanımlama (önizleme + geri al)' },
 ];
 
 // Aşağıdaki 3 tab burada (deferred — kullanıcı talebine göre eklendi):
