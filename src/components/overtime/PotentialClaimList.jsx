@@ -23,7 +23,7 @@ function calcSegDuration(start, end) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let diff = (eh * 60 + em) - (sh * 60 + sm);
-  if (diff <= 0) diff += 24 * 60;
+  if (diff < 0) diff += 24 * 60;
   return diff * 60; // seconds
 }
 
@@ -48,7 +48,7 @@ function getDisplaySegments(item) {
       id: `${item.overtime_request_id}_seg${i}`,
       start: s.start,
       end: s.end,
-      durationSeconds: calcSegDuration(s.start, s.end),
+      durationSeconds: (typeof s.seconds === 'number' ? s.seconds : calcSegDuration(s.start, s.end)),
     }));
   }
   // Tek segment veya segments yoksa, start_time/end_time kullan
