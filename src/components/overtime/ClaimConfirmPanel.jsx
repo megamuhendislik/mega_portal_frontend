@@ -24,7 +24,7 @@ function calcSegSeconds(start, end) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let diff = (eh * 60 + em) - (sh * 60 + sm);
-  if (diff <= 0) diff += 24 * 60;
+  if (diff < 0) diff += 24 * 60;
   return diff * 60;
 }
 
@@ -41,7 +41,7 @@ function flattenSegments(items) {
           requestId: item.overtime_request_id,
           start: s.start,
           end: s.end,
-          seconds: calcSegSeconds(s.start, s.end),
+          seconds: (typeof s.seconds === 'number' ? s.seconds : calcSegSeconds(s.start, s.end)),
         });
       });
     } else {

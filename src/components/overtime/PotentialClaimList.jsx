@@ -23,13 +23,8 @@ function calcSegDuration(start, end) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let diff = (eh * 60 + em) - (sh * 60 + sm);
-  if (diff <= 0) diff += 24 * 60;
+  if (diff < 0) diff += 24 * 60;
   return diff * 60; // seconds
-}
-
-function formatTimeDuration(start, end) {
-  const secs = calcSegDuration(start, end);
-  return formatDuration(secs);
 }
 
 const OT_TYPE_LABELS = {
@@ -48,7 +43,7 @@ function getDisplaySegments(item) {
       id: `${item.overtime_request_id}_seg${i}`,
       start: s.start,
       end: s.end,
-      durationSeconds: calcSegDuration(s.start, s.end),
+      durationSeconds: (typeof s.seconds === 'number' ? s.seconds : calcSegDuration(s.start, s.end)),
     }));
   }
   // Tek segment veya segments yoksa, start_time/end_time kullan
@@ -146,7 +141,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                     <span className="font-medium">{seg.start} – {seg.end}</span>
                     <span className="text-slate-400 text-xs">
-                      ({formatTimeDuration(seg.start, seg.end)})
+                      ({formatDuration(seg.durationSeconds)})
                     </span>
                   </div>
                 ))}
