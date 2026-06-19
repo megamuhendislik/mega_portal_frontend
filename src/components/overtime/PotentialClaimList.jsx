@@ -27,11 +27,6 @@ function calcSegDuration(start, end) {
   return diff * 60; // seconds
 }
 
-function formatTimeDuration(start, end) {
-  const secs = calcSegDuration(start, end);
-  return formatDuration(secs);
-}
-
 const OT_TYPE_LABELS = {
   POST_SHIFT: { label: 'Vardiya Sonrası', cls: 'bg-blue-100 text-blue-700' },
   PRE_SHIFT: { label: 'Vardiya Öncesi', cls: 'bg-purple-100 text-purple-700' },
@@ -146,7 +141,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                     <span className="font-medium">{seg.start} – {seg.end}</span>
                     <span className="text-slate-400 text-xs">
-                      ({formatTimeDuration(seg.start, seg.end)})
+                      ({formatDuration(seg.durationSeconds)})
                     </span>
                   </div>
                 ))}
