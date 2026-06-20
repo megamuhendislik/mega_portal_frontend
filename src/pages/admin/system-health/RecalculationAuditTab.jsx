@@ -401,7 +401,7 @@ export default function RecalculationAuditTab() {
         };
     };
 
-    const runParallelRecalculation = async (chunks = 3) => {
+    const runParallelRecalculation = async (chunks = 6) => {
         // Paralel ŞİMDİLİK yalnız önizleme (dry_run): rollback=güvenli. Kalıcı apply
         // tek (seri) koşuyla yapılır (canlı bordroda eşzamanlı-yazıcı riski sıfır).
         setFrcLoading(true);
@@ -768,15 +768,15 @@ export default function RecalculationAuditTab() {
                         {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
                     </button>
                     <button
-                        onClick={() => runParallelRecalculation(3)}
+                        onClick={() => runParallelRecalculation(6)}
                         disabled={isProcessing || uniLoading || uniFixing || frcLoading || !!employeeId}
-                        title="Çalışanları 3 gruba bölüp PARALEL koşar (~3x hız). Yalnız önizleme (dry_run, güvenli). Tek çalışan seçiliyken devre dışı (zaten hızlı)."
+                        title="Çalışanları 6 gruba bölüp PARALEL koşar (~6x hız, 24 vCPU). Yalnız önizleme (dry_run, güvenli). Tek çalışan seçiliyken devre dışı (zaten hızlı)."
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
                             frcLoading || employeeId ? 'bg-gray-400 cursor-not-allowed' : 'bg-fuchsia-600 hover:bg-fuchsia-700 active:scale-95'
                         }`}
                     >
                         <ArrowPathIcon className="w-4 h-4" />
-                        Paralel Önizleme (3 grup)
+                        Paralel Önizleme (6 grup)
                     </button>
                     <button
                         onClick={runVerifyCalculations}
