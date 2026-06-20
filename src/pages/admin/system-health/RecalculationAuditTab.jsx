@@ -66,6 +66,7 @@ export default function RecalculationAuditTab() {
     const [frcLoading, setFrcLoading] = useState(false);
     const [frcResult, setFrcResult] = useState(null);
     const [frcError, setFrcError] = useState(null);
+    const [frcProgress, setFrcProgress] = useState(null);  // canlı ilerleme barı (TYR)
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
@@ -169,10 +170,12 @@ export default function RecalculationAuditTab() {
                     }
                 } else if (st.status === 'RUNNING') {
                     setFrcLoading(true);
+                    setFrcProgress(st);
                     const pollInterval = setInterval(async () => {
                         try {
                             const pollRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}`);
                             if (cancelled) { clearInterval(pollInterval); return; }
+                            if (pollRes.data.status === 'RUNNING') setFrcProgress(pollRes.data);
                             if (pollRes.data.status === 'COMPLETED') {
                                 clearInterval(pollInterval);
                                 const fullRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}&full=true`);
@@ -264,6 +267,7 @@ export default function RecalculationAuditTab() {
 
         setFrcLoading(true);
         setFrcError(null);
+        setFrcProgress(null);
         // Apply with cache: sim sonucunu silme — fail durumunda kullanıcı eski raporu görebilsin
         if (!(mode === 'apply' && frcResult?.cache_token)) {
             setFrcResult(null);
@@ -335,6 +339,7 @@ export default function RecalculationAuditTab() {
                         { timeout: 180000 });
                     const st = statusRes.data;
                     consecutivePollErrors = 0;
+                    if (st.status === 'RUNNING') setFrcProgress(st);
 
                     if (st.status === 'COMPLETED') {
                         // Tam JSON sonucu al (summary + employees + text_log) — büyük olabilir
@@ -1288,9 +1293,29 @@ export default function RecalculationAuditTab() {
                         <p className="text-sm text-gray-500 font-medium">
                             Tam yeniden hesaplama arka planda calisiyor...
                         </p>
-                        <p className="text-xs text-gray-400">
-                            Celery task olarak calisir, 8-10 dakika surebilir. Sayfa acik kalsin.
-                        </p>
+                        {frcProgress && frcProgress.total_employees ? (
+                            <div className="w-80 max-w-full">
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span className="font-bold text-violet-700">%{frcProgress.progress || 0}</span>
+                                    <span>{frcProgress.processed_employees || 0}/{frcProgress.total_employees} çalışan</span>
+                                </div>
+                                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-violet-500 transition-all duration-500 ease-out"
+                                        style={{ width: `${Math.min(100, Math.max(2, frcProgress.progress || 0))}%` }}
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-600 mt-2 text-center">
+                                    {frcProgress.phase ? <span className="font-semibold">{frcProgress.phase}: </span> : null}
+                                    {frcProgress.current_employee || '—'}
+                                    {frcProgress.current_date ? ` · ${frcProgress.current_date}` : ''}
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-400">
+                                Celery task olarak calisir, tam donem + tum calisanlarda 2 saate kadar surebilir. Sayfa acik kalsin.
+                            </p>
+                        )}
                         <button
                             onClick={async () => {
                                 try {
@@ -1298,6 +1323,7 @@ export default function RecalculationAuditTab() {
                                     setFrcLoading(false);
                                     setFrcResult(null);
                                     setFrcError(null);
+                                    setFrcProgress(null);
                                 } catch {}
                             }}
                             className="mt-2 px-4 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
