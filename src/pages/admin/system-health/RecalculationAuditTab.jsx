@@ -136,9 +136,11 @@ export default function RecalculationAuditTab() {
         )) return;
         mode === 'fix' ? setOtAuditFixing(true) : setOtAuditLoading(true);
         try {
+            // Talep Bütünlüğü Denetimi: tarih aralığında OT talep taraması — DB yük
+            // altında (TYR/diğer audit'ler eşzamanlı) 30s default'u aşar. 30dk ver.
             const res = await api.post('/system/health-check/ot-request-audit/', {
                 date_from: startDate, date_to: endDate, mode,
-            });
+            }, { timeout: 30 * 60 * 1000 });
             setOtAuditResult(res.data);
         } catch (e) {
             alert('Talep denetimi hatası: ' + (e.response?.data?.error || e.message));
@@ -300,10 +302,11 @@ export default function RecalculationAuditTab() {
             }
 
             // Async endpoint — Celery task başlat (sim veya cache-less apply)
-            // NOT: api default timeout 30s. Backend yük altındaysa task dispatch
-            // 30s'yi aşabiliyor → açık 60s timeout ver (yoksa 'timeout of 30000ms').
+            // NOT: api default timeout 30s. Backend AĞIR yük altındaysa (gunicorn 3
+            // sync worker'ı diğer uzun audit'lerce dolu) task dispatch bile gecikir
+            // → 120s ver (yoksa 'timeout of 60000ms').
             const startRes = await api.post('/system/health-check/full-recalculation-async/', body,
-                { timeout: 60000 });
+                { timeout: 120000 });
             const taskId = startRes.data.task_id;
             if (!taskId) throw new Error('Task ID alınamadı');
 
@@ -324,10 +327,12 @@ export default function RecalculationAuditTab() {
                 await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
                 attempts++;
                 try {
-                    // Her poll'a açık 60s timeout (default 30s yetmeyebilir, DB yük altında)
+                    // Her poll'a açık 180s timeout: TYR DB'yi doyurunca + gunicorn 3
+                    // worker dolunca hafif status-poll bile 60s'de yanıt alamayıp
+                    // patlıyordu ('timeout of 60000ms'); 12 ardışık hata → sahte vazgeç.
                     const statusRes = await api.get(
                         `/system/health-check/full-recalculation-status/?task_id=${taskId}`,
-                        { timeout: 60000 });
+                        { timeout: 180000 });
                     const st = statusRes.data;
                     consecutivePollErrors = 0;
 
