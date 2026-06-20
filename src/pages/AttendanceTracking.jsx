@@ -209,7 +209,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             // Try consolidated endpoint first
             try {
-                const res = await api.get('/dashboard/attendance-tracking-init/', { params, timeout: 90000 });
+                const res = await api.get('/dashboard/attendance-tracking-init/', { params, timeout: 180000 });
                 const d = res.data;
                 processResponseData(
                     d.stats,
@@ -226,8 +226,8 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
 
             // FALLBACK: Legacy 4+1 parallel calls
             const calls = [
-                api.get('/dashboard/stats/', { params, timeout: 60000 }),
-                api.get('/dashboard/team_hierarchy/', { timeout: 60000 }),
+                api.get('/dashboard/stats/', { params, timeout: 180000 }),
+                api.get('/dashboard/team_hierarchy/', { timeout: 180000 }),
                 api.get('/employees/subordinates/', { params: { relationship_type: 'SECONDARY' }, timeout: 30000 }),
                 api.get('/dashboard/substitute_team/', { timeout: 30000 })
             ];
