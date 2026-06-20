@@ -67,6 +67,7 @@ export default function RecalculationAuditTab() {
     const [frcResult, setFrcResult] = useState(null);
     const [frcError, setFrcError] = useState(null);
     const [frcProgress, setFrcProgress] = useState(null);  // canlı ilerleme barı (TYR)
+    const [frcParallel, setFrcParallel] = useState(null);  // paralel chunk'lar (N grup, N bar)
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
@@ -372,6 +373,112 @@ export default function RecalculationAuditTab() {
         }
     };
 
+    // ── PARALEL TYR: çalışanları N gruba böl, her grubu ayrı task'ta koştur ──
+    // 27dk tek koşu → ~9dk (24 vCPU). Her grup kendi barıyla ayrı izlenir; hepsi
+    // bitince 3 rapor TEK rapora birleştirilir (mevcut rapor görünümü çalışsın).
+    const mergeChunkResults = (results) => {
+        const valid = results.filter(Boolean);
+        if (!valid.length) return null;
+        const employees = [].concat(...valid.map(r => r.employees || []));
+        const summary = {};
+        for (const r of valid) {
+            for (const [k, v] of Object.entries(r.summary || {})) {
+                if (typeof v === 'number') summary[k] = (summary[k] || 0) + v;
+                else if (Array.isArray(v)) summary[k] = (summary[k] || []).concat(v);
+                else if (summary[k] === undefined) summary[k] = v;
+            }
+        }
+        const text_log = valid.map((r, i) => `═══════ GRUP ${i + 1}/${valid.length} ═══════\n${r.text_log || ''}`).join('\n\n');
+        return {
+            ...valid[0],
+            summary,
+            employees,
+            text_log,
+            mode: valid[0]?.mode || 'dry_run',
+            date_range: valid[0]?.date_range,
+            elapsed: Math.max(...valid.map(r => r.elapsed || 0)),
+            parallel_chunks: valid.length,
+        };
+    };
+
+    const runParallelRecalculation = async (chunks = 3) => {
+        // Paralel ŞİMDİLİK yalnız önizleme (dry_run): rollback=güvenli. Kalıcı apply
+        // tek (seri) koşuyla yapılır (canlı bordroda eşzamanlı-yazıcı riski sıfır).
+        setFrcLoading(true);
+        setFrcError(null);
+        setFrcProgress(null);
+        setFrcParallel(null);
+        setFrcResult(null);
+        setFrcExpandedEmps(new Set());
+        setFrcExpandedDays(new Set());
+        try {
+            const body = {
+                date_from: startDate, date_to: endDate,
+                mode: 'dry_run', show_all_days: showAllDays, chunks,
+            };
+            const startRes = await api.post('/system/health-check/full-recalculation-parallel/', body,
+                { timeout: 120000 });
+            const tasks = startRes.data?.tasks || [];
+            if (!tasks.length) throw new Error('Paralel grup başlatılamadı');
+            setFrcParallel(tasks.map(t => ({ ...t, progress: null, status: 'RUNNING' })));
+
+            const POLL_INTERVAL_MS = 5000;
+            const MAX_MINUTES = 132;
+            const maxAttempts = (MAX_MINUTES * 60 * 1000) / POLL_INTERVAL_MS;
+
+            const pollChunk = async (task, idx) => {
+                let attempts = 0;
+                let consecutiveErrors = 0;
+                while (attempts < maxAttempts) {
+                    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                    attempts++;
+                    try {
+                        const statusRes = await api.get(
+                            `/system/health-check/full-recalculation-status/?task_id=${task.task_id}`,
+                            { timeout: 180000 });
+                        const st = statusRes.data;
+                        consecutiveErrors = 0;
+                        setFrcParallel(prev => prev
+                            ? prev.map((c, i) => i === idx ? { ...c, progress: st, status: st.status } : c)
+                            : prev);
+                        if (st.status === 'COMPLETED') {
+                            const fullRes = await api.get(
+                                `/system/health-check/full-recalculation-status/?task_id=${task.task_id}&full=true`,
+                                { timeout: 120000 });
+                            return fullRes.data;
+                        } else if (st.status === 'FAILED') {
+                            throw new Error(st.error || `Grup ${idx + 1} başarısız`);
+                        } else if (['CANCELLED', 'NOT_FOUND', 'NO_TASK'].includes(st.status)) {
+                            throw new Error(`Grup ${idx + 1} iptal edildi/bulunamadı`);
+                        }
+                    } catch (pollErr) {
+                        consecutiveErrors++;
+                        if (consecutiveErrors >= 12 || attempts >= maxAttempts) throw pollErr;
+                    }
+                }
+                throw new Error(`Grup ${idx + 1} zaman aşımına uğradı (${MAX_MINUTES}dk)`);
+            };
+
+            // Tüm grupları PARALEL poll et; biri patlasa da diğerlerini bekle (allSettled)
+            const settled = await Promise.allSettled(tasks.map((t, i) => pollChunk(t, i)));
+            const ok = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+            const failed = settled.filter(s => s.status === 'rejected');
+            if (!ok.length) {
+                throw new Error(failed[0]?.reason?.message || 'Tüm gruplar başarısız');
+            }
+            const merged = mergeChunkResults(ok);
+            if (failed.length) {
+                merged._partial_note = `${failed.length}/${tasks.length} grup başarısız — rapor kısmi.`;
+            }
+            setFrcResult(merged);
+        } catch (e) {
+            setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
+        } finally {
+            setFrcLoading(false);
+            setFrcParallel(null);
+        }
+    };
+
     const downloadFrcLog = () => {
         // İkinci API çağrısı yerine mevcut sonuçtan indir (timeout sorunu çözümü)
         if (!frcResult?.text_log) {
@@ -659,6 +766,17 @@ export default function RecalculationAuditTab() {
                     >
                         <ArrowPathIcon className="w-4 h-4" />
                         {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
+                    </button>
+                    <button
+                        onClick={() => runParallelRecalculation(3)}
+                        disabled={isProcessing || uniLoading || uniFixing || frcLoading || !!employeeId}
+                        title="Çalışanları 3 gruba bölüp PARALEL koşar (~3x hız). Yalnız önizleme (dry_run, güvenli). Tek çalışan seçiliyken devre dışı (zaten hızlı)."
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
+                            frcLoading || employeeId ? 'bg-gray-400 cursor-not-allowed' : 'bg-fuchsia-600 hover:bg-fuchsia-700 active:scale-95'
+                        }`}
+                    >
+                        <ArrowPathIcon className="w-4 h-4" />
+                        Paralel Önizleme (3 grup)
                     </button>
                     <button
                         onClick={runVerifyCalculations}
@@ -1293,7 +1411,38 @@ export default function RecalculationAuditTab() {
                         <p className="text-sm text-gray-500 font-medium">
                             Tam yeniden hesaplama arka planda calisiyor...
                         </p>
-                        {frcProgress && frcProgress.total_employees ? (
+                        {frcParallel ? (
+                            <div className="w-[28rem] max-w-full space-y-3">
+                                <p className="text-xs text-fuchsia-700 font-bold text-center">
+                                    {frcParallel.length} grup PARALEL koşuyor (~3x hız)
+                                </p>
+                                {frcParallel.map((c, i) => {
+                                    const p = c.progress || {};
+                                    const done = c.status === 'COMPLETED';
+                                    const failed = ['FAILED', 'CANCELLED', 'NOT_FOUND', 'NO_TASK'].includes(c.status);
+                                    const pct = done ? 100 : Math.min(100, Math.max(2, p.progress || 0));
+                                    return (
+                                        <div key={c.task_id} className="text-left">
+                                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                                <span className="font-semibold">Grup {i + 1} · {c.employee_count} çalışan</span>
+                                                <span>{done ? '✓ Bitti' : failed ? '✗ Hata' : `%${p.progress || 0} (${p.processed_employees || 0}/${p.total_employees || c.employee_count})`}</span>
+                                            </div>
+                                            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-500 ease-out ${done ? 'bg-green-500' : failed ? 'bg-red-500' : 'bg-fuchsia-500'}`}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                                                {p.phase ? <span className="font-semibold">{p.phase}: </span> : null}
+                                                {p.current_employee || (done ? 'Tamamlandı' : '—')}
+                                                {p.current_date ? ` · ${p.current_date}` : ''}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : frcProgress && frcProgress.total_employees ? (
                             <div className="w-80 max-w-full">
                                 <div className="flex justify-between text-xs text-gray-600 mb-1">
                                     <span className="font-bold text-violet-700">%{frcProgress.progress || 0}</span>
