@@ -308,14 +308,16 @@ export default function RecalculationAuditTab() {
             if (!taskId) throw new Error('Task ID alınamadı');
 
             // Poll task status
-            // Tüm dönem (65 çalışan × ~90 gün) TYR'si ~18-22dk sürebiliyor.
-            // Backend Celery task: soft_time_limit=3600s (60dk), time_limit=3900s (65dk).
-            // Frontend tavanı 67dk: backend hard limit'in HAFİF üstünde — böylece
+            // Tüm dönem (65 çalışan × ~90 gün) TYR'si ~18-22dk sürebiliyor; yoğun
+            // günlerde + kart-replay ile çok daha uzun. Kullanıcı isteği (2026-06-20):
+            // en az 2 saat.
+            // Backend Celery task: soft_time_limit=7200s (2h), time_limit=7800s (130dk).
+            // Frontend tavanı 132dk: backend hard limit'in HAFİF üstünde — böylece
             // backend zaman aşımına uğrarsa onun FAILED durumunu gösterir, kendi
             // generic timeout'unu değil.
             let attempts = 0;
             const POLL_INTERVAL_MS = 5000;
-            const MAX_MINUTES = 67;
+            const MAX_MINUTES = 132;
             const maxAttempts = (MAX_MINUTES * 60 * 1000) / POLL_INTERVAL_MS; // 720
             let consecutivePollErrors = 0;
             while (attempts < maxAttempts) {
