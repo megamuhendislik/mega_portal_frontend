@@ -401,7 +401,7 @@ export default function RecalculationAuditTab() {
         };
     };
 
-    const runParallelRecalculation = async (chunks = 6) => {
+    const runParallelRecalculation = async (chunks = 3) => {
         // Paralel ŞİMDİLİK yalnız önizleme (dry_run): rollback=güvenli. Kalıcı apply
         // tek (seri) koşuyla yapılır (canlı bordroda eşzamanlı-yazıcı riski sıfır).
         setFrcLoading(true);
@@ -461,14 +461,36 @@ export default function RecalculationAuditTab() {
 
             // Tüm grupları PARALEL poll et; biri patlasa da diğerlerini bekle (allSettled)
             const settled = await Promise.allSettled(tasks.map((t, i) => pollChunk(t, i)));
-            const ok = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
-            const failed = settled.filter(s => s.status === 'rejected');
+            // SAĞLAM TOPLAMA (2026-06-21): DB yük altında status-poll geçici timeout alıp
+            // bir grubu DÜŞÜREBİLİR — ama backend task COMPLETED olup sonuç dosyasını
+            // ZATEN yazmıştır. Bu yüzden poll'dan sonra HER task_id için SON bir full=true
+            // çekimi dene; poll'un getirdiği geçerli (employees/text_log içeren) sonucu
+            // koru, düşürdüğünü dosyadan kurtar. Böylece "6 grubun sadece 1'i görünüyor"
+            // (düşen chunk'lar merge'den eksik) ortadan kalkar.
+            const finalResults = await Promise.all(tasks.map(async (t, i) => {
+                const fromPoll = settled[i].status === 'fulfilled' ? settled[i].value : null;
+                if (fromPoll && (((fromPoll.employees || []).length > 0) || fromPoll.text_log)) {
+                    return fromPoll;
+                }
+                try {
+                    const r = await api.get(
+                        `/system/health-check/full-recalculation-status/?task_id=${t.task_id}&full=true`,
+                        { timeout: 120000 });
+                    if (r.data && (((r.data.employees || []).length > 0) || r.data.text_log)) {
+                        return r.data;
+                    }
+                } catch { /* bu grup gerçekten alınamadı */ }
+                return null;
+            }));
+            const ok = finalResults.filter(Boolean);
             if (!ok.length) {
-                throw new Error(failed[0]?.reason?.message || 'Tüm gruplar başarısız');
+                const firstErr = settled.find(s => s.status === 'rejected');
+                throw new Error(firstErr?.reason?.message || 'Tüm gruplar başarısız');
             }
             const merged = mergeChunkResults(ok);
-            if (failed.length) {
-                merged._partial_note = `${failed.length}/${tasks.length} grup başarısız — rapor kısmi.`;
+            const missing = tasks.length - ok.length;
+            if (missing > 0) {
+                merged._partial_note = `${missing}/${tasks.length} grup sonucu alınamadı — rapor kısmi.`;
             }
             setFrcResult(merged);
         } catch (e) {
@@ -768,15 +790,15 @@ export default function RecalculationAuditTab() {
                         {frcLoading ? 'Hesaplaniyor...' : 'Tam Yeniden Hesaplama'}
                     </button>
                     <button
-                        onClick={() => runParallelRecalculation(6)}
+                        onClick={() => runParallelRecalculation(3)}
                         disabled={isProcessing || uniLoading || uniFixing || frcLoading || !!employeeId}
-                        title="Çalışanları 6 gruba bölüp PARALEL koşar (~6x hız, 24 vCPU). Yalnız önizleme (dry_run, güvenli). Tek çalışan seçiliyken devre dışı (zaten hızlı)."
+                        title="Çalışanları 3 gruba bölüp PARALEL koşar. 6 yerine 3: TYR sırasında DB yükü yarıya iner → site (login/dashboard) açık kalır. Yalnız önizleme (dry_run, güvenli). Tek çalışan seçiliyken devre dışı (zaten hızlı)."
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm text-white transition-all ${
                             frcLoading || employeeId ? 'bg-gray-400 cursor-not-allowed' : 'bg-fuchsia-600 hover:bg-fuchsia-700 active:scale-95'
                         }`}
                     >
                         <ArrowPathIcon className="w-4 h-4" />
-                        Paralel Önizleme (6 grup)
+                        Paralel Önizleme (3 grup)
                     </button>
                     <button
                         onClick={runVerifyCalculations}
