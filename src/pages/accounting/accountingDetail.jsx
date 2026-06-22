@@ -14,22 +14,39 @@ import {
     fmtDurationFromMinutes, fmtHourMin, fmtBool,
 } from './accountingFormat';
 
-// Fazla mesai kaynak etiketleri (OvertimeTab ile aynı sözlük)
+// Fazla mesai kaynak etiketleri (OvertimeRequest.source_type → INTENDED/MANUAL/POTENTIAL)
 const OT_SOURCE_LABELS = {
     POTENTIAL: 'Algılanan',
     MANUAL: 'Manuel',
     INTENDED: 'Planlı',
-    ASSIGNED: 'Atanan',
 };
 
-// Ulaşım türü etiketleri (dış görev)
+// Ulaşım türü etiketleri (LeaveRequest.TRANSPORT_TYPE_CHOICES ile birebir)
 const TRANSPORT_LABELS = {
-    COMPANY: 'Şirket Aracı',
-    PERSONAL: 'Özel Araç',
-    PUBLIC: 'Toplu Taşıma',
-    FLIGHT: 'Uçak',
-    RENTAL: 'Kiralık',
+    COMPANY_CAR: 'Şirket Aracı',
+    PERSONAL_CAR: 'Kişisel Araç',
+    BUS: 'Otobüs',
+    PLANE: 'Uçak',
+    TRAIN: 'Tren',
     OTHER: 'Diğer',
+};
+
+// Dış görev türü etiketleri (LeaveRequest.TASK_TYPE_CHOICES ile birebir)
+const TASK_TYPE_LABELS = {
+    REMOTE_WORK: 'Evden Çalışma',
+    SITE_VISIT: 'Saha Ziyareti',
+    TRAINING: 'Eğitim',
+    MEETING: 'Toplantı',
+    CUSTOMER_VISIT: 'Müşteri Ziyareti',
+    INSTITUTION_VISIT: 'Kurum Ziyareti',
+    OTHER: 'Diğer',
+};
+
+// Seyahat türü etiketleri (LeaveRequest.TRIP_TYPE_CHOICES ile birebir)
+const TRIP_TYPE_LABELS = {
+    NONE: 'Yolculuk Yok',
+    INNER_CITY: 'Şehir İçi',
+    OUT_OF_CITY: 'Şehir Dışı',
 };
 
 /**
@@ -107,8 +124,8 @@ export function renderLeaveDetail(r) {
             { key: 'adres', label: 'Adres', children: r.duty_address },
             { key: 'firma', label: 'Firma', children: r.duty_company },
             { key: 'hedef', label: 'Hedef', children: r.destination },
-            { key: 'gorevtip', label: 'Görev Tipi', children: r.task_type },
-            { key: 'geztip', label: 'Seyahat Tipi', children: r.trip_type },
+            { key: 'gorevtip', label: 'Görev Tipi', children: r.task_type ? (TASK_TYPE_LABELS[r.task_type] || r.task_type) : null },
+            { key: 'geztip', label: 'Seyahat Tipi', children: (r.trip_type && r.trip_type !== 'NONE') ? (TRIP_TYPE_LABELS[r.trip_type] || r.trip_type) : null },
             { key: 'telefon', label: 'İletişim', children: r.contact_phone },
             { key: 'ulasim', label: 'Ulaşım', children: ulasim },
             { key: 'plaka', label: 'Plaka', children: r.transport_plate },

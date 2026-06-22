@@ -11,7 +11,6 @@ const SOURCE_LABELS = {
     POTENTIAL: { label: 'Algılanan', color: 'cyan' },
     MANUAL: { label: 'Manuel', color: 'gold' },
     INTENDED: { label: 'Planlı', color: 'geekblue' },
-    ASSIGNED: { label: 'Atanan', color: 'geekblue' },
 };
 
 /**

@@ -31,6 +31,10 @@ const SECTION_DEFS = [
     { key: 'entitlement', label: 'İzin Bakiyesi', icon: Wallet },
 ];
 
+// Tablo sıralayıcıları — ISO tarih string'leri leksikografik = kronolojik sıralanır
+const byDate = (k) => (a, b) => String(a[k] || '').localeCompare(String(b[k] || ''));
+const byNum = (k) => (a, b) => (Number(a[k]) || 0) - (Number(b[k]) || 0);
+
 // Bölüm başlığı (ikon + başlık + sayı rozeti + opsiyonel sağ aksiyon)
 const SectionHeader = ({ icon: Icon, title, count, extra }) => (
     <div className="flex items-center gap-2 mb-3">
@@ -117,6 +121,9 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
     // Tür-içi durum filtreleri (bölüm-key → status değeri | null)
     const [statusFilters, setStatusFilters] = useState({});
 
+    // Ham Kart bölümü yön filtresi (null | 'IN' | 'OUT')
+    const [rawDir, setRawDir] = useState(null);
+
     // Roster'ı bir kez (sekme ilk aktif olunca) çek — çalışan seçici beslemesi
     const fetchRoster = useCallback(async () => {
         if (!ready) return;
@@ -145,6 +152,7 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
             const res = await api.get(`/accounting/person/${selectedEmpId}/`, { params });
             setDetail(res.data);
             setStatusFilters({}); // yeni kişi → filtreleri sıfırla
+            setRawDir(null);
         } catch (err) {
             console.error('Kişi detayı alınamadı:', err);
             message.error('Kişi detayı yüklenemedi.');
@@ -192,50 +200,50 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
     // ---- Sütun tanımları ----
     const leaveCols = useMemo(() => [
         { title: 'Tür', dataIndex: 'request_type_name', key: 't', render: (v) => v || '—' },
-        { title: 'Aralık', key: 'r', render: (_, r) => <span className="tabular-nums">{fmtRange(r.start_date, r.end_date)}</span> },
-        { title: 'Gün', dataIndex: 'total_days', key: 'd', align: 'right', render: (v) => (v == null ? '—' : v) },
+        { title: 'Aralık', key: 'r', sorter: byDate('start_date'), render: (_, r) => <span className="tabular-nums">{fmtRange(r.start_date, r.end_date)}</span> },
+        { title: 'Gün', dataIndex: 'total_days', key: 'd', align: 'right', sorter: byNum('total_days'), render: (v) => (v == null ? '—' : v) },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} /> },
         { title: 'Onaylayan', dataIndex: 'approved_by_name', key: 'a', responsive: ['md'], render: (v) => v || <span className="text-slate-400">—</span> },
     ], []);
 
     const dutyCols = useMemo(() => [
-        { title: 'Aralık', key: 'r', render: (_, r) => <span className="tabular-nums">{fmtRange(r.start_date, r.end_date)}</span> },
+        { title: 'Aralık', key: 'r', sorter: byDate('start_date'), render: (_, r) => <span className="tabular-nums">{fmtRange(r.start_date, r.end_date)}</span> },
         { title: 'İl', dataIndex: 'duty_city', key: 'c', render: (v) => v || '—' },
         { title: 'Firma', dataIndex: 'duty_company', key: 'f', responsive: ['md'], render: (v) => v || '—' },
-        { title: 'Gün', dataIndex: 'total_days', key: 'd', align: 'right', render: (v) => (v == null ? '—' : v) },
+        { title: 'Gün', dataIndex: 'total_days', key: 'd', align: 'right', sorter: byNum('total_days'), render: (v) => (v == null ? '—' : v) },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} /> },
     ], []);
 
     const otCols = useMemo(() => [
-        { title: 'Tarih', dataIndex: 'date', key: 'd', render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
+        { title: 'Tarih', dataIndex: 'date', key: 'd', sorter: byDate('date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Saat', key: 't', render: (_, r) => <span className="tabular-nums">{fmtTime(r.start_time)}–{fmtTime(r.end_time)}</span> },
-        { title: 'Süre', dataIndex: 'duration_minutes', key: 'dur', align: 'right', render: (v, r) => fmtDurationFromMinutes(v != null ? v : (r.duration_seconds != null ? r.duration_seconds / 60 : null)) },
+        { title: 'Süre', dataIndex: 'duration_minutes', key: 'dur', align: 'right', sorter: byNum('duration_seconds'), render: (v, r) => fmtDurationFromMinutes(v != null ? v : (r.duration_seconds != null ? r.duration_seconds / 60 : null)) },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} /> },
     ], []);
 
     const mealCols = useMemo(() => [
-        { title: 'Tarih', dataIndex: 'date', key: 'd', render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
+        { title: 'Tarih', dataIndex: 'date', key: 'd', sorter: byDate('date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Açıklama', dataIndex: 'description', key: 'desc', ellipsis: true, render: (v) => v || '—' },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <MealStatusTag status={v} statusDisplay={r.status_display} /> },
     ], []);
 
     const cardlessCols = useMemo(() => [
-        { title: 'Tarih', dataIndex: 'date', key: 'd', render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
+        { title: 'Tarih', dataIndex: 'date', key: 'd', sorter: byDate('date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Giriş/Çıkış', key: 't', render: (_, r) => <span className="tabular-nums">{fmtTime(r.check_in_time)}–{fmtTime(r.check_out_time)}</span> },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <CardlessStatusTag status={v} statusDisplay={r.status_display} /> },
     ], []);
 
     const attCols = useMemo(() => [
-        { title: 'Tarih', dataIndex: 'work_date', key: 'd', render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
+        { title: 'Tarih', dataIndex: 'work_date', key: 'd', sorter: byDate('work_date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Giriş', dataIndex: 'check_in', key: 'i', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
         { title: 'Çıkış', dataIndex: 'check_out', key: 'o', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
-        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', render: (v) => <span className="tabular-nums">{fmtHourMin(v)}</span> },
-        { title: 'Fazla', dataIndex: 'overtime_seconds', key: 'ot', align: 'right', render: (v) => <span className="tabular-nums text-amber-600">{fmtHourMin(v)}</span> },
+        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', sorter: byNum('normal_seconds'), render: (v) => <span className="tabular-nums">{fmtHourMin(v)}</span> },
+        { title: 'Fazla', dataIndex: 'overtime_seconds', key: 'ot', align: 'right', sorter: byNum('overtime_seconds'), render: (v) => <span className="tabular-nums text-amber-600">{fmtHourMin(v)}</span> },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => r.status_display || v || '—' },
     ], []);
 
     const rawCols = useMemo(() => [
-        { title: 'Zaman', dataIndex: 'timestamp', key: 't', render: (v) => <span className="tabular-nums">{fmtDateTime(v)}</span> },
+        { title: 'Zaman', dataIndex: 'timestamp', key: 't', sorter: byDate('timestamp'), render: (v) => <span className="tabular-nums">{fmtDateTime(v)}</span> },
         { title: 'Yön', dataIndex: 'direction', key: 'd', align: 'center', render: (v) => <DirectionTag direction={v} /> },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v) => v || '—' },
     ], []);
@@ -423,21 +431,30 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
                     {visibleTypes.has('overtime') && renderDataSection(SECTION_DEFS[2], detail.overtime, otCols, renderOvertimeDetail)}
                     {visibleTypes.has('meal_requests') && renderDataSection(SECTION_DEFS[3], detail.meal_requests, mealCols, renderMealDetail)}
                     {visibleTypes.has('cardless_requests') && renderDataSection(SECTION_DEFS[4], detail.cardless_requests, cardlessCols, renderCardlessDetail)}
-                    {visibleTypes.has('attendance') && renderDataSection(SECTION_DEFS[5], detail.attendance, attCols, renderAttendanceDetail, false)}
-                    {visibleTypes.has('raw_events') && (
-                        <div className="glass-card p-4">
-                            <SectionHeader icon={Layers} title="Ham Kart Olayları" count={(detail.raw_events || []).length} />
-                            <Table
-                                dataSource={detail.raw_events || []}
-                                columns={rawCols}
-                                rowKey={(r) => r.id ?? `${r.timestamp}-${r.direction}`}
-                                size="small"
-                                scroll={{ x: 'max-content' }}
-                                pagination={(detail.raw_events || []).length > 10 ? { pageSize: 10, showSizeChanger: false } : false}
-                                locale={{ emptyText: <Empty description="Bu dönemde kayıt yok" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                            />
-                        </div>
-                    )}
+                    {visibleTypes.has('attendance') && renderDataSection(SECTION_DEFS[5], detail.attendance, attCols, renderAttendanceDetail)}
+                    {visibleTypes.has('raw_events') && (() => {
+                        const rawAll = detail.raw_events || [];
+                        const rawRows = rawDir ? rawAll.filter((r) => r.direction === rawDir) : rawAll;
+                        return (
+                            <div className="glass-card p-4">
+                                <SectionHeader icon={Layers} title="Ham Kart Olayları" count={rawAll.length} />
+                                <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                                    <Tag.CheckableTag checked={!rawDir} onChange={() => setRawDir(null)}>Tümü</Tag.CheckableTag>
+                                    <Tag.CheckableTag checked={rawDir === 'IN'} onChange={() => setRawDir(rawDir === 'IN' ? null : 'IN')}>Giriş</Tag.CheckableTag>
+                                    <Tag.CheckableTag checked={rawDir === 'OUT'} onChange={() => setRawDir(rawDir === 'OUT' ? null : 'OUT')}>Çıkış</Tag.CheckableTag>
+                                </div>
+                                <Table
+                                    dataSource={rawRows}
+                                    columns={rawCols}
+                                    rowKey={(r) => r.id ?? `${r.timestamp}-${r.direction}`}
+                                    size="small"
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={rawRows.length > 10 ? { pageSize: 10, showSizeChanger: false } : false}
+                                    locale={{ emptyText: <Empty description="Bu dönemde kayıt yok" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                                />
+                            </div>
+                        );
+                    })()}
                     {visibleTypes.has('entitlement') && (
                         <div className="glass-card p-4">
                             <SectionHeader icon={Wallet} title="İzin Bakiyesi" />
