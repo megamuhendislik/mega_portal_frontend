@@ -5,6 +5,8 @@ import {
     REQUEST_STATUS_COLORS,
     REQUEST_STATUS_LABELS,
     DIRECTION_LABELS,
+    MEAL_STATUS,
+    CARDLESS_STATUS,
 } from './accountingFormat';
 
 // Çalışan durumu rozeti (Genel Bakış)
@@ -24,4 +26,16 @@ export const RequestStatusTag = ({ status, statusDisplay }) => {
 export const DirectionTag = ({ direction }) => {
     const cfg = DIRECTION_LABELS[direction] || { label: direction || '—', color: 'default' };
     return <Tag color={cfg.color}>{cfg.label}</Tag>;
+};
+
+// Yemek talebi durum rozeti
+export const MealStatusTag = ({ status, statusDisplay }) => {
+    const cfg = MEAL_STATUS[status] || { label: statusDisplay || status || '—', color: 'default' };
+    return <Tag color={cfg.color}>{statusDisplay || cfg.label}</Tag>;
+};
+
+// Kartsız giriş talebi durum rozeti
+export const CardlessStatusTag = ({ status, statusDisplay }) => {
+    const cfg = CARDLESS_STATUS[status] || { label: statusDisplay || status || '—', color: 'default' };
+    return <Tag color={cfg.color}>{statusDisplay || cfg.label}</Tag>;
 };
