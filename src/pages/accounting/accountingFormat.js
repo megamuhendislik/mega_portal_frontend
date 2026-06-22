@@ -36,6 +36,22 @@ export const DIRECTION_LABELS = {
     OUT: { label: 'Çıkış', color: 'volcano' },
 };
 
+// Yemek talebi durumları
+export const MEAL_STATUS = {
+    PENDING: { label: 'Bekliyor', color: 'blue' },
+    ORDERED: { label: 'Sipariş Edildi', color: 'cyan' },
+    DELIVERED: { label: 'Teslim Edildi', color: 'green' },
+    CANCELLED: { label: 'İptal', color: 'default' },
+};
+
+// Kartsız giriş talebi durumları
+export const CARDLESS_STATUS = {
+    PENDING: { label: 'Onay Bekliyor', color: 'blue' },
+    APPROVED: { label: 'Onaylandı', color: 'green' },
+    REJECTED: { label: 'Reddedildi', color: 'red' },
+    CANCELLED: { label: 'Geri Çekildi', color: 'default' },
+};
+
 // =========== SABITLER ===========
 
 // Ortak tarih/saat aralığı ayıracı (en-dash, çevresi boşluklu): "09:00 – 18:00"
@@ -123,4 +139,10 @@ export const fmtHourMin = (sec) => {
 export const fmtHours = (v) => {
     if (v == null || isNaN(v)) return '—';
     return `${Number(v).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} s`;
+};
+
+// boolean -> "Evet" / "Hayır"  (null/undefined -> "—")
+export const fmtBool = (v) => {
+    if (v == null) return '—';
+    return v ? 'Evet' : 'Hayır';
 };

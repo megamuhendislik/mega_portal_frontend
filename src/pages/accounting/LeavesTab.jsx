@@ -3,6 +3,13 @@ import { Table, Empty, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import { RequestStatusTag } from './accountingTags';
 import { fmtRange, fmtDate, emptyStateText } from './accountingFormat';
+import { renderLeaveDetail } from './accountingDetail';
+
+// İzin kategorisi etiketleri (filtre + rozet)
+const CATEGORY_LABELS = {
+    LEAVE: 'İzin',
+    EXTERNAL_DUTY: 'Dış Görev',
+};
 
 /**
  * İzinler sekmesi — /accounting/leaves/
@@ -62,6 +69,13 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
         return [...map.entries()].map(([value, text]) => ({ value, text }));
     }, [rows]);
 
+    // Kategori (İzin / Dış Görev) filtre seçenekleri — yalnız veride mevcut olanlar
+    const categoryFilters = useMemo(() => {
+        const set = new Set();
+        rows.forEach((r) => { if (r.request_type_category) set.add(r.request_type_category); });
+        return [...set].map((value) => ({ value, text: CATEGORY_LABELS[value] || value }));
+    }, [rows]);
+
     const columns = [
         {
             title: 'Çalışan',
@@ -69,13 +83,24 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
             ellipsis: true,
             render: (_, r) => (
                 <button
-                    onClick={() => onSelectEmployee?.(r.employee_id)}
+                    onClick={(e) => { e.stopPropagation(); onSelectEmployee?.(r.employee_id); }}
                     className="text-left text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
                 >
                     {r.employee_name}
                     {r.employee_code ? <span className="text-slate-400 font-normal"> · {r.employee_code}</span> : null}
                 </button>
             ),
+        },
+        {
+            title: 'Kategori',
+            dataIndex: 'request_type_category',
+            key: 'request_type_category',
+            width: 110,
+            align: 'center',
+            responsive: ['md'],
+            render: (v) => (v ? (CATEGORY_LABELS[v] || v) : '—'),
+            filters: categoryFilters,
+            onFilter: (value, record) => record.request_type_category === value,
         },
         {
             title: 'Tür',
@@ -155,7 +180,11 @@ export default function LeavesTab({ params, ready, search, active, onSelectEmplo
                 rowKey="id"
                 loading={loading}
                 size="middle"
-                scroll={{ x: 900 }}
+                scroll={{ x: 1010 }}
+                expandable={{
+                    expandedRowRender: (record) => renderLeaveDetail(record),
+                    expandRowByClick: true,
+                }}
                 pagination={{
                     pageSize: 20,
                     showSizeChanger: true,

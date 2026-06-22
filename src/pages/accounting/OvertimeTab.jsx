@@ -5,12 +5,12 @@ import { RequestStatusTag } from './accountingTags';
 import {
     fmtDate, fmtTime, fmtDurationFromMinutes, emptyStateText, RANGE_SEP,
 } from './accountingFormat';
+import { renderOvertimeDetail } from './accountingDetail';
 
 const SOURCE_LABELS = {
     POTENTIAL: { label: 'Algılanan', color: 'cyan' },
     MANUAL: { label: 'Manuel', color: 'gold' },
     INTENDED: { label: 'Planlı', color: 'geekblue' },
-    ASSIGNED: { label: 'Atanan', color: 'geekblue' },
 };
 
 /**
@@ -71,7 +71,7 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
             ellipsis: true,
             render: (_, r) => (
                 <button
-                    onClick={() => onSelectEmployee?.(r.employee_id)}
+                    onClick={(e) => { e.stopPropagation(); onSelectEmployee?.(r.employee_id); }}
                     className="text-left text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
                 >
                     {r.employee_name}
@@ -151,6 +151,10 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
                 loading={loading}
                 size="middle"
                 scroll={{ x: 880 }}
+                expandable={{
+                    expandedRowRender: (record) => renderOvertimeDetail(record),
+                    expandRowByClick: true,
+                }}
                 pagination={{
                     pageSize: 20,
                     showSizeChanger: true,

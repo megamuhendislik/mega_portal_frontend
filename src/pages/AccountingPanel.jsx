@@ -6,6 +6,7 @@ import {
     CalendarCheck,
     Clock,
     CreditCard,
+    UserSearch,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -14,6 +15,7 @@ import OverviewTab from './accounting/OverviewTab';
 import LeavesTab from './accounting/LeavesTab';
 import OvertimeTab from './accounting/OvertimeTab';
 import CardDataTab from './accounting/CardDataTab';
+import EmployeeDetailTab from './accounting/EmployeeDetailTab';
 import PersonDrawer from './accounting/PersonDrawer';
 
 // =========== TAB BUTTON ===========
@@ -38,6 +40,7 @@ const TABS = [
     { key: 'leaves', label: 'İzinler', icon: <CalendarCheck size={18} /> },
     { key: 'overtime', label: 'Mesailer', icon: <Clock size={18} /> },
     { key: 'cards', label: 'Kart Verileri', icon: <CreditCard size={18} /> },
+    { key: 'employee', label: 'Çalışan Detayı', icon: <UserSearch size={18} /> },
 ];
 
 // Content-Disposition'dan dosya adını ayıkla
@@ -247,6 +250,17 @@ const AccountingPanel = () => {
                             active={activeTab === 'cards'}
                             externalEmployeeId={cardEmpId}
                             onConsumeExternal={consumeCardExternal}
+                        />
+                    </div>
+                )}
+                {mounted.employee && (
+                    <div style={{ display: activeTab === 'employee' ? 'block' : 'none' }}>
+                        <EmployeeDetailTab
+                            params={params}
+                            ready={ready}
+                            active={activeTab === 'employee'}
+                            onExportPerson={handleExportPerson}
+                            exportingPerson={exportingPerson}
                         />
                     </div>
                 )}
