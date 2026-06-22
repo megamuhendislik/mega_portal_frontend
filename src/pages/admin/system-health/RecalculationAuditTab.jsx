@@ -261,8 +261,9 @@ export default function RecalculationAuditTab() {
 
         setFrcLoading(true);
         setFrcError(null);
-        // Apply with cache: sim sonucunu silme — fail durumunda kullanıcı eski raporu görebilsin
-        if (!(mode === 'apply' && frcResult?.cache_token)) {
+        // Apply (staged run_id VEYA cache): sim sonucunu silme — staged apply
+        // frcResult.run_id'ye ihtiyaç duyar; fail durumunda kullanıcı eski raporu görebilsin.
+        if (!(mode === 'apply' && (frcResult?.run_id || frcResult?.cache_token))) {
             setFrcResult(null);
         }
         setFrcExpandedEmps(new Set());
@@ -270,8 +271,86 @@ export default function RecalculationAuditTab() {
         try {
             const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
             if (employeeId) body.employee_id = parseInt(employeeId);
+            // STAGE-THEN-APPLY: dry-run (SIMULASYON) sonucu FrcStagedRun'a stage'lensin
+            // → backend ORTAK run_id üretir, "Uygula" bu run'ı YENİDEN HESAPLAMADAN
+            // canlıya yazar (apply-staged). apply modunda stage YOK (zaten canlıya yazar).
+            if (mode === 'dry_run') body.stage = true;
 
-            // FAST-PATH: Apply with sim cache_token → tekrar hesaplamadan direkt uygula
+            // FAST-PATH (STAGED): Apply edilmiş sim → apply-staged ile YENİDEN
+            // HESAPLAMADAN canlıya yaz (Task 13). frcResult.run_id varsa bu yolu kullan.
+            if (mode === 'apply' && frcResult?.run_id) {
+                try {
+                    const stagedRes = await api.post(
+                        '/system/health-check/apply-staged/',
+                        { run_id: frcResult.run_id },
+                        { timeout: 60000 });
+                    // apply-staged async chunk task'ları döndürür → hepsini izle.
+                    const stagedTaskIds = (stagedRes.data.tasks || [])
+                        .map(t => t.task_id).filter(Boolean);
+                    if (stagedTaskIds.length === 0) throw new Error('Apply task başlatılamadı');
+
+                    // Tüm chunk task'ları COMPLETED olana kadar bekle (run APPLIED
+                    // tüm chunk'lar bitince işaretlenir). Birinde FAILED → hata.
+                    const pending = new Set(stagedTaskIds);
+                    let aAttempts = 0;
+                    const A_POLL_MS = 5000;
+                    const A_MAX_MIN = 67;
+                    const aMaxAttempts = (A_MAX_MIN * 60 * 1000) / A_POLL_MS;
+                    let aPollErrors = 0;
+                    while (pending.size > 0 && aAttempts < aMaxAttempts) {
+                        await new Promise(r => setTimeout(r, A_POLL_MS));
+                        aAttempts++;
+                        try {
+                            for (const tid of Array.from(pending)) {
+                                const sRes = await api.get(
+                                    `/system/health-check/full-recalculation-status/?task_id=${tid}`,
+                                    { timeout: 60000 });
+                                const sSt = sRes.data;
+                                if (sSt.status === 'COMPLETED') {
+                                    pending.delete(tid);
+                                } else if (sSt.status === 'FAILED') {
+                                    throw new Error(sSt.error || 'Uygulama başarısız');
+                                } else if (['CANCELLED', 'NOT_FOUND', 'NO_TASK'].includes(sSt.status)) {
+                                    throw new Error('Uygulama iptal edildi veya bulunamadı');
+                                }
+                            }
+                            aPollErrors = 0;
+                        } catch (aPollErr) {
+                            // Kendi attığımız hata (FAILED/iptal — axios DEĞİL) → hemen yükselt.
+                            // Geçici axios poll hatası → birkaç kez tolere et.
+                            if (!aPollErr?.isAxiosError) throw aPollErr;
+                            aPollErrors++;
+                            if (aPollErrors >= 12) throw aPollErr;
+                        }
+                    }
+                    if (pending.size > 0) {
+                        throw new Error(`Uygulama zaman aşımına uğradı (${A_MAX_MIN}dk).`);
+                    }
+                    // Başarı: sim raporunu koru, mode=apply işaretle (UI "uygulandı" gösterir).
+                    setFrcResult({ ...frcResult, mode: 'apply', _appliedStaged: true });
+                    setFrcLoading(false);
+                    return;
+                } catch (stagedErr) {
+                    const sData = stagedErr?.response?.data || {};
+                    const sStatus = stagedErr?.response?.status;
+                    // 409 EXPIRED / already-applied / APPLYING → taze sim gerekli.
+                    if (sStatus === 409 || sStatus === 404) {
+                        setFrcError(
+                            (sData.error ? sData.error + ' ' : '') +
+                            'Sim süresi dolmuş veya zaten uygulanmış olabilir. Lütfen ' +
+                            'Tam Yeniden Hesaplama (SIMULASYON) tekrar çalıştırın, sonra Uygula\'ya basın.');
+                        setFrcLoading(false);
+                        return;
+                    }
+                    // Diğer hata (network vb.) → kullanıcıya bildir.
+                    setFrcError(sData.error || stagedErr.message || 'Uygulama hatası');
+                    setFrcLoading(false);
+                    return;
+                }
+            }
+
+            // GERİ-UYUM FAST-PATH: run_id yok (eski sim) ama cache_token var →
+            // tekrar hesaplamadan direkt uygula (eski yol).
             if (mode === 'apply' && frcResult?.cache_token) {
                 body.from_cache = true;
                 body.cache_token = frcResult.cache_token;
@@ -305,6 +384,9 @@ export default function RecalculationAuditTab() {
                 { timeout: 60000 });
             const taskId = startRes.data.task_id;
             if (!taskId) throw new Error('Task ID alınamadı');
+            // STAGE-THEN-APPLY: dry-run + stage → backend ORTAK run_id döndürür.
+            // "Uygula" bunu apply-staged'e verir (status JSON'da kaybolursa fallback).
+            const stageRunId = startRes.data.run_id || null;
 
             // Poll task status
             // Tüm dönem (65 çalışan × ~90 gün) TYR'si ~18-22dk sürebiliyor.
@@ -334,7 +416,12 @@ export default function RecalculationAuditTab() {
                             `/system/health-check/full-recalculation-status/?task_id=${taskId}&full=true`,
                             { timeout: 120000 }
                         );
-                        setFrcResult(fullRes.data);
+                        // run_id status JSON'da varsa onu kullan, yoksa async start
+                        // response'undakiyle tamamla (apply-staged için zorunlu).
+                        setFrcResult({
+                            ...fullRes.data,
+                            run_id: fullRes.data.run_id || stageRunId,
+                        });
                         break;
                     } else if (st.status === 'FAILED') {
                         throw new Error(st.error || 'Hesaplama başarısız');
@@ -1281,6 +1368,9 @@ export default function RecalculationAuditTab() {
                                 <button
                                     onClick={() => runFullRecalculation('apply')}
                                     disabled={frcLoading}
+                                    title={frcResult.run_id
+                                        ? 'Bu simülasyonun sonucu hazır (staged) — yeniden hesaplamadan doğrudan canlıya yazılır.'
+                                        : 'Değişiklikler hesaplanıp canlıya uygulanır.'}
                                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
                                 >
                                     <WrenchScrewdriverIcon className="w-4 h-4" />
