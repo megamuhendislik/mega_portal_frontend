@@ -32,7 +32,8 @@ import {
     HeartHandshake,
     ShoppingCart,
     BarChart3,
-    Calculator
+    Calculator,
+    Megaphone
 } from 'lucide-react';
 import clsx from 'clsx';
 import { message } from 'antd';
@@ -43,6 +44,7 @@ import useSmartPolling from '../hooks/useSmartPolling';
 import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 import ModalOverlay from '../components/ui/ModalOverlay';
+import SystemMessagePopup from '../components/SystemMessagePopup';
 
 // Module-level cache for today_summary to avoid duplicate calls (MainLayout + Dashboard)
 let _breakSummaryCache = { data: null, fetchedAt: 0 };
@@ -183,6 +185,7 @@ const MainLayout = () => {
         { path: '/meal-orders', label: 'Yemek Sipariş', icon: Utensils, permission: 'PAGE_MEAL_ORDERS' },
         { path: '/health-reports', label: 'Sağlık Raporları', icon: HeartPulse, permission: 'PAGE_HEALTH_REPORTS' },
         { path: '/special-leaves', label: 'Özel İzinler', icon: HeartHandshake, permission: 'PAGE_SPECIAL_LEAVES' },
+        { path: '/admin/system-messages', label: 'Sistem Mesajları', icon: Megaphone, permission: 'PAGE_SYSTEM_MESSAGES' },
         { path: '/admin/system-health', label: 'Sistem Sağlığı', icon: Shield, permission: 'PAGE_SYSTEM_HEALTH' },
         { path: '/system-data-management', label: 'Veri Yönetimi', icon: Database, permission: 'PAGE_DATA_MANAGEMENT' },
         { path: '/debug/attendance', label: 'Debug', icon: Database, permission: 'PAGE_DEBUG' },
@@ -224,6 +227,9 @@ const MainLayout = () => {
                     alert('Fazla mesai talebiniz oluşturuldu.');
                 }}
             />
+
+            {/* Sistem Mesajları Pop-up */}
+            <SystemMessagePopup />
 
             {/* Profile Reminder Popup */}
             <ModalOverlay open={showProfileReminder} onClose={() => setShowProfileReminder(false)} closeOnOverlayClick={false}>

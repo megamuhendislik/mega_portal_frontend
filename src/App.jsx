@@ -30,6 +30,7 @@ const ProgramManagement = lazyRetry(() => import('./pages/admin/ProgramManagemen
 const Feedback = lazyRetry(() => import('./pages/Feedback'));
 const HealthReports = lazyRetry(() => import('./pages/admin/HealthReports'));
 const SpecialLeaves = lazyRetry(() => import('./pages/admin/SpecialLeaves'));
+const SystemMessages = lazyRetry(() => import('./pages/admin/SystemMessages'));
 const Procurement = lazyRetry(() => import('./pages/Procurement'));
 
 const HelpLibrary = lazyRetry(() => import('./pages/HelpLibrary'));
@@ -148,6 +149,9 @@ function App() {
 
             {/* Special Leaves - Requires PAGE_SPECIAL_LEAVES */}
             <Route path="special-leaves" element={<ProtectedRoute requiredPermission="PAGE_SPECIAL_LEAVES"><Suspense fallback={<PageLoader />}><SpecialLeaves /></Suspense></ProtectedRoute>} />
+
+            {/* System Messages - Requires PAGE_SYSTEM_MESSAGES */}
+            <Route path="admin/system-messages" element={<ProtectedRoute requiredPermission="PAGE_SYSTEM_MESSAGES"><Suspense fallback={<PageLoader />}><SystemMessages /></Suspense></ProtectedRoute>} />
 
             <Route path="system-data-management" element={<ProtectedRoute requiredPermission="PAGE_DATA_MANAGEMENT"><Suspense fallback={<PageLoader />}><DataManagement /></Suspense></ProtectedRoute>} />
 
