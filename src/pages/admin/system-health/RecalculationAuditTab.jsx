@@ -489,8 +489,12 @@ export default function RecalculationAuditTab() {
     };
 
     const runParallelRecalculation = async (chunks = 3) => {
-        // Paralel ŞİMDİLİK yalnız önizleme (dry_run): rollback=güvenli. Kalıcı apply
-        // tek (seri) koşuyla yapılır (canlı bordroda eşzamanlı-yazıcı riski sıfır).
+        // Paralel dry_run (rollback=güvenli) + STAGE: backend 3 gruba ORTAK run_id
+        // üretir (full-recalculation-parallel, stage:true), her grup değişen günlerini
+        // AYNI run'a stage'ler. "Uygula" bu ortak run_id'yi apply-staged'e verir →
+        // 3 GRUBUN TAMAMI YENİDEN HESAPLAMADAN (önceden-hesaplanmış staged sonuç)
+        // canlıya yazılır. apply-staged ayrık çalışan-chunk'larıyla yazdığı için
+        // eşzamanlı-yazıcı riski yok (2026-06-23: paralel-apply kablolaması).
         setFrcLoading(true);
         setFrcError(null);
         setFrcProgress(null);
@@ -502,9 +506,15 @@ export default function RecalculationAuditTab() {
             const body = {
                 date_from: startDate, date_to: endDate,
                 mode: 'dry_run', show_all_days: showAllDays, chunks,
+                stage: true,  // ORTAK run_id üret → "Uygula" apply-staged ile tüm grupları yazar
             };
             const startRes = await api.post('/system/health-check/full-recalculation-parallel/', body,
                 { timeout: 120000 });
+            // STAGE-THEN-APPLY: paralel endpoint 3 grup için ORTAK run_id döndürür.
+            // merged.run_id'ye koy → "Uygula" (runFullRecalculation('apply')) bunu
+            // apply-staged'e verir (frcResult.run_id). Yoksa eski/yavaş tam-recompute
+            // apply'a düşer ve timeout'ta kısmi kalırdı (yalnız ilk grup yazılırdı).
+            const commonRunId = startRes.data?.run_id || null;
             const tasks = startRes.data?.tasks || [];
             if (!tasks.length) throw new Error('Paralel grup başlatılamadı');
             setFrcParallel(tasks.map(t => ({ ...t, progress: null, status: 'RUNNING' })));
@@ -575,6 +585,10 @@ export default function RecalculationAuditTab() {
                 throw new Error(firstErr?.reason?.message || 'Tüm gruplar başarısız');
             }
             const merged = mergeChunkResults(ok);
+            // ORTAK staged run_id'yi merged'e koy → "Uygula" apply-staged ile 3 grubun
+            // tamamını yazar (frcResult.run_id). mergeChunkResults ilk chunk'tan run_id
+            // taşıyabilir ama ortak run_id AUTORİTER (endpoint başında üretildi).
+            if (commonRunId) merged.run_id = commonRunId;
             const missing = tasks.length - ok.length;
             if (missing > 0) {
                 merged._partial_note = `${missing}/${tasks.length} grup sonucu alınamadı — rapor kısmi.`;
