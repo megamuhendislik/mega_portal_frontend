@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { advanceSuffix } from '../../utils/leaveBalance';
 import {
   Calendar,
   Clock,
@@ -131,7 +132,7 @@ export default function LeaveTypeSelector({
           label="Yıllık İzin"
           icon={Calendar}
           color="blue"
-          balanceText={`Kalan: ${leaveBalance?.available || 0} gün`}
+          balanceText={`Kalan: ${leaveBalance?.net_balance ?? leaveBalance?.available ?? 0} gün${advanceSuffix({ limit: leaveBalance?.advance_limit, used: leaveBalance?.advance_used, remaining: leaveBalance?.advance_remaining })}`}
           onClick={() => onSelect('ANNUAL_LEAVE')}
         />
 

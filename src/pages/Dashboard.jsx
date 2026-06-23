@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import useSmartPolling from '../hooks/useSmartPolling'; // Import Hook
 import useFiscalPeriods from '../hooks/useFiscalPeriods';
+import { advanceSuffix } from '../utils/leaveBalance';
 
 import AttendanceAnalyticsChart from '../components/AttendanceAnalyticsChart';
 import MonthlyPerformanceSummary from '../components/MonthlyPerformanceSummary';
@@ -675,11 +676,16 @@ const Dashboard = () => {
                         {/* LEFT — Yıllık İzin */}
                         <div className="pr-3 border-r border-slate-100">
                             <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-1">YILLIK İZİN</p>
-                            <div className="flex items-baseline gap-1 mb-1">
+                            <div className="flex items-baseline gap-1 mb-1 flex-wrap">
                                 <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
                                     {monthlySummary?.annual_leave_balance || 0}
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-400">GÜN</span>
+                                {monthlySummary?.annual_leave_advance_limit > 0 && (
+                                    <span className="text-[10px] font-bold text-amber-600">
+                                        {advanceSuffix({ limit: monthlySummary.annual_leave_advance_limit, used: monthlySummary.annual_leave_advance_used, remaining: monthlySummary.annual_leave_advance_remaining })}
+                                    </span>
+                                )}
                             </div>
                             <p className="text-[10px] text-slate-400 font-medium">
                                 Kullanılan: <span className="text-amber-600 font-bold">{monthlySummary?.annual_leave_used_this_year || 0} Gün</span>

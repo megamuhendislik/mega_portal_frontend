@@ -1012,7 +1012,6 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         if (!user) return null;
         const balance = user.annual_leave_balance || 0;
         const held = user.held_annual_leave || 0;
-        const limit = user.annual_leave_advance_limit || 0;
 
         const entitlement = user.annual_leave_entitlement || 0;
         const used = user.annual_leave_used || 0;
@@ -1030,11 +1029,28 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         const nextLeave = user.next_leave_request;
         const usedThisYear = user.annual_leave_used_this_year || 0;
 
-        const advanceUsed = user.annual_leave_advance_used || 0;
-        const advanceRemaining = Math.max(0, limit - advanceUsed);
-        const available = effective + advanceRemaining;
+        // Avans: TAZE my-entitlement kaynağını tercih et (bayat AuthContext user'a
+        // karşı). entitlementInfo yüklenmemişse user objesine düş.
+        const ent = entitlementInfo || {};
+        const limit = ent.advance_limit ?? (user.annual_leave_advance_limit || 0);
+        const advanceUsed = ent.advance_used ?? (user.annual_leave_advance_used || 0);
+        const advanceRemaining = ent.advance_remaining ?? Math.max(0, limit - advanceUsed);
+        const netBalance = ent.net_balance ?? balance;
+        // Talep edilebilecek azami (submit gating) — backend available_with_advance
+        // ile AYNI: entitlement + advance_remaining. entitlementInfo yüklenmeden
+        // önceki kısa pencerede fallback = netBalance + advanceUsed + advanceRemaining
+        // (= entitlement + advance_remaining); 'effective' net-bakiye olduğu için onu
+        // kullanmak avansı ÇİFT çıkarırdı (yükleme öncesi yanlış RED).
+        const available = ent.available_with_advance ?? (netBalance + advanceUsed + advanceRemaining);
         const lastLeave = user.last_annual_leave_date || null;
-        return { balance, held, limit, available, lastLeave, entitlement, used, reserved, effective, daysToAccrual, nextLeave, usedThisYear, advanceUsed, advanceRemaining };
+        return {
+            balance, held, limit, available, lastLeave, entitlement, used, reserved,
+            effective, daysToAccrual, nextLeave, usedThisYear,
+            advanceUsed, advanceRemaining, netBalance,
+            // snake_case alias'lar (RequestForms/LeaveTypeSelector/LeaveInfoPanel uyumu)
+            advance_used: advanceUsed, advance_remaining: advanceRemaining,
+            advance_limit: limit, net_balance: netBalance,
+        };
     };
 
     // Helper to calculate duration in days

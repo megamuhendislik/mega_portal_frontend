@@ -779,6 +779,12 @@ const StepLeave = ({ formData, handleChange }) => {
                             <span className="text-sm font-normal text-slate-400">Gün</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1">Bakiye yetersiz olduğunda kullanılabilecek avans gün sayısı.</p>
+                        {(formData.annual_leave_advance_limit || 0) > 0 && (
+                            <p className="text-[10px] font-semibold text-amber-600 mt-0.5">
+                                Kullanılan avans: {formData.annual_leave_advance_used || 0}/{formData.annual_leave_advance_limit} gün
+                                {formData.annual_leave_advance_granted_at ? ` · tanım: ${formData.annual_leave_advance_granted_at}` : ''}
+                            </p>
+                        )}
                     </div>
                     <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
                         <div className="text-xs text-emerald-600 font-bold uppercase">Bu Yıl Hakediş</div>
@@ -1511,6 +1517,8 @@ const Employees = () => {
                 completed_annual_leave_total: data.completed_annual_leave_total || 0,
                 completed_annual_leave_this_year: data.completed_annual_leave_this_year || 0,
                 annual_leave_advance_limit: data.annual_leave_advance_limit || 0,
+                annual_leave_advance_used: data.annual_leave_advance_used || 0,
+                annual_leave_advance_granted_at: data.annual_leave_advance_granted_at || null,
                 annual_leave_accrual_rate: data.annual_leave_accrual_rate || 14,
                 auto_calculated_rate: data.auto_calculated_rate || null,
                 leave_entitlements: data.leave_entitlements || [],

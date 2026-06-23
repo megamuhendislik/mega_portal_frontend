@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Gift, ChevronUp, ChevronDown } from 'lucide-react';
 import SmartDatePicker from '../common/SmartDatePicker';
+import { advanceSuffix } from '../../utils/leaveBalance';
 
 const specialMaxDays = {
   'SPECIAL:PATERNITY_LEAVE': 5,
@@ -67,7 +68,14 @@ export default function LeaveInfoPanel({
       return (
         <div className="bg-blue-50/80 rounded-xl p-3 flex justify-between items-center">
           <span className="text-xs font-medium text-slate-500">İzin Bakiyesi</span>
-          <span className="text-lg font-bold text-blue-700">{leaveBalance?.available || 0} gün</span>
+          <span className="text-lg font-bold text-blue-700">
+            {leaveBalance?.net_balance ?? leaveBalance?.available ?? 0} gün
+            {leaveBalance?.advance_limit > 0 && (
+              <span className="ml-1 text-xs font-semibold text-amber-600">
+                {advanceSuffix({ limit: leaveBalance?.advance_limit, used: leaveBalance?.advance_used, remaining: leaveBalance?.advance_remaining })}
+              </span>
+            )}
+          </span>
         </div>
       );
     }

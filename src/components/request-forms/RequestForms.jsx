@@ -98,10 +98,10 @@ export const LeaveRequestForm = ({
                                 </span>
                             </div>
                         )}
-                        {leaveBalance?.advance_used > 0 && (
+                        {leaveBalance?.advance_limit > 0 && (
                             <div className="flex justify-between text-xs text-amber-600">
-                                <span>Avans Kullanılan</span>
-                                <span>{leaveBalance.advance_used} gün</span>
+                                <span>Avans</span>
+                                <span>{(leaveBalance.advance_used || 0)}/{leaveBalance.advance_limit} gün kullanıldı</span>
                             </div>
                         )}
                     </div>
