@@ -47,11 +47,11 @@ const formatDT = (dtStr) => {
     });
 };
 
-// datetime-local input value from ISO string
+// datetime-local input value from ISO string (rendered in Istanbul wall-clock)
 const toLocalInputValue = (isoStr) => {
     if (!isoStr) return '';
-    // Trim seconds/ms for datetime-local
-    return new Date(isoStr).toISOString().slice(0, 16);
+    // sv-SE gives "YYYY-MM-DD HH:mm:ss" in the given tz; reshape to datetime-local ("YYYY-MM-DDTHH:mm")
+    return new Date(isoStr).toLocaleString('sv-SE', { timeZone: 'Europe/Istanbul' }).slice(0, 16).replace(' ', 'T');
 };
 
 // ISO string from datetime-local input (treat as Istanbul = UTC+3)
@@ -96,6 +96,7 @@ const SystemMessages = () => {
     const [employees, setEmployees] = useState([]);
     const [empLoading, setEmpLoading] = useState(false);
     const [empSearch, setEmpSearch] = useState('');
+    const [debouncedEmpSearch, setDebouncedEmpSearch] = useState('');
 
     // Modal
     const [formModal, setFormModal] = useState(null); // null | 'create' | message-object (edit)
@@ -128,24 +129,41 @@ const SystemMessages = () => {
 
     useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
-    // ===== FETCH EMPLOYEES =====
+    // Debounce employee search so typing doesn't spam the API
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedEmpSearch(empSearch), 300);
+        return () => clearTimeout(t);
+    }, [empSearch]);
+
+    // ===== FETCH EMPLOYEES (pages through ALL results) =====
     const fetchEmployees = useCallback(async () => {
         setEmpLoading(true);
         try {
-            // Fetch all employees (handle pagination)
-            let results = [];
-            let url = '/employees/?page_size=500';
-            if (empSearch) url += `&search=${encodeURIComponent(empSearch)}`;
-            const res = await api.get(url);
-            const data = res.data;
-            results = Array.isArray(data) ? data : (data.results || []);
-            setEmployees(results);
+            const all = [];
+            // DRF PageNumberPagination may ignore page_size; follow `next` until exhausted.
+            let url = '/employees/?page=1';
+            if (debouncedEmpSearch) url += `&search=${encodeURIComponent(debouncedEmpSearch)}`;
+            let guard = 0; // safety cap against accidental infinite loops
+            while (url && guard < 100) {
+                guard += 1;
+                const res = await api.get(url);
+                const data = res.data;
+                if (Array.isArray(data)) {
+                    // Non-paginated endpoint — got everything in one shot
+                    all.push(...data);
+                    break;
+                }
+                all.push(...(data.results || []));
+                // `next` is an absolute URL; strip the origin so it goes through the api baseURL
+                url = data.next ? data.next.replace(/^https?:\/\/[^/]+\/api/, '') : null;
+            }
+            setEmployees(all);
         } catch {
             // Silently ignore — employee list is optional
         } finally {
             setEmpLoading(false);
         }
-    }, [empSearch]);
+    }, [debouncedEmpSearch]);
 
     useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
 

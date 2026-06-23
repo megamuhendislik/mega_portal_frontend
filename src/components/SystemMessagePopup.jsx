@@ -40,7 +40,7 @@ export default function SystemMessagePopup() {
   };
 
   return (
-    <ModalOverlay open onClose={closeSession} level="tertiary">
+    <ModalOverlay open onClose={closeSession} level="tertiary" closeOnOverlayClick={false}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className={`${color} p-5 text-white flex items-center gap-3`}>
           <Icon size={24} />
