@@ -1955,6 +1955,7 @@ export default function RecalculationAuditTab() {
                                                                                 <FrcDayCard
                                                                                     key={day.date}
                                                                                     day={day}
+                                                                                    empId={emp.id}
                                                                                     expanded={frcExpandedDays.has(`${emp.id}-${day.date}`)}
                                                                                     onToggle={() => toggleFrcDay(`${emp.id}-${day.date}`)}
                                                                                 />
@@ -2372,7 +2373,26 @@ const SRC_COLORS = {
 };
 
 // Tek gün kartı (Ay → Gün ağacında kullanılır). expanded/onToggle dışarıdan.
-function FrcDayCard({ day, expanded, onToggle }) {
+function FrcDayCard({ day, empId, expanded, onToggle }) {
+    // Kayıt yok fix (2026-06-24): değişmeyen günler slim snapshot (recs:[]) ile gelir —
+    // rc/totaller saklı ama liste boş → eski "(N kayit) + Kayıt yok" çelişkisi. Gün açılınca
+    // (recs boş + rc>0) o gün için GERÇEK kayıtları on-demand çek (RAM-güvenli, tek gün).
+    const [lazyRecs, setLazyRecs] = useState(null);
+    const [lazyLoading, setLazyLoading] = useState(false);
+    const needsLazy = expanded && empId && day?.date
+        && (((day.before?.rc || 0) > 0 && !(day.before?.recs?.length))
+            || ((day.after?.rc || 0) > 0 && !(day.after?.recs?.length)));
+    useEffect(() => {
+        if (!needsLazy || lazyRecs !== null || lazyLoading) return;
+        let cancelled = false;
+        setLazyLoading(true);
+        api.post('/system/health-check/frc-day-detail/', { employee_id: empId, work_date: day.date })
+            .then(res => { if (!cancelled) setLazyRecs(res.data?.snapshot?.recs || []); })
+            .catch(() => { if (!cancelled) setLazyRecs([]); })
+            .finally(() => { if (!cancelled) setLazyLoading(false); });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [needsLazy, empId, day?.date]);
     return (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
@@ -2426,8 +2446,8 @@ function FrcDayCard({ day, expanded, onToggle }) {
                         </div>
                     )}
                     <div className="grid grid-cols-2 gap-3">
-                        <FrcRecordTable title="ONCE" data={day.before} color="gray" />
-                        <FrcRecordTable title="SONRA" data={day.after} color="violet" />
+                        <FrcRecordTable title="ONCE" data={day.before} color="gray" lazyRecs={lazyRecs} lazyLoading={lazyLoading} />
+                        <FrcRecordTable title="SONRA" data={day.after} color="violet" lazyRecs={lazyRecs} lazyLoading={lazyLoading} />
                     </div>
                     {day.ch?.length > 0 && (
                         <div className="p-2 bg-amber-50 border border-amber-200 rounded">
@@ -2524,8 +2544,12 @@ const OT_STATUS_INFO = {
     none: { label: 'Talep edilmemiş', cls: 'bg-gray-100 text-gray-600' },
 };
 
-function FrcRecordTable({ title, data, color }) {
+function FrcRecordTable({ title, data, color, lazyRecs, lazyLoading }) {
     if (!data) return null;
+    // Kayıt yok fix: recs varsa onu kullan; değişmeyen gün slim (recs boş, rc>0) ise
+    // FrcDayCard'ın lazy-load ile çektiği gerçek kayıtları (lazyRecs) göster.
+    const recs = (data.recs && data.recs.length > 0) ? data.recs : (lazyRecs || []);
+    const slimNoDetail = (data.rc || 0) > 0 && !(data.recs && data.recs.length > 0);
     const borderCls = color === 'violet' ? 'border-violet-200' : 'border-gray-200';
     const bgCls = color === 'violet' ? 'bg-violet-50' : 'bg-gray-50';
     const titleCls = color === 'violet' ? 'text-violet-700' : 'text-gray-600';
@@ -2535,7 +2559,7 @@ function FrcRecordTable({ title, data, color }) {
             <div className={`px-2 py-1 text-[10px] font-bold uppercase ${titleCls} border-b ${borderCls}`}>
                 {title} ({data.rc || 0} kayit)
             </div>
-            {data.recs?.length > 0 ? (
+            {recs.length > 0 ? (
                 <table className="w-full text-[10px]">
                     <thead>
                         <tr className={`border-b ${borderCls} text-left text-gray-500`}>
@@ -2548,7 +2572,7 @@ function FrcRecordTable({ title, data, color }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.recs.map((r, i) => (
+                        {recs.map((r, i) => (
                             <tr key={i} className={`border-b border-gray-100 ${r.ot ? 'bg-amber-50/50' : ''}`}>
                                 <td className="py-0.5 px-1 font-mono">{r.ci || '-'}</td>
                                 <td className="py-0.5 px-1 font-mono">{r.co || '-'}</td>
@@ -2573,6 +2597,10 @@ function FrcRecordTable({ title, data, color }) {
                         ))}
                     </tbody>
                 </table>
+            ) : lazyLoading ? (
+                <div className="p-2 text-[10px] text-gray-400 italic">Detay yükleniyor…</div>
+            ) : slimNoDetail ? (
+                <div className="p-2 text-[10px] text-gray-500 italic">Detay saklanmadı (değişmeyen gün, {data.rc} kayıt) — günlük toplamlar geçerli</div>
             ) : (
                 <div className="p-2 text-[10px] text-gray-400 italic">Kayit yok</div>
             )}
