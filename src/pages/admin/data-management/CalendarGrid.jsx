@@ -36,6 +36,21 @@ const getDayStyles = (data, isWeekend) => {
     const hasLeave = data.leave;
     const hasOtReq = data.has_ot_request;
 
+    // Saglik raporu / raporlu — mor
+    if (data.health) {
+        return 'bg-purple-50 border-purple-200';
+    }
+
+    // Dis gorev — turuncu
+    if (data.duty) {
+        return 'bg-orange-50 border-orange-200';
+    }
+
+    // Ozel izin — cyan
+    if (data.special_leave) {
+        return 'bg-cyan-50 border-cyan-200';
+    }
+
     // Izin gunu — mavi
     if (hasLeave) {
         return 'bg-blue-50 border-blue-200';
@@ -126,6 +141,10 @@ export default function CalendarGrid({
                         status: null,
                         leave: null,
                         has_ot_request: false,
+                        health: null,
+                        special_leave: null,
+                        duty: null,
+                        ot_status: null,
                     };
                     const hasStats = data.normal > 0 || data.ot > 0 || data.missing > 0;
                     const hasLeave = data.leave;
@@ -165,23 +184,85 @@ export default function CalendarGrid({
                                 </span>
 
                                 <div className="flex gap-0.5 flex-wrap justify-end">
+                                    {data.duty && (
+                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-orange-100 text-orange-700">
+                                            DIŞ GÖREV
+                                        </span>
+                                    )}
+                                    {data.health && (
+                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-purple-100 text-purple-700">
+                                            RAPORLU
+                                        </span>
+                                    )}
+                                    {data.special_leave && (
+                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-cyan-100 text-cyan-700">
+                                            ÖZEL
+                                        </span>
+                                    )}
                                     {hasLeave && (
                                         <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-green-100 text-green-700">
                                             İZİN
                                         </span>
                                     )}
                                     {hasOtReq && (
-                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-amber-100 text-amber-700">
+                                        <span
+                                            className={`text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold ${
+                                                data.ot_status === 'APPROVED'
+                                                    ? 'bg-amber-200 text-amber-900'
+                                                    : data.ot_status === 'PENDING'
+                                                        ? 'bg-amber-100 text-amber-700'
+                                                        : 'bg-amber-50 text-amber-600'
+                                            }`}
+                                        >
                                             FM
                                         </span>
                                     )}
-                                    {data.status === 'MANUAL' && (
-                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-purple-100 text-purple-700">
+                                    {Array.isArray(data.status) && data.status.includes('MANUAL') && (
+                                        <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded font-bold bg-slate-200 text-slate-700">
                                             MANUAL
                                         </span>
                                     )}
                                 </div>
                             </div>
+
+                            {/* Dis gorev tip alt-etiketi */}
+                            {data.duty && (
+                                <div
+                                    className={`text-[8px] md:text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium truncate ${
+                                        data.duty.status === 'APPROVED'
+                                            ? 'bg-orange-100 text-orange-800'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                    }`}
+                                >
+                                    {data.duty.type}
+                                </div>
+                            )}
+
+                            {/* Saglik raporu tip alt-etiketi */}
+                            {data.health && (
+                                <div
+                                    className={`text-[8px] md:text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium truncate ${
+                                        data.health.status === 'APPROVED'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                    }`}
+                                >
+                                    {data.health.report_type_display}
+                                </div>
+                            )}
+
+                            {/* Ozel izin tip alt-etiketi */}
+                            {data.special_leave && (
+                                <div
+                                    className={`text-[8px] md:text-[9px] px-1.5 py-0.5 rounded mb-1 font-medium truncate ${
+                                        data.special_leave.status === 'APPROVED'
+                                            ? 'bg-cyan-100 text-cyan-800'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                    }`}
+                                >
+                                    {data.special_leave.leave_type_display}
+                                </div>
+                            )}
 
                             {/* Izin tipi badge */}
                             {hasLeave && (
@@ -218,7 +299,7 @@ export default function CalendarGrid({
                                         </div>
                                     )}
                                 </div>
-                            ) : !hasLeave ? (
+                            ) : (!hasLeave && !data.health && !data.special_leave && !data.duty) ? (
                                 <div className="flex justify-center items-center h-full pb-4 text-[10px] md:text-xs text-slate-300 group-hover:text-blue-500 font-medium mt-2">
                                     Kayıt Yok
                                 </div>
