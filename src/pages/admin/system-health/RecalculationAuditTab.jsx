@@ -2111,7 +2111,7 @@ export default function RecalculationAuditTab() {
                                                                             <div className="ml-3">
                                                                                 {ev.attendance_records.map(a => (
                                                                                     <div key={a.id}>
-                                                                                        #{a.id} {a.source}{a.is_overtime_record ? ' *OT' : ''}{a.parent_attendance_id ? ` parent=${a.parent_attendance_id}` : ''} {a.check_in || '-'}→{a.check_out || 'AÇIK'} st={a.status} N={fmtSeconds(a.normal_seconds)} OT={fmtSeconds(a.overtime_seconds)} M={fmtSeconds(a.missing_seconds)} HV={fmtSeconds(a.hospital_visit_seconds)}
+                                                                                        #{a.id} {a.source}{a.is_overtime_record ? ' *OT' : ''}{a.parent_attendance_id ? ` parent=${a.parent_attendance_id}` : ''} {a.check_in || '-'}→{a.check_out || 'AÇIK'} st={a.status} N={fmtSeconds(a.normal_seconds)} OT={fmtSeconds(a.overtime_seconds)} M={fmtSeconds(a.missing_seconds)}{(a.hospital_visit_seconds || 0) > 0 ? ` Raporlu=${fmtSeconds(a.hospital_visit_seconds)}` : ''}
                                                                                     </div>
                                                                                 ))}
                                                                             </div>
@@ -2576,10 +2576,14 @@ function FrcRecordTable({ title, data, color }) {
             ) : (
                 <div className="p-2 text-[10px] text-gray-400 italic">Kayit yok</div>
             )}
-            <div className={`px-2 py-1 border-t ${borderCls} text-[10px] font-bold flex justify-between`}>
+            <div className={`px-2 py-1 border-t ${borderCls} text-[10px] font-bold flex justify-between flex-wrap gap-x-2`}>
                 <span>Normal: {fmtSeconds(data.tn)}</span>
                 <span>Mesai: {fmtSeconds(data.to)}</span>
                 <span>Eksik: {fmtSeconds(data.tm)}</span>
+                {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
+                {(data.thv || 0) > 0 && (
+                    <span className="text-purple-600">Raporlu: {fmtSeconds(data.thv)}</span>
+                )}
             </div>
         </div>
     );
