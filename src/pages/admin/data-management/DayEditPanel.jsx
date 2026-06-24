@@ -116,6 +116,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
     const [cardlessRequests, setCardlessRequests] = useState([]);
     const [mealRequests, setMealRequests] = useState([]);
     const [externalDutyRequests, setExternalDutyRequests] = useState([]);
+    const [healthReports, setHealthReports] = useState([]);
+    const [specialLeaves, setSpecialLeaves] = useState([]);
 
 
     // OT creation form
@@ -234,6 +236,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
             setCardlessRequests(res.data.cardless_requests || []);
             setMealRequests(res.data.meal_requests || []);
             setExternalDutyRequests(res.data.external_duty_requests || []);
+            setHealthReports(res.data.health_reports || []);
+            setSpecialLeaves(res.data.special_leaves || []);
             if (res.data.request_types?.length > 0) {
                 setLeaveTypeId(prev => prev || res.data.request_types[0].id);
             }
@@ -921,6 +925,52 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                                 {ot.reason && <span className="text-xs text-slate-400 ml-2">({ot.reason})</span>}
                             </div>
                             <Tag color={statusColor[ot.status] || 'default'}>{statusLabel[ot.status] || ot.status}</Tag>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Health Reports */}
+            {healthReports.length > 0 && (
+                <div>
+                    <div className="text-xs font-semibold text-purple-600 mb-2 flex items-center gap-1.5">
+                        <MedicineBoxOutlined /> Sağlık Raporları
+                    </div>
+                    {healthReports.map((hr, i) => (
+                        <div key={i} className="flex justify-between items-center bg-purple-50 rounded-lg p-2 mb-1 border border-purple-100">
+                            <div>
+                                <span className="font-medium text-sm text-slate-700">{hr.report_type_display}</span>
+                                <span className="text-xs text-slate-400 ml-2">
+                                    {hr.start_date}
+                                    {hr.end_date && hr.end_date !== hr.start_date ? ` → ${hr.end_date}` : ''}
+                                    {hr.report_type === 'HOSPITAL_VISIT' && hr.start_time
+                                        ? ` (${hr.start_time}${hr.end_time ? ` - ${hr.end_time}` : ''})`
+                                        : ''}
+                                </span>
+                            </div>
+                            <Tag color={statusColor[hr.status] || 'default'}>{statusLabel[hr.status] || hr.status}</Tag>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Special Leaves */}
+            {specialLeaves.length > 0 && (
+                <div>
+                    <div className="text-xs font-semibold text-teal-600 mb-2 flex items-center gap-1.5">
+                        <SafetyCertificateOutlined /> Özel İzinler
+                    </div>
+                    {specialLeaves.map((sl, i) => (
+                        <div key={i} className="flex justify-between items-center bg-teal-50 rounded-lg p-2 mb-1 border border-teal-100">
+                            <div>
+                                <span className="font-medium text-sm text-slate-700">{sl.leave_type_display}</span>
+                                <span className="text-xs text-slate-400 ml-2">
+                                    {sl.start_date}
+                                    {sl.end_date && sl.end_date !== sl.start_date ? ` → ${sl.end_date}` : ''}
+                                    {sl.total_days ? ` (${sl.total_days} gün)` : ''}
+                                </span>
+                            </div>
+                            <Tag color={statusColor[sl.status] || 'default'}>{statusLabel[sl.status] || sl.status}</Tag>
                         </div>
                     ))}
                 </div>
@@ -1893,6 +1943,42 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
             ),
             children: (
                 <div className="space-y-3">
+                    {/* Mevcut sağlık raporları (salt-okunur) */}
+                    <div className="bg-purple-50/40 rounded-lg border border-purple-100 p-3">
+                        <div className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-1.5">
+                            <MedicineBoxOutlined /> Mevcut Sağlık Raporları
+                        </div>
+                        {healthReports.length > 0 ? (
+                            <div className="space-y-1.5">
+                                {healthReports.map((hr) => (
+                                    <div key={hr.id} className="bg-white rounded-lg p-2 border border-purple-100">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium text-sm text-slate-700">
+                                                {hr.report_type_display}
+                                            </span>
+                                            <Tag color={statusColor[hr.status] || 'default'} className="!m-0">
+                                                {statusLabel[hr.status] || hr.status}
+                                            </Tag>
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-0.5">
+                                            {hr.start_date}
+                                            {hr.end_date && hr.end_date !== hr.start_date ? ` → ${hr.end_date}` : ''}
+                                            {hr.report_type === 'HOSPITAL_VISIT' && hr.start_time && (
+                                                <span className="ml-1">({hr.start_time}{hr.end_time ? ` - ${hr.end_time}` : ''})</span>
+                                            )}
+                                            {hr.total_days ? <span className="ml-1">· {hr.total_days} gün</span> : null}
+                                        </div>
+                                        {hr.reason && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 italic">{hr.reason}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-slate-400">Mevcut kayıt yok</div>
+                        )}
+                    </div>
+
                     <div className="bg-white rounded-lg border p-3">
                         <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
                             <PlusOutlined /> Yeni Sağlık Raporu
@@ -1991,6 +2077,39 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
             ),
             children: (
                 <div className="space-y-3">
+                    {/* Mevcut özel izinler (salt-okunur) */}
+                    <div className="bg-teal-50/40 rounded-lg border border-teal-100 p-3">
+                        <div className="text-xs font-semibold text-teal-700 mb-2 flex items-center gap-1.5">
+                            <SafetyCertificateOutlined /> Mevcut Özel İzinler
+                        </div>
+                        {specialLeaves.length > 0 ? (
+                            <div className="space-y-1.5">
+                                {specialLeaves.map((sl) => (
+                                    <div key={sl.id} className="bg-white rounded-lg p-2 border border-teal-100">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium text-sm text-slate-700">
+                                                {sl.leave_type_display}
+                                            </span>
+                                            <Tag color={statusColor[sl.status] || 'default'} className="!m-0">
+                                                {statusLabel[sl.status] || sl.status}
+                                            </Tag>
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-0.5">
+                                            {sl.start_date}
+                                            {sl.end_date && sl.end_date !== sl.start_date ? ` → ${sl.end_date}` : ''}
+                                            {sl.total_days ? <span className="ml-1">· {sl.total_days} gün</span> : null}
+                                        </div>
+                                        {sl.reason && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 italic">{sl.reason}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-slate-400">Mevcut kayıt yok</div>
+                        )}
+                    </div>
+
                     <div className="bg-white rounded-lg border p-3">
                         <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-1.5">
                             <PlusOutlined /> Yeni Özel İzin
