@@ -43,6 +43,9 @@ const EffortDetailPopover = ({ stats }) => {
     if (stats._hrSec > 0) {
         rows.push({ label: 'Rapor', value: stats.healthReportDisplay, color: 'text-sky-600' });
     }
+    if (stats._hvSec > 0) {
+        rows.push({ label: 'Raporlu/İzinli', value: stats.hospitalVisitDisplay, color: 'text-purple-600' });
+    }
     rows.push(
         { label: stats.hasCredited ? 'Toplam Efor' : 'Onaylı Toplam', value: stats.hasCredited ? stats.displayTotalDisplay : stats.netWorkDisplay, bold: true },
         { type: 'divider' },
@@ -119,6 +122,9 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
             const leaveSec = periodSummary.leave_seconds || 0;
             const healthReportSec = periodSummary.health_report_seconds || 0;
             const dutySec = periodSummary.duty_seconds || 0;
+            // Raporlu/İzinli (hastane ziyareti) — DISPLAY-ONLY: backend saat cinsinden gönderir
+            // (normale yazılmaz, eksiği düşürür; burada yalnız ayrı kategori olarak gösterilir).
+            const hospitalVisitSec = Math.round((parseFloat(periodSummary.hospital_visit_hours) || 0) * 3600);
             const potentialOtFromBackend = periodSummary.potential_ot_seconds || 0;
             const creditedSec = leaveSec + healthReportSec + dutySec; // Total credited (İzin + Rapor + Görev)
 
@@ -193,6 +199,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                 _potentialOtSec: potentialOtFromBackend,
                 _leaveSec: leaveSec,
                 _hrSec: healthReportSec,
+                _hvSec: hospitalVisitSec,
                 _otPendingSec: otPendingSec,
                 _otPotentialSec: otPotentialSec,
 
@@ -208,6 +215,7 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                 netBalanceDisplay: fmtSec(netBalanceReal),
                 leaveDisplay: fmtSec(leaveSec),
                 healthReportDisplay: fmtSec(healthReportSec),
+                hospitalVisitDisplay: fmtSec(hospitalVisitSec),
                 displayTotalDisplay: fmtSec(netWorkSec),
 
                 // Legacy compat (bar chart still needs numeric)
@@ -475,6 +483,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                 {parseFloat(stats.dutyHours || 0) > 0 && <span className="text-violet-500">+{stats.dutyDisplay}</span>}
                                 {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-500">+{stats.leaveDisplay}</span>}
                                 {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-500">+{stats.healthReportDisplay}</span>}
+                                {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
+                                {(stats._hvSec || 0) > 0 && <span className="text-purple-500">+{stats.hospitalVisitDisplay} raporlu/izinli</span>}
                             </div>
                             <div className="flex gap-2">
                                 {parseFloat(stats.missingHours) > 0 && (
@@ -553,6 +563,8 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                                 {parseFloat(stats.dutyHours || 0) > 0 && <span className="text-violet-500">+{stats.dutyDisplay}</span>}
                                 {parseFloat(stats.leaveHours) > 0 && <span className="text-cyan-500">+{stats.leaveDisplay}</span>}
                                 {parseFloat(stats.healthReportHours) > 0 && <span className="text-orange-500">+{stats.healthReportDisplay}</span>}
+                                {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
+                                {(stats._hvSec || 0) > 0 && <span className="text-purple-500">+{stats.hospitalVisitDisplay} raporlu/izinli</span>}
                                 {parseFloat(stats.overtimeHours) > 0 && <span className="text-emerald-500">+{stats.overtimeDisplay}</span>}
                                 {(stats._potentialOtSec || 0) > 0 && <span className="text-slate-400">+{stats.potentialOtDisplay || fmtSec(stats._potentialOtSec)} pot.</span>}
                             </div>

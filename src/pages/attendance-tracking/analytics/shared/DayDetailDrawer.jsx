@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Drawer, Tag } from 'antd';
 import {
     Clock, AlarmClock, Coffee, TrendingUp, Calendar as CalendarIcon,
-    CheckCircle2, XCircle, AlertTriangle, Target, BarChart3,
+    CheckCircle2, XCircle, AlertTriangle, Target, BarChart3, Stethoscope,
 } from 'lucide-react';
 
 /**
@@ -80,6 +80,11 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
     const deficit = day?.missing != null ? day.missing : Math.max(0, target - normal);
     const efficiency = target > 0 ? Math.round((worked / target) * 100) : 0;
     const hasBreak = day?.break_total != null;
+    // Raporlu/İzinli (hospital visit) — DISPLAY-ONLY: normale yazılmaz, ayrı kategori.
+    // Gün verisinden saat cinsinden okunur (saniye varsa saate çevrilir); yalnız >0 ise gösterilir.
+    const hospitalVisit = day?.hospital_visit_hours != null
+        ? day.hospital_visit_hours
+        : (day?.hospital_visit_seconds != null ? day.hospital_visit_seconds / 3600 : 0);
 
     return (
         <Drawer
@@ -191,6 +196,20 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                     {deficit > 0 ? 'Hedef altı' : 'Hedefe ulaşıldı'}
                                 </p>
                             </div>
+
+                            {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
+                            {hospitalVisit > 0 && (
+                                <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4">
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <Stethoscope size={11} className="text-purple-600" />
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Raporlu/İzinli</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-purple-800 tabular-nums">
+                                        {formatHours(hospitalVisit)}
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">Sağlık raporu / izin</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Çalışma dağılımı bar */}
