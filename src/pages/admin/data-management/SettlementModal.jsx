@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Radio, Input, Button, message, Table, Tag, Spin, Empty, Popconfirm } from 'antd';
+import { Modal, Radio, Input, InputNumber, Button, message, Table, Tag, Spin, Empty, Popconfirm } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -15,6 +15,8 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
     const [mode, setMode] = useState('settle'); // 'settle' | 'real_reset' | 'undo'
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
+    // Saatli mutabakat: sonraki aya devredecek kalan (saat, +/-). null/0 = tam sıfırla.
+    const [remaining, setRemaining] = useState(null);
 
     // Mutabakat geçmişi
     const [history, setHistory] = useState([]);
@@ -40,6 +42,7 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
             setMode(isSettled ? 'undo' : 'settle');
             setLoading(false);
             setConfirmText('');
+            setRemaining(null);
             fetchHistory();
         }
     }, [isOpen, isSettled, fetchHistory]);
@@ -56,16 +59,24 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
             else if (mode === 'undo') endpoint = '/system-data/undo_settle_balance/';
             else endpoint = '/system-data/real_reset/';
 
-            const res = await api.post(endpoint, {
+            const payload = {
                 employee_id: data.employee.id,
                 year: data.year,
                 month: data.month,
-            });
-            // settle_balance dönüşü settled_amount_seconds içerir — kullanıcıya gerçek
-            // sıfırlanan toplam devri göster.
+            };
+            // Saatli mutabakat: yalnız settle modunda kalan devri gönder (boş → 0 = tam sıfırla).
+            if (mode === 'settle') {
+                payload.remaining_seconds = remaining ? Math.round(remaining * 3600) : 0;
+            }
+            const res = await api.post(endpoint, payload);
+            // settle_balance dönüşü settled_amount_seconds + target_remaining_seconds içerir.
             if (mode === 'settle' && res.data?.settled_amount_seconds != null) {
+                const kalan = res.data.target_remaining_seconds || 0;
                 message.success(
-                    `Mutabakat yapıldı — toplam ${fmtHours(res.data.settled_amount_seconds)} devir sıfırlandı.`
+                    kalan === 0
+                        ? `Mutabakat yapıldı — toplam ${fmtHours(res.data.settled_amount_seconds)} kapatıldı (kalan 0).`
+                        : `Mutabakat yapıldı — ${fmtHours(res.data.settled_amount_seconds)} kapatıldı, `
+                          + `kalan ${kalan > 0 ? '+' : '-'}${fmtHours(kalan)} sonraki aya devredildi.`
                 );
             } else {
                 message.success(res.data.message || 'İşlem başarılı.');
@@ -120,6 +131,13 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
     const cumulSurplus = cumulativeToDate > 0;
     const cumulDeficit = cumulativeToDate < 0;
 
+    // Saatli mutabakat: girilen kalan (saat). Boş/0 → tam sıfırla. Mutabakat sonrası
+    // sonraki aya devredecek değer = kalan.
+    const remHours = remaining || 0;
+    const afterLabel = remHours === 0
+        ? '0 sa devir'
+        : `${remHours > 0 ? '+' : '-'}${Math.abs(remHours)} sa devir`;
+
     const historyColumns = [
         {
             title: 'Tarih',
@@ -141,10 +159,23 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
             render: (_, r) => `${MONTH_NAMES[r.month] || r.month} ${r.year}`,
         },
         {
-            title: 'Sıfırlanan',
+            title: 'Kapatılan',
             dataIndex: 'settled_amount_seconds',
             key: 'settled',
             render: (v) => <span className="font-semibold">{fmtHours(v)}</span>,
+        },
+        {
+            title: 'Kalan',
+            dataIndex: 'target_remaining_seconds',
+            key: 'target_remaining',
+            render: (v) => {
+                const n = v || 0;
+                return (
+                    <span className={n > 0 ? 'text-emerald-600' : n < 0 ? 'text-red-600' : 'text-slate-400'}>
+                        {n > 0 ? '+' : n < 0 ? '-' : ''}{fmtHours(n)}
+                    </span>
+                );
+            },
         },
         {
             title: 'Kullanıcı',
@@ -280,17 +311,38 @@ export default function SettlementModal({ isOpen, onClose, data, onSaveSuccess }
                         <p className="text-xs text-indigo-600 leading-relaxed">
                             Bu işlem <strong>{empName}</strong> için{' '}
                             <strong>{periodLabel}</strong> sonuna kadar birikmiş{' '}
-                            <strong>toplam {cumulativeAbsHours} saat</strong> devri sıfırlar.
+                            <strong>toplam {cumulativeAbsHours} saat</strong> devri kapatır.
                             (Sadece bu ayın neti değil — önceki aylardan gelen devir dahil
-                            tüm kümülatif bakiye.) <strong>Geri alınabilir.</strong>
+                            tüm kümülatif bakiye.) İstersen sonraki aya devredecek bir{' '}
+                            <strong>kalan</strong> bırakabilirsin (saatli mutabakat).{' '}
+                            <strong>Geri alınabilir.</strong>
                         </p>
+
+                        {/* Saatli mutabakat: kalan devir girişi */}
+                        <div className="mt-2.5">
+                            <div className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                                Kalan (sonraki aya devredecek, saat)
+                            </div>
+                            <InputNumber
+                                value={remaining}
+                                onChange={setRemaining}
+                                step={0.5}
+                                precision={2}
+                                placeholder="0 = tam sıfırla"
+                                className="w-full"
+                            />
+                            <div className="mt-1 text-[10px] text-indigo-400">
+                                Boş/0 → tam sıfırla. +5 → sonraki aya +5 sa devreder, −3 → −3 sa.
+                            </div>
+                        </div>
+
                         <div className="flex items-center gap-3 mt-2 text-[10px] font-bold">
                             <span className={`px-2 py-1 rounded ${cumulDeficit ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                 Şimdi: {cumulSurplus ? '+' : cumulDeficit ? '-' : ''}{cumulativeAbsHours} sa devir
                             </span>
                             <span className="text-indigo-400">&rarr;</span>
                             <span className="px-2 py-1 rounded bg-slate-100 text-slate-600">
-                                Mutabakat sonrası: 0 sa devir
+                                Mutabakat sonrası: {afterLabel}
                             </span>
                         </div>
                     </div>
