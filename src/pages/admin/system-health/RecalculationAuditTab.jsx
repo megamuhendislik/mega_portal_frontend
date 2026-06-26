@@ -34,6 +34,13 @@ function fmtSeconds(s) {
     return `${sign}${parts.length ? parts.join(' ') : '0 sn'}`;
 }
 
+function fmtTime(value) {
+    if (!value || value === '-') return '-';
+    const raw = String(value);
+    const normalized = raw.includes('T') ? raw.split('T').pop() : raw;
+    return normalized.split('.', 1)[0].slice(0, 8);
+}
+
 
 const ROOT_CAUSE_COLORS = {
     STALE_CALC: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Eski Hesaplama' },
@@ -975,7 +982,7 @@ export default function RecalculationAuditTab() {
                                                                     </span>
                                                                     <span className="text-gray-500">{r.assignment_source || '-'}</span>
                                                                     <span className="font-mono text-gray-600">
-                                                                        {r.start_time?.slice(0,5) || '-'} - {r.end_time?.slice(0,5) || '-'}
+                                                                        {fmtTime(r.start_time)} - {fmtTime(r.end_time)}
                                                                     </span>
                                                                     <span className="text-gray-400">{fmtSeconds(r.duration_seconds)}</span>
                                                                 </div>
@@ -1042,7 +1049,7 @@ export default function RecalculationAuditTab() {
                                                                     }`}>{r.status}</span>
                                                                     <span className="text-gray-700">Kartsiz Giris</span>
                                                                     <span className="font-mono text-gray-500">
-                                                                        {String(r.check_in_time || '-').slice(0,5)} - {String(r.check_out_time || '-').slice(0,5)}
+                                                                        {fmtTime(r.check_in_time)} - {fmtTime(r.check_out_time)}
                                                                     </span>
                                                                 </div>
                                                             ))}
