@@ -20,13 +20,20 @@ import SanityCheckPanel from './SanityCheckPanel';
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function fmtSeconds(s) {
-    if (!s || s <= 0) return '0 dk';
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    if (h > 0 && m > 0) return `${h} sa ${m} dk`;
-    if (h > 0) return `${h} sa`;
-    return `${m} dk`;
+    if (s === null || s === undefined || Number.isNaN(Number(s))) return '0 sn';
+    const totalRaw = Math.trunc(Number(s));
+    const sign = totalRaw < 0 ? '-' : '';
+    const total = Math.abs(totalRaw);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    const parts = [];
+    if (h) parts.push(`${h} sa`);
+    if (m) parts.push(`${m} dk`);
+    if (sec) parts.push(`${sec} sn`);
+    return `${sign}${parts.length ? parts.join(' ') : '0 sn'}`;
 }
+
 
 const ROOT_CAUSE_COLORS = {
     STALE_CALC: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Eski Hesaplama' },

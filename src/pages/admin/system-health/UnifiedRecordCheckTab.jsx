@@ -33,14 +33,22 @@ function getFlagInfo(flag) {
 }
 
 function fmtSec(s) {
-    if (!s && s !== 0) return '-';
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    return `${h}sa ${m}dk`;
+    if (s === null || s === undefined || Number.isNaN(Number(s))) return '-';
+    const totalRaw = Math.trunc(Number(s));
+    const sign = totalRaw < 0 ? '-' : '';
+    const total = Math.abs(totalRaw);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    const parts = [];
+    if (h) parts.push(`${h}sa`);
+    if (m) parts.push(`${m}dk`);
+    if (sec) parts.push(`${sec}sn`);
+    return `${sign}${parts.length ? parts.join(' ') : '0sn'}`;
 }
 
 // ---------------------------------------------------------------------------
-// Constants & Helpers — AttendanceForensic
+// Constants & Helpers - AttendanceForensic
 // ---------------------------------------------------------------------------
 const SEVERITY_COLORS = {
     critical: 'bg-red-100 text-red-800 border-red-300',
@@ -68,10 +76,8 @@ const TYPE_LABELS = {
 };
 
 function formatSeconds(s) {
-    if (!s && s !== 0) return '-';
-    const h = Math.floor(Math.abs(s) / 3600);
-    const m = Math.floor((Math.abs(s) % 3600) / 60);
-    return `${s < 0 ? '-' : ''}${h}sa ${m}dk`;
+    if (s === null || s === undefined || Number.isNaN(Number(s))) return '-';
+    return fmtSec(s);
 }
 
 function formatTime(isoStr) {
