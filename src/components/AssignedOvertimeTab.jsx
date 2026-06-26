@@ -359,8 +359,10 @@ const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onRe
     const sel = selections || { entryIds: [], potentialIds: [] };
     const otEntries = (intended?.entries || []).filter(e => (e.overtime_seconds || 0) > 0);
 
+    const claimablePotentials = potentials.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle);
+    const blockedPotentials = potentials.filter(p => !claimablePotentials.includes(p));
     const selectedEntrySeconds = otEntries.filter(e => sel.entryIds.includes(e.attendance_id)).reduce((sum, e) => sum + (e.overtime_seconds || 0), 0);
-    const selectedPotentialSeconds = potentials.filter(p => sel.potentialIds.includes(p.overtime_request_id)).reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
+    const selectedPotentialSeconds = claimablePotentials.filter(p => sel.potentialIds.includes(p.overtime_request_id)).reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
     const totalSelectedSeconds = selectedEntrySeconds + selectedPotentialSeconds;
     const selectedCount = sel.entryIds.length + sel.potentialIds.length;
     const isAboveThreshold = totalSelectedSeconds >= 1800;
@@ -370,6 +372,7 @@ const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onRe
         onSelectionChange({ ...sel, entryIds: next });
     };
     const togglePotential = (id) => {
+        if (!claimablePotentials.some(p => p.overtime_request_id === id)) return;
         const next = sel.potentialIds.includes(id) ? sel.potentialIds.filter(x => x !== id) : [...sel.potentialIds, id];
         onSelectionChange({ ...sel, potentialIds: next });
     };
@@ -409,13 +412,13 @@ const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onRe
                 </div>
             )}
             {/* POTENTIAL segmentler */}
-            {potentials.length > 0 && (
+            {(claimablePotentials.length > 0 || blockedPotentials.length > 0) && (
                 <div className="mt-3">
                     <p className="text-[11px] font-bold text-purple-500 mb-2 flex items-center gap-1">
                         <Zap size={12} /> {type === 'mixed' ? 'Algılanan Segmentler' : 'Segmentler'}
                     </p>
                     <div className="space-y-1.5">
-                        {potentials.map((item) => {
+                        {claimablePotentials.map((item) => {
                             const checked = sel.potentialIds.includes(item.overtime_request_id);
                             const otTypeLabel = item.ot_type === 'PRE_SHIFT' ? 'Vardiya Öncesi' : item.ot_type === 'POST_SHIFT' ? 'Vardiya Sonrası' : item.ot_type === 'OFF_DAY' ? 'Tatil Günü' : 'Karma';
                             const otTypeColor = item.ot_type === 'PRE_SHIFT' ? 'text-blue-700 bg-blue-50' : item.ot_type === 'POST_SHIFT' ? 'text-purple-700 bg-purple-50' : item.ot_type === 'OFF_DAY' ? 'text-amber-700 bg-amber-50' : 'text-slate-700 bg-slate-50';
@@ -433,6 +436,22 @@ const ClaimableDayExpanded = ({ day, selections, onSelectionChange, reason, onRe
                                         </div>
                                     </div>
                                 </label>
+                            );
+                        })}
+                        {blockedPotentials.map((item) => {
+                            const reason = item.claim_block_reason || 'Bu segment ayni gun bundle limitinin altinda.';
+                            return (
+                                <div key={`blocked-${item.overtime_request_id}`} className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50/50 border border-slate-100 opacity-70">
+                                    <input type="checkbox" checked={false} disabled className="w-4 h-4 rounded border-slate-300 text-slate-300" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <Clock size={12} className="text-slate-400" />
+                                            <span className="text-sm font-semibold text-slate-500">{item.start_time} - {item.end_time}</span>
+                                            <span className="text-xs text-slate-400">({formatDuration(item.actual_overtime_seconds)})</span>
+                                        </div>
+                                        <div className="text-[10px] text-amber-600 mt-0.5">{reason}</div>
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
@@ -479,13 +498,16 @@ const ClaimableDayCard = ({ day, expanded, onToggle, selections, onSelectionChan
     const monthName = _p ? MONTH_NAMES[_p.month - 1] : '';
     const year = _p ? _p.year : '';
 
+    const claimablePotentials = potentials.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle);
+    const selectableOtSeconds = (intended ? (intended.actual_overtime_seconds || 0) : 0)
+        + claimablePotentials.reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
     const totalOtSeconds = (intended ? (intended.actual_overtime_seconds || 0) : 0)
         + potentials.reduce((sum, p) => sum + (p.actual_overtime_seconds || 0), 0);
     const entryCount = (intended ? (intended.entries?.length || 0) : 0) + potentials.length;
     const hasOt = totalOtSeconds > 0;
     const isPast = isDatePast(date);
     const hasCheckOut = intended ? !!intended.check_out_time : true;
-    const canExpand = hasOt && (hasCheckOut || isPast);
+    const canExpand = hasOt && (hasCheckOut || isPast) && selectableOtSeconds >= 1800;
 
     const typeBadgeClass = type === 'intended' ? 'bg-blue-50 text-blue-700 border-blue-200'
         : type === 'potential' ? 'bg-purple-50 text-purple-700 border-purple-200'
@@ -982,7 +1004,7 @@ const AssignedOvertimeTab = () => {
         if (expandedDay === date) { setExpandedDay(null); return; }
         setExpandedDay(date);
         const entryIds = (day.intended?.entries || []).filter(e => (e.overtime_seconds || 0) > 0).map(e => e.attendance_id);
-        const potentialIds = day.potentials.map(p => p.overtime_request_id);
+        const potentialIds = day.potentials.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle).map(p => p.overtime_request_id);
         setDaySelections(prev => ({ ...prev, [date]: { entryIds, potentialIds } }));
         if (!dayReasons[date]) {
             setDayReasons(prev => ({ ...prev, [date]: day.intended?.task_description || '' }));
@@ -993,8 +1015,10 @@ const AssignedOvertimeTab = () => {
     const handleDaySubmit = useCallback(async (day) => {
         const date = day.date;
         const sel = daySelections[date] || { entryIds: [], potentialIds: [] };
+        const allowedPotentialIds = new Set(day.potentials.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle).map(p => p.overtime_request_id));
+        const potentialIds = sel.potentialIds.filter(id => allowedPotentialIds.has(id));
         const reason = dayReasons[date] || '';
-        if (sel.entryIds.length === 0 && sel.potentialIds.length === 0) return;
+        if (sel.entryIds.length === 0 && potentialIds.length === 0) return;
         setLoadingDate(date);
         setDayErrors(prev => ({ ...prev, [date]: '' }));
         try {
@@ -1004,11 +1028,11 @@ const AssignedOvertimeTab = () => {
                 return undefined;
             })();
             if (day.intended) {
-                const payload = { reason: reason || undefined, potential_ids: sel.potentialIds.length > 0 ? sel.potentialIds : undefined };
+                const payload = { reason: reason || undefined, potential_ids: potentialIds.length > 0 ? potentialIds : undefined };
                 if (autoApprover) payload.target_approver_id = autoApprover;
                 await api.post(`/overtime-assignments/${day.intended.assignment_id}/claim/`, payload);
-            } else if (sel.potentialIds.length > 0) {
-                const payload = { overtime_request_ids: sel.potentialIds, reason: reason || 'Ek mesai talebi' };
+            } else if (potentialIds.length > 0) {
+                const payload = { overtime_request_ids: potentialIds, reason: reason || 'Ek mesai talebi' };
                 if (autoApprover) payload.target_approver_id = autoApprover;
                 await api.post('/overtime-requests/claim-potential/', payload);
             }

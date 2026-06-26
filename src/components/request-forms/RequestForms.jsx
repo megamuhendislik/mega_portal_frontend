@@ -351,6 +351,7 @@ export const OvertimeRequestForm = ({
     const potentialByDay = useMemo(() => {
         const map = {};
         for (const item of (potential || [])) {
+            if (!(item.can_claim || item.is_rejected) || item.below_minimum_bundle) continue;
             if (!map[item.date]) map[item.date] = { date: item.date, items: [], is_today: item.is_today };
             map[item.date].items.push(item);
         }
@@ -471,9 +472,9 @@ export const OvertimeRequestForm = ({
                                     <button
                                         type="button"
                                         onClick={() => handleClaimClick('INTENDED', item)}
-                                        disabled={item.actual_overtime_seconds <= 0 || claimingId === item.assignment_id}
+                                        disabled={(item.actual_overtime_seconds || 0) < 1800 || claimingId === item.assignment_id}
                                         className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                            item.actual_overtime_seconds <= 0
+                                            (item.actual_overtime_seconds || 0) < 1800
                                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                 : claimingId === item.assignment_id
                                                     ? 'bg-emerald-100 text-emerald-600 cursor-wait'

@@ -343,7 +343,7 @@ export default function OTDayDetailPanel({
 
       {/* Potentials Section — Bundle görünüm */}
       {potentials.length > 0 && (() => {
-        const claimable = potentials.filter(p => p.can_claim || (p.actual_overtime_seconds > 0 && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status)));
+        const claimable = potentials.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle && !p.already_claimed && !['PENDING', 'APPROVED'].includes(p.claim_status));
         const nonClaimable = potentials.filter(p => !claimable.includes(p));
         // Denetim 2026-06-10 (#58): backend artık duration_seconds döndürür; duration_hours
         // fallback'i de eklendi (savunma-derinliği — eskiden hepsi undefined → bundle '0 dk').
