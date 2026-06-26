@@ -304,7 +304,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
     const handleClaimPotential = useCallback((req) => {
         // Aynı gündeki tüm POTENTIAL segmentlerini bul
         const sameDayPotentials = (overtimeRequests || []).filter(
-            r => r.status === 'POTENTIAL' && r.date === req.date
+            r => r.status === 'POTENTIAL' && r.date === req.date && (r.can_claim || r.is_rejected) && !r.below_minimum_bundle
         );
         // Hepsi varsayılan seçili
         const selectedIds = sameDayPotentials.map(r => r.id);

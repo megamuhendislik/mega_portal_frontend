@@ -64,9 +64,9 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const potential = claimableData?.potential || [];
   const weeklyStatus = claimableData?.weekly_ot_status || null;
 
-  const intendedClaimable = intended.filter(i => i.can_claim || i.is_rejected);
+  const intendedClaimable = intended.filter(i => (i.can_claim || i.is_rejected) && (i.actual_overtime_seconds || 0) >= 1800);
   const intendedRejCount = intended.filter(i => i.is_rejected).length;
-  const potentialClaimable = potential.filter(p => p.can_claim || p.is_rejected);
+  const potentialClaimable = potential.filter(p => (p.can_claim || p.is_rejected) && !p.below_minimum_bundle);
   const potentialRejCount = potential.filter(p => p.is_rejected).length;
 
   const goBack = () => {
