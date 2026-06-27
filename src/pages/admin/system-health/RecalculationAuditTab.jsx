@@ -42,6 +42,86 @@ function fmtTime(value) {
 }
 
 
+function changeSeverity(seconds) {
+    const abs = Math.abs(Number(seconds) || 0);
+    if (abs >= 7200) return 'critical';
+    if (abs >= 1800) return 'high';
+    if (abs >= 300) return 'medium';
+    if (abs > 0) return 'low';
+    return 'none';
+}
+
+const CHANGE_STYLES = {
+    none: {
+        label: 'Fark yok',
+        shell: 'border-gray-200 bg-white',
+        header: 'bg-gray-50 hover:bg-gray-100',
+        badge: 'bg-gray-100 text-gray-600',
+        chip: 'bg-gray-50 text-gray-500 border-gray-200',
+        text: 'text-gray-500',
+        bar: 'bg-gray-300',
+    },
+    low: {
+        label: 'Saniye/kucuk',
+        shell: 'border-slate-200 bg-white',
+        header: 'bg-slate-50 hover:bg-slate-100',
+        badge: 'bg-slate-200 text-slate-700',
+        chip: 'bg-slate-50 text-slate-700 border-slate-200',
+        text: 'text-slate-700',
+        bar: 'bg-slate-400',
+    },
+    medium: {
+        label: 'Kucuk fark',
+        shell: 'border-amber-200 bg-amber-50/20',
+        header: 'bg-amber-50 hover:bg-amber-100',
+        badge: 'bg-amber-200 text-amber-900',
+        chip: 'bg-amber-50 text-amber-800 border-amber-200',
+        text: 'text-amber-800',
+        bar: 'bg-amber-500',
+    },
+    high: {
+        label: 'Buyuk fark',
+        shell: 'border-orange-300 bg-orange-50/30',
+        header: 'bg-orange-50 hover:bg-orange-100',
+        badge: 'bg-orange-200 text-orange-900',
+        chip: 'bg-orange-50 text-orange-800 border-orange-200',
+        text: 'text-orange-800',
+        bar: 'bg-orange-500',
+    },
+    critical: {
+        label: 'Cok buyuk',
+        shell: 'border-red-300 bg-red-50/40',
+        header: 'bg-red-50 hover:bg-red-100',
+        badge: 'bg-red-200 text-red-900',
+        chip: 'bg-red-50 text-red-800 border-red-200',
+        text: 'text-red-800',
+        bar: 'bg-red-600',
+    },
+};
+
+function maxMonthlyDiff(emp) {
+    const keys = new Set([...Object.keys(emp?.mb || {}), ...Object.keys(emp?.ma || {})]);
+    const fields = ['cmp', 'ot', 'mis', 'nb', 'tw', 'cum', 'lv', 'hr'];
+    let max = 0;
+    keys.forEach((key) => {
+        const before = emp?.mb?.[key] || {};
+        const after = emp?.ma?.[key] || {};
+        fields.forEach((field) => {
+            const diff = Math.abs((after?.[field] || 0) - (before?.[field] || 0));
+            if (diff > max) max = diff;
+        });
+    });
+    return max;
+}
+
+function changeWidth(seconds) {
+    const abs = Math.abs(Number(seconds) || 0);
+    if (!abs) return '0%';
+    const capped = Math.min(abs, 7200);
+    return `${Math.max(8, Math.round((capped / 7200) * 100))}%`;
+}
+
+
 const ROOT_CAUSE_COLORS = {
     STALE_CALC: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Eski Hesaplama' },
     TOLERANCE_DIFF: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Tolerans Farki' },
@@ -1609,22 +1689,42 @@ export default function RecalculationAuditTab() {
                     {/* Employee List */}
                     {frcResult.employees?.length > 0 && (
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-gray-800">
-                                Degisen Calisanlar ({frcResult.employees.length})
-                            </h4>
-                            {frcResult.employees.map((emp) => (
-                                <div key={emp.id} className="border border-violet-200 rounded-xl overflow-hidden">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h4 className="text-sm font-bold text-gray-800">
+                                    Degisen Calisanlar ({frcResult.employees.length})
+                                </h4>
+                                <div className="flex flex-wrap gap-1.5 text-[9px] font-bold">
+                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">0-5dk</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">5-30dk</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">30dk-2sa</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">2sa+</span>
+                                </div>
+                            </div>
+                            {[...frcResult.employees].sort((a, b) => maxMonthlyDiff(b) - maxMonthlyDiff(a)).map((emp) => {
+                                const maxDiff = maxMonthlyDiff(emp);
+                                const severity = changeSeverity(maxDiff);
+                                const sevStyle = CHANGE_STYLES[severity];
+                                return (
+                                <div key={emp.id} className={`border rounded-xl overflow-hidden ${sevStyle.shell}`}>
                                     {/* Employee Header */}
                                     <button
                                         onClick={() => toggleFrcEmp(emp.id)}
-                                        className="w-full flex items-center justify-between p-3 bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                                        className={`w-full flex items-center justify-between p-3 transition-colors text-left ${sevStyle.header}`}
                                     >
-                                        <div className="flex items-center gap-3 text-xs">
-                                            <span className="font-bold text-violet-800">{emp.name}</span>
-                                            <span className="text-gray-500">{emp.dept}</span>
-                                            <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded-full text-[10px] font-bold">
-                                                {emp.cd} gun degisti
-                                            </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                                                <span className={`font-bold ${sevStyle.text}`}>{emp.name}</span>
+                                                <span className="text-gray-500">{emp.dept}</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevStyle.badge}`}>
+                                                    {emp.cd} gun degisti
+                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sevStyle.chip}`}>
+                                                    En buyuk fark: {fmtSeconds(maxDiff)} / {sevStyle.label}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 h-1.5 w-full max-w-md rounded-full bg-white/80 overflow-hidden border border-white">
+                                                <div className={`h-full rounded-full ${sevStyle.bar}`} style={{ width: changeWidth(maxDiff) }} />
+                                            </div>
                                         </div>
                                         {frcExpandedEmps.has(emp.id) ?
                                             <ChevronUpIcon className="w-4 h-4 text-gray-400" /> :
@@ -1747,7 +1847,8 @@ export default function RecalculationAuditTab() {
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -2201,18 +2302,26 @@ function FrcRecordTable({ title, data, color }) {
 function FrcMonthlyField({ label, before, after }) {
     const diff = (after || 0) - (before || 0);
     if (before === after || (!before && !after)) return null;
+    const severity = changeSeverity(diff);
+    const style = CHANGE_STYLES[severity];
     return (
-        <div className="flex flex-col">
-            <span className="text-gray-500 text-[9px]">{label}</span>
-            <div className="flex items-center gap-1">
+        <div className={`rounded border p-2 ${style.chip}`}>
+            <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-bold uppercase">{label}</span>
+                <span className="text-[9px] font-bold">{style.label}</span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
                 <span className="text-gray-600">{fmtSeconds(before || 0)}</span>
                 <span className="text-gray-400">&rarr;</span>
                 <span className="font-bold text-indigo-700">{fmtSeconds(after || 0)}</span>
                 {diff !== 0 && (
-                    <span className={`text-[9px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-[9px] font-bold ${diff > 0 ? 'text-green-700' : 'text-red-700'}`}>
                         ({diff > 0 ? '+' : ''}{fmtSeconds(Math.abs(diff))})
                     </span>
                 )}
+            </div>
+            <div className="mt-1.5 h-1 rounded-full bg-white/80 overflow-hidden">
+                <div className={`h-full rounded-full ${style.bar}`} style={{ width: changeWidth(diff) }} />
             </div>
         </div>
     );
