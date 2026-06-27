@@ -531,7 +531,7 @@ const Attendance = () => {
                                     {viewScope === 'DAILY' && <span className="text-xs text-slate-400 font-medium ml-2">({selectedDate})</span>}
                                 </h3>
                             </div>
-                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} leaveCoverageMap={leaveCoverageMap} />
+                            <AttendanceLogTable logs={viewScope === 'DAILY' ? logs.filter(l => l.work_date === selectedDate) : logs} leaveCoverageMap={leaveCoverageMap} visibleDates={viewScope === 'DAILY' ? [selectedDate] : null} />
                         </div>
 
                     </div>

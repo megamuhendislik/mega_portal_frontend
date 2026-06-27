@@ -277,15 +277,19 @@ const coverageIso = (date, hhmm) => {
     return `${date}T${hhmm}:00+03:00`;
 };
 
-const buildDisplayRows = (logs, leaveCoverageMap) => {
+const buildDisplayRows = (logs, leaveCoverageMap, visibleDates = null) => {
     const rows = [...(logs || [])];
     const actualCoverageKeys = new Set(
         rows
             .filter(log => ['HEALTH_REPORT', 'HOSPITAL_VISIT'].includes(log.source))
             .map(log => `${log.work_date}:${log.source}:${formatTime(log.check_in)}:${formatTime(log.check_out)}`)
     );
-    const dates = new Set(rows.map(log => log.work_date).filter(Boolean));
-    Object.keys(leaveCoverageMap || {}).forEach(date => dates.add(date));
+    const dates = visibleDates?.length
+        ? new Set(visibleDates.filter(Boolean))
+        : new Set(rows.map(log => log.work_date).filter(Boolean));
+    if (!visibleDates?.length) {
+        Object.keys(leaveCoverageMap || {}).forEach(date => dates.add(date));
+    }
 
     dates.forEach(date => {
         getCoverageItemsForDate(leaveCoverageMap[date])
@@ -375,8 +379,8 @@ const ProcessedDetailChips = ({ log }) => {
     );
 };
 
-const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
-    const displayRows = React.useMemo(() => buildDisplayRows(logs, leaveCoverageMap), [logs, leaveCoverageMap]);
+const AttendanceLogTable = ({ logs, leaveCoverageMap = {}, visibleDates = null }) => {
+    const displayRows = React.useMemo(() => buildDisplayRows(logs, leaveCoverageMap, visibleDates), [logs, leaveCoverageMap, visibleDates]);
 
     return (
         <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
