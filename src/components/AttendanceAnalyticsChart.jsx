@@ -136,7 +136,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             const creditSources = ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT', 'SPECIAL_LEAVE'];
             const externalDuty = sourceSeconds(['DUTY']);
             const healthReport = sourceSeconds(['HEALTH_REPORT']);
-            const hospitalVisit = sourceSeconds(['HOSPITAL_VISIT'], l => (l.hospital_visit_seconds || l.normal_seconds || 0));
+            const hospitalVisit = dayLogs.reduce((acc, l) => acc + (l.hospital_visit_seconds || (l.source === 'HOSPITAL_VISIT' ? (l.normal_seconds || 0) : 0)), 0);
             const specialLeave = sourceSeconds(['SPECIAL_LEAVE']);
             const totalNormal = dayLogs
                 .filter(l => !creditSources.includes(l.source))

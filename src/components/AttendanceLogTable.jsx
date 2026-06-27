@@ -134,6 +134,14 @@ const getStatusBadge = (log) => {
         );
     }
 
+    if (log.isCoverageRow) {
+        return (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">Onaylandı</span>
+            </div>
+        );
+    }
     const status = log.status;
 
     // Custom Check: Normal Mesai (Approved/Calculated but no overtime)
@@ -230,6 +238,94 @@ const doesCoverageOverlap = (coverage, log) => {
 };
 
 
+const getCoverageItemsForDate = (coverage) => {
+    if (!coverage) return [];
+    if (Array.isArray(coverage)) return coverage;
+    if (Array.isArray(coverage.items)) return coverage.items;
+    return [coverage];
+};
+
+const getCoverageItemsForLog = (coverage, log) =>
+    getCoverageItemsForDate(coverage).filter(item => doesCoverageOverlap(item, log));
+
+const coverageDurationSeconds = (coverage) => {
+    if (!coverage?.start_time || !coverage?.end_time) return 0;
+    const toSeconds = (hhmm) => {
+        const [hour, minute] = hhmm.split(':').map(Number);
+        return (hour * 60 + minute) * 60;
+    };
+    return Math.max(0, toSeconds(coverage.end_time) - toSeconds(coverage.start_time));
+};
+
+const coverageRecordType = (coverage) => {
+    if (coverage?.type === 'health_report' && coverage.type_code === 'HOSPITAL_VISIT') return 'hospital_visit';
+    if (coverage?.type === 'health_report') return 'health_report';
+    if (coverage?.type === 'external_duty') return 'external_duty';
+    if (coverage?.type === 'special_leave') return 'special_leave';
+    return 'manual';
+};
+
+const coverageSource = (coverage) => {
+    if (coverage?.type === 'health_report') return coverage.type_code || 'HEALTH_REPORT';
+    if (coverage?.type === 'external_duty') return 'DUTY';
+    if (coverage?.type === 'special_leave') return 'SPECIAL_LEAVE';
+    return coverage?.type_code || 'MANUAL';
+};
+
+const coverageIso = (date, hhmm) => {
+    if (!date || !hhmm) return null;
+    return `${date}T${hhmm}:00+03:00`;
+};
+
+const buildDisplayRows = (logs, leaveCoverageMap) => {
+    const rows = [...(logs || [])];
+    const actualCoverageKeys = new Set(
+        rows
+            .filter(log => ['HEALTH_REPORT', 'HOSPITAL_VISIT'].includes(log.source))
+            .map(log => `${log.work_date}:${log.source}:${formatTime(log.check_in)}:${formatTime(log.check_out)}`)
+    );
+    const dates = new Set(rows.map(log => log.work_date).filter(Boolean));
+    Object.keys(leaveCoverageMap || {}).forEach(date => dates.add(date));
+
+    dates.forEach(date => {
+        getCoverageItemsForDate(leaveCoverageMap[date])
+            .filter(coverage => coverage.type === 'health_report')
+            .forEach((coverage, index) => {
+                const source = coverageSource(coverage);
+                const key = `${date}:${source}:${coverage.start_time || '-'}:${coverage.end_time || '-'}`;
+                if (actualCoverageKeys.has(key)) return;
+
+                const durationSeconds = coverageDurationSeconds(coverage);
+                rows.push({
+                    id: `coverage-${date}-${coverage.request_id || index}-${source}`,
+                    isCoverageRow: true,
+                    coverageItem: coverage,
+                    work_date: date,
+                    check_in: coverageIso(date, coverage.start_time),
+                    check_out: coverageIso(date, coverage.end_time),
+                    total_seconds: durationSeconds,
+                    total_minutes: Math.round(durationSeconds / 60),
+                    normal_seconds: source === 'HEALTH_REPORT' ? durationSeconds : 0,
+                    hospital_visit_seconds: source === 'HOSPITAL_VISIT' ? durationSeconds : 0,
+                    source,
+                    source_display: coverage.type_name,
+                    record_type: coverageRecordType(coverage),
+                    record_type_label: coverage.type_name,
+                    status: 'APPROVED',
+                    note: coverage.reason || '',
+                });
+            });
+    });
+
+    return rows.sort((a, b) => {
+        const dateA = a.work_date || '';
+        const dateB = b.work_date || '';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = a.check_in || '99:99';
+        const timeB = b.check_in || '99:99';
+        return timeA.localeCompare(timeB);
+    });
+};
 const ProcessedDetailChips = ({ log }) => {
     const type = log.record_type || 'card';
     const sourceLabel = log.record_type_label || log.source_display;
@@ -250,7 +346,9 @@ const ProcessedDetailChips = ({ log }) => {
     }
 
     const normal = formatDurationSeconds(log.normal_seconds);
-    const hospitalVisit = formatDurationSeconds(log.hospital_visit_seconds);
+    const hospitalVisit = ['hospital_visit'].includes(type)
+        ? formatDurationSeconds(log.hospital_visit_seconds || log.total_seconds)
+        : null;
     const approvedOt = formatDurationSeconds(log.ot_approved_seconds || log.overtime_seconds);
     const pendingOt = formatDurationSeconds(log.pending_overtime_seconds);
     const potentialOt = formatDurationSeconds(log.ot_potential_seconds);
@@ -278,6 +376,8 @@ const ProcessedDetailChips = ({ log }) => {
 };
 
 const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
+    const displayRows = React.useMemo(() => buildDisplayRows(logs, leaveCoverageMap), [logs, leaveCoverageMap]);
+
     return (
         <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -296,14 +396,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50/50">
-                        {[...logs].sort((a, b) => {
-                            const dateA = a.work_date || '';
-                            const dateB = b.work_date || '';
-                            if (dateA !== dateB) return dateA.localeCompare(dateB);
-                            const timeA = a.check_in || '';
-                            const timeB = b.check_in || '';
-                            return timeA.localeCompare(timeB);
-                        }).map((log) => (
+                        {displayRows.map((log) => (
                             <tr key={log.id} className="group hover:bg-slate-50/80 transition-colors duration-200 cursor-default">
                                 <td className="p-2 pl-3 md:p-3 md:pl-5 lg:p-5 lg:pl-8">
                                     <div className="flex items-center gap-3">
@@ -350,11 +443,11 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                         <div className="md:hidden">
                                             <RecordTypeBadgeMobile log={log} />
                                         </div>
-                                        {leaveCoverageMap[log.work_date] && doesCoverageOverlap(leaveCoverageMap[log.work_date], log) && (
-                                            <LeaveBadge leave={{ is_on_leave: true, ...leaveCoverageMap[log.work_date] }} size="sm" />
-                                        )}
-                                        {/* Tam gün izin/rapor varsa attendance status badge gösterme — izin zaten onaylı */}
-                                        {!(leaveCoverageMap[log.work_date] && !leaveCoverageMap[log.work_date].is_hourly) && getStatusBadge(log)}
+                                        {getCoverageItemsForLog(leaveCoverageMap[log.work_date], log).map((coverage, index) => (
+                                            <LeaveBadge key={`${coverage.type}-${coverage.request_id || index}-${coverage.start_time || ''}`} leave={{ is_on_leave: true, ...coverage }} size="sm" />
+                                        ))}
+                                        {/* Tam gün izin/rapor varsa attendance status badge gösterme; coverage satırları zaten onaylıdır. */}
+                                        {!(getCoverageItemsForLog(leaveCoverageMap[log.work_date], log).some(coverage => !coverage.is_hourly) && !log.isCoverageRow) && getStatusBadge(log)}
                                         {log.overtime_minutes > 0 && (
                                             <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 pl-1">
                                                 <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
@@ -387,7 +480,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                 </td>
                             </tr>
                         ))}
-                        {logs.length === 0 && (
+                        {displayRows.length === 0 && (
                             <tr>
                                 <td colSpan="9" className="p-12 text-center text-slate-400">
                                     <div className="flex flex-col items-center gap-3 opacity-50">
