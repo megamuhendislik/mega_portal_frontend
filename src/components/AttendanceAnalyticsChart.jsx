@@ -130,14 +130,23 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
             if (dateStr === '-') continue;
             const dayLogs = allLogs.filter(l => l.work_date === dateStr);
 
-            const totalNormal = dayLogs.reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
+            const sourceSeconds = (sources) => dayLogs
+                .filter(l => sources.includes(l.source))
+                .reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
+            const creditSources = ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT', 'SPECIAL_LEAVE'];
+            const externalDuty = sourceSeconds(['DUTY']);
+            const healthReport = sourceSeconds(['HEALTH_REPORT']);
+            const hospitalVisit = sourceSeconds(['HOSPITAL_VISIT']);
+            const specialLeave = sourceSeconds(['SPECIAL_LEAVE']);
+            const totalNormal = dayLogs
+                .filter(l => !creditSources.includes(l.source))
+                .reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
             const otApproved = dayLogs.reduce((acc, l) => acc + (l.ot_approved_seconds || 0), 0);
             const otPending = dayLogs.reduce((acc, l) => acc + (l.pending_overtime_seconds || 0), 0);
             const totalCalcOt = dayLogs.reduce((acc, l) => acc + (l.calculated_overtime_seconds || 0), 0);
-            // İzin/Rapor günlerinde: normal → leave olarak göster, potansiyel OT sıfırla
-            const isLeaveDay = dayLogs.length > 0 && dayLogs.every(l => ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT'].includes(l.source));
-            const otPotential = isLeaveDay ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
+            const isCreditOnlyDay = dayLogs.length > 0 && dayLogs.every(l => creditSources.includes(l.source));
+            const otPotential = isCreditOnlyDay ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
             const totalMissing = dayLogs.filter(l => !l.is_overtime_record).reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const dayTarget = dayLogs.length > 0
                 ? Math.max(...dayLogs.map(l => l.day_target_seconds || 0))
@@ -147,8 +156,11 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 date: dateStr,
                 name: safeFormat(d, 'EEE', { locale: tr }),
                 fullDate: safeFormat(d, 'd MMM yyyy', { locale: tr }),
-                normal: isLeaveDay ? 0 : parseFloat((totalNormal / 3600).toFixed(1)),
-                leave: isLeaveDay ? parseFloat((totalNormal / 3600).toFixed(1)) : 0,
+                normal: parseFloat((totalNormal / 3600).toFixed(2)),
+                external_duty: parseFloat((externalDuty / 3600).toFixed(2)),
+                health_report: parseFloat((healthReport / 3600).toFixed(2)),
+                hospital_visit: parseFloat((hospitalVisit / 3600).toFixed(2)),
+                special_leave: parseFloat((specialLeave / 3600).toFixed(2)),
                 ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
                 ot_pending: parseFloat((otPending / 3600).toFixed(2)),
                 ot_potential: parseFloat((otPotential / 3600).toFixed(2)),
@@ -213,7 +225,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                         />
                         <Legend iconType="circle" wrapperStyle={{ paddingTop: '4px', fontSize: '10px' }} />
                         <Line type="step" dataKey="target" stroke="#94a3b8" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={false} name="Hedef" connectNulls={false} />
-                        <Bar dataKey="leave" stackId="a" fill="#8b5cf6" radius={[0, 0, 4, 4]} name="İzin/Rapor" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="external_duty" stackId="a" fill="#7c3aed" radius={[0, 0, 4, 4]} name="Dış Görev" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="health_report" stackId="a" fill="#ef4444" name="Sağlık Raporu" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="hospital_visit" stackId="a" fill="#a855f7" name="Hastane" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="special_leave" stackId="a" fill="#14b8a6" name="Özel İzin" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} name="Normal" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_approved" stackId="a" fill="#10b981" name="Onaylı Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_pending" stackId="a" fill="url(#striped-pending)" stroke="#f59e0b" strokeWidth={1} name="Bekleyen Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />

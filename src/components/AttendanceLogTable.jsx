@@ -21,6 +21,19 @@ const formatDate = (isoString) => {
     } catch { return '-'; }
 };
 
+const formatDurationSeconds = (seconds) => {
+    const total = Math.max(0, Math.round(seconds || 0));
+    if (total <= 0) return null;
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    const parts = [];
+    if (h) parts.push(`${h}s`);
+    if (m) parts.push(`${m}dk`);
+    if (sec || !parts.length) parts.push(`${sec}sn`);
+    return parts.join(' ');
+};
+
 // --- RecordTypeBadge ---
 const RECORD_TYPE_CONFIG = {
     card:           { icon: CreditCard, label: 'Kart',      bg: 'bg-slate-50',   border: 'border-slate-200', text: 'text-slate-600',   dot: 'bg-slate-400'   },
@@ -28,6 +41,7 @@ const RECORD_TYPE_CONFIG = {
     health_report:  { icon: HeartPulse, label: 'S. Raporu',  bg: 'bg-red-50',     border: 'border-red-200',   text: 'text-red-600',     dot: 'bg-red-500'     },
     hospital_visit: { icon: Stethoscope,label: 'Hastane',    bg: 'bg-purple-50',  border: 'border-purple-200',text: 'text-purple-600',  dot: 'bg-purple-500'  },
     external_duty:  { icon: Briefcase,  label: 'Dış Görev',  bg: 'bg-violet-50',  border: 'border-violet-200',text: 'text-violet-600',  dot: 'bg-violet-500'  },
+    special_leave:  { icon: Calendar,   label: 'Özel İzin',  bg: 'bg-teal-50',    border: 'border-teal-200',  text: 'text-teal-700',    dot: 'bg-teal-500'    },
     overtime:       { icon: Timer,      label: 'Fazla Mesai',   bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' },
     split:          { icon: Scissors,   label: 'Bölme',      bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
     system:         { icon: Settings,   label: 'Sistem',     bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
@@ -215,6 +229,52 @@ const doesCoverageOverlap = (coverage, log) => {
     return true; // fallback
 };
 
+
+const ProcessedDetailChips = ({ log }) => {
+    const type = log.record_type || 'card';
+    const sourceLabel = log.record_type_label || log.source_display;
+    const chips = [];
+
+    if (['external_duty', 'health_report', 'hospital_visit', 'special_leave'].includes(type)) {
+        chips.push({ key: 'processed', label: 'İşlenmiş Talep', value: sourceLabel, cls: 'bg-violet-50 text-violet-700 border-violet-200' });
+    }
+    if (type === 'overtime' || log.ot_status) {
+        const statusLabel = {
+            APPROVED: 'Onaylı Mesai',
+            PENDING: 'Talep Edildi',
+            POTENTIAL: 'Algılandı',
+            REJECTED: 'Reddedildi',
+            CANCELLED: 'İptal'
+        }[log.ot_status] || 'Mesai';
+        chips.push({ key: 'ot-status', label: statusLabel, value: log.ot_source_type || '', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
+    }
+
+    const normal = formatDurationSeconds(log.normal_seconds);
+    const approvedOt = formatDurationSeconds(log.ot_approved_seconds || log.overtime_seconds);
+    const pendingOt = formatDurationSeconds(log.pending_overtime_seconds);
+    const potentialOt = formatDurationSeconds(log.ot_potential_seconds);
+    const missing = formatDurationSeconds(log.missing_seconds);
+
+    if (normal) chips.push({ key: 'normal', label: 'Normal', value: normal, cls: 'bg-blue-50 text-blue-700 border-blue-200' });
+    if (approvedOt) chips.push({ key: 'approved-ot', label: 'Onaylı FM', value: approvedOt, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
+    if (pendingOt) chips.push({ key: 'pending-ot', label: 'Bekleyen FM', value: pendingOt, cls: 'bg-amber-50 text-amber-700 border-amber-200' });
+    if (potentialOt) chips.push({ key: 'potential-ot', label: 'Potansiyel FM', value: potentialOt, cls: 'bg-slate-50 text-slate-600 border-slate-200' });
+    if (missing) chips.push({ key: 'missing', label: 'Eksik', value: missing, cls: 'bg-rose-50 text-rose-700 border-rose-200' });
+
+    if (!chips.length) return <span className="text-xs text-slate-300">-</span>;
+
+    return (
+        <div className="flex flex-wrap justify-end gap-1.5 max-w-[280px] ml-auto">
+            {chips.slice(0, 5).map(chip => (
+                <span key={chip.key} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${chip.cls}`}>
+                    <span>{chip.label}</span>
+                    {chip.value && <span className="font-semibold opacity-80">{chip.value}</span>}
+                </span>
+            ))}
+        </div>
+    );
+};
+
 const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
     return (
         <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 overflow-hidden">
@@ -302,8 +362,10 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                     </div>
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5 pr-3 md:pr-5 lg:pr-8 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <ProcessedDetailChips log={log} />
                                     {log.note && (
-                                        <div className="group/note relative inline-block">
+                                        <div className="group/note relative inline-block shrink-0">
                                             {log.note.includes('eşik altı') ? (
                                                 <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center cursor-help border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors">
                                                     <span className="text-xs font-bold">!</span>
@@ -319,6 +381,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {} }) => {
                                             </div>
                                         </div>
                                     )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
