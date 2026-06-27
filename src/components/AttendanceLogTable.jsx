@@ -250,12 +250,14 @@ const ProcessedDetailChips = ({ log }) => {
     }
 
     const normal = formatDurationSeconds(log.normal_seconds);
+    const hospitalVisit = formatDurationSeconds(log.hospital_visit_seconds);
     const approvedOt = formatDurationSeconds(log.ot_approved_seconds || log.overtime_seconds);
     const pendingOt = formatDurationSeconds(log.pending_overtime_seconds);
     const potentialOt = formatDurationSeconds(log.ot_potential_seconds);
     const missing = formatDurationSeconds(log.missing_seconds);
 
     if (normal) chips.push({ key: 'normal', label: 'Normal', value: normal, cls: 'bg-blue-50 text-blue-700 border-blue-200' });
+    if (hospitalVisit) chips.push({ key: 'hospital-visit', label: 'Hastane', value: hospitalVisit, cls: 'bg-purple-50 text-purple-700 border-purple-200' });
     if (approvedOt) chips.push({ key: 'approved-ot', label: 'Onaylı FM', value: approvedOt, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
     if (pendingOt) chips.push({ key: 'pending-ot', label: 'Bekleyen FM', value: pendingOt, cls: 'bg-amber-50 text-amber-700 border-amber-200' });
     if (potentialOt) chips.push({ key: 'potential-ot', label: 'Potansiyel FM', value: potentialOt, cls: 'bg-slate-50 text-slate-600 border-slate-200' });
