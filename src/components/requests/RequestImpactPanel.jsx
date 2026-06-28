@@ -59,6 +59,39 @@ const progressBarColors = {
     purple: { bg: 'bg-purple-100', fill: 'bg-purple-500', text: 'text-purple-700' },
 };
 
+const dateKey = (value) => (value ? String(value).slice(0, 10) : '');
+
+const expandExternalDutyRange = (req) => {
+    if (!req?.start_date || !req?.end_date || !req?.start_time || !req?.end_time) return [];
+    const rows = [];
+    const current = new Date(`${dateKey(req.start_date)}T00:00:00`);
+    const end = new Date(`${dateKey(req.end_date)}T00:00:00`);
+    while (!Number.isNaN(current.getTime()) && !Number.isNaN(end.getTime()) && current <= end) {
+        rows.push({
+            date: current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }),
+            start_time: String(req.start_time).slice(0, 5),
+            end_time: String(req.end_time).slice(0, 5),
+            included: true,
+        });
+        current.setDate(current.getDate() + 1);
+    }
+    return rows;
+};
+
+const normalizeExternalDutySegments = (req) => {
+    const raw = req?.date_segments || req?.duty_work_info?.date_segments || [];
+    if (Array.isArray(raw) && raw.length > 0) {
+        return raw
+            .filter(seg => seg?.date && seg?.start_time && seg?.end_time && seg.included !== false)
+            .map(seg => ({
+                ...seg,
+                date: dateKey(seg.date),
+                start_time: String(seg.start_time).slice(0, 5),
+                end_time: String(seg.end_time).slice(0, 5),
+            }));
+    }
+    return expandExternalDutyRange(req);
+};
 // ─── Sub-components ───────────────────────────────────────────────────────
 const Section = ({ title, icon, children, color = 'slate' }) => {
     const c = sectionColors[color] || sectionColors.slate;
@@ -423,7 +456,7 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
             case 'EXTERNAL_DUTY': {
                 const dwi = req.duty_work_info;
                 const totalOtMin = dwi?.total_ot_minutes || 0;
-                const segments = req.date_segments || [];
+                const segments = normalizeExternalDutySegments(req);
                 const isPendingDuty = req.status === 'PENDING';
 
                 // PENDING duty: backend preview_duty_hours sonucu (öğle düşülmüş net hesap)
@@ -508,10 +541,6 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             {/* Pending without segments: show global times */}
                             {isPendingDuty && segments.length === 0 && req.start_time && req.end_time && (
                                 <InfoRow label="Çalışma Saatleri" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} />
-                            )}
-                            {/* Pending: global times always shown as summary when available */}
-                            {isPendingDuty && segments.length > 0 && req.start_time && req.end_time && (
-                                <InfoRow label="Saat Aralığı" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} highlight />
                             )}
                         </Section>
                         <div className="md:col-span-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">

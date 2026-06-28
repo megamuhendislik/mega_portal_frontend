@@ -1641,17 +1641,23 @@ export const ExternalDutyForm = ({
                     {(() => {
                         const included = (externalDutyForm.date_segments || [])
                             .filter(s => s.included && s.start_time && s.end_time);
-                        const formatShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' });
+                        const formatShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' });
                         return (
                             <>
                                 <SummaryRow label="Talep edilen" value={`${included.length} gün`} />
-                                {included.length > 0 && included.length <= 8 && (
-                                    <SummaryRow label="Günler" value={included.map(s => formatShort(s.date)).join(', ')} />
-                                )}
                                 {included.length > 0 && (
-                                    <SummaryRow label="Saatler" value={included.length === 1
-                                        ? `${included[0].start_time} - ${included[0].end_time}`
-                                        : 'Gün başına değişken'} />
+                                    <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50/70 overflow-hidden">
+                                        <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                            {included.map((seg, i) => (
+                                                <div key={`${seg.date}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-xs bg-white/80">
+                                                    <span className="font-semibold text-slate-700">{formatShort(seg.date)}</span>
+                                                    <span className="font-bold text-purple-700 whitespace-nowrap">
+                                                        {String(seg.start_time).slice(0, 5)} - {String(seg.end_time).slice(0, 5)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
                             </>
                         );

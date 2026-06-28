@@ -10,6 +10,49 @@ import ModalOverlay from './ui/ModalOverlay';
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
 
+const toDateKey = (value) => {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+};
+
+const expandDateRangeSegments = (startDate, endDate, startTime, endTime) => {
+  if (!startDate || !endDate || !startTime || !endTime) return [];
+  const rows = [];
+  const current = new Date(`${toDateKey(startDate)}T00:00:00`);
+  const end = new Date(`${toDateKey(endDate)}T00:00:00`);
+  while (!Number.isNaN(current.getTime()) && !Number.isNaN(end.getTime()) && current <= end) {
+    rows.push({
+      date: current.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }),
+      start_time: String(startTime).slice(0, 5),
+      end_time: String(endTime).slice(0, 5),
+      included: true,
+    });
+    current.setDate(current.getDate() + 1);
+  }
+  return rows;
+};
+
+const normalizeDutySegments = (request) => {
+  const raw = request?.date_segments || request?.duty_work_info?.date_segments || [];
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+      .filter(seg => seg && seg.date && seg.start_time && seg.end_time && seg.included !== false)
+      .map(seg => ({
+        ...seg,
+        date: toDateKey(seg.date),
+        start_time: String(seg.start_time).slice(0, 5),
+        end_time: String(seg.end_time).slice(0, 5),
+      }));
+  }
+  return expandDateRangeSegments(request?.start_date, request?.end_date, request?.start_time, request?.end_time);
+};
+
+const getEmployeeId = (request) => {
+  const employee = request?.employee;
+  if (employee && typeof employee === 'object') return employee.id || employee.employee_id || null;
+  return request?.employee_id || employee || request?.employee_detail?.id || null;
+};
+
 const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate, onApprove, onReject, mode = 'personal' }) => {
   // EXTERNAL_DUTY uses LEAVE endpoints/logic — normalize for all internal checks
   const requestType = rawRequestType === 'EXTERNAL_DUTY' ? 'LEAVE' : rawRequestType;
@@ -109,8 +152,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
             end_date: request.end_date,
             start_time: request.start_time || null,
             end_time: request.end_time || null,
-            employee_id: request.employee || request.employee_detail?.id,
-            date_segments: request.date_segments || null,
+            employee_id: getEmployeeId(request),
+            date_segments: normalizeDutySegments(request).length > 0 ? normalizeDutySegments(request) : null,
           });
           setDutyPreview(resp.data);
         } catch (err) {
@@ -590,7 +633,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 )}
                 {/* Dış Görev — gün bazlı çalışma saatleri */}
                 {request.request_type_detail?.category === 'EXTERNAL_DUTY' && (() => {
-                  const segs = request.date_segments || [];
+                  const segs = normalizeDutySegments(request);
                   if (segs.length === 0 && request.start_time && request.end_time) {
                     return (
                       <div className="flex items-center justify-between">
@@ -831,11 +874,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                     </div>
 
                     {/* Gün Bazlı Çalışma Detayı (date_segments) */}
-                    {request.duty_work_info?.date_segments && request.duty_work_info.date_segments.length > 0 && (
+                    {normalizeDutySegments(request).length > 0 && (
                       <div className="mb-3">
                         <span className="text-[10px] font-bold text-purple-600 uppercase mb-1 block">Gün Bazlı Çalışma Detayı</span>
                         <div className="space-y-1">
-                          {request.duty_work_info.date_segments.map((seg, i) => (
+                          {normalizeDutySegments(request).map((seg, i) => (
                             <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-purple-100">
                               <span className="text-slate-600 font-medium">
                                 {new Date(seg.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Europe/Istanbul' })}
