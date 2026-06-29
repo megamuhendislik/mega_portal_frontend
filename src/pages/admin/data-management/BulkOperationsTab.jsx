@@ -12,6 +12,8 @@ import {
     Alert,
     Statistic,
     Tag,
+    Tooltip,
+    Spin,
 } from 'antd';
 import {
     ThunderboltOutlined,
@@ -22,10 +24,13 @@ import {
     TeamOutlined,
     CalendarOutlined,
     ClockCircleOutlined,
+    LockOutlined,
+    UnlockOutlined,
 } from '@ant-design/icons';
 import { eachDayOfInterval, getDay, format } from 'date-fns';
 import dayjs from 'dayjs';
 import api from '../../../services/api';
+import { getIstanbulFiscalMonth } from '../../../utils/dateUtils';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 const buildEmployeeOptions = (employees) =>
@@ -64,6 +69,14 @@ export default function BulkOperationsTab() {
     const [settleMonth, setSettleMonth] = useState(null);
     const [settleProcessing, setSettleProcessing] = useState(false);
     const [settleProgress, setSettleProgress] = useState({ current: 0, total: 0, results: [] });
+
+    // ── Section 4: Geçmiş Dönem Kilidi ────────────────────────────
+    // Şirket geneli (çalışan bağımsız) mali dönem kilidi: kilitli dönemde
+    // kullanıcı talep oluşturamaz/onaylayamaz ve PENDING talepler iptal olur.
+    const [lockMonth, setLockMonth] = useState(null);
+    const [lockStatus, setLockStatus] = useState(null); // { year, month, is_locked } | null
+    const [lockStatusLoading, setLockStatusLoading] = useState(false);
+    const [lockProcessing, setLockProcessing] = useState(false);
 
     // ── Load employees ────────────────────────────────────────────
     useEffect(() => {
@@ -339,6 +352,107 @@ export default function BulkOperationsTab() {
                 `${successCount} başarılı, ${errorCount} hata. Toplam: ${total} personel.`
             );
         }
+    };
+
+    // ================================================================
+    // SECTION 4: Geçmiş Dönem Kilidi
+    // ================================================================
+    // Seçilen dönemin (year/month) kilit durumunu çek → rozet.
+    useEffect(() => {
+        if (!lockMonth) {
+            setLockStatus(null);
+            return;
+        }
+        const year = lockMonth.year();
+        const month = lockMonth.month() + 1;
+        let cancelled = false;
+        setLockStatusLoading(true);
+        api.get('/system-data/period_lock_status/', { params: { year, month } })
+            .then((res) => { if (!cancelled) setLockStatus(res.data || null); })
+            .catch(() => { if (!cancelled) setLockStatus(null); })
+            .finally(() => { if (!cancelled) setLockStatusLoading(false); });
+        return () => { cancelled = true; };
+    }, [lockMonth]);
+
+    // Seçilen dönem KAPANMIŞ mı? Backend yalnız kapanmış geçmiş dönemi kilitler
+    // (today > period_end). Global kilit takvim-bağımsız default 26→25 kuralını
+    // kullandığından, açık/kapalı sınırı getIstanbulFiscalMonth (bugünü içeren mali
+    // dönem) ile birebir eşleşir: seçilen dönem cari mali dönemden ÖNCEYSE kapanmıştır.
+    // Bu yalnız buton disabled durumu içindir; otorite backend'in 400 yanıtıdır (graceful).
+    const lockPeriodClosed = (() => {
+        if (!lockMonth) return false;
+        const selY = lockMonth.year();
+        const selM = lockMonth.month() + 1;
+        const { year: curY, month: curM } = getIstanbulFiscalMonth();
+        return (selY * 12 + selM) < (curY * 12 + curM);
+    })();
+
+    const executeTogglePeriodLock = async (year, month, nextLocked) => {
+        setLockProcessing(true);
+        try {
+            const res = await api.post('/system-data/set_period_lock/', {
+                year, month, locked: nextLocked,
+            });
+            const newLocked = res.data?.locked ?? nextLocked;
+            const cancelledPending = res.data?.cancelled_pending || 0;
+            if (newLocked) {
+                message.success(
+                    cancelledPending > 0
+                        ? `Dönem kilitlendi. ${cancelledPending} bekleyen talep iptal edildi.`
+                        : 'Dönem kilitlendi.'
+                );
+            } else {
+                message.success('Dönem kilidi açıldı.');
+            }
+            setLockStatus({ year, month, is_locked: newLocked });
+        } catch (e) {
+            // Açık dönem koruması (graceful): backend kapanmamış dönemde 400 döner.
+            message.error('Hata: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setLockProcessing(false);
+        }
+    };
+
+    const handleTogglePeriodLock = () => {
+        if (!lockMonth) {
+            message.warning('Lütfen bir dönem (ay) seçin.');
+            return;
+        }
+        const year = lockMonth.year();
+        const month = lockMonth.month() + 1;
+        const monthLabel = lockMonth.format('MMMM YYYY');
+        const currentlyLocked = !!lockStatus?.is_locked;
+        const nextLocked = !currentlyLocked;
+
+        Modal.confirm({
+            title: nextLocked ? 'Dönemi Kilitle' : 'Dönem Kilidini Aç',
+            icon: nextLocked
+                ? <LockOutlined style={{ color: '#ef4444' }} />
+                : <UnlockOutlined style={{ color: '#52c41a' }} />,
+            content: nextLocked ? (
+                <div>
+                    <p>
+                        <strong>{monthLabel}</strong> dönemi kilitlenecek. Kullanıcılar bu
+                        döneme talep oluşturamaz/onaylayamaz ve bu dönemdeki bekleyen
+                        talepler <strong>İPTAL</strong> edilir.
+                    </p>
+                    <p className="text-slate-500 text-sm mt-2">
+                        TYR ve Veri Yönetimi etkilenmez. Onaylıyor musunuz?
+                    </p>
+                </div>
+            ) : (
+                <div>
+                    <p>
+                        <strong>{monthLabel}</strong> dönemi kilidi açılacak. Kullanıcılar
+                        tekrar talep oluşturabilecek.
+                    </p>
+                </div>
+            ),
+            okText: nextLocked ? 'Evet, Kilitle' : 'Evet, Kilidi Aç',
+            okButtonProps: nextLocked ? { danger: true } : undefined,
+            cancelText: 'Vazgeç',
+            onOk: () => executeTogglePeriodLock(year, month, nextLocked),
+        });
     };
 
     // ── Result summary renderer ───────────────────────────────────
@@ -732,6 +846,120 @@ export default function BulkOperationsTab() {
 
                 {/* Result summary */}
                 {renderResultSummary(settleProgress)}
+            </Card>
+
+            {/* ── Section 4: Geçmiş Dönem Kilidi ─────────────────── */}
+            <Card
+                className="shadow-sm hover:shadow-md transition-shadow"
+                {...cardTitle(
+                    <LockOutlined className="text-slate-600 text-xl" />,
+                    'bg-slate-500/10',
+                    'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                    'Geçmiş Dönem Kilidi',
+                    'Kapanmış bir mali dönemi kilitle — kullanıcılar o döneme talep oluşturamaz/onaylayamaz'
+                )}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Dönem secimi */}
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            <CalendarOutlined className="mr-1" />
+                            Dönem (Ay)
+                        </label>
+                        <DatePicker
+                            picker="month"
+                            value={lockMonth}
+                            onChange={setLockMonth}
+                            format="MMMM YYYY"
+                            className="w-full"
+                            disabled={lockProcessing}
+                            placeholder="Dönem seçin"
+                        />
+                    </div>
+
+                    {/* Kilit durumu rozeti */}
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            Kilit Durumu
+                        </label>
+                        <div className="h-8 flex items-center">
+                            {!lockMonth ? (
+                                <span className="text-sm text-slate-400">Dönem seçin</span>
+                            ) : lockStatusLoading ? (
+                                <Spin size="small" />
+                            ) : lockStatus == null ? (
+                                <span className="text-sm text-slate-400">Durum alınamadı</span>
+                            ) : lockStatus.is_locked ? (
+                                <Tag icon={<LockOutlined />} color="red" className="text-sm py-0.5 px-2.5">
+                                    Kilitli
+                                </Tag>
+                            ) : (
+                                <Tag icon={<UnlockOutlined />} color="green" className="text-sm py-0.5 px-2.5">
+                                    Açık
+                                </Tag>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bilgi notu */}
+                <Alert
+                    type="warning"
+                    showIcon
+                    className="mt-4"
+                    message="Kilit kullanıcı taleplerini etkiler"
+                    description="Kilitli dönemde kullanıcılar fazla mesai, yemek ve kartsız giriş talebi oluşturamaz/onaylayamaz; kilitlendiğinde o dönemin bekleyen talepleri otomatik iptal edilir. TYR ve Veri Yönetimi (yöneticinin elle düzeltmeleri) etkilenmez. Yalnız kapanmış geçmiş dönemler kilitlenebilir."
+                />
+
+                {/* Kilitle / Kilidi Aç butonu */}
+                <div className="mt-5 flex items-center gap-3">
+                    {lockStatus?.is_locked ? (
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<UnlockOutlined />}
+                            loading={lockProcessing}
+                            disabled={!lockMonth || lockStatusLoading}
+                            onClick={handleTogglePeriodLock}
+                            className="!bg-green-600 !border-green-600 hover:!bg-green-700"
+                        >
+                            Kilidi Aç
+                        </Button>
+                    ) : (
+                        <Tooltip
+                            title={
+                                lockMonth && lockStatus != null && !lockPeriodClosed
+                                    ? 'Yalnız kapanmış geçmiş dönemler kilitlenebilir'
+                                    : ''
+                            }
+                        >
+                            {/* span: disabled Button'da Tooltip'in tetiklenmesi için */}
+                            <span className="inline-block">
+                                <Button
+                                    type="primary"
+                                    danger
+                                    size="large"
+                                    icon={<LockOutlined />}
+                                    loading={lockProcessing}
+                                    disabled={
+                                        !lockMonth ||
+                                        lockStatusLoading ||
+                                        lockStatus == null ||
+                                        !lockPeriodClosed
+                                    }
+                                    onClick={handleTogglePeriodLock}
+                                >
+                                    Dönemi Kilitle
+                                </Button>
+                            </span>
+                        </Tooltip>
+                    )}
+                    {lockMonth && (
+                        <Tag color={lockStatus?.is_locked ? 'red' : 'default'} className="text-xs">
+                            {lockMonth.format('MMMM YYYY')}
+                        </Tag>
+                    )}
+                </div>
             </Card>
         </div>
     );
