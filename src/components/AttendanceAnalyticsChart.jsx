@@ -14,6 +14,18 @@ import api from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
 import { getIstanbulToday, getIstanbulTodayDate, getIstanbulMonth } from '../utils/dateUtils';
 
+// Ondalık saat (ör. 8.9) → "8sa 54dk" gösterimi (negatif destekli — net bakiye için)
+const fmtHM = (h) => {
+    const n = Number(h);
+    if (!n || isNaN(n)) return '0dk';
+    const neg = n < 0;
+    const totalMin = Math.round(Math.abs(n) * 60);
+    const sa = Math.floor(totalMin / 60);
+    const dk = totalMin % 60;
+    const s = sa > 0 ? (dk > 0 ? `${sa}sa ${dk}dk` : `${sa}sa`) : `${dk}dk`;
+    return neg ? `-${s}` : s;
+};
+
 // Safe date validation: returns true if Date is valid
 const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime());
 
@@ -218,6 +230,8 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 10, fill: '#94a3b8' }} dy={5} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 10, fill: '#94a3b8' }} />
                         <Tooltip
+                            wrapperStyle={{ zIndex: 50 }}
+                            formatter={(value, name) => [fmtHM(value), name]}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             itemStyle={{ fontSize: '12px', fontWeight: 600 }}
                             labelStyle={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
@@ -262,37 +276,37 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                     {d?.avg_normal > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
-                            <span className="font-bold">{d.avg_normal} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_normal)}</span>
                         </div>
                     )}
                     {d?.avg_ot_approved > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Onaylı Mesai</span>
-                            <span className="font-bold">{d.avg_ot_approved} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_ot_approved)}</span>
                         </div>
                     )}
                     {d?.avg_ot_pending > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" />Bekleyen Mesai</span>
-                            <span className="font-bold">{d.avg_ot_pending} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_ot_pending)}</span>
                         </div>
                     )}
                     {d?.avg_ot_potential > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-400" />Potansiyel Mesai</span>
-                            <span className="font-bold">{d.avg_ot_potential} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_ot_potential)}</span>
                         </div>
                     )}
                     {d?.avg_missing > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-400" />Eksik</span>
-                            <span className="font-bold">{d.avg_missing} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_missing)}</span>
                         </div>
                     )}
                     {showBreaks && d?.avg_break > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-300" />Mola</span>
-                            <span className="font-bold">{d.avg_break} sa</span>
+                            <span className="font-bold">{fmtHM(d.avg_break)}</span>
                         </div>
                     )}
                     {showTotals && (
@@ -300,11 +314,11 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                             <p className="text-[10px] text-slate-400">Haftalık toplam</p>
                             <div className="flex items-center justify-between text-xs">
                                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-indigo-500" />Toplam Çalışma</span>
-                                <span className="font-bold">{d?.total_work || 0} sa</span>
+                                <span className="font-bold">{fmtHM(d?.total_work)}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
                                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-500" />Toplam Mesai</span>
-                                <span className="font-bold">{d?.total_ot || 0} sa</span>
+                                <span className="font-bold">{fmtHM(d?.total_ot)}</span>
                             </div>
                         </div>
                     )}
@@ -354,7 +368,7 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                             label={{ value: 'Toplam Sa', angle: 90, position: 'insideRight', offset: 15, fontSize: 9, fill: '#6366f1' }}
                         />
                     )}
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip wrapperStyle={{ zIndex: 50 }} content={<CustomTooltip />} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} />
 
                     {/* Average daily bars */}
@@ -462,29 +476,29 @@ const YearlyView = ({ data }) => {
                 <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
-                        <span className="font-bold">{d?.normal || 0} sa</span>
+                        <span className="font-bold">{fmtHM(d?.normal)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Toplam Mesai</span>
-                        <span className="font-bold">{d?.total_mesai || 0} sa</span>
+                        <span className="font-bold">{fmtHM(d?.total_mesai)}</span>
                     </div>
                     {(d?.ot_approved > 0 || d?.ot_pending > 0 || d?.ot_potential > 0) && (
                         <div className="pl-4 border-l-2 border-emerald-200 space-y-0.5 text-[10px] text-slate-500">
-                            {d?.ot_approved > 0 && <div className="flex justify-between"><span>Onaylı</span><span>{d.ot_approved} sa</span></div>}
-                            {d?.ot_pending > 0 && <div className="flex justify-between"><span>Bekleyen</span><span>{d.ot_pending} sa</span></div>}
-                            {d?.ot_potential > 0 && <div className="flex justify-between"><span>Potansiyel</span><span>{d.ot_potential} sa</span></div>}
+                            {d?.ot_approved > 0 && <div className="flex justify-between"><span>Onaylı</span><span>{fmtHM(d.ot_approved)}</span></div>}
+                            {d?.ot_pending > 0 && <div className="flex justify-between"><span>Bekleyen</span><span>{fmtHM(d.ot_pending)}</span></div>}
+                            {d?.ot_potential > 0 && <div className="flex justify-between"><span>Potansiyel</span><span>{fmtHM(d.ot_potential)}</span></div>}
                         </div>
                     )}
                     {d?.missing > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-400" />Eksik</span>
-                            <span className="font-bold">{d.missing} sa</span>
+                            <span className="font-bold">{fmtHM(d.missing)}</span>
                         </div>
                     )}
                     <div className="border-t border-slate-100 pt-1 mt-1">
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-violet-500" />Kümülatif Net</span>
-                            <span className="font-bold">{d?.cumulative_net_hours || 0} sa</span>
+                            <span className="font-bold">{fmtHM(d?.cumulative_net_hours)}</span>
                         </div>
                     </div>
                 </div>
@@ -500,7 +514,7 @@ const YearlyView = ({ data }) => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXTick />} dy={10} interval={0} />
                     <YAxis yAxisId="left" domain={[0, 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#94A3B8' }} label={{ value: 'Saat', angle: -90, position: 'insideLeft', offset: 15, fontSize: 10, fill: '#94a3b8' }} />
                     <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: isMobile ? 9 : 11, fill: '#8b5cf6' }} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip wrapperStyle={{ zIndex: 50 }} content={<CustomTooltip />} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
 
                     <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" shape={<CustomBar />} label={renderBarLabel} />
