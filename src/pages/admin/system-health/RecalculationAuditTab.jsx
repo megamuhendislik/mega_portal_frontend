@@ -106,6 +106,13 @@ function maxMonthlyDiff(emp) {
     keys.forEach((key) => {
         const before = emp?.mb?.[key] || {};
         const after = emp?.ma?.[key] || {};
+        // CARİ/AÇIK mali dönemi (is_open) denetim-farkı olarak SAYMA: açık ayda
+        // Eksik/Net/Kümülatif, cari-günün "ghost_deficit"i ile ZAMAN-BAĞIMLI ilerler
+        // (past_target = istanbul_today'e göre pro-rata). m_before (bayat stored) vs
+        // m_after (taze cascade NOW) farkı = geçen zamanın karşılanmamış hedefi →
+        // BENIGN, bordro-nötr, apply'a girmez (cd=0). Kapanmış ayda ghost sabit →
+        // oradaki fark GERÇEK staleness olduğundan SAYILIR.
+        if (before?.is_open || after?.is_open) return;
         fields.forEach((field) => {
             const diff = Math.abs((after?.[field] || 0) - (before?.[field] || 0));
             if (diff > max) max = diff;
@@ -1978,7 +1985,14 @@ export default function RecalculationAuditTab() {
                                     <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">2sa+</span>
                                 </div>
                             </div>
-                            {[...frcResult.employees].sort((a, b) => maxMonthlyDiff(b) - maxMonthlyDiff(a)).map((emp) => {
+                            {[...frcResult.employees].sort((a, b) => {
+                                // Gerçek değişenler (günlük cd>0 veya ghost) üste; sonra kapanmış-ay
+                                // gerçek farkına göre. Açık-ay zaman-kayması maxMonthlyDiff'e girmez.
+                                const rank = (e) => ((e.cd || 0) > 0 || (e.ghost || 0) > 0 ? 1 : 0);
+                                const r = rank(b) - rank(a);
+                                if (r !== 0) return r;
+                                return maxMonthlyDiff(b) - maxMonthlyDiff(a);
+                            }).map((emp) => {
                                 const maxDiff = maxMonthlyDiff(emp);
                                 const severity = changeSeverity(maxDiff);
                                 const sevStyle = CHANGE_STYLES[severity];
@@ -2608,18 +2622,29 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
 // Aylık özet bloğu (Ay detayında): before→after diff grid + Hesap Dökümü.
 function FrcMonthSummary({ b, a }) {
     if (!b && !a) return null;
+    // Cari/açık mali dönem: Eksik/Net/Kümülatif cari-günün ghost_deficit'iyle
+    // zaman-bağımlı ilerler (benign, bordro-nötr, denetim-dışı). Alarm severity yerine
+    // nötr göster + bilgi rozeti.
+    const isOpen = !!(b?.is_open || a?.is_open);
     return (
         <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-            <h6 className="text-[10px] font-bold text-indigo-700 uppercase mb-2">Aylik Ozet (Onceki → Sonraki)</h6>
+            <h6 className="text-[10px] font-bold text-indigo-700 uppercase mb-2 flex flex-wrap items-center gap-2">
+                <span>Aylik Ozet (Onceki → Sonraki)</span>
+                {isOpen && (
+                    <span className="normal-case font-normal text-[9px] text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
+                        cari ay · canli zaman-kaymasi (denetim-disi)
+                    </span>
+                )}
+            </h6>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                <FrcMonthlyField label="Tamamlanan" before={b?.cmp} after={a?.cmp} />
-                <FrcMonthlyField label="Mesai" before={b?.ot} after={a?.ot} />
-                <FrcMonthlyField label="Eksik" before={b?.mis} after={a?.mis} />
-                <FrcMonthlyField label="Net Bakiye" before={b?.nb} after={a?.nb} />
-                <FrcMonthlyField label="Toplam Is" before={b?.tw} after={a?.tw} />
-                <FrcMonthlyField label="Kumulatif" before={b?.cum} after={a?.cum} />
-                <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} />
-                <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} />
+                <FrcMonthlyField label="Tamamlanan" before={b?.cmp} after={a?.cmp} isOpen={isOpen} />
+                <FrcMonthlyField label="Mesai" before={b?.ot} after={a?.ot} isOpen={isOpen} />
+                <FrcMonthlyField label="Eksik" before={b?.mis} after={a?.mis} isOpen={isOpen} />
+                <FrcMonthlyField label="Net Bakiye" before={b?.nb} after={a?.nb} isOpen={isOpen} />
+                <FrcMonthlyField label="Toplam Is" before={b?.tw} after={a?.tw} isOpen={isOpen} />
+                <FrcMonthlyField label="Kumulatif" before={b?.cum} after={a?.cum} isOpen={isOpen} />
+                <FrcMonthlyField label="Izin" before={b?.lv} after={a?.lv} isOpen={isOpen} />
+                <FrcMonthlyField label="Rapor" before={b?.hr} after={a?.hr} isOpen={isOpen} />
             </div>
             {a?.breakdown && (
                 <details className="mt-1.5" open>
@@ -2732,16 +2757,18 @@ function FrcRecordTable({ title, data, color, lazyRecs, lazyLoading }) {
     );
 }
 
-function FrcMonthlyField({ label, before, after }) {
+function FrcMonthlyField({ label, before, after, isOpen }) {
     const diff = (after || 0) - (before || 0);
     if (before === after || (!before && !after)) return null;
-    const severity = changeSeverity(diff);
+    // Açık (cari) dönemde fark benign zaman-kaymasıdır → alarm severity YOK (nötr),
+    // magnitude barı gösterme. Kapanmış ayda gerçek severity korunur.
+    const severity = isOpen ? 'none' : changeSeverity(diff);
     const style = CHANGE_STYLES[severity];
     return (
         <div className={`rounded border p-2 ${style.chip}`}>
             <div className="flex items-center justify-between gap-2">
                 <span className="text-[9px] font-bold uppercase">{label}</span>
-                <span className="text-[9px] font-bold">{style.label}</span>
+                <span className="text-[9px] font-bold">{isOpen ? 'cari ay' : style.label}</span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
                 <span className="text-gray-600">{fmtSeconds(before || 0)}</span>
@@ -2754,7 +2781,7 @@ function FrcMonthlyField({ label, before, after }) {
                 )}
             </div>
             <div className="mt-1.5 h-1 rounded-full bg-white/80 overflow-hidden">
-                <div className={`h-full rounded-full ${style.bar}`} style={{ width: changeWidth(diff) }} />
+                <div className={`h-full rounded-full ${style.bar}`} style={{ width: isOpen ? '0%' : changeWidth(diff) }} />
             </div>
         </div>
     );
