@@ -308,7 +308,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                     date: dateStr,
                     start_time: '08:00',
                     end_time: '18:00',
-                    included: false,
+                    included: true,
                 });
                 current.setDate(current.getDate() + 1);
             }
