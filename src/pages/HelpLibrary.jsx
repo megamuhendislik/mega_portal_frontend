@@ -114,8 +114,10 @@ const HelpLibrary = () => {
         return hasPermission(perm);
     };
 
-    // managerOnly: /analytics gibi requireManager rotalarının bölümleri (MainLayout visibleWhen ile aynı kural)
-    const isManagerUser = user?.is_manager || user?.user?.is_superuser;
+    // managerOnly: /analytics gibi requireManager rotalarının bölümleri
+    // (MainLayout visibleWhen + isFullAccessUser bypass'ı ile aynı küme: yönetici, superuser, admin veya SYSTEM_ADMIN rolü)
+    const isManagerUser = !!(user?.is_manager || user?.user?.is_superuser || user?.is_admin ||
+        (Array.isArray(user?.roles) && user.roles.some((r) => r?.key === 'SYSTEM_ADMIN')));
 
     const sections = useMemo(() => {
         return helpContent.filter(section =>

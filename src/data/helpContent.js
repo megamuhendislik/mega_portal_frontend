@@ -44,7 +44,7 @@ const helpContent = [
         },
         {
             title: 'Aylık Performans, Son Aktiviteler ve Yaklaşan Etkinlikler',
-            description: 'Alt bölümde her mali dönem (önceki ayın 26sı - ayın 25i) için hedef çalışma süresi, gerçekleşen süre ve bakiye gösterilir; oklarla aylar arasında gezinebilirsiniz. Son aktiviteler listesinde giriş/çıkış hareketleriniz, yaklaşan etkinliklerde tatiller, izinler, mesai atamaları ve dış görevler yer alır.',
+            description: 'Alt bölümde her mali dönem (önceki ayın 26\'sı - ayın 25\'i) için hedef çalışma süresi, gerçekleşen süre ve bakiye gösterilir; oklarla aylar arasında gezinebilirsiniz. Son aktiviteler listesinde giriş/çıkış hareketleriniz, yaklaşan etkinliklerde tatiller, izinler, mesai atamaları ve dış görevler yer alır.',
             image: { src: '/help-images/help-giris-04.png', caption: 'Aylık performans ve etkinlik listeleri' }
         },
         {
@@ -63,7 +63,7 @@ const helpContent = [
         { q: 'Fazla mesai nasıl algılanır?', a: 'Vardiya sonrası (tolerans penceresi sonrasında), vardiya öncesi erken giriş veya tatil günü çalışmalarında otomatik potansiyel mesai oluşur. Aynı gündeki mesai parçaları kümelere ayrılır; 30 dakikanın altında kalan küme sıfırlanır ve talep edilemez.' },
         { q: 'Mola sürem neden aşıldı görünüyor?', a: 'Gün içindeki her çıkış-giriş aralığı mola olarak sayılır. Günlük mola hakkınız aşıldığında aşan kısım net çalışma sürenizden düşülür.' },
         { q: 'Aylık bakiyem negatif, ne anlama geliyor?', a: 'O mali dönemde hedef çalışma süresinin altında kaldığınızı gösterir. Geç kalma, erken çıkış veya eksik günlerden kaynaklanabilir.' },
-        { q: 'Mali dönem hangi tarihleri kapsar?', a: 'Önceki ayın 26sından ilgili ayın 25ine kadar olan dönemi kapsar. Aylık performans özeti bu döneme göre hesaplanır.' },
+        { q: 'Mali dönem hangi tarihleri kapsar?', a: 'Önceki ayın 26\'sından ilgili ayın 25\'ine kadar olan dönemi kapsar. Aylık performans özeti bu döneme göre hesaplanır.' },
         { q: 'Gece yarısını geçen mesaim nasıl hesaplanır?', a: 'Gece 00:00 sonrasına sarkan kayıtlar otomatik görevle bölünür: mevcut kayıt gün sonunda kapatılır, ertesi gün için yeni kayıt açılır.' }
     ]
 },
@@ -192,7 +192,7 @@ const helpContent = [
         },
         {
             title: 'İzin Türünü ve Tarihleri Seçme',
-            description: 'İzin türünü (yıllık izin, mazeret izni, doğum günü izni, yasal izinler veya avans izin) seçin, başlangıç/bitiş tarihlerini belirleyin ve açıklamanızı yazıp gönderin. Mazeret izni saat bazlı çalışır: yıllık 18 saat hak, günde en fazla 4,5 saat.'
+            description: 'İzin türünü (Yıllık İzin, Mazeret İzni, Doğum Günü İzni veya Özel İzinler: babalık, ölüm, evlilik, ücretsiz izin) seçin, başlangıç/bitiş tarihlerini belirleyin ve açıklamanızı yazıp gönderin. Mazeret izni saat bazlı çalışır: yıllık 18 saat hak, günde en fazla 4,5 saat.'
         },
         {
             title: 'Onay Süreci',
@@ -204,7 +204,7 @@ const helpContent = [
         },
         {
             title: 'Avans İzin Kullanımı',
-            description: 'Yıllık izin bakiyeniz yetersizse avans izin seçeneğini kullanabilirsiniz. Avans izin, henüz hak etmediğiniz günleri önceden kullanmanızı sağlar; bakiyeniz negatife düşebilir.'
+            description: 'Avans izin ayrı bir tür değildir: yıllık izin talebinde bakiyeniz yetersiz kalırsa, tanımlı avans limitiniz dahilinde talep yine verilebilir ve bakiyeniz negatife düşer. Henüz hak etmediğiniz günleri önceden kullanmış olursunuz; yeni hak edişler önce bu borcu kapatır.'
         }
     ],
     tips: [
@@ -351,11 +351,11 @@ const helpContent = [
         },
         {
             title: 'Tarih Aralığı ve Gün Seçimi (Çok Günlü Görev)',
-            description: 'Başlangıç ve bitiş tarihini seçin; aradaki her gün listeye eklenir. Her günü ayrı ayrı dahil edip hariç bırakabilirsiniz — örneğin hafta sonu veya tatil günlerini atlayabilirsiniz. "Tümünü dahil et", "Tümünü çıkar" ve "Sadece hafta içi" kısayolları toplu seçim sağlar. Tek günlük görevde gün otomatik dahil edilir.'
+            description: 'Başlangıç ve bitiş tarihini seçin; aradaki her gün listeye eklenir. Her günü ayrı ayrı dahil edip hariç bırakabilirsiniz — örneğin hafta sonu veya tatil günlerini atlayabilirsiniz. "Tümünü Dahil Et", "Tümünü Atla" ve "Hafta İçi Dahil Et" kısayolları toplu seçim sağlar. Tek günlük görevde gün otomatik dahil edilir.'
         },
         {
             title: 'Çalışma Saatlerini Girme',
-            description: 'Dahil ettiğiniz her gün için başlangıç ve bitiş saatini girin. İlk dahil edilen güne varsayılan olarak 08:00-18:00 önerilir; "tümüne uygula" seçeneğiyle aynı saatleri tüm dahil günlere kopyalayabilirsiniz. Dahil edilen her günün saatleri dolu olmalıdır, aksi halde talep gönderilemez.'
+            description: 'Dahil ettiğiniz her gün için başlangıç ve bitiş saatini girin. İlk dahil edilen güne varsayılan olarak 08:00-18:00 önerilir; "İlk dahil saati uygula" seçeneğiyle ilk günün saatlerini tüm dahil günlere kopyalayabilirsiniz. Dahil edilen her günün saatleri dolu olmalıdır, aksi halde talep gönderilemez.'
         },
         {
             title: 'Mesai Hesabını Anlama',
@@ -772,8 +772,9 @@ const helpContent = [
         id: 'onay-surecleri',
         title: 'Onay Süreçleri',
         icon: CheckSquare,
-        description: 'Ekibinizden gelen izin, fazla mesai, kartsız giriş ve diğer taleplerin onay/red süreçleri, onay hiyerarşisi ve karar değiştirme. (Yöneticiler ve sistem yöneticileri görebilir)',
-        permission: ['APPROVAL_OVERTIME', 'APPROVAL_LEAVE', 'APPROVAL_CARDLESS_ENTRY'],
+        description: 'Ekibinizden gelen izin, fazla mesai, kartsız giriş ve diğer taleplerin onay/red süreçleri, onay hiyerarşisi ve karar değiştirme. (Ekibi olan yöneticiler ve sistem yöneticileri görebilir)',
+        permission: null,
+        managerOnly: true,
         link: '/requests',
         images: [
             { src: '/help-images/help-talepler-02.png', caption: 'Gelen Talepler — Onay Bekleyen ve Ekip Talepleri tabloları, tür/durum filtreleri' }
