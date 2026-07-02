@@ -40,7 +40,7 @@ const SectionHeading = ({ children }) => (
 );
 
 const HelpLibrary = () => {
-    const { hasPermission } = useAuth();
+    const { hasPermission, user } = useAuth();
     const [activeSection, setActiveSection] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -114,9 +114,14 @@ const HelpLibrary = () => {
         return hasPermission(perm);
     };
 
+    // managerOnly: /analytics gibi requireManager rotalarının bölümleri (MainLayout visibleWhen ile aynı kural)
+    const isManagerUser = user?.is_manager || user?.user?.is_superuser;
+
     const sections = useMemo(() => {
-        return helpContent.filter(section => checkPerm(section.permission));
-    }, [hasPermission]);
+        return helpContent.filter(section =>
+            (!section.managerOnly || isManagerUser) && checkPerm(section.permission)
+        );
+    }, [hasPermission, isManagerUser]);
 
     const filteredSections = useMemo(() => {
         if (!searchQuery.trim()) return sections;
