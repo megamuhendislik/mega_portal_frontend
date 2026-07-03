@@ -13,6 +13,7 @@ import {
     ClockIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
+import StalePotentialCleanup from './StalePotentialCleanup';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -447,6 +448,8 @@ export default function RequestAuditTab() {
 
     return (
         <div className="space-y-6">
+            <StalePotentialCleanup />
+
             {/* Header + Filtreler */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div className="flex items-center justify-between flex-wrap gap-3">

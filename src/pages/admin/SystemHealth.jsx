@@ -126,8 +126,6 @@ export default function SystemHealth() {
                         { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
-                        { id: 'potential_audit', name: 'Potansiyel Denetimi', icon: BoltIcon },
-                        { id: 'false_cancelled_hr', name: 'Yanlış İptal Kurtarma', icon: WrenchScrewdriverIcon },
                     ].map((tab) => (
                         <button
                             key={tab.id}
