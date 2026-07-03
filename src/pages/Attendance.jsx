@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Clock, Calendar, Users, User, Filter
+    Clock, Calendar, Users, User, Filter, FileDown
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,7 @@ import MonthlyBalanceCarousel from '../components/MonthlyBalanceCarousel';
 import Skeleton from '../components/Skeleton';
 import AttendanceTracking from './AttendanceTracking';
 import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
+import MonthlyReportsModal from '../components/MonthlyReportsModal';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
@@ -59,6 +60,7 @@ const Attendance = () => {
     const [viewScope, setViewScope] = useState('DAILY'); // 'DAILY' | 'MONTHLY'
     const [monthlyWeeklyOt, setMonthlyWeeklyOt] = useState(null);
     const [weeklyOtDrawerOpen, setWeeklyOtDrawerOpen] = useState(false);
+    const [reportsModalOpen, setReportsModalOpen] = useState(false);
     const [weeklyOtDrawerRefDate, setWeeklyOtDrawerRefDate] = useState(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -384,8 +386,19 @@ const Attendance = () => {
                             </button>
                         )}
                     </div>
+
+                    {/* Self-servis aylık rapor pop-up tetikleyicisi */}
+                    <button
+                        onClick={() => setReportsModalOpen(true)}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-bold bg-white text-slate-600 border border-slate-200 shadow-sm hover:text-indigo-600 hover:border-indigo-200 transition-all"
+                    >
+                        <FileDown size={18} />
+                        Aylık Raporlarım
+                    </button>
                 </div>
             </div>
+
+            <MonthlyReportsModal open={reportsModalOpen} onClose={() => setReportsModalOpen(false)} />
 
             {/* Back Button for Team Detail */}
             {
