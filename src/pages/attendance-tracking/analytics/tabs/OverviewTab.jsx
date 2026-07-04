@@ -20,7 +20,7 @@ const DIST_COLORS = { excellent: '#10b981', good: '#6366f1', average: '#f59e0b',
 const DIST_LABELS = { excellent: 'Mükemmel ≥95%', good: 'İyi 80-95%', average: 'Orta 60-80%', low: 'Düşük <60%' };
 
 export default function OverviewTab() {
-    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, queryParams, refetch, startDate, endDate, minAttendancePct, minAttendanceEnabled } = useAnalytics();
+    const { data, loading, isComparing, deltas, compareLabel, periodLabel, compareData, compareSpanMonths, queryParams, refetch, startDate, endDate, minAttendancePct, minAttendanceEnabled } = useAnalytics();
 
     // Defensive fallback: bulk endpoint başarısız olursa kendi başımıza çekelim
     const [fallbackData, setFallbackData] = useState(null);
@@ -385,6 +385,10 @@ export default function OverviewTab() {
     }
 
     const cmpKpi = compareData?.team_overview?.kpi;
+    // "Önceki Çeyrek (3 Ay Ort.)": kıyas saat metriklerini ay sayısına böl (aylık
+    // ortalama) — cari 1-ayla adil kıyas. Yüzde metrikler oran → bölünmez.
+    const cmpSpan = compareSpanMonths || 1;
+    const cmpAvg = (v) => Math.round((v || 0) / cmpSpan);
     const isUsingFallback = !data?.team_overview && fallbackData?.team_overview;
 
     return (
@@ -429,27 +433,27 @@ export default function OverviewTab() {
                                 {
                                     label: 'Çalışma',
                                     curr: `${round(kpi.total_worked_hours)}h`,
-                                    prev: `${round(cmpKpi.total_worked_hours)}h`,
+                                    prev: `${cmpAvg(cmpKpi.total_worked_hours)}h`,
                                     pct: deltas?.worked,
-                                    absDiff: round((kpi.total_worked_hours || 0) - (cmpKpi.total_worked_hours || 0)),
+                                    absDiff: round((kpi.total_worked_hours || 0) - (cmpKpi.total_worked_hours || 0) / cmpSpan),
                                     unit: 'h',
                                     betterIsHigher: true,
                                 },
                                 {
                                     label: 'Fazla Mesai',
                                     curr: `${round(kpi.total_overtime_hours)}h`,
-                                    prev: `${round(cmpKpi.total_overtime_hours)}h`,
+                                    prev: `${cmpAvg(cmpKpi.total_overtime_hours)}h`,
                                     pct: deltas?.overtime,
-                                    absDiff: round((kpi.total_overtime_hours || 0) - (cmpKpi.total_overtime_hours || 0)),
+                                    absDiff: round((kpi.total_overtime_hours || 0) - (cmpKpi.total_overtime_hours || 0) / cmpSpan),
                                     unit: 'h',
                                     betterIsHigher: null, // OT artışı/azalışı semantik değil
                                 },
                                 {
                                     label: 'Kayıp',
                                     curr: `${round(kpi.total_missing_hours)}h`,
-                                    prev: `${round(cmpKpi.total_missing_hours)}h`,
+                                    prev: `${cmpAvg(cmpKpi.total_missing_hours)}h`,
                                     pct: deltas?.missing,
-                                    absDiff: round((kpi.total_missing_hours || 0) - (cmpKpi.total_missing_hours || 0)),
+                                    absDiff: round((kpi.total_missing_hours || 0) - (cmpKpi.total_missing_hours || 0) / cmpSpan),
                                     unit: 'h',
                                     betterIsHigher: false, // Kayıp artışı kötü
                                 },

@@ -162,12 +162,14 @@ export function AnalyticsProvider({ children }) {
     const [positionIds, setPositionIds] = useState(() => parseIntList(searchParams.get('position')));
     const [minAttendancePct, setMinAttendancePct] = useState(() => {
         const n = parseIntOrNull(searchParams.get('min_att'));
-        return n != null && n >= 0 && n <= 100 ? n : 50;
+        return n != null && n >= 0 && n <= 100 ? n : 35;
     });
     const [minAttendanceEnabled, setMinAttendanceEnabled] = useState(() => {
         const raw = searchParams.get('min_att_on');
-        // Default kapali — kullanici manuel acar (ay basinda %50 default herkesi elemesin)
-        return raw === null ? false : raw === '1';
+        // Kullanıcı kararı (2026-07-04): VARSAYILAN AÇIK, %35 — devam/doluluk <%35
+        // olanlar (muaf/BOARD dahil) ortalamayı bozmasın diye elenir. Kullanıcı
+        // kapatabilir (min_att_on=0) veya eşiği değiştirebilir (min_att).
+        return raw === null ? true : raw === '1';
     });
     // Exclude (Hariç Tut): nav-bar'dan multi-select departman/calisan
     const [excludeDepartmentIds, setExcludeDepartmentIds] = useState(() => parseIntList(searchParams.get('ex_dept')));
@@ -341,7 +343,7 @@ export function AnalyticsProvider({ children }) {
             params.set('cmp_end', compareEndDate);
         }
         if (!minAttendanceEnabled) params.set('min_att_on', '0');
-        if (minAttendancePct !== 50) params.set('min_att', String(minAttendancePct));
+        if (minAttendancePct !== 35) params.set('min_att', String(minAttendancePct));
         setSearchParams(params, { replace: true });
     }, [
         viewMode,
@@ -529,12 +531,18 @@ export function AnalyticsProvider({ children }) {
         const delta = (a, b) => (b !== 0 && b != null) ? Math.round((a - b) / Math.abs(b) * 100) : null;
         // pp delta: yüzde metriklerin doğrudan farkı (zaten % oldukları için)
         const pp = (a, b) => Math.round((a || 0) - (b || 0));
+        // "Önceki Çeyrek (3 Ay Ort.)": karşılaştırma penceresi 3 ay → backend SAAT
+        // toplamlarını 3-ay toplamı döner. Cari (1 ay) ile adil kıyas için saat
+        // metriklerini ay sayısına böl (AYLIK ORTALAMA). Yüzde metrikler (efficiency/
+        // attendance) zaten oran → bölünmez. (P2-5 FE: eskiden 1-ay vs 3-ay-toplam.)
+        const spanM = compareMode === 'prev_quarter' ? 3 : 1;
+        const cAvg = (v) => (v || 0) / spanM;
         return {
             // Goreli-% (saat metrikleri için doğru; yüzde metrikler için BACKWARD-COMPAT — kullanma)
             efficiency: delta(primary.avg_efficiency_pct || 0, compare.avg_efficiency_pct || 0),
-            worked: delta(primary.total_worked_hours || 0, compare.total_worked_hours || 0),
-            overtime: delta(primary.total_overtime_hours || 0, compare.total_overtime_hours || 0),
-            missing: delta(primary.total_missing_hours || 0, compare.total_missing_hours || 0),
+            worked: delta(primary.total_worked_hours || 0, cAvg(compare.total_worked_hours)),
+            overtime: delta(primary.total_overtime_hours || 0, cAvg(compare.total_overtime_hours)),
+            missing: delta(primary.total_missing_hours || 0, cAvg(compare.total_missing_hours)),
             attendance: delta(primary.attendance_rate_pct || 0, compare.attendance_rate_pct || 0),
             // pp delta: yüzde-tabanlı metrikler için DOĞRU gösterim (mini KPI bunları kullanır)
             efficiencyPp: pp(primary.avg_efficiency_pct || 0, compare.avg_efficiency_pct || 0),
@@ -542,7 +550,7 @@ export function AnalyticsProvider({ children }) {
             health: (primary.health_score || 0) - (compare.health_score || 0),
             raw: { primary, compare },
         };
-    }, [data, compareData]);
+    }, [data, compareData, compareMode]);
 
     const value = useMemo(() => ({
         // Period
@@ -561,6 +569,9 @@ export function AnalyticsProvider({ children }) {
         compareLabel,
         compareData, compareLoading,
         deltas,
+        // "Önceki Çeyrek" 3 ay → tüketiciler saat metriklerini bu sayıya bölüp
+        // aylık ortalama gösterir (banner/delta 1-ay cariyle adil kıyas için).
+        compareSpanMonths: compareMode === 'prev_quarter' ? 3 : 1,
         isComparing: compareMode !== 'none' && !!compareData,
         // Filters
         departmentIds, setDepartmentIds,
