@@ -186,8 +186,8 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                     <div className="text-[11px] text-slate-400 text-center py-6">Bu çalışan için bu dönemde ölçülebilir hedef yok.</div>
                 ) : (
                     <div className="space-y-3">
-                        <MetricBar label="Yapılan Normal Mesai" value={nDol} color={levelColor(nDol)} tip="(min(W, Y-M)) / Y" />
-                        <MetricBar label="Toplam Yapılan Mesai" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(effective + Fazla Mesai) / Y" />
+                        <MetricBar label="Yapılan Normal Mesai" value={nDol} color={levelColor(nDol)} tip="min(100, Yapılan Normal / Yükümlülük × 100) — eksik düşülmez" />
+                        <MetricBar label="Toplam Yapılan Mesai" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(Yapılan Normal + Fazla Mesai) / Yükümlülük × 100" />
                         <MetricBar label="Fazla Mesai / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="Fazla Mesai / Y" />
                         <MetricBar label="Eksik / Yükümlülük" value={eksY} color={intensityColor(eksY)} tip="M / Y" />
                         <MetricBar label="Fazla Mesai / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="Fazla Mesai / Normal mesai" />
@@ -702,8 +702,8 @@ function TeamOverviewMode({ onSelectPerson }) {
                                         { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
                                         { key: 'real_break', label: 'Gerçek Mola', align: 'right', tip: 'Günlük ort. gerçek mola (öğle hariç), dakika' },
                                         { key: 'counted_break', label: 'Düşülen Mola', align: 'right', tip: 'Günlük ort. iş süresinden düşülen mola, dakika' },
-                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'Normal / Yükümlülük (missing-aware)' },
-                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Effective + Fazla Mesai) / Yükümlülük' },
+                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'min(100, Normal / Yükümlülük × 100) — eksik düşülmez' },
+                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Normal + Fazla Mesai) / Yükümlülük × 100' },
                                         { key: 'ot_to_target', label: 'FM/Y', align: 'right', tip: 'Fazla Mesai / Yükümlülük' },
                                         { key: 'missing_to_target', label: 'Eksik/Y', align: 'right', tip: 'Eksik / Yükümlülük' },
                                         { key: 'target', label: 'Hedef', align: 'right', tip: 'Aylık tam hedef' },
