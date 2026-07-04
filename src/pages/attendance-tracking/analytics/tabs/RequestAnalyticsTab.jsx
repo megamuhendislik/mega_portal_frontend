@@ -191,7 +191,7 @@ export default function RequestAnalyticsTab() {
         const TR_MONTHS = { Jan: 'Oca', Feb: 'Şub', Mar: 'Mar', Apr: 'Nis', May: 'May', Jun: 'Haz', Jul: 'Tem', Aug: 'Ağu', Sep: 'Eyl', Oct: 'Eki', Nov: 'Kas', Dec: 'Ara' };
         return data.monthly_trend.map(m => ({
             name: (m.label || '').replace(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/, match => TR_MONTHS[match] || match),
-            ym: m.ym || m.year_month || m.key || null, // backend "YYYY-MM"
+            ym: m.month || m.ym || m.year_month || m.key || null, // backend "YYYY-MM" (key: month)
             izin: m.leave || 0,
             ek_mesai: m.overtime || 0,
             yemek: m.meal || 0,
@@ -232,8 +232,11 @@ export default function RequestAnalyticsTab() {
 
     // Leave type breakdown
     const leaveTypeData = useMemo(() => {
-        if (!data?.leave_type_breakdown) return [];
-        return data.leave_type_breakdown
+        // Ekip modunda (comprehensive) anahtar `leave_types`; kişisel modda (list)
+        // `leave_type_breakdown` — ikisini de oku ki ekip pie'ı boş kalmasın.
+        const src = data?.leave_type_breakdown || data?.leave_types;
+        if (!src) return [];
+        return src
             .filter(d => d.count > 0)
             .map((d, i) => ({
                 name: d.type || d.leave_type || d.name,
@@ -406,7 +409,7 @@ export default function RequestAnalyticsTab() {
                     onClick={mode === 'team' ? () => setSelectedStatus('PENDING') : undefined} />
                 <KPICard title="Reddedilen" value={rejectedCount} icon={XCircle} gradient="red" />
                 <KPICard title={avgDecisionHours != null ? 'Ort. Karar Süresi' : 'Fazla Mesai Saati'}
-                    value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours || 0)}
+                    value={avgDecisionHours != null ? avgDecisionHours : (data?.total_overtime_hours ?? data?.overtime_hours ?? 0)}
                     suffix={avgDecisionHours != null ? 'saat' : 'saat'}
                     icon={Clock} gradient="blue"
                     info={avgDecisionHours != null ? METRIC_EXPLANATIONS.decision_time : METRIC_EXPLANATIONS.overtime} />
