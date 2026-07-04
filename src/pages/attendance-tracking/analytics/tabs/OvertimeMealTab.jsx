@@ -21,6 +21,34 @@ import {
 const OT_COLORS = { intended: '#6366f1', potential: '#f59e0b', manual: '#10b981', weekend: '#8b5cf6' };
 const OT_LABELS = { intended: 'Planlı', potential: 'Potansiyel', manual: 'Manuel', weekend: 'Hafta Sonu' };
 
+// OT-saati/yemek dönem trendi için özel tooltip: oran + o ayın OT saati & yemek sayısı
+function MealOtRatioTooltip({ active, payload, label }) {
+    if (!active || !payload || !payload.length) return null;
+    const row = payload[0]?.payload || {};
+    const ratio = row.oran;
+    return (
+        <div className="rounded-lg border border-white/20 bg-slate-900/95 px-4 py-3 text-sm text-white shadow-xl backdrop-blur-md" role="tooltip">
+            <div className="mb-2 border-b border-white/10 pb-1.5 text-xs font-semibold uppercase tracking-wider text-white/70">{label}</div>
+            <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                    <span className="text-white/70">Oran:</span>
+                    <span className="ml-auto font-semibold tabular-nums">
+                        {ratio == null ? 'Yemek yok' : `Her ${Number(ratio).toFixed(1)} OT-saatine 1 yemek`}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-white/70">Onaylı OT:</span>
+                    <span className="ml-auto font-semibold tabular-nums">{row.ot ?? 0} sa</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-white/70">OT-günü Yemek:</span>
+                    <span className="ml-auto font-semibold tabular-nums">{row.yemek ?? 0}</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function OvertimeMealTab() {
     const { data: bulkData, loading: bulkLoading, queryParams, startDate, endDate } = useAnalytics();
     const [otData, setOtData] = useState(null);
@@ -30,6 +58,8 @@ export default function OvertimeMealTab() {
     const [sourceFilter, setSourceFilter] = useState(null);
     // Drill-down modal state
     const [drilldown, setDrilldown] = useState(null); // { type: 'ot_ranking' | 'break_distribution', title, data }
+    // OT-saati/yemek kişi tablosu sıralama durumu (default: en sık yemek yiyen üstte → oran artan)
+    const [mealOtSort, setMealOtSort] = useState({ key: 'ot_hours_per_meal', dir: 'asc' });
 
     // Fetch OT & break-meal data individually for richer data
     const fetchData = useCallback(async () => {
@@ -204,6 +234,51 @@ export default function OvertimeMealTab() {
             oran: m.rate_pct ?? m.rate ?? 0,
         }));
     }, [breakMeal]);
+
+    // ─── OT-saati Başına Yemek (kişi bazlı) — breakMeal.meal_ot_by_employee ───
+    // Yalnız approved_ot_hours>0 olanlar backend'den gelir. yemek=0 → ot_hours_per_meal null.
+    const mealOtByEmployee = useMemo(() => {
+        if (!breakMeal?.meal_ot_by_employee) return [];
+        return breakMeal.meal_ot_by_employee.map((e, i) => ({
+            id: e.employee_id ?? i,
+            name: e.name || e.employee_name || '',
+            department: e.department || '—',
+            approved_ot_hours: Math.round((e.approved_ot_hours || 0) * 10) / 10,
+            meals_on_ot: e.meals_on_ot || 0,
+            ot_hours_per_meal: e.ot_hours_per_meal ?? null,   // null → OT var, yemek yok
+            meals_per_ot_hour: e.meals_per_ot_hour ?? null,
+        }));
+    }, [breakMeal]);
+
+    // Sıralı görünüm — null (yemek yok) yönden bağımsız her zaman sona
+    const mealOtSorted = useMemo(() => {
+        const { key, dir } = mealOtSort;
+        return [...mealOtByEmployee].sort((a, b) => {
+            const av = a[key];
+            const bv = b[key];
+            if (av == null && bv == null) return 0;
+            if (av == null) return 1;    // null son
+            if (bv == null) return -1;
+            return dir === 'asc' ? av - bv : bv - av;
+        });
+    }, [mealOtByEmployee, mealOtSort]);
+
+    // Dönemsel OT-saati/yemek oranı — meal_trend[].ot_hours_per_meal (null → grafik boşluğu)
+    const mealOtRatioTrend = useMemo(() => {
+        if (!breakMeal?.meal_trend) return [];
+        return breakMeal.meal_trend.map(m => ({
+            name: (m.label || '').replace(/\d{4}$/, '').trim(),
+            oran: m.ot_hours_per_meal ?? null,
+            ot: Math.round((m.approved_ot_hours || 0) * 10) / 10,
+            yemek: m.meals_on_ot || 0,
+        }));
+    }, [breakMeal]);
+
+    // Kolon başlığına tıklayınca sırala (sayısal kolonlar); yeni kolonda oran artan, diğerleri azalan başlar
+    const toggleMealOtSort = (key) => setMealOtSort(prev => prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'ot_hours_per_meal' ? 'asc' : 'desc' });
+    const mealOtSortArrow = (key) => mealOtSort.key === key ? (mealOtSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
 
     // Risk Haritasi: Mola dakika x FM saat — yorgunluk gostergesi
     // (early return'lerden ONCE — hooks rules)
@@ -450,6 +525,77 @@ export default function OvertimeMealTab() {
                         </table>
                     </div>
                 ) : <EmptyState message="Fazla Mesai-Yemek eşleştirme verisi yok" />}
+            </SectionCard>
+
+            {/* ═══ OT-saati Başına Yemek — Kişi Bazlı (sortable) ═══ */}
+            <SectionCard title="OT-saati Başına Yemek — Kişi Bazlı" icon={Utensils} iconGradient="from-rose-500 to-red-600"
+                subtitle={`Onaylı OT yapan çalışanlar — her kişi kaç OT saatinde 1 yemek alıyor · ${mealOtSorted.length} kişi · başlığa tıkla sırala`}>
+                {mealOtSorted.length > 0 ? (
+                    <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 bg-white z-10">
+                                <tr className="border-b-2 border-slate-100">
+                                    <th className="text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Çalışan</th>
+                                    <th onClick={() => toggleMealOtSort('approved_ot_hours')}
+                                        className="cursor-pointer select-none text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold hover:text-slate-600 transition-colors">
+                                        Onaylı OT (sa){mealOtSortArrow('approved_ot_hours')}
+                                    </th>
+                                    <th onClick={() => toggleMealOtSort('meals_on_ot')}
+                                        className="cursor-pointer select-none text-center py-3 px-4 text-[10px] text-slate-400 uppercase font-bold hover:text-slate-600 transition-colors">
+                                        OT-günü Yemek{mealOtSortArrow('meals_on_ot')}
+                                    </th>
+                                    <th onClick={() => toggleMealOtSort('ot_hours_per_meal')}
+                                        className="cursor-pointer select-none text-left py-3 px-4 text-[10px] text-slate-400 uppercase font-bold hover:text-slate-600 transition-colors">
+                                        OT-saati / Yemek{mealOtSortArrow('ot_hours_per_meal')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mealOtSorted.map((row, i) => (
+                                    <tr key={row.id ?? i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                        <td className="py-2.5 px-4">
+                                            <div className="font-bold text-slate-700">{row.name}</div>
+                                            <div className="text-[10px] text-slate-400">{row.department}</div>
+                                        </td>
+                                        <td className="py-2.5 px-4 text-center tabular-nums font-bold text-slate-600">{row.approved_ot_hours.toFixed(1)}</td>
+                                        <td className="py-2.5 px-4 text-center tabular-nums font-bold text-orange-600">{row.meals_on_ot}</td>
+                                        <td className="py-2.5 px-4">
+                                            {row.ot_hours_per_meal != null ? (
+                                                <div>
+                                                    <div className="font-black text-slate-800 tabular-nums">Her {Number(row.ot_hours_per_meal).toFixed(1)} OT-saatine 1 yemek</div>
+                                                    <div className="text-[10px] text-slate-400 tabular-nums">
+                                                        {row.meals_per_ot_hour != null ? Number(row.meals_per_ot_hour).toFixed(2) : '—'} yemek/OT-saati
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">OT var, yemek yok</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : <EmptyState message="OT yapan çalışan için yemek verisi yok" />}
+            </SectionCard>
+
+            {/* ═══ OT-saati / Yemek — Dönemsel Değişim ═══ */}
+            <SectionCard title="OT-saati / Yemek — Dönemsel Değişim" icon={TrendingUp} iconGradient="from-rose-500 to-orange-600"
+                subtitle="Her yemek başına düşen onaylı OT saatinin aylık değişimi — yüksek = yemek daha seyrek">
+                {mealOtRatioTrend.some(m => m.oran != null) ? (
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={mealOtRatioTrend}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
+                                <YAxis tick={{ fontSize: 10 }} unit=" sa" />
+                                <Tooltip content={<MealOtRatioTooltip />} />
+                                <Line type="monotone" dataKey="oran" name="OT-saati / Yemek" stroke="#f43f5e"
+                                    strokeWidth={2.5} dot={{ r: 3, fill: '#f43f5e' }} connectNulls={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                ) : <EmptyState message="OT-saati/yemek trend verisi yok" />}
             </SectionCard>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
