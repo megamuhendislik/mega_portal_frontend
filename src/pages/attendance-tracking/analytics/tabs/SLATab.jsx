@@ -89,7 +89,9 @@ export default function SLATab({ showScopeBanner = true } = {}) {
             name: TYPE_LABELS[key] || key,
             toplam: val.total || 0,
             bekleyen: val.pending || 0,
-            onaylı: (val.total || 0) - (val.pending || 0),
+            // "Kararlı" = backend'in gerçek karar sayısı (decided); total-pending POTENTIAL/BUNDLED
+            // gibi karar-olmayan kayıtları da sayardı. decided yoksa eski hesaba düş.
+            onaylı: val.decided != null ? val.decided : (val.total || 0) - (val.pending || 0),
             ortSaat: val.avg_hours || 0,
             hedefteYüzde: val.on_target_pct || 0,
             color: TYPE_COLORS[key] || '#94a3b8',

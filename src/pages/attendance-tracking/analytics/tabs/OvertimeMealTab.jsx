@@ -242,6 +242,11 @@ export default function OvertimeMealTab() {
     const approvedOT = ot?.approved_hours ? Math.round(ot.approved_hours) : 0;
     const approvalRate = totalOT > 0 ? Math.round(approvedOT / totalOT * 100) : 0;
 
+    // Skaler KPI alanları backend'de `kpi` altında yuvalı (chart/array alanları top-level kalır).
+    // Kardeş sekmelerle (Performance/Overview) tutarlı: önce .kpi., yoksa top-level fallback.
+    const bmk = breakMeal?.kpi || breakMeal || {};
+    const otEmpCount = ot?.kpi?.employee_count ?? ot?.employee_count ?? 0;
+
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
             {/* ═══ Kapsam göstergesi (Ekibim vs Tüm Şirket) ═══ */}
@@ -257,20 +262,20 @@ export default function OvertimeMealTab() {
                 <KPICard title="Onaylı Fazla Mesai" value={approvedOT} suffix="saat" icon={Zap} gradient="emerald"
                     subtitle={`Onay oranı: %${approvalRate}`}
                     info={{ title: 'Onaylı Fazla Mesai', content: <><p><strong className="text-white">Formül:</strong> Σ (Onay durumu = APPROVED olan Fazla Mesai kayıtları)</p><p className="text-slate-400">Sadece yönetici tarafından onaylanmış fazla mesai saatleri.</p></> }} />
-                <KPICard title="Fazla Mesai Yapan" value={ot?.employee_count || 0} suffix="kişi" icon={BarChart3} gradient="indigo" />
-                <KPICard title="Ort. Fazla Mesai / Kişi" value={ot?.employee_count > 0 ? Math.round(totalOT / ot.employee_count) : 0} suffix="saat" icon={Award} gradient="violet" />
-                <KPICard title="FM Yemek Oranı" value={breakMeal?.meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
-                    subtitle={`${breakMeal?.meal_days_on_ot || 0}/${breakMeal?.approved_ot_days || 0} FM günü (sipariş/teslim)`}
+                <KPICard title="Fazla Mesai Yapan" value={otEmpCount} suffix="kişi" icon={BarChart3} gradient="indigo" />
+                <KPICard title="Ort. Fazla Mesai / Kişi" value={otEmpCount > 0 ? Math.round(totalOT / otEmpCount) : 0} suffix="saat" icon={Award} gradient="violet" />
+                <KPICard title="FM Yemek Oranı" value={bmk.meal_rate_pct || 0} suffix="%" icon={Utensils} gradient="cyan"
+                    subtitle={`${bmk.meal_days_on_ot || 0}/${bmk.approved_ot_days || 0} FM günü (sipariş/teslim)`}
                     info={METRIC_EXPLANATIONS.meal_rate} />
-                <KPICard title="Saat / Yemek" value={breakMeal?.ot_hours_per_meal || 0} suffix="sa" icon={Utensils} gradient="rose"
-                    subtitle={`${breakMeal?.total_meals || 0} yemek · ${breakMeal?.total_approved_ot_hours || 0} sa OT`}
-                    info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ OT gününde alınan yemek sayısı (sipariş edilen/teslim edilen)</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Yalnız ORDERED/DELIVERED yemekler sayılır; bekleyen (PENDING) talepler hariçtir.</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{breakMeal?.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
-                <KPICard title="Ort. Gerçek Mola" value={Math.round(breakMeal?.avg_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="cyan"
-                    subtitle={`%${breakMeal?.break_over_30_pct || 0} kişi >30dk · ${breakMeal?.break_exceeding_count || 0} kişi`}
+                <KPICard title="Saat / Yemek" value={bmk.ot_hours_per_meal || 0} suffix="sa" icon={Utensils} gradient="rose"
+                    subtitle={`${bmk.total_meals || 0} yemek · ${bmk.total_approved_ot_hours || 0} sa OT`}
+                    info={{ title: 'FM Yemek Yoğunluğu', content: <><p><strong className="text-white">Formül:</strong> Toplam Onaylı FM Saati ÷ OT gününde alınan yemek sayısı (sipariş edilen/teslim edilen)</p><p className="text-slate-400">"Her yemek başına X saat onaylı fazla mesai düşüyor."</p><p className="text-slate-400">Yalnız ORDERED/DELIVERED yemekler sayılır; bekleyen (PENDING) talepler hariçtir.</p><p className="text-slate-400">Ters metrik: <strong className="text-slate-200">{bmk.meals_per_ot_hour || 0}</strong> yemek/saat</p></> }} />
+                <KPICard title="Ort. Gerçek Mola" value={Math.round(bmk.avg_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="cyan"
+                    subtitle={`%${bmk.break_over_30_pct || 0} kişi >30dk · ${bmk.break_exceeding_count || 0} kişi`}
                     info={{ title: 'Ortalama Gerçek Mola', content: <><p><strong className="text-white">Tanım:</strong> Öğle arası HARİÇ gerçek mola (boşluk) süresinin kişi başı ortalaması.</p><p className="text-slate-400">İş süresinden düşülen molayı değil, çalışanın fiilen verdiği ara molalarını gösterir.</p><p className="text-slate-400">Eşik aşımı: 30/45 dk üzeri gerçek mola.</p></> }} />
-                <KPICard title="Ort. Düşülen Mola" value={Math.round(breakMeal?.avg_counted_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="indigo"
+                <KPICard title="Ort. Düşülen Mola" value={Math.round(bmk.avg_counted_break_minutes || 0)} suffix="dk" icon={Coffee} gradient="indigo"
                     subtitle="İş süresinden düşülen"
-                    info={{ title: 'Ortalama Düşülen Mola', content: <><p><strong className="text-white">Tanım:</strong> Çalışma süresinden düşülen (sayılan) mola süresinin kişi başı ortalaması.</p><p className="text-slate-400">Öğle-hariç fazla mola: <strong className="text-slate-200">{Math.round(breakMeal?.avg_uncounted_break_minutes || 0)}</strong> dk</p></> }} />
+                    info={{ title: 'Ortalama Düşülen Mola', content: <><p><strong className="text-white">Tanım:</strong> Çalışma süresinden düşülen (sayılan) mola süresinin kişi başı ortalaması.</p><p className="text-slate-400">Öğle-hariç fazla mola: <strong className="text-slate-200">{Math.round(bmk.avg_uncounted_break_minutes || 0)}</strong> dk</p></> }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
