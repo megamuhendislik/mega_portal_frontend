@@ -228,13 +228,20 @@ export default function ComparisonTab() {
             { key: 'missing_hours', label: 'Eksik (sa)', color: '#dc2626' },
             { key: 'avg_break_minutes', label: 'Ort. Mola (dk)', color: '#8b5cf6' },
             { key: 'avg_counted_break_minutes', label: 'Düşülen Mola (dk)', color: '#a855f7' },
+            // OT-saati/yemek (sa/yemek) — null (yemek yok / OT yok) olan kişide çubuk çizilmez
+            { key: 'ot_hours_per_meal', label: 'OT-saati/Yemek', color: '#f43f5e', nullable: true },
         ];
 
         const barData = snap.map((s) => ({
             name: s.label,
             key: s.key,
             is_avg: s.is_avg,
-            ...metrics.reduce((acc, m) => ({ ...acc, [m.key]: s.metrics?.[m.key] || 0 }), {}),
+            ...metrics.reduce((acc, m) => {
+                const raw = s.metrics?.[m.key];
+                // nullable metrikte null → null (çubuk atlanır); diğerlerinde eski davranış (|| 0)
+                acc[m.key] = raw == null ? (m.nullable ? null : 0) : raw;
+                return acc;
+            }, {}),
         }));
 
         return (
@@ -324,6 +331,14 @@ export default function ComparisonTab() {
                                     <div>
                                         <span className="text-slate-500">Düşülen Mola:</span>{' '}
                                         <span className="font-bold tabular-nums text-violet-700">{s.metrics?.avg_counted_break_minutes ?? 0}dk</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-slate-500">OT-saati/Yemek:</span>{' '}
+                                        <span className="font-bold tabular-nums text-rose-600">
+                                            {s.metrics?.ot_hours_per_meal != null
+                                                ? `${Number(s.metrics.ot_hours_per_meal).toFixed(1)} sa/yemek`
+                                                : '—'}
+                                        </span>
                                     </div>
                                 </div>
                             ) : (
