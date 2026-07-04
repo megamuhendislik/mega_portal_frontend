@@ -351,12 +351,14 @@ export default function ComparisonTab() {
             // Round up to next 25 for cleaner axis labels
             return Math.max(floor, Math.ceil(peak / 25) * 25);
         };
+        // Her metrik RadarMetric içinde kendi max'ına göre 0-100'e normalize edilir.
+        // FM/Y ve Eksik/Y ters-yönlü (yüksek = kötü) → etikette "düşük iyi" ile işaretlenir.
         const radarMetrics = [
-            { key: 'efficiency_pct', label: 'Yap. Mesai', max: dynamicMax('efficiency_pct', 100) },
-            { key: 'total_completion_pct', label: 'T.Yap. Mesai', max: dynamicMax('total_completion_pct', 120) },
-            { key: 'ot_to_target_pct', label: 'FM/Y', max: dynamicMax('ot_to_target_pct', 50) },
-            { key: 'missing_to_target_pct', label: 'Eksik/Y', max: dynamicMax('missing_to_target_pct', 50) },
-            { key: 'attendance_pct', label: 'Devam', max: dynamicMax('attendance_pct', 100) },
+            { key: 'efficiency_pct', label: 'Yap. Mesai', unit: '%', max: dynamicMax('efficiency_pct', 100) },
+            { key: 'total_completion_pct', label: 'T.Yap. Mesai', unit: '%', max: dynamicMax('total_completion_pct', 120) },
+            { key: 'ot_to_target_pct', label: 'FM/Y (düşük iyi)', unit: '%', max: dynamicMax('ot_to_target_pct', 50) },
+            { key: 'missing_to_target_pct', label: 'Eksik/Y (düşük iyi)', unit: '%', max: dynamicMax('missing_to_target_pct', 50) },
+            { key: 'attendance_pct', label: 'Devam', unit: '%', max: dynamicMax('attendance_pct', 100) },
         ];
         const radarEntities = snap.map((s, i) => ({
             id: s.key,
@@ -373,7 +375,7 @@ export default function ComparisonTab() {
         return (
             <RadarMetric
                 title="Radar Karşılaştırma — 5 metrik"
-                subtitle="Tüm metrikler tek görüntüde · alan büyüklüğü genel performansı yansıtır"
+                subtitle="Her eksen kendi ölçeğinde %0-100'e normalize edildi · Eksik/Y ve FM/Y eksenlerinde düşük değer daha iyidir · ham değerler tooltip'te"
                 entities={radarEntities}
                 metrics={radarMetrics}
                 height={400}

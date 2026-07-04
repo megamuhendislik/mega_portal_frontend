@@ -5,6 +5,7 @@ import {
     SortAsc, SortDesc, Filter as FilterIcon, Building2,
 } from 'lucide-react';
 import api from '../../../../services/api';
+import { useAnalytics } from '../AnalyticsContext';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, Cell, LineChart, Line,
@@ -47,6 +48,7 @@ function Sparkline({ data, color = '#ef4444' }) {
 }
 
 export default function MissingHoursDetailModal({ open, onClose }) {
+    const { queryParams } = useAnalytics();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -62,7 +64,7 @@ export default function MissingHoursDetailModal({ open, onClose }) {
             setLoading(true);
             setError(null);
         });
-        api.get('/attendance-analytics/workforce/missing-hours-detail/')
+        api.get('/attendance-analytics/workforce/missing-hours-detail/', { params: queryParams })
             .then((res) => { if (!cancelled) setData(res.data); })
             .catch((err) => {
                 if (cancelled) return;
@@ -70,7 +72,7 @@ export default function MissingHoursDetailModal({ open, onClose }) {
             })
             .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
-    }, [open]);
+    }, [open, queryParams]);
 
     const employees = useMemo(() => data?.employees || [], [data]);
     const byDepartment = useMemo(() => data?.by_department || [], [data]);

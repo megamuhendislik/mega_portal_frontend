@@ -3,14 +3,14 @@ import { quadrantOf, QUADRANT_META, levelColor } from './helpers';
 
 /**
  * Risk Haritasi'nin ismi-sayilan grid versiyonu.
- * 5x5 hucreli (X: Eksik/Y, Y: FM/Y) — her hucredeki kisi sayisi balon
+ * 5x5 hucreli (X: Yap.Normal/Y, Y: FM/Y) — her hucredeki kisi sayisi balon
  * boyutu + ortalama Yap. Mesai renk yogunlugu olarak gosterilir.
  *
  * Kullanim: ScatterMatrix view_mode='heatmap' iken render edilir.
  * Hucreye tikla -> o hucredeki kisileri drill et.
  */
 export default function HeatmapGridView({ points, onCellClick }) {
-    // 5 X bin (eksik/y: 0-100, her 20%) x 5 Y bin (FM/Y: 0-50, her 10%)
+    // 5 X bin (yap.normal/y: 0-100, her 20%) x 5 Y bin (FM/Y: 0-50, her 10%)
     const X_BINS = 5;
     const Y_BINS = 5;
     const X_MAX = 100;
@@ -119,7 +119,7 @@ export default function HeatmapGridView({ points, onCellClick }) {
             <div className="grid grid-cols-[40px_1fr] gap-x-1 mt-1">
                 <div></div>
                 <div className="text-center text-[10px] text-slate-500 font-bold">
-                    Eksik / Yükümlülük (%) →
+                    Yapılan Normal Mesai / Yükümlülük (%) →
                 </div>
             </div>
             <div className="flex items-center justify-between mt-3 px-2">

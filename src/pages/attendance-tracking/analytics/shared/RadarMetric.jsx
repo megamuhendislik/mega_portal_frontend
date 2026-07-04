@@ -29,12 +29,20 @@ export default function RadarMetric({
     collapsible = true,
     defaultOpen = true,
 }) {
+    // Her metrik kendi doğal aralığında (m.max) 0-100'e normalize edilir; böylece
+    // küçük-aralıklı eksenler (ör. FM/Y 0-50) tek paylaşılan radyal ölçekte ezilmez.
+    // Grafik normalize değeri çizer; HAM değer + birim tooltip'te saklanır (dürüst kalsın).
     const data = useMemo(() => {
         return metrics.map((m) => {
-            const row = { metric: m.label, fullMark: m.max || 100 };
+            const denom = m.max || 100;
+            const unit = m.unit ?? '%';
+            const raw = {};
+            const row = { metric: m.label, fullMark: 100, __raw: raw, __unit: unit, __max: denom };
             entities.forEach((e) => {
                 const v = e.metrics?.[m.key];
-                row[e.name] = v == null ? 0 : Math.min(m.max || 100, v);
+                const val = v == null ? 0 : v;
+                raw[e.name] = val;
+                row[e.name] = denom > 0 ? Math.min(100, (val / denom) * 100) : 0;
             });
             return row;
         });
@@ -67,8 +75,10 @@ export default function RadarMetric({
                         />
                         <PolarRadiusAxis
                             angle={90}
-                            domain={[0, 'auto']}
-                            tick={{ fontSize: 9, fill: '#94a3b8' }}
+                            domain={[0, 100]}
+                            tickCount={5}
+                            tickFormatter={(v) => `%${v}`}
+                            tick={{ fontSize: 9, fill: '#cbd5e1' }}
                         />
                         <Tooltip
                             content={({ active, payload, label }) => {
@@ -78,15 +88,24 @@ export default function RadarMetric({
                                         <div className="font-bold text-slate-700 mb-1.5 pb-1 border-b border-slate-100">
                                             {label}
                                         </div>
-                                        {payload.map((p, i) => (
-                                            <div key={i} className="flex items-center gap-2 text-[11px]">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                                                <span className="font-medium text-slate-600">{p.name}:</span>
-                                                <span className="font-black tabular-nums" style={{ color: p.color }}>
-                                                    {Math.round(p.value)}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        {payload.map((p, i) => {
+                                            // Grafik normalize (0-100) değer çizer; tooltip HAM değeri gösterir.
+                                            const rawObj = p.payload?.__raw;
+                                            const unit = p.payload?.__unit ?? '';
+                                            const raw = rawObj && p.name in rawObj ? rawObj[p.name] : p.value;
+                                            const display = unit === '%'
+                                                ? `%${Math.round(raw)}`
+                                                : `${Math.round(raw)}${unit}`;
+                                            return (
+                                                <div key={i} className="flex items-center gap-2 text-[11px]">
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                                                    <span className="font-medium text-slate-600">{p.name}:</span>
+                                                    <span className="font-black tabular-nums" style={{ color: p.color }}>
+                                                        {display}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             }}
