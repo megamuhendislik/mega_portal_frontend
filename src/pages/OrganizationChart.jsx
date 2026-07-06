@@ -358,6 +358,8 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, 
 
     return (
         <div
+            data-org-emp={emp.id}
+            data-org-ctx={(emp._ctxSecondary ?? emp.is_secondary) ? 'secondary' : 'primary'}
             draggable={canDrag}
             onDragStart={canDrag ? (e) => dnd.handleDragStart(e, empData) : undefined}
             onDragEnd={canDrag ? () => dnd.handleDragEnd() : undefined}
@@ -558,7 +560,10 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
                 {group.employees.map(emp => (
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
-                            emp={{ ...emp, is_secondary: false }} // Ensure clean props
+                            // is_secondary görsel için sıfırlanır ama çapa bağlamı
+                            // (_ctxSecondary) korunur — yıldızlı kopya 'primary'
+                            // damgalanıp çapraz-ok çapasını çalmasın
+                            emp={{ ...emp, is_secondary: false, _ctxSecondary: !!emp.is_secondary }}
                             onClick={onClick}
                             showTags={showTags}
                             dnd={dnd}
@@ -777,6 +782,93 @@ const OrganizationChart = () => {
     const containerRef = useRef(null);
     const contentRef = useRef(null);
     const hasFittedRef = useRef(false);
+
+    // Çapraz kenarlar: birden çok ANA (PRIMARY) yöneticisi olan kişiye,
+    // yerleşim ebeveyni (manager_id) DIŞINDAKİ ana yönetici(ler)den kesikli ok.
+    // Overlay contentRef (transform'lu sarmalayıcı) İÇİNDE olduğundan zoom/pan
+    // ile birlikte dönüşür; koordinatlar doğal (ölçeksiz) uzayda hesaplanır.
+    const [crossEdges, setCrossEdges] = useState([]);
+
+    const measureCrossEdges = useCallback(() => {
+        const content = contentRef.current;
+        if (!content) { setCrossEdges([]); return; }
+
+        // Mantıksal kenar listesi: ham ağaçtan (from=diğer ana yönetici, to=çalışan)
+        const logical = [];
+        const seen = new Set();
+        const walk = (n) => {
+            const pms = n.primary_managers;
+            // is_secondary kopyalarda manager_id LOKAL (o departmandaki) ebeveyndir;
+            // primary yerleşim ebeveyni filtreden geçip SAHTE kenar üretirdi —
+            // kenarlar yalnız birincil-bağlam düğümünden üretilir.
+            if (!n.is_secondary && Array.isArray(pms) && pms.length > 1) {
+                pms.forEach(pm => {
+                    if (pm.id === n.manager_id) return; // düz ağaç bağlantısı zaten var
+                    const k = `${pm.id}->${n.id}`;
+                    if (seen.has(k)) return; // ikincil-departman kopyaları aynı kenarı üretir
+                    seen.add(k);
+                    logical.push({ key: k, from: pm.id, fromName: pm.name, to: n.id, toName: n.name });
+                });
+            }
+            (n.employees || []).forEach(walk);
+            (n.children || []).forEach(walk);
+        };
+        treeData.forEach(walk);
+        if (logical.length === 0) { setCrossEdges([]); return; }
+
+        // Gerçek render ölçeği rect/offsetWidth'ten türetilir (zoom geçişi
+        // ortasında bile tutarlı; scale state'ine bağımlılık yok)
+        const contentRect = content.getBoundingClientRect();
+        const s = content.offsetWidth ? contentRect.width / content.offsetWidth : 1;
+        if (!s) { setCrossEdges([]); return; }
+
+        const pick = (id) => {
+            const els = content.querySelectorAll(`[data-org-emp="${id}"]`);
+            if (!els.length) return null;
+            for (const el of els) {
+                if (el.dataset.orgCtx === 'primary') return el;
+            }
+            return els[0];
+        };
+
+        const out = [];
+        for (const e of logical) {
+            const fromEl = pick(e.from);
+            const toEl = pick(e.to);
+            if (!fromEl || !toEl) continue; // uç kart görünmüyorsa (filtre vb.) atla
+            const fr = fromEl.getBoundingClientRect();
+            const tr = toEl.getBoundingClientRect();
+            out.push({
+                ...e,
+                x1: (fr.left + fr.width / 2 - contentRect.left) / s,
+                y1: (fr.bottom - contentRect.top) / s,
+                x2: (tr.left + tr.width / 2 - contentRect.left) / s,
+                y2: (tr.top - contentRect.top) / s,
+            });
+        }
+        setCrossEdges(out);
+    }, [treeData]);
+
+    // Layout'u değiştiren her durumda yeniden ölç (zoom/pan HARİÇ — gerekmez)
+    useEffect(() => {
+        const raf = requestAnimationFrame(measureCrossEdges);
+        return () => cancelAnimationFrame(raf);
+    }, [measureCrossEdges, loading, showEmployees, showTags, showManagerInfo, showSecondaryManagers, isEditMode]);
+
+    // Font/geç yerleşim kaymaları için ağacı VE content'i gözle. content
+    // (minWidth:100%) container ile genişler; tam ekran / pencere / sidebar
+    // boyut değişimi flex-center'lı ağacı içeride kaydırır — .tree'nin kendi
+    // boyutu değişmediğinden yalnız-.tree gözlemi bunu kaçırırdı.
+    // (ResizeObserver layout boyutu raporlar, CSS transform'dan etkilenmez.)
+    useEffect(() => {
+        const content = contentRef.current;
+        if (!content || typeof ResizeObserver === 'undefined') return;
+        const ro = new ResizeObserver(() => measureCrossEdges());
+        ro.observe(content);
+        const tree = content.querySelector('.tree');
+        if (tree) ro.observe(tree);
+        return () => ro.disconnect();
+    }, [measureCrossEdges, loading]);
 
     // 5. Hierarchy Flattening for System Admins
     // This function merges a Manager and their Subordinate Managers into a single "Group" node
@@ -1333,6 +1425,39 @@ const OrganizationChart = () => {
                         alignItems: 'flex-start'
                     }}
                 >
+                    {/* Çapraz kenar overlay'i: ikinci ana yöneticiden kesikli ok.
+                        Transform'lu sarmalayıcının içinde → zoom/pan ile birlikte hareket eder. */}
+                    {crossEdges.length > 0 && (
+                        <svg
+                            className="absolute pointer-events-none"
+                            // zIndex 0 + DOM'da .tree'den ÖNCE: transform'lu grup
+                            // sarmalayıcıları stacking context yaratıp iç kartların
+                            // z-10'unu hapsettiğinden (efektif seviye 0), zIndex>0
+                            // olsaydı çizgi grup içi kart YÜZLERİNİN üstüne binerdi
+                            style={{ top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: 0 }}
+                        >
+                            <defs>
+                                <marker id="crossEdgeArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                                    <path d="M0,0 L7,3.5 L0,7 Z" fill="#8b5cf6" />
+                                </marker>
+                            </defs>
+                            {crossEdges.map(e => (
+                                <path
+                                    key={e.key}
+                                    d={`M ${e.x1} ${e.y1} C ${e.x1} ${e.y1 + 40}, ${e.x2} ${e.y2 - 40}, ${e.x2} ${e.y2 - 4}`}
+                                    fill="none"
+                                    stroke="#8b5cf6"
+                                    strokeWidth="1.5"
+                                    strokeDasharray="6 4"
+                                    opacity="0.75"
+                                    markerEnd="url(#crossEdgeArrow)"
+                                    style={{ pointerEvents: 'stroke' }}
+                                >
+                                    <title>{`${e.fromName} → ${e.toName} (ikinci ana yönetici)`}</title>
+                                </path>
+                            ))}
+                        </svg>
+                    )}
                     <div className="tree select-none">
                         <ul>
                             {treeData.map(node => (
@@ -1355,6 +1480,17 @@ const OrganizationChart = () => {
                         </ul>
                     </div>
                 </div>
+
+                {/* Lejant: kesikli ok = ikinci ana yönetici (yalnız çapraz kenar varken) */}
+                {crossEdges.length > 0 && (
+                    <div className="absolute bottom-3 left-3 z-20 bg-white/90 backdrop-blur-sm border border-violet-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm pointer-events-none">
+                        <svg width="28" height="8">
+                            <line x1="0" y1="4" x2="19" y2="4" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="5 3" />
+                            <path d="M19,0.5 L26,4 L19,7.5 Z" fill="#8b5cf6" />
+                        </svg>
+                        <span className="text-[10px] font-semibold text-violet-700">İkinci ana yönetici</span>
+                    </div>
+                )}
             </div>
 
             <style>{`
