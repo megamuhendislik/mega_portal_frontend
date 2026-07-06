@@ -600,10 +600,13 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
             _category: (n.employees || n.code) ? 'SUB_DEPT' : getRoleCategory(n.title)
         }));
 
-        // 2. Count ALL employees per category (including ones with children)
+        // 2. Count LEAF employees per category — astı olan düğüm kutuya alınmaz,
+        //    kendi alt ağacıyla tekil çizilir (2026-07-07: eş-rütbeli iki şef
+        //    "Grup Şefi (2)" kutusuna toplanıp astları havuzlanıyordu)
+        const isLeaf = (n) => !n.children || n.children.length === 0;
         const catCounts = {};
         nodesWithCat.forEach(n => {
-            if (n._category !== 'SUB_DEPT') {
+            if (n._category !== 'SUB_DEPT' && isLeaf(n)) {
                 catCounts[n._category] = (catCounts[n._category] || 0) + 1;
             }
         });
@@ -616,29 +619,21 @@ const TreeNode = ({ node, showAllEmployees, showTags, onEmployeeClick, isEditMod
             return a._category.localeCompare(b._category);
         });
 
-        // 4. Single pass: group ALL employees of same category (2+), including ones with children
+        // 4. Single pass: group LEAF employees of same category (2+); nodes with
+        //    subordinates render individually so real manager edges stay visible
         sortedNodes.forEach(nodeItem => {
             if (processedIds.has(nodeItem.id)) return;
 
             const category = nodeItem._category;
 
-            if (category !== 'SUB_DEPT' && catCounts[category] >= 2) {
-                const groupMembers = sortedNodes.filter(n => n._category === category && !processedIds.has(n.id));
+            if (category !== 'SUB_DEPT' && isLeaf(nodeItem) && catCounts[category] >= 2) {
+                const groupMembers = sortedNodes.filter(n => n._category === category && isLeaf(n) && !processedIds.has(n.id));
                 groupMembers.forEach(m => processedIds.add(m.id));
-
-                // Collect children from all members (scalp and adopt)
-                const adoptedChildren = [];
-                groupMembers.forEach(m => {
-                    if (m.children && m.children.length > 0) {
-                        adoptedChildren.push(...m.children);
-                    }
-                });
 
                 resultList.push({
                     type: 'group',
                     title: category,
                     employees: groupMembers.map(m => ({ ...m, children: [] })),
-                    children: adoptedChildren.length > 0 ? adoptedChildren : undefined,
                     id: `group-${category}-${nodeItem.id}`,
                     color: getColorForCategory(category)
                 });
