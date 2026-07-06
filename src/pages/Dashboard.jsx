@@ -15,7 +15,7 @@ import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { getIstanbulToday, getIstanbulDateOffset, formatIstanbulTime } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset, formatIstanbulTime, fmtSaDk, fmtSaDkSec } from '../utils/dateUtils';
 
 // Yaklaşan Etkinlikler sabit tanımlar (component dışında — re-render'da yeniden oluşturulmaz)
 const eventTypeLabels = {
@@ -573,12 +573,12 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-baseline gap-1 mb-1">
                         <span className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                            {formatMin(todaySummary?.overtime_approved)}
+                            {fmtSaDkSec(todaySummary?.overtime_approved)}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400">dk onaylı</span>
+                        <span className="text-[10px] font-bold text-slate-400">onaylı</span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-medium mb-3">
-                        Bekleyen: {formatMin(todaySummary?.overtime_pending)} / Potansiyel: {formatMin(todaySummary?.overtime_potential)} dk
+                        Bekleyen: {fmtSaDkSec(todaySummary?.overtime_pending)} / Potansiyel: {fmtSaDkSec(todaySummary?.overtime_potential)}
                     </p>
 
                     {/* Weekly OT Progress */}
@@ -629,7 +629,7 @@ const Dashboard = () => {
                                         <span className="text-[9px] font-bold text-amber-500">HAFTALIK LİMİT</span>
                                     </div>
                                     <span className={`text-[9px] font-bold ${colorClass}`}>
-                                        {used}:00/{limit}:00
+                                        {fmtSaDk(used)}/{fmtSaDk(limit)}
                                     </span>
                                 </div>
                                 {label && (
@@ -648,7 +648,7 @@ const Dashboard = () => {
                                 </div>
                                 {ratio >= 0.7 && (
                                     <p className={`text-[8px] mt-0.5 ${colorClass}`}>
-                                        Kalan: {remaining}:00
+                                        Kalan: {fmtSaDk(remaining)}
                                     </p>
                                 )}
                             </div>

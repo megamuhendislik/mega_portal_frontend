@@ -7,7 +7,7 @@ import {
   CircleCheck, Activity, CircleDot, ArrowRight, UserCheck
 } from 'lucide-react';
 import api from '../../services/api';
-import { getIstanbulToday, toIstanbulParts, fmtH } from '../../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts, fmtH, fmtSaDk } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import ModalOverlay from '../ui/ModalOverlay';
 
@@ -697,7 +697,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
 
   // --- Total calculation text ---
   const totalCalcText = selectedDates.length > 1
-    ? `${selectedDates.length} gün × ${hoursPerDay} sa = ${newHours} sa toplam`
+    ? `${selectedDates.length} gün × ${fmtSaDk(hoursPerDay)} = ${fmtSaDk(newHours)} toplam`
     : null;
 
   // --- Submit button style logic ---
@@ -952,7 +952,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                             </Tooltip>
                           </div>
                           <span className="text-xs font-bold text-slate-700">
-                            {fmtH(projectedTotal)} / {weeklyLimit} saat
+                            {fmtH(projectedTotal)} / {fmtH(weeklyLimit)} saat
                           </span>
                         </div>
 
@@ -1156,7 +1156,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <div className="flex items-center gap-2">
                           <ShieldAlert size={16} className="text-red-600 flex-shrink-0" />
                           <span className="text-xs font-bold text-red-700">
-                            Haftalık limit aşılacak! {fmtH(projectedTotal)} / {weeklyLimit} saat ({Math.round(progressPercent)}%)
+                            Haftalık limit aşılacak! {fmtH(projectedTotal)} / {fmtH(weeklyLimit)} saat ({Math.round(progressPercent)}%)
                           </span>
                         </div>
                         <p className="text-[10px] text-red-600 ml-6">
@@ -1414,7 +1414,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         {/* Info chips row */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[10px] font-bold text-blue-600">
-                            <Clock size={10} /> {a.max_duration_hours} sa
+                            <Clock size={10} /> {fmtSaDk(a.max_duration_hours)}
                           </span>
                           {a.assigned_by_name && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-[10px] font-medium text-slate-500">
@@ -1504,7 +1504,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           )}
                           {actualHours != null && actualHours > 0 && (
                             <span className="inline-flex items-center gap-1 font-extrabold text-emerald-700">
-                              <Activity size={10} /> Fiili: {actualHours} sa
+                              <Activity size={10} /> Fiili: {fmtSaDk(actualHours)}
                             </span>
                           )}
                           {actualHours === 0 && hasAttendance && (
@@ -1514,7 +1514,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                           )}
                           {hasClaimed && rd.requested_hours != null && (
                             <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
-                              <FileText size={10} /> Talep: {rd.requested_hours} sa
+                              <FileText size={10} /> Talep: {fmtSaDk(rd.requested_hours)}
                             </span>
                           )}
                           {hasClaimed && rd.target_approver_name && (
@@ -1584,7 +1584,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Max Süre</div>
                   <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                     <Clock size={14} className="text-slate-400" />
-                    {detailModal.max_duration_hours} saat
+                    {fmtSaDk(detailModal.max_duration_hours)}
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-3">
@@ -1672,7 +1672,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         {detailModal.request_detail.requested_hours != null && (
                           <div>
                             <span className="text-slate-400">Talep Edilen:</span>{' '}
-                            <span className="font-bold text-slate-700">{detailModal.request_detail.requested_hours} saat</span>
+                            <span className="font-bold text-slate-700">{fmtSaDk(detailModal.request_detail.requested_hours)}</span>
                           </div>
                         )}
                         {detailModal.request_detail.source_type && (
@@ -1757,13 +1757,13 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         {detailModal.request_detail.actual_ot_hours != null && (
                           <div>
                             <span className="text-slate-400">Fiili EK Mesai:</span>{' '}
-                            <span className="font-extrabold text-emerald-700">{detailModal.request_detail.actual_ot_hours} saat</span>
+                            <span className="font-extrabold text-emerald-700">{fmtSaDk(detailModal.request_detail.actual_ot_hours)}</span>
                           </div>
                         )}
                         {detailModal.request_detail.normal_hours != null && (
                           <div>
                             <span className="text-slate-400">Normal Mesai:</span>{' '}
-                            <span className="font-bold text-slate-700">{detailModal.request_detail.normal_hours} saat</span>
+                            <span className="font-bold text-slate-700">{fmtSaDk(detailModal.request_detail.normal_hours)}</span>
                           </div>
                         )}
                         {detailModal.request_detail.attendance_status && (
@@ -1993,7 +1993,7 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                   })()}
                 </div>
                 <div className="text-xs text-orange-600">
-                  Atayan: <span className="font-bold">{overrideConfirmModal.assigned_by_name}</span> · Max: {overrideConfirmModal.max_duration_hours} sa
+                  Atayan: <span className="font-bold">{overrideConfirmModal.assigned_by_name}</span> · Max: {fmtSaDk(overrideConfirmModal.max_duration_hours)}
                 </div>
               </div>
 

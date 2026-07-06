@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, CreditCard, PenLine, HeartPulse, Stethoscope, Briefcase, Timer, Scissors, Settings } from 'lucide-react';
 import { LeaveBadge } from '../pages/attendance-tracking/AttendanceComponents';
-import { toIstanbulParts } from '../utils/dateUtils';
+import { toIstanbulParts, fmtSaDkMin } from '../utils/dateUtils';
 
 const formatTime = (isoString) => {
     if (!isoString) return '-';
@@ -455,7 +455,7 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {}, visibleDates = null }
                                         {log.overtime_minutes > 0 && (
                                             <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 pl-1">
                                                 <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
-                                                +{log.overtime_minutes} dk Fazla
+                                                +{fmtSaDkMin(log.overtime_minutes)} Fazla
                                             </span>
                                         )}
                                     </div>
