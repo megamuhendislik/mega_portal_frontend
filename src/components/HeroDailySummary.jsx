@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock, Coffee, Briefcase, Timer, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
+import { fmtSaDkSec } from '../utils/dateUtils';
 
 const HeroDailySummary = ({ summary, loading }) => {
     if (loading) {
@@ -269,7 +270,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                                         <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Onaylı</span>
                                     </div>
-                                    <span className="text-lg font-black text-emerald-700">{Math.floor(otApproved / 60)}<span className="text-[10px] font-bold text-emerald-400 ml-0.5">dk</span></span>
+                                    <span className="text-lg font-black text-emerald-700">{fmtSaDkSec(otApproved)}</span>
                                 </div>
                                 {/* Pending */}
                                 <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-xl border border-amber-100/50">
@@ -277,7 +278,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                         <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                                         <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Bekleyen</span>
                                     </div>
-                                    <span className="text-lg font-black text-amber-700">{Math.floor(otPending / 60)}<span className="text-[10px] font-bold text-amber-400 ml-0.5">dk</span></span>
+                                    <span className="text-lg font-black text-amber-700">{fmtSaDkSec(otPending)}</span>
                                 </div>
                                 {/* Potential */}
                                 <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
@@ -285,7 +286,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                         <div className="w-2 h-2 rounded-full bg-slate-400"></div>
                                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Potansiyel</span>
                                     </div>
-                                    <span className="text-lg font-black text-slate-600">{Math.floor(otPotential / 60)}<span className="text-[10px] font-bold text-slate-400 ml-0.5">dk</span></span>
+                                    <span className="text-lg font-black text-slate-600">{fmtSaDkSec(otPotential)}</span>
                                 </div>
                             </div>
                         </div>
@@ -293,7 +294,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                         <div className="mt-3">
                             {overtimeSeconds > 0 ? (
                                 <div className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                    Toplam Tespit: {Math.floor(overtimeSeconds / 60)} dk
+                                    Toplam Tespit: {fmtSaDkSec(overtimeSeconds)}
                                 </div>
                             ) : (
                                 <div className="flex items-center justify-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100/50 opacity-60">

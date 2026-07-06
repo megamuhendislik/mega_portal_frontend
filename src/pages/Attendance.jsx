@@ -16,7 +16,7 @@ import WeeklyOtDetailDrawer from '../components/WeeklyOtDetailDrawer';
 import MonthlyReportsModal from '../components/MonthlyReportsModal';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
-import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
+import { getIstanbulToday, toIstanbulParts, fmtSaDk } from '../utils/dateUtils';
 import useFiscalPeriods from '../hooks/useFiscalPeriods';
 
 const Attendance = () => {
@@ -483,7 +483,7 @@ const Attendance = () => {
                                                     <div className="flex items-center gap-1">
                                                         <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
                                                         <span className={`text-[10px] font-bold tabular-nums leading-none ${textColor}`}>
-                                                            {isUnlimited ? `${week.used_hours}` : `${week.used_hours}/${week.limit_hours}`}
+                                                            {isUnlimited ? fmtSaDk(week.used_hours) : `${fmtSaDk(week.used_hours)}/${fmtSaDk(week.limit_hours)}`}
                                                         </span>
                                                     </div>
                                                 </div>

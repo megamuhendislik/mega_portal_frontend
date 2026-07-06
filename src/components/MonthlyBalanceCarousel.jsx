@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, Clock, Zap, AlertTriangle } from 'lucide-react';
-import { getIstanbulMonth } from '../utils/dateUtils';
+import { getIstanbulMonth, fmtSaDkSec } from '../utils/dateUtils';
 
 const MONTHS = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -33,13 +33,9 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
     const canGoRight = startIdx < months.length - 3;
     const visibleSlice = months.slice(startIdx, startIdx + 3);
 
-    const fmtHours = (sec) => {
+    const fmtSigned = (sec) => {
         if (sec == null) return null;
-        const totalMin = Math.round(Math.abs(sec) / 60);
-        const h = Math.floor(totalMin / 60);
-        const m = totalMin % 60;
-        const formatted = `${h}:${String(m).padStart(2, '0')}`;
-        return sec >= 0 ? `+${formatted}` : `-${formatted}`;
+        return sec >= 0 ? `+${fmtSaDkSec(sec)}` : fmtSaDkSec(sec);
     };
 
     return (
@@ -94,9 +90,9 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                     const targetSec = md.target || 0;
                     const completedSec = md.completed || 0;
                     const missingSec = md.missing || 0;
-                    const targetH = (targetSec / 3600).toFixed(1);
-                    const completedH = (completedSec / 3600).toFixed(1);
-                    const missingH = (missingSec / 3600).toFixed(1);
+                    const targetH = fmtSaDkSec(targetSec);
+                    const completedH = fmtSaDkSec(completedSec);
+                    const missingH = fmtSaDkSec(missingSec);
 
                     // Bakiye: cari ay past_target_balance, geçmiş ay balance, gelecek null
                     let balanceSec = null;
@@ -104,7 +100,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                     else if (isCurrent) balanceSec = md.past_target_balance ?? md.balance ?? 0;
 
                     const isPositive = balanceSec != null && balanceSec >= 0;
-                    const balanceH = balanceSec != null ? fmtHours(balanceSec) : null;
+                    const balanceH = fmtSigned(balanceSec);
 
                     // İlerleme yüzdesi
                     const pct = isFuture ? 0 : targetSec > 0 ? Math.min(100, (completedSec / targetSec) * 100) : 0;
@@ -171,7 +167,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                                             <span className="text-[11px] text-slate-500 font-medium">Hedef</span>
                                         </div>
                                         <span className="text-[12px] font-semibold text-slate-600 font-mono tabular-nums">
-                                            {targetH}<span className="text-slate-300 ml-0.5 text-[10px]">sa</span>
+                                            {targetH}
                                         </span>
                                     </div>
 
@@ -181,7 +177,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                                             <span className={`text-[11px] font-medium ${isFuture ? 'text-slate-300' : 'text-slate-500'}`}>Çalışılan</span>
                                         </div>
                                         <span className={`text-[12px] font-semibold font-mono tabular-nums ${isFuture ? 'text-slate-300' : 'text-slate-600'}`}>
-                                            {isFuture ? '—' : <>{completedH}<span className="text-slate-300 ml-0.5 text-[10px]">sa</span></>}
+                                            {isFuture ? '—' : completedH}
                                         </span>
                                     </div>
 
@@ -193,7 +189,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                                                 <span className="text-[11px] font-medium text-rose-500">Eksik</span>
                                             </div>
                                             <span className="text-[12px] font-semibold font-mono tabular-nums text-rose-600">
-                                                -{missingH}<span className="text-rose-300 ml-0.5 text-[10px]">sa</span>
+                                                -{missingH}
                                             </span>
                                         </div>
                                     )}
@@ -221,7 +217,7 @@ export default function MonthlyBalanceCarousel({ periodSummary }) {
                                                     <span className={`text-sm font-black font-mono tabular-nums tracking-tight ${
                                                         isPositive ? 'text-emerald-600' : 'text-rose-600'
                                                     }`}>
-                                                        {balanceH}<span className="text-[10px] font-bold ml-0.5 opacity-60">sa</span>
+                                                        {balanceH}
                                                     </span>
                                                 </div>
                                             ) : (

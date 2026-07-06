@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { differenceInDays, addDays, isBefore, min as dateMin, format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { getIstanbulToday, getIstanbulTodayDate } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulTodayDate, fmtSaDk } from '../utils/dateUtils';
 import useFiscalPeriods from '../hooks/useFiscalPeriods';
 import {
     formatMinutes,
@@ -800,7 +800,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                     <button onClick={() => setOtDistMode('hours')} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${otDistMode === 'hours' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}>Saat</button>
                                     <button onClick={() => setOtDistMode('pct')} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${otDistMode === 'pct' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}>%</button>
                                 </div>
-                                <span className="text-[10px] text-slate-400">{activeCount}/{total} aktif · ort {avgUsed}/{avgLimit}sa</span>
+                                <span className="text-[10px] text-slate-400">{activeCount}/{total} aktif · ort {fmtSaDk(avgUsed)}/{fmtSaDk(avgLimit)}</span>
                             </div>
                         </div>
 
@@ -888,11 +888,11 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                         <div className="grid grid-cols-3 gap-2">
                             <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
                                 <div className="text-[10px] text-slate-400 font-semibold uppercase">Ekip Ort.</div>
-                                <div className="text-lg font-black text-slate-700 tabular-nums">{otDistDrawerData.avgUsed}<span className="text-xs font-medium text-slate-400">sa</span></div>
+                                <div className="text-lg font-black text-slate-700 tabular-nums">{fmtSaDk(otDistDrawerData.avgUsed)}</div>
                             </div>
                             <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
                                 <div className="text-[10px] text-slate-400 font-semibold uppercase">Ort. Limit</div>
-                                <div className="text-lg font-black text-slate-700 tabular-nums">{otDistDrawerData.avgLimit}<span className="text-xs font-medium text-slate-400">sa</span></div>
+                                <div className="text-lg font-black text-slate-700 tabular-nums">{fmtSaDk(otDistDrawerData.avgLimit)}</div>
                             </div>
                             <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
                                 <div className="text-[10px] text-slate-400 font-semibold uppercase">Aktif</div>
@@ -915,7 +915,7 @@ const AttendanceTracking = ({ embedded = false, year: propYear, month: propMonth
                                                 <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                                     <div className={`h-full ${barColor} rounded-full`} style={{ width: `${Math.min(100, m.pct)}%` }} />
                                                 </div>
-                                                <span className={`text-[11px] font-bold tabular-nums ${textColor} w-16 text-right`}>{m.used}/{m.limit}</span>
+                                                <span className={`text-[11px] font-bold tabular-nums ${textColor} w-24 text-right`}>{fmtSaDk(m.used)}/{fmtSaDk(m.limit)}</span>
                                                 <span className="text-[9px] text-slate-400 w-8 text-right tabular-nums">{m.pct}%</span>
                                             </div>
                                         </summary>

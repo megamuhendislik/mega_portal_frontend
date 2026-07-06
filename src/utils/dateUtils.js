@@ -299,3 +299,38 @@ export function fmtSec(s) {
     const sign = neg ? '-' : '';
     return `${sign}${h}:${String(m).padStart(2, '0')}`;
 }
+
+/**
+ * Saniye → "Xsa Ydk" formatı (örn: 8100 → "2sa 15dk", 7200 → "2sa", 2700 → "45dk").
+ * Dakika en yakına yuvarlanır; 60dk taşması saate devredilir (7170 → "2sa").
+ */
+export function fmtSaDkSec(s) {
+    const n = Number(s);
+    if (!n || isNaN(n)) return '0dk';
+    const neg = n < 0;
+    const totalMin = Math.round(Math.abs(n) / 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const sign = neg ? '-' : '';
+    if (h > 0 && m > 0) return `${sign}${h}sa ${m}dk`;
+    if (h > 0) return `${sign}${h}sa`;
+    return `${sign}${m}dk`;
+}
+
+/**
+ * Ondalık saat → "Xsa Ydk" formatı (örn: 2.25 → "2sa 15dk", 30 → "30sa")
+ */
+export function fmtSaDk(hours) {
+    const n = parseFloat(hours);
+    if (!n || isNaN(n)) return '0dk';
+    return fmtSaDkSec(n * 3600);
+}
+
+/**
+ * Dakika → "Xsa Ydk" formatı (örn: 135 → "2sa 15dk")
+ */
+export function fmtSaDkMin(minutes) {
+    const n = Number(minutes);
+    if (!n || isNaN(n)) return '0dk';
+    return fmtSaDkSec(n * 60);
+}

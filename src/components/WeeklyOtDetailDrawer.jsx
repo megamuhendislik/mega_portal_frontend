@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Drawer, Progress, Table, Tag, Spin, Empty } from 'antd';
 import { Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import { fmtSaDk } from '../utils/dateUtils';
 
 const STATUS_CONFIG = {
   APPROVED:  { label: 'Onaylı',     color: 'green' },
@@ -73,7 +74,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       dataIndex: 'hours',
       key: 'hours',
       width: 70,
-      render: (h) => <span className="text-xs font-semibold">{h} sa</span>,
+      render: (h) => <span className="text-xs font-semibold">{fmtSaDk(h)}</span>,
     },
     {
       title: 'Durum',
@@ -131,11 +132,11 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold text-gray-700">
-                {data.is_unlimited ? 'Sınırsız' : `${data.used_hours} / ${data.limit_hours} saat`}
+                {data.is_unlimited ? 'Sınırsız' : `${fmtSaDk(data.used_hours)} / ${fmtSaDk(data.limit_hours)}`}
               </span>
               {!data.is_unlimited && (
                 <span className="text-xs text-gray-500">
-                  Kalan: <span className="font-semibold">{data.remaining_hours}</span> saat
+                  Kalan: <span className="font-semibold">{fmtSaDk(data.remaining_hours)}</span>
                 </span>
               )}
             </div>
@@ -163,7 +164,7 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
                 return (
                   <div key={item.key} className="flex items-center gap-2 bg-white rounded-lg border border-gray-100 p-2.5">
                     <Tag color={cfg.color} className="m-0 text-[10px]">{cfg.label}</Tag>
-                    <span className="text-sm font-semibold">{item.hours} sa</span>
+                    <span className="text-sm font-semibold">{fmtSaDk(item.hours)}</span>
                     <span className="text-[10px] text-gray-400">({item.count})</span>
                   </div>
                 );
