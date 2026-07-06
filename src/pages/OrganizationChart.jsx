@@ -359,7 +359,7 @@ const EmployeeNode = ({ emp, onClick, showTags, dnd, isEditMode, onContextMenu, 
     return (
         <div
             data-org-emp={emp.id}
-            data-org-ctx={emp.is_secondary ? 'secondary' : 'primary'}
+            data-org-ctx={(emp._ctxSecondary ?? emp.is_secondary) ? 'secondary' : 'primary'}
             draggable={canDrag}
             onDragStart={canDrag ? (e) => dnd.handleDragStart(e, empData) : undefined}
             onDragEnd={canDrag ? () => dnd.handleDragEnd() : undefined}
@@ -560,7 +560,10 @@ const GroupNode = ({ group, colorClass, onClick, showTags, dnd, isEditMode, onCo
                 {group.employees.map(emp => (
                     <div key={emp.id} className="transform transition-transform hover:scale-105 active:scale-95">
                         <EmployeeNode
-                            emp={{ ...emp, is_secondary: false }} // Ensure clean props
+                            // is_secondary görsel için sıfırlanır ama çapa bağlamı
+                            // (_ctxSecondary) korunur — yıldızlı kopya 'primary'
+                            // damgalanıp çapraz-ok çapasını çalmasın
+                            emp={{ ...emp, is_secondary: false, _ctxSecondary: !!emp.is_secondary }}
                             onClick={onClick}
                             showTags={showTags}
                             dnd={dnd}
@@ -795,7 +798,10 @@ const OrganizationChart = () => {
         const seen = new Set();
         const walk = (n) => {
             const pms = n.primary_managers;
-            if (Array.isArray(pms) && pms.length > 1) {
+            // is_secondary kopyalarda manager_id LOKAL (o departmandaki) ebeveyndir;
+            // primary yerleşim ebeveyni filtreden geçip SAHTE kenar üretirdi —
+            // kenarlar yalnız birincil-bağlam düğümünden üretilir.
+            if (!n.is_secondary && Array.isArray(pms) && pms.length > 1) {
                 pms.forEach(pm => {
                     if (pm.id === n.manager_id) return; // düz ağaç bağlantısı zaten var
                     const k = `${pm.id}->${n.id}`;
@@ -849,14 +855,18 @@ const OrganizationChart = () => {
         return () => cancelAnimationFrame(raf);
     }, [measureCrossEdges, loading, showEmployees, showTags, showManagerInfo, showSecondaryManagers, isEditMode]);
 
-    // Font/geç yerleşim kaymaları için ağacı gözle
+    // Font/geç yerleşim kaymaları için ağacı VE content'i gözle. content
+    // (minWidth:100%) container ile genişler; tam ekran / pencere / sidebar
+    // boyut değişimi flex-center'lı ağacı içeride kaydırır — .tree'nin kendi
+    // boyutu değişmediğinden yalnız-.tree gözlemi bunu kaçırırdı.
+    // (ResizeObserver layout boyutu raporlar, CSS transform'dan etkilenmez.)
     useEffect(() => {
         const content = contentRef.current;
         if (!content || typeof ResizeObserver === 'undefined') return;
-        const tree = content.querySelector('.tree');
-        if (!tree) return;
         const ro = new ResizeObserver(() => measureCrossEdges());
-        ro.observe(tree);
+        ro.observe(content);
+        const tree = content.querySelector('.tree');
+        if (tree) ro.observe(tree);
         return () => ro.disconnect();
     }, [measureCrossEdges, loading]);
 
@@ -1420,7 +1430,11 @@ const OrganizationChart = () => {
                     {crossEdges.length > 0 && (
                         <svg
                             className="absolute pointer-events-none"
-                            style={{ top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: 5 }}
+                            // zIndex 0 + DOM'da .tree'den ÖNCE: transform'lu grup
+                            // sarmalayıcıları stacking context yaratıp iç kartların
+                            // z-10'unu hapsettiğinden (efektif seviye 0), zIndex>0
+                            // olsaydı çizgi grup içi kart YÜZLERİNİN üstüne binerdi
+                            style={{ top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: 0 }}
                         >
                             <defs>
                                 <marker id="crossEdgeArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
@@ -1437,6 +1451,7 @@ const OrganizationChart = () => {
                                     strokeDasharray="6 4"
                                     opacity="0.75"
                                     markerEnd="url(#crossEdgeArrow)"
+                                    style={{ pointerEvents: 'stroke' }}
                                 >
                                     <title>{`${e.fromName} → ${e.toName} (ikinci ana yönetici)`}</title>
                                 </path>
