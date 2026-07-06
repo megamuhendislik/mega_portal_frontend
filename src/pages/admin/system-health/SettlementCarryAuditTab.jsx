@@ -25,6 +25,7 @@ const fmtHM = (sec) => {
 const SEVERITY = {
     CRITICAL: { label: 'KRİTİK', cls: 'bg-red-100 text-red-700 border-red-200' },
     WARNING: { label: 'UYARI', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    INFO: { label: 'BİLGİ', cls: 'bg-blue-100 text-blue-700 border-blue-200' },
     OK: { label: 'SAĞLIKLI', cls: 'bg-green-100 text-green-700 border-green-200' },
 };
 
