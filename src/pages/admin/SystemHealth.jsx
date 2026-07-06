@@ -42,6 +42,7 @@ import ResourceMonitor from '../../components/ResourceMonitor';
 import DashboardTab from './system-health/DashboardTab';
 import RecalculationAuditTab from './system-health/RecalculationAuditTab';
 import RequestAuditTab from './system-health/RequestAuditTab';
+import SettlementCarryAuditTab from './system-health/SettlementCarryAuditTab';
 import GateEventPatternTab from './system-health/GateEventPatternTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
 import PdksRawImportTab from './system-health/PdksRawImportTab';
@@ -108,6 +109,7 @@ export default function SystemHealth() {
                         { id: 'dashboard', name: 'Genel Bakış', icon: ServerStackIcon },
                         { id: 'recalc_audit', name: 'TYR + Veri Bütünlüğü', icon: ArrowPathIcon },
                         { id: 'request_audit', name: 'Talep Denetimi', icon: DocumentMagnifyingGlassIcon },
+                        { id: 'settlement_carry', name: 'Mutabakat Ay Devri', icon: ArrowsRightLeftIcon },
                         { id: 'gate_event_pattern', name: 'Gate Event Analizi', icon: BoltIcon },
                         // ─── 🎯 Hub'lar (alt-sekmeli) ───
                         { id: 'attendance_audit_hub', name: 'Mesai Denetim', icon: CalculatorIcon },
@@ -150,6 +152,7 @@ export default function SystemHealth() {
                 {activeTab === 'dashboard' && <DashboardTab stats={stats} refresh={fetchStats} loading={loadingStats} />}
                 {activeTab === 'recalc_audit' && <RecalculationAuditTab />}
                 {activeTab === 'request_audit' && <RequestAuditTab />}
+                {activeTab === 'settlement_carry' && <SettlementCarryAuditTab />}
                 {activeTab === 'gate_event_pattern' && <GateEventPatternTab />}
                 {/* 🎯 Hub'lar */}
                 {activeTab === 'attendance_audit_hub' && <AttendanceAuditHubTab />}
