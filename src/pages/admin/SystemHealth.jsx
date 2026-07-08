@@ -33,7 +33,8 @@ import {
     ArrowsRightLeftIcon,
     MagnifyingGlassIcon,
     IdentificationIcon,
-    DocumentMagnifyingGlassIcon
+    DocumentMagnifyingGlassIcon,
+    CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 
 import ResourceMonitor from '../../components/ResourceMonitor';
@@ -47,6 +48,7 @@ import GateEventPatternTab from './system-health/GateEventPatternTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
 import PdksRawImportTab from './system-health/PdksRawImportTab';
 import PdksReconcileTab from './system-health/PdksReconcileTab';
+import AnnualLeaveAccrualAuditTab from './system-health/AnnualLeaveAccrualAuditTab';
 
 // Hub tabs (alt-sekmeli paneller — eski 44 tabı kapsar)
 import TestsHubTab from './system-health/TestsHubTab';
@@ -127,6 +129,7 @@ export default function SystemHealth() {
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
+                        { id: 'annual_leave_accrual', name: 'Yıllık İzin Yenileme', icon: CalendarDaysIcon },
                         { id: 'system_reset', name: 'Sistem Sıfırlama', icon: ExclamationTriangleIcon },
                     ].map((tab) => (
                         <button
@@ -171,6 +174,7 @@ export default function SystemHealth() {
                 {activeTab === 'stress_test' && <StressTestTab />}
                 {activeTab === 'synthetic' && <SyntheticDataTab />}
                 {activeTab === 'system_reset' && <SystemResetTab />}
+                {activeTab === 'annual_leave_accrual' && <AnnualLeaveAccrualAuditTab />}
             </div>
 
         </div>
