@@ -13,6 +13,7 @@ import OvertimeClaimModal from '../../components/overtime/OvertimeClaimModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
+import { isBirthdayLeaveAvailable } from '../../utils/leaveBalance';
 
 const filterChipColors = {
     blue:    { bg50: 'bg-blue-50',    text700: 'text-blue-700',    ring200: 'ring-blue-200',    text600: 'text-blue-600' },
@@ -563,8 +564,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                 </button>
             </div>
 
-            {/* Birthday Banner */}
-            {birthdayBalance?.is_birthday_month && !birthdayBalance?.is_used && (
+            {/* Birthday Banner — yalnız doğum ayında + kullanılmamışken (yanmış değilse) */}
+            {isBirthdayLeaveAvailable(birthdayBalance) && (
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-2xl">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">🎂</span>

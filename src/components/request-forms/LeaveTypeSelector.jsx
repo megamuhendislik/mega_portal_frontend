@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { advanceSuffix } from '../../utils/leaveBalance';
+import { advanceSuffix, isBirthdayLeaveAvailable } from '../../utils/leaveBalance';
 import {
   Calendar,
   Clock,
@@ -119,13 +119,8 @@ export default function LeaveTypeSelector({
 }) {
   const [expandedSpecial, setExpandedSpecial] = useState(false);
 
-  // Yanma kuralı: doğum günü izni yalnızca doğum ayında + kullanılmamışken
-  // geçerlidir; ay geçince veya kullanılınca tamamen gizlenir (talep edilemez).
-  // Backend 'available' döner; deploy-sırası güvenliği için mevcut alanlardan
-  // fallback hesaplanır.
-  const birthdayAvailable =
-    birthdayBalance?.available ??
-    (birthdayBalance?.is_birthday_month === true && birthdayBalance?.is_used === false);
+  // Yanma kuralı tek-doğru-kaynak: yalnız doğum ayında + kullanılmamışken göster.
+  const birthdayAvailable = isBirthdayLeaveAvailable(birthdayBalance);
 
   return (
     <div className="space-y-4">
