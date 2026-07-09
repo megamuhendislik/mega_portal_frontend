@@ -119,9 +119,13 @@ export default function LeaveTypeSelector({
 }) {
   const [expandedSpecial, setExpandedSpecial] = useState(false);
 
-  const birthdayNotEligible = birthdayBalance && birthdayBalance.eligible === false;
-  const birthdayUsed = birthdayBalance?.already_used === true;
-  const birthdayDisabled = birthdayNotEligible || birthdayUsed;
+  // Yanma kuralı: doğum günü izni yalnızca doğum ayında + kullanılmamışken
+  // geçerlidir; ay geçince veya kullanılınca tamamen gizlenir (talep edilemez).
+  // Backend 'available' döner; deploy-sırası güvenliği için mevcut alanlardan
+  // fallback hesaplanır.
+  const birthdayAvailable =
+    birthdayBalance?.available ??
+    (birthdayBalance?.is_birthday_month === true && birthdayBalance?.is_used === false);
 
   return (
     <div className="space-y-4">
@@ -145,20 +149,17 @@ export default function LeaveTypeSelector({
           onClick={() => onSelect('EXCUSE_LEAVE')}
         />
 
-        {/* Doğum Günü İzni — her zaman göster, eligible değilse disabled */}
-        <LeaveCard
-          label="Doğum Günü İzni"
-          icon={Gift}
-          color="pink"
-          balanceText={
-            !birthdayBalance ? 'Yükleniyor...'
-            : birthdayUsed ? 'Kullanıldı'
-            : birthdayNotEligible ? 'Hak yok'
-            : '1 gün hakkınız var'
-          }
-          onClick={() => !birthdayDisabled && onSelect('BIRTHDAY_LEAVE')}
-          disabled={birthdayDisabled || !birthdayBalance}
-        />
+        {/* Doğum Günü İzni — yalnız doğum ayında + kullanılmamışken göster;
+            ay geçince/kullanılınca tamamen gizli (yanmış) */}
+        {birthdayAvailable && (
+          <LeaveCard
+            label="Doğum Günü İzni"
+            icon={Gift}
+            color="pink"
+            balanceText="1 gün hakkınız var"
+            onClick={() => onSelect('BIRTHDAY_LEAVE')}
+          />
+        )}
 
         {/* Özel İzinler */}
         <LeaveCard
