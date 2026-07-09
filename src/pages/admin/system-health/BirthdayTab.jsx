@@ -279,6 +279,10 @@ export default function BirthdayTab() {
                                                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">
                                                     <CheckCircleIcon className="w-3 h-3" /> İzin Kullanıldı
                                                 </span>
+                                            ) : emp.expired ? (
+                                                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                                                    🔥 Süresi Doldu
+                                                </span>
                                             ) : (
                                                 <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">
                                                     <GiftIcon className="w-3 h-3" /> İzin Hakkı Var
