@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { advanceSuffix } from '../../utils/leaveBalance';
+import { advanceSuffix, isBirthdayLeaveAvailable } from '../../utils/leaveBalance';
 import {
   Calendar,
   Clock,
@@ -119,9 +119,8 @@ export default function LeaveTypeSelector({
 }) {
   const [expandedSpecial, setExpandedSpecial] = useState(false);
 
-  const birthdayNotEligible = birthdayBalance && birthdayBalance.eligible === false;
-  const birthdayUsed = birthdayBalance?.already_used === true;
-  const birthdayDisabled = birthdayNotEligible || birthdayUsed;
+  // Yanma kuralı tek-doğru-kaynak: yalnız doğum ayında + kullanılmamışken göster.
+  const birthdayAvailable = isBirthdayLeaveAvailable(birthdayBalance);
 
   return (
     <div className="space-y-4">
@@ -145,20 +144,17 @@ export default function LeaveTypeSelector({
           onClick={() => onSelect('EXCUSE_LEAVE')}
         />
 
-        {/* Doğum Günü İzni — her zaman göster, eligible değilse disabled */}
-        <LeaveCard
-          label="Doğum Günü İzni"
-          icon={Gift}
-          color="pink"
-          balanceText={
-            !birthdayBalance ? 'Yükleniyor...'
-            : birthdayUsed ? 'Kullanıldı'
-            : birthdayNotEligible ? 'Hak yok'
-            : '1 gün hakkınız var'
-          }
-          onClick={() => !birthdayDisabled && onSelect('BIRTHDAY_LEAVE')}
-          disabled={birthdayDisabled || !birthdayBalance}
-        />
+        {/* Doğum Günü İzni — yalnız doğum ayında + kullanılmamışken göster;
+            ay geçince/kullanılınca tamamen gizli (yanmış) */}
+        {birthdayAvailable && (
+          <LeaveCard
+            label="Doğum Günü İzni"
+            icon={Gift}
+            color="pink"
+            balanceText="1 gün hakkınız var"
+            onClick={() => onSelect('BIRTHDAY_LEAVE')}
+          />
+        )}
 
         {/* Özel İzinler */}
         <LeaveCard

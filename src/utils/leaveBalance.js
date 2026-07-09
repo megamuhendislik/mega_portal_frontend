@@ -29,3 +29,19 @@ export function formatLeaveBalance(s = {}, { unit = 'gün' } = {}) {
   const net = Number(s.net ?? 0);
   return `${net} ${unit}${advanceSuffix(s)}`;
 }
+
+/**
+ * Doğum günü izni şu an kullanılabilir/talep edilebilir mi (tek-doğru-kaynak).
+ * Kural: yalnızca doğum ayında + kullanılmamışken geçerli. Doğum ayı geçince
+ * veya kullanılınca "yanar" → false.
+ * Backend `available` alanını kullanır; henüz gelmemişse (deploy öncesi)
+ * mevcut alanlardan (is_birthday_month && !is_used) fallback hesaplar.
+ * @param {{available?: boolean, is_birthday_month?: boolean, is_used?: boolean}|null|undefined} balance
+ * @returns {boolean}
+ */
+export function isBirthdayLeaveAvailable(balance) {
+  return (
+    balance?.available ??
+    (balance?.is_birthday_month === true && balance?.is_used === false)
+  );
+}
