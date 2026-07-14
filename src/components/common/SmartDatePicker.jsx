@@ -62,6 +62,7 @@ export default function SmartDatePicker({
   disabledDates,
   holidays = [],
   leaveHistory = [],
+  highlightDates = [],
   accentColor = 'blue',
   showLegend = true,
   compact = false,
@@ -117,6 +118,8 @@ export default function SmartDatePicker({
     });
     return map;
   }, [leaveHistory]);
+
+  const highlightSet = useMemo(() => new Set(highlightDates), [highlightDates]);
 
   const todayStr = useMemo(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }), []);
 
@@ -249,6 +252,9 @@ export default function SmartDatePicker({
             bgClass = accent.light;
           } else if (inHover) {
             bgClass = `${accent.light} opacity-60`;
+          } else if (highlightSet.has(dateStr) && d.isCurrentMonth) {
+            // Kapsanan iş günleri (özel izin önizlemesi) — hafif accent vurgu
+            bgClass = accent.light;
           } else if (holiday && d.isCurrentMonth) {
             bgClass = 'bg-red-50';
             textClass = 'text-red-600';
