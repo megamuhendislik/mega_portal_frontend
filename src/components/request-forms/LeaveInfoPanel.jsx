@@ -74,10 +74,15 @@ export default function LeaveInfoPanel({
   useEffect(() => {
     if (!leaveType || !leaveType.startsWith('SPECIAL:') || !leaveForm.start_date) {
       setPreview(null);
+      setPreviewLoading(false);
       return;
     }
     const code = leaveType.split(':')[1];
-    if (code === 'UNPAID' && !leaveForm.end_date) { setPreview(null); return; }
+    if (code === 'UNPAID' && !leaveForm.end_date) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
     let cancelled = false;
     setPreviewLoading(true);
     const t = setTimeout(async () => {
@@ -187,7 +192,7 @@ export default function LeaveInfoPanel({
               </div>
               {offList.length > 0 && (
                 <div className="text-[11px] text-slate-400">
-                  {offList.length} off günü sayılmadı: {offList.slice(0, 3).map(d => fmtDate(d.date)).join(', ')}{offList.length > 3 ? '…' : ''}
+                  {offList.length} off günü sayılmadı: {offList.slice(0, 3).map(d => fmtDate(d.date)).join(', ')}{(offList.length > 3 || preview.truncated) ? '…' : ''}
                 </div>
               )}
               {!maxDays && preview.total_days === 0 && (
