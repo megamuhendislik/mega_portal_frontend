@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Gift, ChevronUp, ChevronDown } from 'lucide-react';
 import SmartDatePicker from '../common/SmartDatePicker';
 import { advanceSuffix } from '../../utils/leaveBalance';
+import api from '../../services/api';
 
+// NOT: anahtarlar LeaveTypeSelector'ın ürettiği gerçek kodlarla (SPECIAL:PATERNITY
+// vb, _LEAVE eki YOK) eşleşmeli — eski _LEAVE'li anahtarlar hiç eşleşmiyordu.
 const specialMaxDays = {
-  'SPECIAL:PATERNITY_LEAVE': 5,
-  'SPECIAL:BEREAVEMENT_LEAVE': 3,
-  'SPECIAL:MARRIAGE_LEAVE': 3,
-  'SPECIAL:UNPAID_LEAVE': null,
+  'SPECIAL:PATERNITY': 5,
+  'SPECIAL:BEREAVEMENT': 3,
+  'SPECIAL:MARRIAGE': 3,
+  'SPECIAL:UNPAID': null,
 };
 
 const statusColors = {
@@ -30,6 +33,9 @@ export default function LeaveInfoPanel({
 }) {
   const calendarMode = useMemo(() => {
     if (['EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'].includes(leaveType)) return 'single';
+    // Sabit süreli özel izinler: yalnız başlangıç seçilir (bitişi sunucu iş-günü
+    // bazlı hesaplar). Ücretsiz izin (SPECIAL:UNPAID) ve yıllık aralık kalır.
+    if (leaveType && leaveType.startsWith('SPECIAL:') && leaveType !== 'SPECIAL:UNPAID') return 'single';
     return 'range';
   }, [leaveType]);
 
@@ -61,6 +67,45 @@ export default function LeaveInfoPanel({
       .filter(l => ['PENDING', 'APPROVED', 'ESCALATED'].includes(l.status))
       .slice(0, 5);
   }, [recentLeaveHistory]);
+
+  // Özel izin iş-günü önizlemesi (sunucudan; bordroyla birebir). Debounced.
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  useEffect(() => {
+    if (!leaveType || !leaveType.startsWith('SPECIAL:') || !leaveForm.start_date) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+    const code = leaveType.split(':')[1];
+    if (code === 'UNPAID' && !leaveForm.end_date) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const params = { leave_type: code, start_date: leaveForm.start_date };
+        if (code === 'UNPAID') params.end_date = leaveForm.end_date;
+        const res = await api.get('/special-leaves/date-preview/', { params });
+        if (!cancelled) setPreview(res.data);
+      } catch {
+        if (!cancelled) setPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [leaveType, leaveForm.start_date, leaveForm.end_date]);
+
+  const coveredDays = useMemo(
+    () => (preview?.days || []).filter(d => !d.is_off_day).map(d => d.date),
+    [preview]);
+  const fmtDate = (s) => (s
+    ? new Date(s + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
+    : '');
 
   // --- Bölüm B: Bakiye kartı render ---
   const renderBalanceCard = () => {
@@ -128,11 +173,33 @@ export default function LeaveInfoPanel({
     // SPECIAL: izinler
     if (leaveType && leaveType.startsWith('SPECIAL:')) {
       const maxDays = specialMaxDays[leaveType];
+      const offList = (preview?.days || []).filter(d => d.is_off_day);
       return (
-        <div className="bg-purple-50/80 rounded-xl p-3 text-sm text-purple-700">
-          {maxDays
-            ? `Maksimum süre: ${maxDays} gün`
-            : 'Ücretsiz izin — süre sınırı yok'}
+        <div className="bg-purple-50/80 rounded-xl p-3 text-sm text-purple-700 space-y-1.5">
+          <div>{maxDays ? `Maksimum süre: ${maxDays} gün` : 'Ücretsiz izin — süre sınırı yok'}</div>
+          {previewLoading && <div className="text-xs text-slate-400">Hesaplanıyor…</div>}
+          {preview && (
+            <div className="pt-1.5 border-t border-purple-200/40 text-xs text-slate-600 space-y-0.5">
+              {maxDays && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Bitiş</span>
+                  <span className="font-medium text-slate-700">{fmtDate(preview.end_date)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">{maxDays ? 'İş günü' : 'Çalışılan gün'}</span>
+                <span className="font-medium text-purple-700">{preview.total_days} gün</span>
+              </div>
+              {offList.length > 0 && (
+                <div className="text-[11px] text-slate-400">
+                  {offList.length} off günü sayılmadı: {offList.slice(0, 3).map(d => fmtDate(d.date)).join(', ')}{(offList.length > 3 || preview.truncated) ? '…' : ''}
+                </div>
+              )}
+              {!maxDays && preview.total_days === 0 && (
+                <div className="text-red-600 font-medium">Seçilen aralıkta çalışılan gün yok — izin oluşturulamaz.</div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -163,6 +230,7 @@ export default function LeaveInfoPanel({
             onChange={handleDateChange}
             holidays={holidays}
             leaveHistory={calendarLeaveHistory}
+            highlightDates={calendarMode === 'single' ? coveredDays : []}
             minDate={minDate}
             accentColor={accentColor}
           />
