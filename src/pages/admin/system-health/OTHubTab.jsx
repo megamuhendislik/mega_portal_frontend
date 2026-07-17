@@ -4,6 +4,7 @@ import {
     UsersIcon,
     ClockIcon,
     FunnelIcon,
+    LinkIcon,
 } from '@heroicons/react/24/outline';
 
 import OvertimeAuditTab from './OvertimeAuditTab';
@@ -11,6 +12,7 @@ import OTEmployeeAnalysisTab from './OTEmployeeAnalysisTab';
 import OTAnalysisTab from './OTAnalysisTab';
 import OTGroupingAuditTab from './OTGroupingAuditTab';
 import PotentialAuditTab from './PotentialAuditTab';
+import PlannedUnplannedBundleAuditTab from './PlannedUnplannedBundleAuditTab';
 
 const SUB_TABS = [
     { id: 'panel', name: 'Şirket Geneli', icon: BoltIcon, Component: OTAnalysisTab,
@@ -23,6 +25,8 @@ const SUB_TABS = [
       desc: 'OT segment gruplama/parçalanma bug tarayıcı + TXT export' },
     { id: 'potential', name: 'Potansiyel Denetimi', icon: BoltIcon, Component: PotentialAuditTab,
       desc: 'Kart verisi olmayan "hayalet" POTENTIAL OT kayıt tarayıcı' },
+    { id: 'pu-bundle', name: 'Planlı–Plansız Bundle', icon: LinkIcon, Component: PlannedUnplannedBundleAuditTab,
+      desc: 'Plansız OT talebinin planlı (atama) talebe yanlış BUNDLED edilmesi tarayıcı + TXT + onarım' },
 ];
 
 export default function OTHubTab() {
