@@ -57,7 +57,7 @@ export default function PlannedUnplannedBundleAuditTab() {
     // İki adımlı onarım: önce dry-run (plan), sonra uygula.
     const runFix = async (dryRun) => {
         if (!dryRun && !window.confirm(
-            'Onarım UYGULANACAK: birleştirilen plansız talepler çözülüp (POTENTIAL) günler yeniden hesaplanacak.\n\nDevam edilsin mi?'
+            'Onarım UYGULANACAK: birleştirilen plansız talepler çözülüp çalışan adına doğrudan ilgili yöneticinin onayına (PENDING) gönderilecek, günler yeniden hesaplanacak.\n\nDevam edilsin mi?'
         )) return;
         setFixing(true); setError(null);
         try {
@@ -79,7 +79,8 @@ export default function PlannedUnplannedBundleAuditTab() {
                 <p className="text-sm text-gray-500 mb-4">
                     Plansız (AUTO) bir fazla mesai talebinin planlı (INTENDED, atama-bağlı) bir taleple
                     yanlışça birleştirildiği (BUNDLED) kayıtları tarar — bu talepler şefe onaya düşmeden
-                    sessizce onaylı olmuş olabilir. Onarım: birleştirmeyi çözer + günü yeniden hesaplar.
+                    sessizce onaylı olmuş olabilir. Onarım: birleştirmeyi çözer, fazlayı çalışan adına
+                    doğrudan ilgili yöneticinin onayına (PENDING) gönderir + günü yeniden hesaplar.
                 </p>
 
                 <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -135,8 +136,8 @@ export default function PlannedUnplannedBundleAuditTab() {
                     <div className={`mt-4 p-4 rounded-lg border ${fixResult.dry_run ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
                         <p className={`text-sm font-bold mb-2 ${fixResult.dry_run ? 'text-amber-800' : 'text-green-800'}`}>
                             {fixResult.dry_run
-                                ? `DRY-RUN — ${fixResult.unbundled_count} kayıt çözülecek, ${fixResult.fixed_count} gün recalc edilecek (henüz yazılmadı)`
-                                : `Uygulandı — ${fixResult.unbundled_count} kayıt çözüldü, ${fixResult.fixed_count} gün recalc edildi`}
+                                ? `DRY-RUN — ${fixResult.unbundled_count} kayıt çözülecek, ${fixResult.claimed_count ?? 0} excess onaya gönderilecek, ${fixResult.fixed_count} gün recalc (henüz yazılmadı)`
+                                : `Uygulandı — ${fixResult.unbundled_count} kayıt çözüldü, ${fixResult.claimed_count ?? 0} excess onaya (PENDING) gönderildi, ${fixResult.fixed_count} gün recalc`}
                         </p>
                         <div className="space-y-1 max-h-48 overflow-y-auto">
                             {fixResult.fix_log?.map((line, i) => (
