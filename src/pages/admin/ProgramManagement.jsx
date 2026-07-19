@@ -3,11 +3,12 @@ import api from '../../services/api';
 import {
     Package, Plus, Settings, Shield, Trash2, RefreshCw,
     Monitor, Copy, Eye, EyeOff, X, Check,
-    Activity, ChevronRight, Key, UserCheck
+    Activity, ChevronRight, Key, UserCheck, Cpu
 } from 'lucide-react';
 import CreateProgramModal from './program-management/CreateProgramModal';
 import DocsTab from './program-management/DocsTab';
 import UsersTab from './program-management/UsersTab';
+import TelemetryTab from './program-management/TelemetryTab';
 
 const ProgramManagement = () => {
     const [programs, setPrograms] = useState([]);
@@ -309,6 +310,7 @@ const ProgramManagement = () => {
                                 <div className="flex border-b border-slate-100">
                                     {[
                                         { key: 'devices', label: 'Cihazlar', icon: Monitor },
+                                        { key: 'telemetry', label: 'Telemetri', icon: Cpu },
                                         { key: 'users', label: 'Yetkili Kullanıcılar', icon: UserCheck },
                                         { key: 'logs', label: 'Erişim Logları', icon: Activity },
                                         { key: 'docs', label: 'API Rehberi', icon: Shield },
@@ -335,6 +337,9 @@ const ProgramManagement = () => {
                                             accessList={accessList}
                                             onToggle={toggleDevice}
                                         />
+                                    )}
+                                    {activeTab === 'telemetry' && (
+                                        <TelemetryTab programId={selectedProgram.id} />
                                     )}
                                     {activeTab === 'logs' && (
                                         <LogsTab logs={accessLogs} resultColors={resultColors} />
