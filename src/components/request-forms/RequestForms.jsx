@@ -1157,7 +1157,19 @@ export const ExternalDutyForm = ({
                 {externalDutyForm.start_date && externalDutyForm.end_date && (
                     <div className="text-sm text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
                         <span>Toplam Görev Süresi:</span>
-                        <span className="font-bold text-purple-700">{duration} Gün</span>
+                        <span className="font-bold text-purple-700">
+                            {(() => {
+                                // Skip-days: seçili gün sayısını göster, tüm takvim aralığını değil.
+                                const sel = segments.filter(s => s.included).length;
+                                if (sel === 0 || sel === duration) return `${sel || duration} Gün`;
+                                return (
+                                    <>
+                                        {sel} gün seçili
+                                        <span className="text-slate-400 font-normal"> / {duration} günlük aralık</span>
+                                    </>
+                                );
+                            })()}
+                        </span>
                     </div>
                 )}
 
