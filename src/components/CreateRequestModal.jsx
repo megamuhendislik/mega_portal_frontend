@@ -3,7 +3,7 @@ import { ArrowLeft, X, AlertCircle, FileText, Clock, Briefcase, Utensils, Credit
 import { message } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, getWeekMondayISO } from '../utils/dateUtils';
 import useCalendarData from '../hooks/useCalendarData';
 import SmartDatePicker from './common/SmartDatePicker';
 import ModalOverlay from './ui/ModalOverlay';
@@ -323,20 +323,40 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         }
     }, [externalDutyForm.start_date, externalDutyForm.end_date, selectedType]);
 
-    // Fetch weekly OT status when duty preview has overtime
-    const dutyOtMinutes = dutyHoursPreview?.totals?.total_overtime_minutes || 0;
-    const dutyStartDate = externalDutyForm.start_date;
+    // Fetch weekly OT status — bir dış görev aralığı birden çok Pzt–Paz haftasına
+    // yayılabilir. Her hafta AYRI değerlendirilir; bu yüzden OT'si olan HER haftanın
+    // (tekilleştirilmiş Pazartesi) kullanımını ayrı çekip byWeek haritası oluştururuz.
+    // (Eski kod tek referans_tarih=start_date çekiyor, tüm aralık toplamını o tek
+    //  haftanın kalanıyla kıyaslıyordu → farklı haftalardaki günlerde yanlış "limit aşıldı".)
+    const dutyOtWeeksKey = (dutyHoursPreview?.days || [])
+        .filter(d => (d.overtime_minutes || 0) > 0 && d.date)
+        .map(d => getWeekMondayISO(d.date))
+        .filter(Boolean)
+        .sort()
+        .join(',');
     useEffect(() => {
-        if (selectedType !== 'EXTERNAL_DUTY') return;
-        if (!dutyOtMinutes) {
+        if (selectedType !== 'EXTERNAL_DUTY' || !dutyOtWeeksKey) {
             setWeeklyOtForDuty(null);
             return;
         }
-        if (!dutyStartDate) return;
-        api.get('/overtime-requests/weekly-ot-status/', {
-            params: { reference_date: dutyStartDate }
-        }).then(res => setWeeklyOtForDuty(res.data)).catch(() => setWeeklyOtForDuty(null));
-    }, [dutyOtMinutes, selectedType, dutyStartDate]);
+        const mondays = Array.from(new Set(dutyOtWeeksKey.split(',')));
+        let cancelled = false;
+        Promise.all(
+            mondays.map(monday =>
+                api.get('/overtime-requests/weekly-ot-status/', {
+                    params: { reference_date: monday }
+                })
+                    .then(res => [monday, res.data])
+                    .catch(() => [monday, null])
+            )
+        ).then(entries => {
+            if (cancelled) return;
+            const byWeek = {};
+            entries.forEach(([monday, data]) => { if (data) byWeek[monday] = data; });
+            setWeeklyOtForDuty(Object.keys(byWeek).length ? { byWeek } : null);
+        });
+        return () => { cancelled = true; };
+    }, [selectedType, dutyOtWeeksKey]);
 
     useEffect(() => {
         if (isOpen) {

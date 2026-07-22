@@ -263,6 +263,31 @@ export function parseLocalDate(dateStr) {
 }
 
 /**
+ * Verilen YYYY-MM-DD tarihinin ait olduğu SABİT Pzt–Paz haftasının
+ * Pazartesi'sini YYYY-MM-DD olarak döndürür.
+ *
+ * Backend `attendance/services/weekly_ot_service.py` ile birebir aynı kural:
+ *   window_start = reference_date - reference_date.weekday()   (Pzt=0 .. Paz=6)
+ * JS getDay() (Paz=0..Cmt=6) Python weekday()'e çevrilir: (getDay()+6)%7.
+ * Pazar, BİR ÖNCEKİ Pazartesi'nin haftasına aittir (Pzt–Paz kapsayıcı).
+ *
+ * @param {string} dateStr - YYYY-MM-DD
+ * @returns {string} O haftanın Pazartesi'si (YYYY-MM-DD) veya '' (geçersiz giriş)
+ */
+export function getWeekMondayISO(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+    if (!y || !m || !d) return '';
+    const dt = new Date(y, m - 1, d);          // yerel gece yarısı (tarih-only)
+    const offset = (dt.getDay() + 6) % 7;      // Pzt=0 .. Paz=6
+    dt.setDate(dt.getDate() - offset);
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+}
+
+/**
  * Intl.DateTimeFormat ile Istanbul TZ'de Türkçe format.
  * @param {string|Date} date
  * @param {object} options - Intl.DateTimeFormat options (timeZone otomatik eklenir)

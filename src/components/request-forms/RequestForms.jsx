@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
-import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts, getWeekMondayISO, parseLocalDate } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
 
 // ============================================================
@@ -1107,7 +1107,28 @@ export const ExternalDutyForm = ({
             setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
         };
 
+        const includeWeekendsOnly = () => {
+            const updated = segments.map(s => {
+                const d = new Date(s.date + 'T00:00:00');
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6; // Pazar veya Cumartesi
+                return {
+                    ...s,
+                    included: isWeekend,
+                    start_time: isWeekend ? (s.start_time || '08:00') : s.start_time,
+                    end_time: isWeekend ? (s.end_time || '18:00') : s.end_time,
+                };
+            });
+            setExternalDutyForm(prev => ({ ...prev, date_segments: updated }));
+        };
+
         const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+        // Hızlı-seçim butonlarını yalnız işe yarar oldukları aralıklarda göster:
+        // aralıkta hiç hafta sonu yoksa "Hafta Sonu Dahil Et" (aksi halde tek tıkla
+        // tüm seçimi siler); aynı şekilde tümü hafta sonuysa "Hafta İçi Dahil Et".
+        const dayOfWeekOf = (dateStr) => new Date(dateStr + 'T00:00:00').getDay();
+        const hasWeekendDay = segments.some(s => { const g = dayOfWeekOf(s.date); return g === 0 || g === 6; });
+        const hasWeekdayDay = segments.some(s => { const g = dayOfWeekOf(s.date); return g >= 1 && g <= 5; });
 
         return (
             <div className="space-y-5 animate-in slide-in-from-right-8 duration-300">
@@ -1169,10 +1190,18 @@ export const ExternalDutyForm = ({
                                     className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors">
                                     Tümünü Atla
                                 </button>
-                                <button type="button" onClick={includeWeekdaysOnly}
-                                    className="px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
-                                    Hafta İçi Dahil Et
-                                </button>
+                                {hasWeekdayDay && (
+                                    <button type="button" onClick={includeWeekdaysOnly}
+                                        className="px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
+                                        Hafta İçi Dahil Et
+                                    </button>
+                                )}
+                                {hasWeekendDay && (
+                                    <button type="button" onClick={includeWeekendsOnly}
+                                        className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors">
+                                        Hafta Sonu Dahil Et
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -1732,34 +1761,88 @@ export const ExternalDutyForm = ({
                         <div className="animate-pulse text-sm text-slate-400">Mesai hesaplanıyor...</div>
                     </div>
                 ) : null}
-                {dutyHoursPreview?.totals?.total_overtime_minutes > 0 && (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={externalDutyForm.include_overtime}
-                                onChange={(e) => setExternalDutyForm(prev => ({ ...prev, include_overtime: e.target.checked }))}
-                                className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                            />
-                            <span className="text-sm font-medium text-amber-800">Fazla mesai saatlerini talep et</span>
-                        </label>
-                        <div className="text-xs text-amber-600 mt-1 ml-6">
-                            Toplam Fazla Mesai: {Math.round(dutyHoursPreview.totals.total_overtime_minutes / 60 * 10) / 10} saat
-                        </div>
-                        {weeklyOtForDuty && !weeklyOtForDuty.is_unlimited && (
-                            <div className="text-xs mt-1 ml-6">
-                                <span className={weeklyOtForDuty.is_over_limit ? 'text-red-600' : 'text-amber-600'}>
-                                    Haftalık: {weeklyOtForDuty.used_hours}/{weeklyOtForDuty.limit_hours} sa — Kalan: {weeklyOtForDuty.remaining_hours} sa
-                                </span>
-                                {weeklyOtForDuty.remaining_hours < dutyHoursPreview.totals.total_overtime_minutes / 60 && (
-                                    <div className="text-red-600 font-medium mt-0.5">
-                                        Haftalık limit aşılacak — Fazla Mesai kısmı potansiyel olarak kalacak
-                                    </div>
-                                )}
+                {dutyHoursPreview?.totals?.total_overtime_minutes > 0 && (() => {
+                    const totalOtMin = dutyHoursPreview.totals.total_overtime_minutes;
+                    const fmtHrs = (min) => Math.round((min / 60) * 10) / 10;
+
+                    // Projeksiyon OT'sini SABİT Pzt–Paz haftalarına böl (backend gün-bazlı
+                    // limit uyguluyor; her hafta AYRI değerlendirilir). Farklı haftalardaki
+                    // günlerin toplamını tek haftanın kalanıyla kıyaslamak YANLIŞ uyarı üretir.
+                    const projByWeek = {};
+                    (dutyHoursPreview.days || []).forEach(d => {
+                        const ot = d.overtime_minutes || 0;
+                        if (ot <= 0 || !d.date) return;
+                        const wk = getWeekMondayISO(d.date);
+                        if (!wk) return;
+                        projByWeek[wk] = (projByWeek[wk] || 0) + ot;
+                    });
+                    const byWeek = weeklyOtForDuty?.byWeek || {};
+                    const weekMondays = Object.keys(projByWeek).sort();
+
+                    const fmtWeekLabel = (mondayISO) => {
+                        const mon = parseLocalDate(mondayISO);
+                        const sun = new Date(mon);
+                        sun.setDate(mon.getDate() + 6);
+                        const f = (dt) => dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                        return `${f(mon)} – ${f(sun)}`;
+                    };
+
+                    const weekRows = weekMondays.map(wk => {
+                        const usage = byWeek[wk] || null;
+                        const projMin = projByWeek[wk];
+                        const isUnlimited = !!usage?.is_unlimited;
+                        // Karşılaştırma HAM SANİYEDE (backend guard'ı: used + eklenen > limit)
+                        const usedSec = usage ? (usage.used_seconds ?? Math.round((usage.used_hours || 0) * 3600)) : 0;
+                        const limitSec = usage ? (usage.limit_seconds ?? Math.round((usage.limit_hours || 0) * 3600)) : null;
+                        const projSec = Math.round(projMin * 60);
+                        const wouldExceed = !isUnlimited && limitSec != null && (usedSec + projSec > limitSec);
+                        return { wk, usage, projMin, isUnlimited, wouldExceed };
+                    });
+                    const shownRows = weekRows.filter(r => r.usage && !r.isUnlimited);
+                    const anyExceed = weekRows.some(r => r.wouldExceed);
+                    const multiWeek = shownRows.length > 1;
+
+                    return (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={externalDutyForm.include_overtime}
+                                    onChange={(e) => setExternalDutyForm(prev => ({ ...prev, include_overtime: e.target.checked }))}
+                                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                                />
+                                <span className="text-sm font-medium text-amber-800">Fazla mesai saatlerini talep et</span>
+                            </label>
+                            <div className="text-xs text-amber-600 mt-1 ml-6">
+                                Toplam Fazla Mesai: {fmtHrs(totalOtMin)} saat
                             </div>
-                        )}
-                    </div>
-                )}
+                            {shownRows.length > 0 && (
+                                <div className="text-xs mt-1.5 ml-6 space-y-0.5">
+                                    {multiWeek && (
+                                        <div className="text-slate-500">Haftalık limit (Pzt–Paz) her hafta ayrı değerlendirilir:</div>
+                                    )}
+                                    {shownRows.map(r => {
+                                        const u = r.usage;
+                                        return (
+                                            <div key={r.wk} className={r.wouldExceed ? 'text-red-600' : 'text-amber-600'}>
+                                                {multiWeek && <span className="text-slate-500">{fmtWeekLabel(r.wk)}: </span>}
+                                                bu talep +{fmtHrs(r.projMin)} sa · mevcut {u.used_hours}/{u.limit_hours} sa · kalan {u.remaining_hours} sa
+                                                {r.wouldExceed && <span className="font-medium"> — limit aşılıyor</span>}
+                                            </div>
+                                        );
+                                    })}
+                                    {anyExceed && (
+                                        <div className="text-red-600 font-medium mt-0.5">
+                                            {multiWeek
+                                                ? 'Limiti aşan hafta(lar)ın Fazla Mesai kısmı potansiyel olarak kalacak; diğer haftalar normal onaya gider.'
+                                                : 'Haftalık limit aşılacak — Fazla Mesai kısmı potansiyel olarak kalacak'}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
                 {dutyHoursPreview && (() => {
                     const firstWorkingDay = dutyHoursPreview.days?.find(d => !d.is_off_day);
                     const shiftTargetMin = firstWorkingDay?.shift_target_minutes;
