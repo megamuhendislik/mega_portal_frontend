@@ -46,6 +46,7 @@ export const isServiceActiveOn = (
     periods = [],
     isoDate = getIstanbulToday(),
 ) => normalizeServiceUsagePeriods(periods).some(
-    (period) => period.start_date <= isoDate
+    (period) => period.start_date
+        && period.start_date <= isoDate
         && (!period.end_date || isoDate <= period.end_date),
 );
