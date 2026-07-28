@@ -948,11 +948,11 @@ const helpContent = [
             },
             {
                 title: 'Çalışan Bilgilerini Düzenleme',
-                description: 'Listede çalışan satırının üzerine gelin ve kalem (Düzenle) simgesine tıklayın. Kişisel bilgiler, departman/pozisyon, yönetici atamaları, mali takvim, servis kullanımı, haftalık fazla mesai limiti, izin bakiyeleri ve yetkiler buradan güncellenir.'
+                description: 'Listede çalışan satırının üzerine gelin ve kalem (Düzenle) simgesine tıklayın. Kişisel bilgiler, departman/pozisyon, yönetici atamaları, mali takvim, servis kullanım dönemleri, haftalık fazla mesai limiti, izin bakiyeleri ve yetkiler buradan güncellenir.'
             },
             {
                 title: 'Detaylar & Yetkinlik Ayarları',
-                description: 'Bu adımda çalışma tipi, mali takvim ataması, servis kullanımı (ve isteğe bağlı servis toleransı dakikası) ile haftalık fazla mesai limiti (varsayılan 30 saat) tanımlanır. Haftalık limit Pazartesi-Pazar takvim haftasında onaylı + bekleyen mesai toplamına uygulanır.'
+                description: 'Bu adımda çalışma tipi, mali takvim ataması ve birbirleriyle çakışmayan başlangıç/bitiş tarihli servis kullanım dönemleri tanımlanır; bitiş tarihi boş bırakılan dönem devam eder. Servis toleransı yalnızca aktif dönemin kapsadığı tarihlerde geçerlidir. Haftalık fazla mesai limiti (varsayılan 30 saat) Pazartesi-Pazar takvim haftasında onaylı + bekleyen mesai toplamına uygulanır.'
             },
             {
                 title: 'Çalışanı Pasife Alma',
@@ -962,7 +962,7 @@ const helpContent = [
         tips: [
             { type: 'info', text: 'Birincil yönetici değiştiğinde çalışanın BEKLEYEN talepleri otomatik olarak yeni yöneticiye devredilir. Bu durumda çalışan, eski yönetici ve yeni yönetici olmak üzere üç taraf da bildirim alır.' },
             { type: 'warning', text: 'Pasife alma işlemi çalışanın sistem erişimini kapatır. Silme yerine pasife alma kullanılır; geçmiş puantaj ve talep kayıtları korunur.' },
-            { type: 'info', text: 'Servis toleransı çalışan bazında yalnızca servis kullanan (uses_service) çalışanlar için geçerlidir; giriş/çıkış saatlerini vardiya sınırına yuvarlar. Diğer tolerans değerleri çalışan üzerinden değil, mali takvimden okunur.' },
+            { type: 'info', text: 'Servis toleransı yalnızca aktif servis kullanım döneminin kapsadığı tarihlerde giriş/çıkış saatlerini vardiya sınırına yuvarlar. Tam yeniden hesaplama, geçmişteki her tarih için o günün dönemini ayrıca değerlendirir. Diğer tolerans değerleri çalışan üzerinden değil, mali takvimden okunur.' },
             { type: 'success', text: 'İzin Yönetimi adımında yıllık izin bakiyesi, avans izin limiti ve yıllık hak ediş oranı tanımlanır. İşe giriş tarihi kıdem ve hak ediş hesabında kullanılır.' }
         ],
         faq: [
@@ -1305,18 +1305,18 @@ const helpContent = [
             },
             {
                 title: 'Servis Toleransının Etkisi',
-                description: 'Servis kullanan (uses_service) çalışanlarda giriş/çıkış saatleri servis toleransı (varsayılan 15 dk) içinde vardiya sınırlarına yuvarlanır. Bu değer takvimden okunur ve gerekirse çalışan bazında geçersiz kılınabilir. Toplu hesaplama tetiklediğinizde bu yuvarlama otomatik uygulanır.'
+                description: 'Servis kullanımı, birbirleriyle çakışmayan başlangıç/bitiş tarihli dönemlerle tanımlanır; bitiş tarihi boşsa dönem devam eder. Servis toleransı (varsayılan 15 dk) yalnızca aktif dönemin kapsadığı tarihlerde giriş/çıkış saatlerini vardiya sınırlarına yuvarlar. Bu değer takvimden okunur ve gerekirse çalışan bazında geçersiz kılınabilir. Toplu hesaplama, geçmişteki her tarih için ilgili dönemi ayrıca değerlendirir.'
             }
         ],
         tips: [
             { type: 'warning', text: 'Toplu hesaplama çalışan sayısına bağlı olarak sürebilir ve işlem sırasında sistem yavaşlayabilir. Yoğun mesai saatleri dışında tetiklemeyi tercih edin.' },
             { type: 'info', text: 'Log konsolu boşsa Sistem Sağlığı > Sistem Ayarları bölümünden servis loglarını aktif edin.' },
-            { type: 'info', text: 'Servis toleransı yalnızca servis kullanan çalışanları etkiler; diğer çalışanlar için normal tolerans (30 dk vardiya sonrası pencere) geçerlidir.' }
+            { type: 'info', text: 'Servis toleransı yalnızca aktif servis kullanım döneminin kapsadığı tarihlerde uygulanır; diğer tarihler için normal tolerans (30 dk vardiya sonrası pencere) geçerlidir.' }
         ],
         faq: [
             { q: 'Günlük hesaplamayı ne zaman manuel tetiklemeliyim?', a: 'Veri Yönetiminden giriş/çıkış düzeltmesi yaptıktan sonra veya bir günün hesapları güncel görünmüyorsa. Normal akışta canlı güncelleme 30 saniyede bir, gece görevleri 00:01\'de otomatik çalışır.' },
             { q: 'Geçmiş bir tarih için hesaplama çalıştırabilir miyim?', a: 'Evet. Hedef tarih alanından istediğiniz günü seçebilirsiniz; varsayılan olarak dünkü tarih gelir.' },
-            { q: 'Servis toleransı kimlere uygulanır?', a: 'Yalnızca servis kullanan çalışanlara. Giriş/çıkış saatleri vardiya sınırlarına yuvarlanır. Değer takvimden okunur, çalışan bazında farklı bir değer tanımlanabilir.' },
+            { q: 'Servis toleransı kimlere uygulanır?', a: 'Yalnızca aktif servis kullanım döneminin kapsadığı tarihlerde uygulanır. Giriş/çıkış saatleri vardiya sınırlarına yuvarlanır. Değer takvimden okunur, çalışan bazında farklı bir değer tanımlanabilir; tam yeniden hesaplama geçmişteki her tarihi kendi dönemine göre değerlendirir.' },
             { q: 'Loglarda ERROR görüyorum, ne yapmalıyım?', a: 'Hata satırındaki bileşen adı ve mesajı not edin. Kalıcı hatalar için Sistem Sağlığı sayfasındaki tanılama sekmelerini (Kişi-Gün Tanılama, TYR) kullanın.' }
         ]
     },

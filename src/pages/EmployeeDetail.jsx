@@ -10,6 +10,13 @@ import { useAuth } from '../context/AuthContext';
 import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
+import ServiceUsagePeriodsEditor from '../components/ServiceUsagePeriodsEditor';
+import {
+    normalizeServiceUsagePeriods,
+    serializeServiceUsagePeriods,
+    validateServiceUsagePeriods,
+    isServiceActiveOn,
+} from '../utils/serviceUsagePeriods';
 
 const EmployeeDetail = () => {
     const { id } = useParams();
@@ -58,7 +65,7 @@ const EmployeeDetail = () => {
         daily_break_allowance: 0,
         shift_start: '', shift_end: '',
         lunch_start: '12:30', lunch_end: '13:30',
-        uses_service: false, service_tolerance_minutes: 0,
+        uses_service: false, service_usage_periods: [], service_tolerance_minutes: 0,
         weekly_ot_limit_hours: 30,
 
         // Permissions
@@ -130,7 +137,10 @@ const EmployeeDetail = () => {
             shift_end: emp.shift_end || '',
             lunch_start: emp.lunch_start || '12:30',
             lunch_end: emp.lunch_end || '13:30',
-            uses_service: emp.uses_service || false,
+            service_usage_periods: normalizeServiceUsagePeriods(
+                emp.service_usage_periods || [],
+            ),
+            uses_service: isServiceActiveOn(emp.service_usage_periods || []),
             service_tolerance_minutes: emp.service_tolerance_minutes || 0,
             weekly_ot_limit_hours: emp.weekly_ot_limit_hours ?? 30,
             weekly_schedule: emp.weekly_schedule || {},
@@ -231,6 +241,14 @@ const EmployeeDetail = () => {
     };
 
     const handleSave = async () => {
+        const servicePeriodErrors = validateServiceUsagePeriods(
+            formData.service_usage_periods,
+        );
+        if (servicePeriodErrors.length > 0) {
+            toast.error(servicePeriodErrors[0]);
+            return;
+        }
+
         // Pre-save yönetici validasyonu
         const deptObj = departments.find(d => String(d.id) === String(formData.department));
         const posObj = jobPositions.find(p => String(p.id) === String(formData.job_position));
@@ -264,6 +282,13 @@ const EmployeeDetail = () => {
                 work_schedule: formData.work_schedule || null,
                 department: formData.department || null,
                 job_position: formData.job_position || null,
+                service_usage_periods: serializeServiceUsagePeriods(
+                    formData.service_usage_periods,
+                ),
+                uses_service: isServiceActiveOn(formData.service_usage_periods),
+                service_tolerance_minutes: formData.service_usage_periods.length
+                    ? (formData.service_tolerance_minutes || null)
+                    : null,
             };
 
             // Handle password change
@@ -280,7 +305,15 @@ const EmployeeDetail = () => {
         } catch (error) {
             console.error('Error updating employee:', error);
             const data = error.response?.data;
-            if (data?.primary_managers) {
+            if (data?.service_usage_periods) {
+                const messages = Array.isArray(data.service_usage_periods)
+                    ? data.service_usage_periods
+                    : [data.service_usage_periods];
+                const firstMessage = typeof messages[0] === 'string'
+                    ? messages[0]
+                    : JSON.stringify(messages[0]);
+                toast.error(firstMessage);
+            } else if (data?.primary_managers) {
                 toast.error(Array.isArray(data.primary_managers) ? data.primary_managers.join(' ') : data.primary_managers);
             } else {
                 toast.error('Güncelleme sırasında hata oluştu: ' + (data?.detail || error.message));
@@ -828,25 +861,19 @@ const EmployeeDetail = () => {
                                             <input type="time" name="lunch_end" value={formData.lunch_end} onChange={handleInputChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                         </div>
 
-                                        {/* Service Usage */}
+                                        {/* Service Usage Periods */}
                                         <div className="md:col-span-2 pt-4 border-t border-slate-100 mt-2">
-                                            <div className="flex items-center gap-3">
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.uses_service || false}
-                                                        onChange={e => setFormData(prev => ({ ...prev, uses_service: e.target.checked }))}
-                                                        className="sr-only peer"
-                                                    />
-                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                </label>
-                                                <div>
-                                                    <span className="text-sm font-medium text-slate-700">Servis Kullanıyor</span>
-                                                    <p className="text-xs text-slate-400">İşaretlenirse, servis toleransı uygulanır</p>
-                                                </div>
-                                            </div>
+                                            <ServiceUsagePeriodsEditor
+                                                value={formData.service_usage_periods}
+                                                onChange={(periods) => setFormData((previous) => ({
+                                                    ...previous,
+                                                    service_usage_periods: periods,
+                                                    uses_service: isServiceActiveOn(periods),
+                                                }))}
+                                                disabled={!canEdit}
+                                            />
                                         </div>
-                                        {formData.uses_service && (
+                                        {formData.service_usage_periods.length > 0 && (
                                             <div>
                                                 <label className="block text-sm font-medium text-slate-700 mb-1">Servis Toleransı (Dk)</label>
                                                 <input
