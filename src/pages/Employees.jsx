@@ -7,6 +7,13 @@ import { Settings, Trash2, Edit2, Download, Upload, CalendarRange, UserX, UserCh
 import { Modal } from 'antd';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
+import ServiceUsagePeriodsEditor from '../components/ServiceUsagePeriodsEditor';
+import {
+    normalizeServiceUsagePeriods,
+    serializeServiceUsagePeriods,
+    validateServiceUsagePeriods,
+    isServiceActiveOn,
+} from '../utils/serviceUsagePeriods';
 
 
 // --- Constants ---
@@ -27,7 +34,7 @@ const FIELD_TO_STEP = {
     job_position: 2, tags: 2, assignments: 2, employee_code: 2,
     phone: 3, secondary_phone: 3, emergency_contact_name: 3,
     emergency_contact_phone: 3, address: 3, insurance_number: 3,
-    work_type: 4, fiscal_calendar: 4, uses_service: 4,
+    work_type: 4, fiscal_calendar: 4, uses_service: 4, service_usage_periods: 4,
     service_tolerance_minutes: 4, weekly_ot_limit_hours: 4, technical_skills: 4,
     leave_entitlements: 5, annual_leave_balance: 5,
     annual_leave_advance_limit: 5, annual_leave_accrual_rate: 5, hired_date: 5,
@@ -67,6 +74,7 @@ const INITIAL_FORM_STATE = {
     employment_status: 'ACTIVE',
     work_type: 'FULL_TIME',
     uses_service: false, // [NEW] Service Usage
+    service_usage_periods: [],
     service_tolerance_minutes: 0,
     weekly_ot_limit_hours: 30,
     remote_work_days: [], // ['MON', 'WED']
@@ -484,7 +492,7 @@ const StepContact = ({ formData, handleChange }) => (
     </div>
 );
 
-const StepDetails = ({ formData, handleChange, workSchedules }) => {
+const StepDetails = ({ formData, handleChange, setFormData, workSchedules }) => {
 
 
 
@@ -606,26 +614,19 @@ const StepDetails = ({ formData, handleChange, workSchedules }) => {
                     </div>
                 </div>
 
-                {/* Service Usage Toggle */}
+                {/* Service Usage Periods */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={formData.uses_service || false}
-                                onChange={e => handleChange('uses_service', e.target.checked)}
-                                className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                        <div>
-                            <span className="text-sm font-medium text-slate-700">Servis Kullanıyor</span>
-                            <p className="text-xs text-slate-400">İşaretlenirse, servis toleransı uygulanır</p>
-                        </div>
-                    </div>
+                    <ServiceUsagePeriodsEditor
+                        value={formData.service_usage_periods}
+                        onChange={(periods) => setFormData((previous) => ({
+                            ...previous,
+                            service_usage_periods: periods,
+                            uses_service: isServiceActiveOn(periods),
+                        }))}
+                    />
 
-                    {formData.uses_service && (
-                        <div className="pl-14 animate-fade-in">
+                    {formData.service_usage_periods.length > 0 && (
+                        <div className="animate-fade-in">
                             <InputField
                                 label="Servis Toleransı (Dk)"
                                 type="number"
@@ -1507,7 +1508,10 @@ const Employees = () => {
                 card_uid: data.card_uid || '',
                 employment_status: data.employment_status,
                 work_type: data.work_type,
-                uses_service: data.uses_service || false, // [NEW]
+                service_usage_periods: normalizeServiceUsagePeriods(
+                    data.service_usage_periods || [],
+                ),
+                uses_service: isServiceActiveOn(data.service_usage_periods || []),
                 service_tolerance_minutes: data.service_tolerance_minutes || 0,
                 weekly_ot_limit_hours: data.weekly_ot_limit_hours ?? 30,
                 hired_date: data.hired_date || '',
@@ -1579,6 +1583,16 @@ const Employees = () => {
 
     const handleSubmit = async () => {
         setSubmitting(true);
+        const servicePeriodErrors = validateServiceUsagePeriods(
+            formData.service_usage_periods,
+        );
+        if (servicePeriodErrors.length > 0) {
+            setCurrentStep(4);
+            toast.error(servicePeriodErrors[0]);
+            setSubmitting(false);
+            return;
+        }
+
         try {
             // Payload Prep
             const cleanPayload = { ...formData };
@@ -1600,7 +1614,13 @@ const Employees = () => {
                 lunch_start: null,
                 lunch_end: null,
                 daily_break_allowance: null,
-                service_tolerance_minutes: cleanPayload.uses_service ? (cleanPayload.service_tolerance_minutes || null) : null,
+                service_usage_periods: serializeServiceUsagePeriods(
+                    cleanPayload.service_usage_periods,
+                ),
+                uses_service: isServiceActiveOn(cleanPayload.service_usage_periods),
+                service_tolerance_minutes: cleanPayload.service_usage_periods.length
+                    ? (cleanPayload.service_tolerance_minutes || null)
+                    : null,
                 weekly_ot_limit_hours: cleanPayload.weekly_ot_limit_hours ?? 30,
                 weekly_schedule: null, // Force remove any legacy weekly schedule data
                 // assignments is already in cleanPayload
@@ -1636,6 +1656,20 @@ const Employees = () => {
 
             if (!errData) {
                 toast.error("Bağlantı hatası. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            if (errData.service_usage_periods) {
+                const messages = Array.isArray(errData.service_usage_periods)
+                    ? errData.service_usage_periods
+                    : [errData.service_usage_periods];
+                const firstMessage = typeof messages[0] === 'string'
+                    ? messages[0]
+                    : JSON.stringify(messages[0]);
+
+                setFormErrors({ 4: [{ field: 'service_usage_periods', message: firstMessage }] });
+                goToStep(4, true);
+                toast.error(firstMessage);
                 return;
             }
 
@@ -2186,7 +2220,7 @@ const Employees = () => {
 
                                 {/* Section 4: Details */}
                                 <section id="sec-details" className="scroll-mt-24 pt-8 border-t border-slate-100">
-                                    <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />
+                                    <StepDetails formData={formData} handleChange={handleInputChange} setFormData={setFormData} workSchedules={workSchedules} />
                                 </section>
 
                                 {/* Section 5: Annual Leave (Edit Mode) */}
@@ -2235,7 +2269,7 @@ const Employees = () => {
                                 {currentStep === 1 && <StepPersonal formData={formData} handleChange={handleInputChange} canEditSensitive={hasPermission('PAGE_EMPLOYEES')} canChangePassword={hasPermission('PAGE_EMPLOYEES')} />}
                                 {currentStep === 2 && <StepCorporate formData={formData} handleChange={handleInputChange} departments={departments} jobPositions={jobPositions} employees={employees} showManagerValidation={showManagerValidation} />}
                                 {currentStep === 3 && <StepContact formData={formData} handleChange={handleInputChange} />}
-                                {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} workSchedules={workSchedules} />}
+                                {currentStep === 4 && <StepDetails formData={formData} handleChange={handleInputChange} setFormData={setFormData} workSchedules={workSchedules} />}
                                 {currentStep === 5 && <StepLeave formData={formData} handleChange={handleInputChange} />}
                                 {currentStep === 6 && hasPermission('PAGE_EMPLOYEES') && <StepPermissions formData={formData} handleChange={handleInputChange} permissions={permissions} jobPositions={jobPositions} roles={roles} canManageRoles={true} />}
                                 {currentStep === 6 && !hasPermission('PAGE_EMPLOYEES') && (
@@ -2329,6 +2363,3 @@ const Employees = () => {
 };
 
 export default Employees;
-
-
-
