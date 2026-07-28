@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CalendarRange, Plus, Trash2 } from 'lucide-react';
 import { getIstanbulToday } from '../utils/dateUtils';
 import {
@@ -25,16 +24,12 @@ const createPeriodKey = (periods) => {
 const ServiceUsagePeriodsEditor = ({ value = [], onChange, disabled = false }) => {
     const periods = normalizeServiceUsagePeriods(value);
     const validationErrors = validateServiceUsagePeriods(value);
-    const [endDateEditingKeys, setEndDateEditingKeys] = useState([]);
     const isServiceActive = isServiceActiveOn(value);
 
     const updatePeriod = (key, changes) => {
-        const nextPeriods = periods.map((period) => {
-            if (period._key !== key) return period;
-
-            const nextPeriod = { ...period, ...changes };
-            return { ...nextPeriod, ongoing: !nextPeriod.end_date };
-        });
+        const nextPeriods = periods.map((period) => (
+            period._key === key ? { ...period, ...changes } : period
+        ));
         onChange(nextPeriods);
     };
 
@@ -54,24 +49,18 @@ const ServiceUsagePeriodsEditor = ({ value = [], onChange, disabled = false }) =
 
     const handleOngoingChange = (period, checked) => {
         if (checked) {
-            setEndDateEditingKeys((keys) => keys.filter((key) => key !== period._key));
             updatePeriod(period._key, { end_date: null, ongoing: true });
             return;
         }
 
-        setEndDateEditingKeys((keys) => [...new Set([...keys, period._key])]);
-        onChange(periods.map((item) => (
-            item._key === period._key ? { ...item, ongoing: false } : item
-        )));
+        updatePeriod(period._key, { ongoing: false });
     };
 
     const handleEndDateChange = (period, endDate) => {
-        setEndDateEditingKeys((keys) => keys.filter((key) => key !== period._key));
-        updatePeriod(period._key, { end_date: endDate || null, ongoing: !endDate });
+        updatePeriod(period._key, { end_date: endDate || null, ongoing: false });
     };
 
     const handleDelete = (key) => {
-        setEndDateEditingKeys((keys) => keys.filter((editingKey) => editingKey !== key));
         onChange(periods.filter((period) => period._key !== key));
     };
 
@@ -103,10 +92,11 @@ const ServiceUsagePeriodsEditor = ({ value = [], onChange, disabled = false }) =
                 ) : (
                     <div className="relative space-y-3 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-blue-100">
                         {periods.map((period, index) => {
-                            const isOngoing = !period.end_date && !endDateEditingKeys.includes(period._key);
+                            const isOngoing = period.ongoing;
                             const startInputId = `service-period-start-${period._key}`;
                             const endInputId = `service-period-end-${period._key}`;
                             const hasInvalidRange = period.end_date && period.end_date < period.start_date;
+                            const isEndDateMissing = !period.ongoing && !period.end_date;
 
                             return (
                                 <div key={period._key} className="relative rounded-lg border border-slate-200 bg-white p-3 pl-7 shadow-sm">
@@ -134,7 +124,7 @@ const ServiceUsagePeriodsEditor = ({ value = [], onChange, disabled = false }) =
                                                     min={period.start_date || undefined}
                                                     onChange={(event) => handleEndDateChange(period, event.target.value)}
                                                     disabled={disabled || isOngoing}
-                                                    aria-invalid={hasInvalidRange}
+                                                    aria-invalid={hasInvalidRange || isEndDateMissing}
                                                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                                 />
                                             </div>
