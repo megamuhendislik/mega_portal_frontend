@@ -16,6 +16,11 @@ import api from '../../../services/api';
 import Phase2IssuePanel from './Phase2IssuePanel';
 import IntegrityFindingsPanel from './IntegrityFindingsPanel';
 import SanityCheckPanel from './SanityCheckPanel';
+import {
+    buildFrcApplyConfirmation,
+    getFrcApplyBlockReason,
+    getProtectedDayInfo,
+} from './recalculationAuditSafety';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -147,10 +152,10 @@ export default function RecalculationAuditTab() {
     const [startDate, setStartDate] = useState(getIstanbulDateOffset(-30));
     const [endDate, setEndDate] = useState(getIstanbulToday());
     const [employeeId, setEmployeeId] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [fixing, setFixing] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState(null);
+    const [loading] = useState(false);
+    const [fixing] = useState(false);
+    const [result] = useState(null);
+    const [error] = useState(null);
     const [showLog, setShowLog] = useState(false);
     const [expandedMismatches, setExpandedMismatches] = useState(new Set());
 
@@ -173,6 +178,11 @@ export default function RecalculationAuditTab() {
     const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
     const [showAllDays, setShowAllDays] = useState(false);
+    const {
+        count: frcProtectedDaysSkipped,
+        details: frcProtectedDayDetails,
+    } = getProtectedDayInfo(frcResult);
+    const frcApplyBlockReason = getFrcApplyBlockReason(frcResult);
 
     // OT Request Audit state
     const [otAuditLoading, setOtAuditLoading] = useState(false);
@@ -338,6 +348,11 @@ export default function RecalculationAuditTab() {
     // ── Full Recalculation ──────────────────────────────────────────
     const runFullRecalculation = async (mode = 'dry_run') => {
         if (mode === 'apply') {
+            const applyBlockReason = getFrcApplyBlockReason(frcResult);
+            if (applyBlockReason) {
+                setFrcError(applyBlockReason);
+                return;
+            }
             // Çalışan aleyhine (Normal AZALANSA) ek koruma: prompt + tam-kelime
             // yazma şartı. Türkay 11 May benzeri 2sa 20dk haksız eksik
             // senaryoları kaza ile uygulanmasın.
@@ -359,12 +374,8 @@ export default function RecalculationAuditTab() {
                     return;
                 }
             }
-            if (!window.confirm(
-                'DIKKAT: Tum degisiklikler kalici olarak uygulanacak!\n\n' +
-                'Dry-run raporundaki tum split duzeltmeleri, normal mesai yeniden hesaplamalari,\n' +
-                'Fazla Mesai ayarlamalari ve aylik ozet guncellemeleri veritabanina yazilacak.\n\n' +
-                'Bu islem geri alinamaz. Devam etmek istiyor musunuz?'
-            )) return;
+            const { count: protectedDaysSkipped } = getProtectedDayInfo(frcResult);
+            if (!window.confirm(buildFrcApplyConfirmation(protectedDaysSkipped))) return;
         }
 
         setFrcLoading(true);
@@ -838,51 +849,6 @@ export default function RecalculationAuditTab() {
         } finally {
             setUniLoading(false);
             setUniFixing(false);
-        }
-    };
-
-    const runAudit = async () => {
-        setLoading(true);
-        setError(null);
-        setResult(null);
-        try {
-            const body = {
-                start_date: startDate,
-                end_date: endDate,
-            };
-            if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/recalculation-audit/', body, { timeout: 300000 });
-            setResult(res.data);
-        } catch (e) {
-            setError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const runFix = async () => {
-        if (!window.confirm(
-            'DİKKAT: Bu işlem tüm farklılıkları kalıcı olarak düzeltecektir.\n\n' +
-            'Tüm günler yeniden hesaplanacak ve sonuçlar veritabanına kaydedilecek.\n' +
-            'Aylık özetler de güncellenecektir.\n\n' +
-            'Devam etmek istiyor musunuz?'
-        )) return;
-
-        setFixing(true);
-        setError(null);
-        setResult(null);
-        try {
-            const body = {
-                start_date: startDate,
-                end_date: endDate,
-            };
-            if (employeeId) body.employee_id = parseInt(employeeId);
-            const res = await api.post('/system/health-check/recalculation-fix/', body, { timeout: 300000 });
-            setResult(res.data);
-        } catch (e) {
-            setError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
-        } finally {
-            setFixing(false);
         }
     };
 
@@ -1697,7 +1663,9 @@ export default function RecalculationAuditTab() {
                                     setFrcResult(null);
                                     setFrcError(null);
                                     setFrcProgress(null);
-                                } catch {}
+                                } catch {
+                                    // Polling will surface any persistent backend error.
+                                }
                             }}
                             className="mt-2 px-4 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
                         >
@@ -1733,11 +1701,15 @@ export default function RecalculationAuditTab() {
                             {frcResult.mode === 'dry_run' && (
                                 <button
                                     onClick={() => runFullRecalculation('apply')}
-                                    disabled={frcLoading}
-                                    title={frcResult.run_id
+                                    disabled={frcLoading || Boolean(frcApplyBlockReason)}
+                                    title={frcApplyBlockReason || (frcResult.run_id
                                         ? 'Bu simülasyonun sonucu hazır (staged) — yeniden hesaplamadan doğrudan canlıya yazılır.'
-                                        : 'Değişiklikler hesaplanıp canlıya uygulanır.'}
-                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-lg"
+                                        : 'Değişiklikler hesaplanıp canlıya uygulanır.')}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm text-white transition-all shadow-lg ${
+                                        frcApplyBlockReason
+                                            ? 'bg-gray-400 cursor-not-allowed shadow-none'
+                                            : 'bg-red-600 hover:bg-red-700 active:scale-95'
+                                    }`}
                                 >
                                     <WrenchScrewdriverIcon className="w-4 h-4" />
                                     {(frcResult.summary?.total_employees_changed > 0 || frcResult.summary?.restored_requests > 0 || frcResult.summary?.dedup_manual_ot > 0)
@@ -1812,6 +1784,77 @@ export default function RecalculationAuditTab() {
                             </div>
                         )}
                     </div>
+
+                    {frcApplyBlockReason && (
+                        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-300 rounded-lg text-red-800 text-sm">
+                            <XCircleIcon className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <div className="font-bold">Kısmi rapor uygulanamaz</div>
+                                <div className="mt-1">{frcResult._partial_note}</div>
+                                <div className="mt-1 text-xs text-red-700">
+                                    Eksik grup nedeniyle bu önizleme canlıya uygulanmayacak. Önizlemeyi tekrar çalıştırın.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {frcProtectedDaysSkipped > 0 && (
+                        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-sm">
+                            <ExclamationTriangleIcon className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                                <div className="font-bold">
+                                    {frcProtectedDaysSkipped} korumalı gün güvenlik nedeniyle yeniden hesaplanmadı
+                                </div>
+                                <div className="mt-1 text-xs text-amber-800">
+                                    Bağlı fazla mesai talepleri ve puantaj kimlikleri korunarak bu günler değişmeden bırakılacak.
+                                </div>
+                                {frcProtectedDayDetails.length > 0 && (
+                                    <details className="mt-3">
+                                        <summary className="cursor-pointer font-semibold text-xs hover:text-amber-950">
+                                            Atlanan günlerin detayını göster ({frcProtectedDayDetails.length})
+                                        </summary>
+                                        <div className="mt-2 max-h-64 overflow-auto rounded border border-amber-200 bg-white/70">
+                                            <table className="w-full text-xs">
+                                                <thead className="sticky top-0 bg-amber-100 text-amber-900">
+                                                    <tr className="text-left">
+                                                        <th className="px-2 py-1.5">Çalışan</th>
+                                                        <th className="px-2 py-1.5">Tarih</th>
+                                                        <th className="px-2 py-1.5">Puantaj</th>
+                                                        <th className="px-2 py-1.5">FM Talebi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {frcProtectedDayDetails.map((detail, index) => (
+                                                        <tr
+                                                            key={`${detail.employee_id || 'emp'}-${detail.date || detail.work_date || 'date'}-${index}`}
+                                                            className="border-t border-amber-100"
+                                                        >
+                                                            <td className="px-2 py-1.5 font-medium">
+                                                                {detail.employee_name || detail.employee || `#${detail.employee_id || '-'}`}
+                                                            </td>
+                                                            <td className="px-2 py-1.5 font-mono">
+                                                                {detail.date || detail.work_date || '-'}
+                                                            </td>
+                                                            <td className="px-2 py-1.5 font-mono">
+                                                                {Array.isArray(detail.attendance_ids)
+                                                                    ? detail.attendance_ids.join(', ')
+                                                                    : (detail.attendance_id || '-')}
+                                                            </td>
+                                                            <td className="px-2 py-1.5 font-mono">
+                                                                {Array.isArray(detail.request_ids)
+                                                                    ? detail.request_ids.join(', ')
+                                                                    : (detail.request_id || '-')}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </details>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1964,7 +2007,9 @@ export default function RecalculationAuditTab() {
                     ) : null}
 
                     {/* No changes */}
-                    {frcResult.summary?.total_employees_changed === 0 && (
+                    {frcResult.summary?.total_employees_changed === 0
+                        && frcProtectedDaysSkipped === 0
+                        && !frcApplyBlockReason && (
                         <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-bold">
                             <CheckCircleIcon className="w-5 h-5" />
                             Tum hesaplamalar dogru — degisiklik gerekmiyor!
