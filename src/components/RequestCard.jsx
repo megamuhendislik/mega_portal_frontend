@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, FileText, CheckCircle2, XCircle, Edit2, Trash2, Check, X, User, CheckCircle, CreditCard, Users } from 'lucide-react';
 import ModalOverlay from './ui/ModalOverlay';
+import { fmtSaDk } from '../utils/dateUtils';
 
 const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, onReject, isIncoming, onViewDetails }) => {
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -112,16 +113,16 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                             <div className="grid grid-cols-3 gap-2 text-center">
                                 <div className="bg-white/60 p-1 rounded">
                                     <span className="block text-[10px] text-slate-400 font-bold">Toplam</span>
-                                    <span className="font-black text-orange-700 text-sm">{request.employee_annual_leave_balance.hours_entitled} sa</span>
+                                    <span className="font-black text-orange-700 text-sm">{fmtSaDk(request.employee_annual_leave_balance.hours_entitled)}</span>
                                 </div>
                                 <div className="bg-white/60 p-1 rounded">
                                     <span className="block text-[10px] text-slate-400 font-bold">Kullanılan</span>
-                                    <span className="font-black text-amber-600 text-sm">{request.employee_annual_leave_balance.hours_used} sa</span>
+                                    <span className="font-black text-amber-600 text-sm">{fmtSaDk(request.employee_annual_leave_balance.hours_used)}</span>
                                 </div>
                                 <div className="bg-white/60 p-1 rounded">
                                     <span className="block text-[10px] text-slate-400 font-bold">Kalan</span>
                                     <span className={`font-black text-sm ${request.employee_annual_leave_balance.hours_remaining <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                        {request.employee_annual_leave_balance.hours_remaining} sa
+                                        {fmtSaDk(request.employee_annual_leave_balance.hours_remaining)}
                                     </span>
                                 </div>
                             </div>

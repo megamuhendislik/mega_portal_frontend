@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { advanceSuffix } from '../../utils/leaveBalance';
+import { fmtSaDk } from '../../utils/dateUtils';
 import {
   Calendar,
   Clock,
@@ -141,7 +142,7 @@ export default function LeaveTypeSelector({
           label="Mazeret İzni"
           icon={Clock}
           color="amber"
-          balanceText={`Kalan: ${excuseBalance?.hours_remaining != null ? excuseBalance.hours_remaining : (excuseBalance?.remaining_hours || 0)} saat`}
+          balanceText={`Kalan: ${fmtSaDk(excuseBalance?.hours_remaining ?? excuseBalance?.remaining_hours)}`}
           onClick={() => onSelect('EXCUSE_LEAVE')}
         />
 
