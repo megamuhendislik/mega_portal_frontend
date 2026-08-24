@@ -7,7 +7,7 @@ import api from '../../services/api';
 // NOT: anahtarlar LeaveTypeSelector'ın ürettiği gerçek kodlarla (SPECIAL:PATERNITY
 // vb, _LEAVE eki YOK) eşleşmeli — eski _LEAVE'li anahtarlar hiç eşleşmiyordu.
 const specialMaxDays = {
-  'SPECIAL:PATERNITY': 5,
+  'SPECIAL:PATERNITY': 10,
   'SPECIAL:BEREAVEMENT': 3,
   'SPECIAL:MARRIAGE': 3,
   'SPECIAL:UNPAID': null,
@@ -33,9 +33,10 @@ export default function LeaveInfoPanel({
 }) {
   const calendarMode = useMemo(() => {
     if (['EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'].includes(leaveType)) return 'single';
-    // Sabit süreli özel izinler: yalnız başlangıç seçilir (bitişi sunucu iş-günü
-    // bazlı hesaplar). Ücretsiz izin (SPECIAL:UNPAID) ve yıllık aralık kalır.
-    if (leaveType && leaveType.startsWith('SPECIAL:') && leaveType !== 'SPECIAL:UNPAID') return 'single';
+    // Ölüm/evlilik sabit süreli olduğu için yalnız başlangıç seçilir. Babalık
+    // (1-10 iş günü), ücretsiz izin ve yıllık izin tarih aralığı kullanır.
+    if (leaveType && leaveType.startsWith('SPECIAL:')
+      && !['SPECIAL:PATERNITY', 'SPECIAL:UNPAID'].includes(leaveType)) return 'single';
     return 'range';
   }, [leaveType]);
 
@@ -71,28 +72,36 @@ export default function LeaveInfoPanel({
   // Özel izin iş-günü önizlemesi (sunucudan; bordroyla birebir). Debounced.
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
   useEffect(() => {
     if (!leaveType || !leaveType.startsWith('SPECIAL:') || !leaveForm.start_date) {
       setPreview(null);
       setPreviewLoading(false);
+      setPreviewError('');
       return;
     }
     const code = leaveType.split(':')[1];
-    if (code === 'UNPAID' && !leaveForm.end_date) {
+    const usesSelectedRange = ['PATERNITY', 'UNPAID'].includes(code);
+    if (usesSelectedRange && !leaveForm.end_date) {
       setPreview(null);
       setPreviewLoading(false);
+      setPreviewError('');
       return;
     }
     let cancelled = false;
     setPreviewLoading(true);
+    setPreviewError('');
     const t = setTimeout(async () => {
       try {
         const params = { leave_type: code, start_date: leaveForm.start_date };
-        if (code === 'UNPAID') params.end_date = leaveForm.end_date;
+        if (usesSelectedRange) params.end_date = leaveForm.end_date;
         const res = await api.get('/special-leaves/date-preview/', { params });
         if (!cancelled) setPreview(res.data);
-      } catch {
-        if (!cancelled) setPreview(null);
+      } catch (err) {
+        if (!cancelled) {
+          setPreview(null);
+          setPreviewError(err.response?.data?.detail || 'İzin süresi hesaplanamadı.');
+        }
       } finally {
         if (!cancelled) setPreviewLoading(false);
       }
@@ -176,8 +185,9 @@ export default function LeaveInfoPanel({
       const offList = (preview?.days || []).filter(d => d.is_off_day);
       return (
         <div className="bg-purple-50/80 rounded-xl p-3 text-sm text-purple-700 space-y-1.5">
-          <div>{maxDays ? `Maksimum süre: ${maxDays} gün` : 'Ücretsiz izin — süre sınırı yok'}</div>
+          <div>{maxDays ? `Maksimum süre: ${maxDays} iş günü` : 'Ücretsiz izin — süre sınırı yok'}</div>
           {previewLoading && <div className="text-xs text-slate-400">Hesaplanıyor…</div>}
+          {previewError && <div className="text-xs font-medium text-red-600">{previewError}</div>}
           {preview && (
             <div className="pt-1.5 border-t border-purple-200/40 text-xs text-slate-600 space-y-0.5">
               {maxDays && (

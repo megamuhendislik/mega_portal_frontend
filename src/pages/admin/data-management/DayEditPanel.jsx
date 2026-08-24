@@ -660,8 +660,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
     };
 
     /* ───── special leave (staged SPECIAL CREATE) ─────
-     * PATERNITY (5g) / BEREAVEMENT (3g) / MARRIAGE (3g): sabit süre — backend
-     * end_date'i otomatik hesaplar (start_date yeterli). UNPAID: custom aralık. */
+     * PATERNITY: seçilen aralıkta 1-10 iş günü. BEREAVEMENT/MARRIAGE: sabit 3 iş
+     * günü ve backend bitişi hesaplar. UNPAID: seçilen aralık. */
     const handleCreateSpecial = () => {
         if (!newSpecialStart || !newSpecialEnd) {
             message.warning('Başlangıç ve bitiş tarihi gerekli');
@@ -2141,7 +2141,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                                     <DatePicker
                                         value={newSpecialEnd}
                                         onChange={setNewSpecialEnd}
-                                        disabled={newSpecialType !== 'UNPAID'}
+                                        disabled={!['PATERNITY', 'UNPAID'].includes(newSpecialType)}
                                         className="w-full"
                                         size="small"
                                         format="YYYY-MM-DD"
@@ -2168,9 +2168,11 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                                 Kuyruğa Ekle
                             </Button>
                             <div className="text-[10px] text-slate-400">
-                                {newSpecialType === 'UNPAID'
-                                    ? 'Ücretsiz izin — seçilen tarih aralığı kullanılır.'
-                                    : 'Sabit süreli izin — bitiş tarihi türe göre otomatik hesaplanır (başlangıç yeterli).'}
+                                {newSpecialType === 'PATERNITY'
+                                    ? 'Babalık izni — seçilen aralıktaki çalışma günleri sayılır (en fazla 10 iş günü).'
+                                    : newSpecialType === 'UNPAID'
+                                        ? 'Ücretsiz izin — seçilen tarih aralığı kullanılır.'
+                                        : 'Sabit süreli izin — bitiş tarihi türe göre otomatik hesaplanır (başlangıç yeterli).'}
                             </div>
                         </div>
                     </div>

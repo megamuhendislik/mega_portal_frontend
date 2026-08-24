@@ -767,7 +767,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 const formData = new FormData();
                 formData.append('leave_type', specialCode);
                 formData.append('start_date', leaveForm.start_date);
-                if (specialCode === 'UNPAID') {
+                if (['PATERNITY', 'UNPAID'].includes(specialCode)) {
                     if (!isYmd(leaveForm.end_date)) {
                         setError('Bitiş tarihi zorunlu (YYYY-MM-DD).');
                         setLoading(false);
