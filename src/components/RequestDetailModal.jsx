@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
+import NonWorkingDayOvertimeWarning from './requests/NonWorkingDayOvertimeWarning';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
@@ -975,7 +976,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                                 {day.duty_start} - {day.duty_end}
                               </span>
                               <span className="w-24 text-center text-[10px] text-slate-400">
-                                {day.is_off_day ? 'Tatil/İzin' : `${day.shift_start}-${day.shift_end}`}
+                                {day.is_off_day
+                                  ? 'Tatil / Hafta sonu'
+                                  : day.is_non_working_status_day
+                                    ? day.non_working_status?.label || 'İzin / Rapor'
+                                    : `${day.shift_start}-${day.shift_end}`}
                               </span>
                               <div className="w-20 text-center">
                                 {day.normal_work_minutes > 0 ? (
@@ -1441,6 +1446,14 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
           </div>
 
           {/* OT Auto-Approval Warning for External Duty */}
+          {request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
+           request?.status === 'PENDING' && (
+            <NonWorkingDayOvertimeWarning
+              source={dutyPreview || request}
+              className="mb-3"
+            />
+          )}
+
           {request?.request_type_detail?.category === 'EXTERNAL_DUTY' &&
            request?.status === 'PENDING' &&
            dutyPreview?.totals?.total_overtime_minutes > 0 && (

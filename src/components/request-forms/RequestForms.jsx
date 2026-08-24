@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts, getWeekMondayISO, parseLocalDate } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
+import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
 
 // ============================================================
 // LeaveRequestForm (Right Panel Only)
@@ -1136,7 +1137,7 @@ export const ExternalDutyForm = ({
                     <AlertCircle className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Mesai Hesaplama</h4>
-                        <p className="mt-1">Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır. Vardiya saatleri içindeki süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>fazla mesai</strong> olarak değerlendirilir. Tatil/hafta sonu günlerinde tüm süre fazla mesai sayılır.</p>
+                        <p className="mt-1">Takvimde iş günü olan tarihlerde dış görevle çakışan öğle arası düşülür. Vardiya saatleri içindeki net süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>fazla mesai</strong> olarak değerlendirilir. Gerçek tatil/hafta sonu günlerinde tüm süre fazla mesai sayılır ve öğle kesintisi yapılmaz.</p>
                     </div>
                 </div>
                 <div>
@@ -1320,6 +1321,11 @@ export const ExternalDutyForm = ({
                             })}
                         </div>
 
+                        <NonWorkingDayOvertimeWarning
+                            source={dutyHoursPreview}
+                            className="mb-3"
+                        />
+
                         {dutyHoursPreview && (
                             <div className="space-y-2">
                                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -1375,7 +1381,7 @@ export const ExternalDutyForm = ({
                                         <div className="space-y-1">
                                             <p className="font-bold">Hesaplama Kuralları</p>
                                             <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
-                                                <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
+                                                <li>Takvimde iş günü olan tarihlerde görevle çakışan öğle arası düşülür</li>
                                                 <li>Vardiya saatleri içindeki görev süresi <strong>normal mesai</strong> olarak yazılır</li>
                                                 <li>Vardiya saatleri dışındaki görev süresi <strong>fazla mesai</strong> olarak değerlendirilir</li>
                                                 <li>Fazla mesai, haftalık limit dahilinde otomatik onaylanır</li>
@@ -1704,6 +1710,7 @@ export const ExternalDutyForm = ({
                         );
                     })()}
                 </SummaryCard>
+                <NonWorkingDayOvertimeWarning source={dutyHoursPreview} />
                 {/* Tahmini Mesai Hesaplaması */}
                 {dutyHoursPreview ? (
                     <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">
@@ -1866,7 +1873,7 @@ export const ExternalDutyForm = ({
                                 <div className="space-y-1">
                                     <p className="font-bold">Hesaplama Kuralları</p>
                                     <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
-                                        <li>Dış görevde öğle molası düşülmez, tüm süre çalışma sayılır</li>
+                                        <li>Takvimde iş günü olan tarihlerde görevle çakışan öğle arası düşülür</li>
                                         {shiftTargetMin > 0 && (
                                             <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
                                         )}

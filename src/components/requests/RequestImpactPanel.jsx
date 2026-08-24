@@ -4,6 +4,7 @@ import {
     ArrowRight, LogIn, LogOut, Check, X,
     Info, AlertTriangle, Shield
 } from 'lucide-react';
+import NonWorkingDayOvertimeWarning from './NonWorkingDayOvertimeWarning';
 
 // ─── Static Tailwind color lookup (avoids dynamic class purging) ──────────
 const sectionColors = {
@@ -543,6 +544,11 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                                 <InfoRow label="Çalışma Saatleri" value={`${String(req.start_time).substring(0, 5)} - ${String(req.end_time).substring(0, 5)}`} />
                             )}
                         </Section>
+                        {isPendingDuty && (
+                            <div className="md:col-span-2">
+                                <NonWorkingDayOvertimeWarning source={dwi} />
+                            </div>
+                        )}
                         <div className="md:col-span-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                             <p className="font-bold mb-1">Onay Bilgilendirme</p>
                             <ul className="list-disc pl-4 space-y-0.5">

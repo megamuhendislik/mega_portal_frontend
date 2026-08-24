@@ -8,6 +8,10 @@ import api from '../../services/api';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import {
+    buildNonWorkingDayApprovalMessage,
+    getSubstituteLeaveType,
+} from '../../components/requests/nonWorkingDayOvertimeUtils';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
 import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
@@ -454,7 +458,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
                 if (r.status && r.status !== 'PENDING') return; // decided → substituteDecided
-                const key = `LEAVE-${r.id}`;
+                const substituteType = getSubstituteLeaveType(r);
+                const key = `${substituteType}-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     const principal = authorities.find(a => a.principal === r.principal_id);
@@ -462,7 +467,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     const realDept = r.employee_department || r.employee_detail?.department_name || '';
                     items.push({
                         ...r,
-                        type: 'LEAVE',
+                        type: substituteType,
                         employee_name: r.employee_name || r.employee_detail?.full_name || '',
                         employee_department: realDept ? `${subLabel} · ${realDept}` : subLabel,
                         target_approver_name: r.target_approver_name || r.target_approver_detail?.full_name || '',
@@ -552,7 +557,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             const principal = authorities.find(a => a.principal === r.principal_id);
             const subLabel = principal?.principal_name ? `Vekâleten — ${principal.principal_name}` : 'Vekâleten';
             const realDept = r.employee_department || r.employee_detail?.department_name || '';
-            items.push(buildItem(r, 'LEAVE', {
+            items.push(buildItem(r, getSubstituteLeaveType(r), {
                 employee_department: realDept ? `${subLabel} · ${realDept}` : subLabel,
                 start_date: r.start_date || r.date,
                 leave_type_name: r.leave_type_name || r.request_type_detail?.name || '',
@@ -601,12 +606,13 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         if (substituteData) {
             const authorities = substituteData.authorities || [];
             (substituteData.leave_requests || []).forEach(r => {
-                const key = `LEAVE-${r.id}`;
+                const substituteType = getSubstituteLeaveType(r);
+                const key = `${substituteType}-${r.id}`;
                 if (seen.has(key)) return;
                 seen.add(key);
                 const principal = authorities.find(a => a.principal === r.principal_id);
                 items.push(normalizeRequest(
-                    { ...r, type: 'LEAVE', manager_type: 'PRIMARY' },
+                    { ...r, type: substituteType, manager_type: 'PRIMARY' },
                     'SUBSTITUTE', true, principal?.principal_name || ''
                 ));
             });
@@ -862,6 +868,38 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Approve/reject handler wrapper
     const wrapApprove = async (r, notes) => {
+        const performApproval = async () => {
+            if (r._isSubstitute) return handleSubstituteApprove(r);
+            return handleApprove(r, notes);
+        };
+        const statusDayApprovalMessage = buildNonWorkingDayApprovalMessage(r);
+        if (statusDayApprovalMessage) {
+            return new Promise((resolve, reject) => {
+                Modal.confirm({
+                    title: 'İzin / Rapor Gününde Fazla Mesai',
+                    content: (
+                        <div className="space-y-2 text-sm text-slate-600">
+                            <p>{statusDayApprovalMessage}</p>
+                            <p className="font-medium text-amber-700">
+                                Bu bilgilendirme onaya engel değildir.
+                            </p>
+                        </div>
+                    ),
+                    okText: 'Bilgiyi Gördüm, Onayla',
+                    cancelText: 'Vazgeç',
+                    okButtonProps: { danger: false },
+                    onOk: async () => {
+                        try {
+                            await performApproval();
+                            resolve();
+                        } catch (error) {
+                            reject(error);
+                        }
+                    },
+                    onCancel: () => reject(new Error('cancelled')),
+                });
+            });
+        }
         // 23:59 OT uyarı kontrolü
         if ((r.type === 'OVERTIME' || r._type === 'OVERTIME') && isMidnightBoundary(r.end_time)) {
             return new Promise((resolve, reject) => {
@@ -873,8 +911,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     okButtonProps: { danger: false },
                     onOk: async () => {
                         try {
-                            if (r._isSubstitute) await handleSubstituteApprove(r);
-                            else await handleApprove(r, notes);
+                            await performApproval();
                             resolve();
                         } catch (e) { reject(e); }
                     },
@@ -882,8 +919,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 });
             });
         }
-        if (r._isSubstitute) return handleSubstituteApprove(r);
-        else return handleApprove(r, notes);
+        return performApproval();
     };
     const wrapReject = async (r, reason) => {
         if (r._isSubstitute) return handleSubstituteReject(r, reason);
