@@ -660,7 +660,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
     };
 
     /* ───── special leave (staged SPECIAL CREATE) ─────
-     * PATERNITY: seçilen aralıkta 1-10 iş günü. BEREAVEMENT/MARRIAGE: sabit 3 iş
+     * PATERNITY: seçilen aralıkta 1-10 takvim günü. BEREAVEMENT/MARRIAGE: sabit 3 iş
      * günü ve backend bitişi hesaplar. UNPAID: seçilen aralık. */
     const handleCreateSpecial = () => {
         if (!newSpecialStart || !newSpecialEnd) {
@@ -2169,7 +2169,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                             </Button>
                             <div className="text-[10px] text-slate-400">
                                 {newSpecialType === 'PATERNITY'
-                                    ? 'Babalık izni — seçilen aralıktaki çalışma günleri sayılır (en fazla 10 iş günü).'
+                                    ? 'Babalık izni — başlangıç ve bitiş dahil en fazla 10 takvim günü; çalışma dışı günler puantajı etkilemez.'
                                     : newSpecialType === 'UNPAID'
                                         ? 'Ücretsiz izin — seçilen tarih aralığı kullanılır.'
                                         : 'Sabit süreli izin — bitiş tarihi türe göre otomatik hesaplanır (başlangıç yeterli).'}

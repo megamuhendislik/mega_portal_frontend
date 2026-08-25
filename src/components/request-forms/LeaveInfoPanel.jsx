@@ -25,8 +25,6 @@ export default function LeaveInfoPanel({
   setLeaveForm,
   leaveBalance,
   excuseBalance,
-  entitlementInfo,
-  workingDaysInfo,
   recentLeaveHistory = [],
   holidays = [],
   calendarLeaveHistory = [],
@@ -34,7 +32,7 @@ export default function LeaveInfoPanel({
   const calendarMode = useMemo(() => {
     if (['EXCUSE_LEAVE', 'BIRTHDAY_LEAVE'].includes(leaveType)) return 'single';
     // Ölüm/evlilik sabit süreli olduğu için yalnız başlangıç seçilir. Babalık
-    // (1-10 iş günü), ücretsiz izin ve yıllık izin tarih aralığı kullanır.
+    // (1-10 takvim günü), ücretsiz izin ve yıllık izin tarih aralığı kullanır.
     if (leaveType && leaveType.startsWith('SPECIAL:')
       && !['SPECIAL:PATERNITY', 'SPECIAL:UNPAID'].includes(leaveType)) return 'single';
     return 'range';
@@ -69,7 +67,7 @@ export default function LeaveInfoPanel({
       .slice(0, 5);
   }, [recentLeaveHistory]);
 
-  // Özel izin iş-günü önizlemesi (sunucudan; bordroyla birebir). Debounced.
+  // Özel izin tarih önizlemesi (sunucudan; bordroyla birebir). Debounced.
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
@@ -182,10 +180,17 @@ export default function LeaveInfoPanel({
     // SPECIAL: izinler
     if (leaveType && leaveType.startsWith('SPECIAL:')) {
       const maxDays = specialMaxDays[leaveType];
+      const isPaternity = leaveType === 'SPECIAL:PATERNITY';
       const offList = (preview?.days || []).filter(d => d.is_off_day);
       return (
         <div className="bg-purple-50/80 rounded-xl p-3 text-sm text-purple-700 space-y-1.5">
-          <div>{maxDays ? `Maksimum süre: ${maxDays} iş günü` : 'Ücretsiz izin — süre sınırı yok'}</div>
+          <div>
+            {isPaternity
+              ? `Maksimum süre: ${maxDays} takvim günü (hafta sonu ve tatiller dahil)`
+              : maxDays
+                ? `Maksimum süre: ${maxDays} iş günü`
+                : 'Ücretsiz izin — süre sınırı yok'}
+          </div>
           {previewLoading && <div className="text-xs text-slate-400">Hesaplanıyor…</div>}
           {previewError && <div className="text-xs font-medium text-red-600">{previewError}</div>}
           {preview && (
@@ -197,12 +202,21 @@ export default function LeaveInfoPanel({
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-slate-500">{maxDays ? 'İş günü' : 'Çalışılan gün'}</span>
+                <span className="text-slate-500">{isPaternity ? 'Takvim günü' : maxDays ? 'İş günü' : 'Çalışılan gün'}</span>
                 <span className="font-medium text-purple-700">{preview.total_days} gün</span>
               </div>
+              {isPaternity && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Puantajı etkileyen çalışma günü</span>
+                  <span className="font-medium text-slate-700">{preview.working_days} gün</span>
+                </div>
+              )}
               {offList.length > 0 && (
                 <div className="text-[11px] text-slate-400">
-                  {offList.length} off günü sayılmadı: {offList.slice(0, 3).map(d => fmtDate(d.date)).join(', ')}{(offList.length > 3 || preview.truncated) ? '…' : ''}
+                  {isPaternity
+                    ? `${offList.length} çalışma dışı gün takvim süresine dahil, puantajı etkilemez: `
+                    : `${offList.length} off günü sayılmadı: `}
+                  {offList.slice(0, 3).map(d => fmtDate(d.date)).join(', ')}{(offList.length > 3 || preview.truncated) ? '…' : ''}
                 </div>
               )}
               {!maxDays && preview.total_days === 0 && (
