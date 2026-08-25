@@ -12,6 +12,8 @@ import CreateRequestModal from '../../components/CreateRequestModal';
 import OvertimeClaimModal from '../../components/overtime/OvertimeClaimModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
+import NonWorkingDayOvertimeWarning from '../../components/requests/NonWorkingDayOvertimeWarning';
+import { selectOvertimeWarningSources } from '../../components/requests/nonWorkingDayOvertimeUtils';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
 
 const filterChipColors = {
@@ -863,6 +865,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                                 </p>
                             </div>
                         )}
+                        <NonWorkingDayOvertimeWarning
+                            source={claimModal.segments?.length
+                                ? selectOvertimeWarningSources(
+                                    claimModal.segments,
+                                    claimModal.selectedIds || [],
+                                )
+                                : claimModal.target}
+                        />
                         {/* Segment listesi — checkbox ile seçim */}
                         {claimModal.segments && claimModal.segments.length > 0 && (
                             <div className="space-y-2">

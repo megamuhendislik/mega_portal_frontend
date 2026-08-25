@@ -362,6 +362,8 @@ const OvertimePanel = ({ req, mode }) => {
                 )}
             </Section>
 
+            <NonWorkingDayOvertimeWarning source={req} className="md:col-span-2" />
+
             <ApprovalInfoSection req={req} />
         </>
     );
@@ -553,8 +555,9 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                             <p className="font-bold mb-1">Onay Bilgilendirme</p>
                             <ul className="list-disc pl-4 space-y-0.5">
                                 <li>Onaylandığında çalışanın mesai kaydına işlenecektir</li>
-                                <li>Öğle molası düşülür; vardiya içi net süre normal mesai, dışındaki süre fazla mesai olarak işlenir</li>
-                                <li>Tatil/hafta sonu günlerinde tüm süre fazla mesai olarak değerlendirilir</li>
+                                <li>Takvimde çalışma günü olan tarihlerde (izin/rapor günü dahil) yalnız planlı öğle arasıyla çakışan görev süresi düşülür</li>
+                                <li>Onaylı tam gün izin/raporda kalan net görev süresinin tamamı fazla mesai; olağan çalışma gününde vardiya içi net süre normal mesai, dışındaki süre fazla mesai olur</li>
+                                <li>Gerçek tatil, çalışılmayan hafta sonu ve tam gün resmi tatilde öğle kesilmez; görev süresi brüt fazla mesai sayılır</li>
                                 {previewOtMin > 0 && <li>Bu talep <strong>{Math.floor(previewOtMin / 60)}s{previewOtMin % 60 > 0 ? ` ${previewOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir (otomatik onaylanacak)</li>}
                                 {totalOtMin > 0 && previewOtMin === 0 && <li>Bu talep <strong>{Math.floor(totalOtMin / 60)}s{totalOtMin % 60 > 0 ? ` ${totalOtMin % 60}dk` : ''}</strong> fazla mesai içermektedir</li>}
                             </ul>

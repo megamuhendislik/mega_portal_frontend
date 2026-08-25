@@ -9,6 +9,11 @@ import IntendedClaimList from './IntendedClaimList';
 import PotentialClaimList from './PotentialClaimList';
 import ManualEntryForm from './ManualEntryForm';
 import ClaimConfirmPanel from './ClaimConfirmPanel';
+import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import {
+  calculateOvertimeSeconds,
+  fetchNonWorkingDayOvertimeWarning,
+} from '../requests/nonWorkingDayOvertimeUtils';
 
 function getIstanbulToday() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
@@ -31,6 +36,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
     send_to_substitute: false,
   });
   const [selectedApproverId, setSelectedApproverId] = useState(null);
+  const [manualWarning, setManualWarning] = useState({ key: '', data: null });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -59,6 +65,35 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
       fetchData();
     }
   }, [open, fetchData]);
+
+  useEffect(() => {
+    if (!open || view !== 'manual' || !manualForm.date) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const previewKey = [manualForm.date, manualForm.start_time, manualForm.end_time].join('|');
+    const overtimeSeconds = calculateOvertimeSeconds(
+      manualForm.start_time,
+      manualForm.end_time,
+    );
+    fetchNonWorkingDayOvertimeWarning(
+      api,
+      manualForm.date,
+      'MANUAL',
+      overtimeSeconds,
+    )
+      .then(data => {
+        if (!cancelled) setManualWarning({ key: previewKey, data });
+      })
+      .catch(() => {
+        if (!cancelled) setManualWarning({ key: previewKey, data: null });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, view, manualForm.date, manualForm.start_time, manualForm.end_time]);
 
   const intended = claimableData?.intended || [];
   const potential = claimableData?.potential || [];
@@ -220,6 +255,14 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
 
               {view === 'manual' && (
                 <div className="animate-slideInRight">
+                  <NonWorkingDayOvertimeWarning
+                    source={manualWarning.key === [
+                      manualForm.date,
+                      manualForm.start_time,
+                      manualForm.end_time,
+                    ].join('|') ? manualWarning.data : null}
+                    className="mb-4"
+                  />
                   <ManualEntryForm
                     weeklyStatus={weeklyStatus}
                     form={manualForm}

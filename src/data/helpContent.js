@@ -359,24 +359,24 @@ const helpContent = [
         },
         {
             title: 'Mesai Hesabını Anlama',
-            description: 'Dış görevde öğle molası düşülmez, girilen tüm süre çalışma sayılır. Vardiya saatleri içindeki süre normal mesai, vardiya dışındaki süre fazla mesai olarak değerlendirilir. Tatil ve hafta sonu günlerinde girilen sürenin tamamı fazla mesai sayılır.'
+            description: 'Takvimde çalışma günü olan tarihlerde, izin veya rapor günü dahil, dış görevin planlı öğle arasıyla çakışan bölümü düşülür. Olağan çalışma gününde vardiya içindeki net süre normal, vardiya dışındaki net süre fazla mesaidir; onaylı tam gün izin veya raporda kalan net görev süresinin tamamı fazla mesai olur. Gerçek tatil, çalışılmayan hafta sonu ve tam gün resmi tatilde öğle kesintisi yapılmaz; girilen sürenin tamamı fazla mesai sayılır.'
         },
         {
             title: 'Onay ve Otomatik Sonuçlar',
-            description: 'Talebiniz yöneticinize gider. Onaylandığında dahil edilen her gün için ayrı puantaj kaydı oluşturulur. Onaylı görevin vardiya dışı kısmı otomatik olarak onaylı fazla mesaiye dönüşür — ayrıca mesai talebi vermenize gerek yoktur (görev + mesai birlikte onaylı kuralı).'
+            description: 'Talebiniz yöneticinize gider. Onaylandığında dahil edilen her gün için ayrı puantaj kaydı oluşturulur. Olağan çalışma gününde görevin vardiya dışı kısmı; onaylı tam gün izin/raporda öğle kesintisinden kalan net sürenin tamamı; gerçek tatil veya çalışılmayan hafta sonunda ise brüt görev süresi otomatik onaylı fazla mesaiye dönüşür. Ayrıca mesai talebi vermenize gerek yoktur.'
         }
     ],
     tips: [
-        { type: 'success', text: 'Onaylanan dış görevin vardiya dışında kalan kısmı için ayrıca fazla mesai talebi oluşturmanız gerekmez; sistem bu süreyi otomatik onaylı mesai olarak işler.' },
-        { type: 'info', text: 'Yarım gün tatillerde kesim saatinden sonraki görev çalışması fazla mesai sayılır; tam tatil ve hafta sonu günlerinde ise girilen sürenin tamamı fazla mesaidir.' },
+        { type: 'success', text: 'Onaylanan dış görevin hesaplanan fazla mesai kısmı otomatik onaylanır; olağan çalışma gününde vardiya dışı süre, tam gün izin/raporda öğle kesintisinden kalan net sürenin tamamı ve gerçek tatil gününde brüt süre için ayrıca mesai talebi oluşturmanız gerekmez.' },
+        { type: 'info', text: 'Yarım gün tatillerde kesim saatinden sonraki görev çalışması fazla mesai sayılır. Tam resmi tatil ve takvimde çalışılmayan hafta sonunda görev süresi brüt fazla mesaidir; çalışma günü olarak planlanan hafta sonu ise vardiya ve öğle kurallarını izler.' },
         { type: 'warning', text: 'Çok günlü görevde yalnızca dahil işaretlediğiniz ve saatlerini doldurduğunuz günler gönderilir. Hafta sonunu çalışmayacaksanız o günleri hariç bırakın; aksi halde o günler görev günü olarak işlenir.' },
         { type: 'info', text: 'Geriye dönük dış görev talebi 2 mali ay penceresi ile sınırlıdır; kilitli mali dönemlerdeki tarihler için talep oluşturulamaz.' }
     ],
     faq: [
-        { q: 'Hafta sonu göreve gittim, mesaim nasıl hesaplanır?', a: 'Tatil ve hafta sonu günlerinde dış görevde girilen sürenin tamamı fazla mesai sayılır ve görev onaylandığında otomatik onaylı mesai olarak işlenir.' },
+        { q: 'Hafta sonu göreve gittim, mesaim nasıl hesaplanır?', a: 'Takvimde çalışılmayan hafta sonlarında dış görev süresinin tamamı, öğle kesilmeden, fazla mesai sayılır. Hafta sonu günü çalışma günü olarak planlandıysa o günün vardiya ve planlı öğle arası kuralları uygulanır.' },
         { q: 'Çok günlü görevde araya giren hafta sonunu nasıl atlarım?', a: 'Gün listesinde ilgili günlerin dahil işaretini kaldırın veya "Sadece hafta içi" kısayolunu kullanın. Hariç bırakılan günler için kayıt oluşturulmaz.' },
-        { q: 'Evden çalışmada da fazla mesai oluşur mu?', a: 'Evet, hesap kuralı tüm görev tipleri için aynıdır: vardiya içi süre normal mesai, vardiya dışı süre fazla mesai olarak değerlendirilir.' },
-        { q: 'Dış görevde öğle molası düşülür mü?', a: 'Hayır. Dış görevde öğle molası düşülmez, girdiğiniz sürenin tamamı çalışma olarak sayılır.' },
+        { q: 'Evden çalışmada da fazla mesai oluşur mu?', a: 'Evet, görev tipi hesap kuralını değiştirmez. Olağan çalışma gününde vardiya içi net süre normal, vardiya dışı net süre fazla mesaidir; onaylı tam gün izin/raporda öğle kesintisinden kalan görev süresinin tamamı fazla mesai olur.' },
+        { q: 'Dış görevde öğle molası düşülür mü?', a: 'Takvimde çalışma günü olan tarihlerde, onaylı tam gün izin veya rapor günü dahil, yalnızca dış görevle planlı öğle arasının çakışan bölümü düşülür. Gerçek tatil, çalışılmayan hafta sonu ve tam gün resmi tatilde öğle kesintisi yapılmaz; görev süresi brüt fazla mesai sayılır.' },
         { q: 'Görev onaylanınca puantajım nasıl görünür?', a: 'Dahil edilen her gün için ayrı bir dış görev puantaj kaydı oluşturulur ve o günlerin çalışma süresi girdiğiniz saatlere göre hesaplanır.' },
         { q: 'Görev talebim kime gider?', a: 'Birincil yöneticinize yönlendirilir. Onay/red sonucu size uygulama içi bildirim olarak iletilir.' }
     ]
@@ -1115,7 +1115,7 @@ const helpContent = [
             { q: 'Raporlu gün devamsızlık sayılır mı?', a: 'Hayır. Raporlu günler devamsızlık sayılmaz ve o günlerin mesai eksiğini düşürür. Bordro raporlarında ayrı kalem olarak gösterilir.' },
             { q: 'Çalışan kendi raporunu nasıl yükler?', a: 'Talepler sayfasından Yeni Talep > Sağlık Raporu seçeneğiyle tarih aralığını ve rapor belgesini iletir. Kayıt onaylandığında puantaja yansır.' },
             { q: 'Hastane ziyareti ile sağlık raporu arasındaki fark nedir?', a: 'Sağlık raporu tam gün(ler)i kapsar; hastane ziyareti gün içindeki saatlik sağlık devamsızlığıdır. İkisi ayrı tür olarak kaydedilir ve puantajda farklı işlenir.' },
-            { q: 'Raporlu süre normal çalışma olarak sayılır mı?', a: 'Hayır. Raporlu süre normal çalışmaya eklenmez; yalnızca günün eksiğini kapatır ve bordroda ayrı gösterilir. Böylece raporlu gün fazla mesai üretmez.' },
+            { q: 'Raporlu süre normal çalışma olarak sayılır mı?', a: 'Hayır. Rapor hakkının kendisi çalışma değildir; günün eksiğini kapatır ve bordroda ayrı gösterilir. Ancak onaylı tam gün raporda fiilen yapılan kartlı, kartsız veya manuel çalışma ham giriş-çıkış süresiyle fazla mesai sayılır; öğle arası düşülmez ve servis toleransı uygulanmaz.' },
             { q: 'Raporlu günler takvim görünümlerinde görünür mü?', a: 'Evet. Raporlu günler takvim ve Veri Yönetimi görünümlerinde mor RAPORLU rozetiyle işaretlenir.' }
         ]
     },

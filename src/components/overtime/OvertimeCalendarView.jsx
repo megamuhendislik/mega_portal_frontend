@@ -10,6 +10,12 @@ import { getIstanbulTodayDate, toIstanbulParts, getIstanbulToday, fmtH, fmtSec }
 import OTDayDetailPanel from './OTDayDetailPanel';
 import OverrideConfirmModal from './OverrideConfirmModal';
 import CreateAssignmentModal from './CreateAssignmentModal';
+import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import {
+  calculateOvertimeSeconds,
+  fetchNonWorkingDayOvertimeWarning,
+  selectOvertimeWarningSources,
+} from '../requests/nonWorkingDayOvertimeUtils';
 
 const MONTH_NAMES = [
   'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -189,6 +195,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
   const [manualModal, setManualModal] = useState(false);
   const [manualForm, setManualForm] = useState({ date: '', start_time: '', end_time: '', reason: '' });
   const [manualLoading, setManualLoading] = useState(false);
+  const [manualWarning, setManualWarning] = useState({ key: '', data: null });
 
   // Manager selection for claims/manual entry
   const [otManagers, setOtManagers] = useState([]);
@@ -227,6 +234,33 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       })
       .catch(() => setOtManagers([]));
   }, [isManagerMode]);
+
+  useEffect(() => {
+    if (!manualModal || !manualForm.date) return undefined;
+
+    let cancelled = false;
+    const previewKey = [manualForm.date, manualForm.start_time, manualForm.end_time].join('|');
+    const overtimeSeconds = calculateOvertimeSeconds(
+      manualForm.start_time,
+      manualForm.end_time,
+    );
+    fetchNonWorkingDayOvertimeWarning(
+      api,
+      manualForm.date,
+      'MANUAL',
+      overtimeSeconds,
+    )
+      .then(data => {
+        if (!cancelled) setManualWarning({ key: previewKey, data });
+      })
+      .catch(() => {
+        if (!cancelled) setManualWarning({ key: previewKey, data: null });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [manualModal, manualForm.date, manualForm.start_time, manualForm.end_time]);
 
   // Fetch available fiscal periods
   useEffect(() => {
@@ -497,6 +531,12 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       setManualLoading(false);
     }
   };
+
+  const selectedPotentialWarningSource = useMemo(() => {
+    if (!claimModal.data) return null;
+    if (!claimModal.multi || !Array.isArray(claimModal.data)) return claimModal.data;
+    return selectOvertimeWarningSources(claimModal.data, selectedPotentialIds);
+  }, [claimModal.data, claimModal.multi, selectedPotentialIds]);
 
   // Summary stats
   const summary = useMemo(() => {
@@ -883,6 +923,8 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       >
         {claimModal.data && (
           <div className="space-y-3">
+            <NonWorkingDayOvertimeWarning source={selectedPotentialWarningSource} />
+
             {claimModal.multi && Array.isArray(claimModal.data) ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -1014,6 +1056,14 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         cancelText="Vazgeç"
       >
         <div className="space-y-3 mt-2">
+          <NonWorkingDayOvertimeWarning
+            source={manualWarning.key === [
+              manualForm.date,
+              manualForm.start_time,
+              manualForm.end_time,
+            ].join('|') ? manualWarning.data : null}
+          />
+
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-bold text-slate-500 mb-1 block">Tarih</label>
@@ -1088,6 +1138,8 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       >
         {intendedClaimModal.item && (
           <div className="space-y-3">
+            <NonWorkingDayOvertimeWarning source={intendedClaimModal.item} />
+
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-800">
               <div className="font-medium">{intendedClaimModal.item.task_description || 'Ek mesai görevi'}</div>
               <div className="text-xs mt-1 flex items-center gap-2">

@@ -1061,6 +1061,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
 
             {requestType === 'OVERTIME' && (
               <>
+                <NonWorkingDayOvertimeWarning
+                  source={request._mergedSegments?.length ? request._mergedSegments : request}
+                />
+
                 {/* Temel Bilgiler */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white rounded-xl p-3 border border-slate-200">

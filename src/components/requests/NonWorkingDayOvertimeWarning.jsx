@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import {
-    formatOvertimeMinutes,
+    formatOvertimeSeconds,
     formatWarningDate,
     getNonWorkingDayOvertimeWarnings,
 } from './nonWorkingDayOvertimeUtils';
@@ -9,6 +9,7 @@ import {
 const NonWorkingDayOvertimeWarning = ({ source, className = '' }) => {
     const warnings = getNonWorkingDayOvertimeWarnings(source);
     if (warnings.length === 0) return null;
+    const ruleTexts = [...new Set(warnings.map(warning => warning.ruleText).filter(Boolean))];
 
     return (
         <div className={`rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900 ${className}`.trim()}>
@@ -16,17 +17,18 @@ const NonWorkingDayOvertimeWarning = ({ source, className = '' }) => {
                 <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600" />
                 <div className="min-w-0">
                     <p className="text-sm font-bold">İzin / rapor gününde fazla mesai</p>
-                    <p className="mt-0.5 text-xs leading-5 text-amber-800">
-                        Normal çalışma yükümlülüğü bulunmayan bu günlerde dış görev,
-                        normal iş günü öğle arası düşülerek fazla mesai sayılır.
-                    </p>
+                    <div className="mt-0.5 space-y-1 text-xs leading-5 text-amber-800">
+                        {ruleTexts.map(ruleText => (
+                            <p key={ruleText}>{ruleText}</p>
+                        ))}
+                    </div>
                     <ul className="mt-2 space-y-1 text-xs">
                         {warnings.map((warning, index) => (
                             <li key={`${warning.date}-${index}`} className="font-medium">
                                 {formatWarningDate(warning.date)}
                                 {warning.status?.label ? ` · ${warning.status.label}` : ''}
-                                {warning.overtimeMinutes > 0
-                                    ? ` · ${formatOvertimeMinutes(warning.overtimeMinutes)} fazla mesai`
+                                {warning.overtimeSeconds > 0
+                                    ? ` · ${formatOvertimeSeconds(warning.overtimeSeconds)} fazla mesai`
                                     : ''}
                             </li>
                         ))}

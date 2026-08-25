@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowLeft, CalendarCheck, Zap, AlertTriangle } from 'lucide-react';
 import WeeklyOTLimitBar from './WeeklyOTLimitBar';
+import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import { withNonWorkingDayOvertimeSeconds } from '../requests/nonWorkingDayOvertimeUtils';
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '0 dk';
@@ -75,7 +77,10 @@ export default function ClaimConfirmPanel({
   const [sendToSubstitute, setSendToSubstitute] = useState(false);
 
   // items = dayGroup'taki POTENTIAL kayıtlar
-  const rawItems = isIntended ? [] : (claimTarget?.items || []);
+  const rawItems = useMemo(
+    () => (isIntended ? [] : (claimTarget?.items || [])),
+    [isIntended, claimTarget],
+  );
   // Segment'leri aç — her iç segment ayrı checkbox olur
   const displaySegments = useMemo(() => flattenSegments(rawItems), [rawItems]);
 
@@ -106,6 +111,24 @@ export default function ClaimConfirmPanel({
       .filter(s => selectedSegIds.has(s.id))
       .reduce((sum, s) => sum + s.seconds, 0);
   }, [isIntended, claimTarget, displaySegments, selectedSegIds]);
+
+  const selectedWarningSource = useMemo(() => {
+    if (isIntended) return claimTarget;
+
+    const secondsByRequest = new Map();
+    for (const segment of displaySegments) {
+      if (!selectedSegIds.has(segment.id)) continue;
+      const key = String(segment.requestId);
+      secondsByRequest.set(key, (secondsByRequest.get(key) || 0) + segment.seconds);
+    }
+
+    return rawItems.flatMap(item => {
+      const selectedSeconds = secondsByRequest.get(String(item.overtime_request_id)) || 0;
+      return selectedSeconds > 0
+        ? [withNonWorkingDayOvertimeSeconds(item, selectedSeconds)]
+        : [];
+    });
+  }, [isIntended, claimTarget, rawItems, displaySegments, selectedSegIds]);
 
   const projectedHours = totalSeconds / 3600;
   const willExceed = weeklyStatus && !weeklyStatus.is_unlimited
@@ -166,6 +189,8 @@ export default function ClaimConfirmPanel({
             {typeLabel}
           </span>
         </div>
+
+        <NonWorkingDayOvertimeWarning source={selectedWarningSource} />
 
         {/* Segment checkbox'ları */}
         {displaySegments.length > 0 && (

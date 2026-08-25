@@ -3,6 +3,12 @@ import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, 
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts, getWeekMondayISO, parseLocalDate } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import api from '../../services/api';
+import {
+    calculateOvertimeSeconds,
+    fetchNonWorkingDayOvertimeWarning,
+    selectOvertimeWarningSources,
+} from '../requests/nonWorkingDayOvertimeUtils';
 
 // ============================================================
 // LeaveRequestForm (Right Panel Only)
@@ -331,6 +337,7 @@ export const OvertimeRequestForm = ({
 }) => {
     const [claimConfirm, setClaimConfirm] = useState(null); // { type: 'INTENDED'|'POTENTIAL', id, ... }
     const [claimReason, setClaimReason] = useState('');
+    const [manualWarning, setManualWarning] = useState({ key: '', data: null });
 
     const intended = claimableData?.intended || [];
     const potential = claimableData?.potential || [];
@@ -360,6 +367,44 @@ export const OvertimeRequestForm = ({
     }, [potential]);
 
     const [claimSelectedIds, setClaimSelectedIds] = useState({});
+
+    useEffect(() => {
+        if (!manualOpen || !overtimeForm.date) {
+            return undefined;
+        }
+
+        let cancelled = false;
+        const previewKey = [
+            overtimeForm.date,
+            overtimeForm.start_time,
+            overtimeForm.end_time,
+        ].join('|');
+        const overtimeSeconds = calculateOvertimeSeconds(
+            overtimeForm.start_time,
+            overtimeForm.end_time,
+        );
+        fetchNonWorkingDayOvertimeWarning(
+            api,
+            overtimeForm.date,
+            'MANUAL',
+            overtimeSeconds,
+        )
+            .then(data => {
+                if (!cancelled) setManualWarning({ key: previewKey, data });
+            })
+            .catch(() => {
+                if (!cancelled) setManualWarning({ key: previewKey, data: null });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        manualOpen,
+        overtimeForm.date,
+        overtimeForm.start_time,
+        overtimeForm.end_time,
+    ]);
 
     const handleClaimClick = (type, item) => {
         if (type === 'POTENTIAL' && item._dayGroup) {
@@ -582,6 +627,18 @@ export const OvertimeRequestForm = ({
                         </div>
                     </div>
 
+                    <NonWorkingDayOvertimeWarning
+                        source={claimConfirm._dayGroup
+                            ? selectOvertimeWarningSources(
+                                claimConfirm._dayGroup.items,
+                                claimSelectedIds[claimConfirm.date] ?? claimConfirm._dayGroup.items.map(
+                                    item => item.overtime_request_id || item.attendance_id,
+                                ),
+                            )
+                            : claimConfirm}
+                        className="mb-3"
+                    />
+
                     {/* Segment checkbox'ları (çoklu segment varsa) */}
                     {claimConfirm._dayGroup && claimConfirm._dayGroup.items.length > 1 && (
                         <div className="mb-3 space-y-1.5">
@@ -742,6 +799,14 @@ export const OvertimeRequestForm = ({
                                 accentColor="blue"
                             />
                         </div>
+
+                        <NonWorkingDayOvertimeWarning
+                            source={manualWarning.key === [
+                                overtimeForm.date,
+                                overtimeForm.start_time,
+                                overtimeForm.end_time,
+                            ].join('|') ? manualWarning.data : null}
+                        />
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1137,7 +1202,7 @@ export const ExternalDutyForm = ({
                     <AlertCircle className="shrink-0 mt-0.5" size={18} />
                     <div>
                         <h4 className="font-bold">Mesai Hesaplama</h4>
-                        <p className="mt-1">Takvimde iş günü olan tarihlerde dış görevle çakışan öğle arası düşülür. Vardiya saatleri içindeki net süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>fazla mesai</strong> olarak değerlendirilir. Gerçek tatil/hafta sonu günlerinde tüm süre fazla mesai sayılır ve öğle kesintisi yapılmaz.</p>
+                        <p className="mt-1">Takvimde iş günü olan tarihlerde, izin/rapor günü dahil, dış görevle çakışan planlı öğle arası düşülür. Olağan çalışma gününde vardiya içindeki net süre <strong>normal mesai</strong>, vardiya dışındaki süre <strong>fazla mesai</strong> olur; onaylı tam gün izin/raporda kalan net sürenin tamamı fazla mesaidir. Gerçek tatil, çalışılmayan hafta sonu ve tam gün resmi tatilde tüm süre fazla mesai sayılır ve öğle kesintisi yapılmaz.</p>
                     </div>
                 </div>
                 <div>
@@ -1381,11 +1446,11 @@ export const ExternalDutyForm = ({
                                         <div className="space-y-1">
                                             <p className="font-bold">Hesaplama Kuralları</p>
                                             <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
-                                                <li>Takvimde iş günü olan tarihlerde görevle çakışan öğle arası düşülür</li>
-                                                <li>Vardiya saatleri içindeki görev süresi <strong>normal mesai</strong> olarak yazılır</li>
-                                                <li>Vardiya saatleri dışındaki görev süresi <strong>fazla mesai</strong> olarak değerlendirilir</li>
+                                                <li>Takvimde iş günü olan tarihlerde (izin/rapor günü dahil) görevle çakışan planlı öğle arası düşülür</li>
+                                                <li>Onaylı tam gün izin/raporda kalan net görev süresinin tamamı <strong>fazla mesai</strong> olur</li>
+                                                <li>Diğer çalışma günlerinde vardiya içi net süre <strong>normal mesai</strong>, vardiya dışı net süre <strong>fazla mesai</strong> olur</li>
                                                 <li>Fazla mesai, haftalık limit dahilinde otomatik onaylanır</li>
-                                                {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>fazla mesai</strong> sayılır</li>}
+                                                {hasOffDay && <li>Gerçek tatil/çalışılmayan hafta sonu günlerinde tüm süre <strong>brüt fazla mesai</strong> sayılır; öğle kesilmez</li>}
                                                 <li>Aynı gün kart verisi varsa birleştirilir</li>
                                             </ul>
                                         </div>
@@ -1873,12 +1938,12 @@ export const ExternalDutyForm = ({
                                 <div className="space-y-1">
                                     <p className="font-bold">Hesaplama Kuralları</p>
                                     <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
-                                        <li>Takvimde iş günü olan tarihlerde görevle çakışan öğle arası düşülür</li>
+                                        <li>Takvimde iş günü olan tarihlerde (izin/rapor günü dahil) görevle çakışan planlı öğle arası düşülür</li>
                                         {shiftTargetMin > 0 && (
-                                            <li>Günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
+                                            <li>Olağan çalışma gününde günlük mesai hedefine ({Math.floor(shiftTargetMin / 60)}s {shiftTargetMin % 60 > 0 ? `${shiftTargetMin % 60}dk` : ''}) kadar <strong>normal mesai</strong> yazılır</li>
                                         )}
-                                        <li>Hedefi aşan süre <strong>fazla mesai</strong> olarak otomatik onaylanır</li>
-                                        {hasOffDay && <li>Tatil/hafta sonu günlerinde tüm süre <strong>fazla mesai</strong> sayılır</li>}
+                                        <li>Olağan çalışma gününde hedefi aşan süre; onaylı tam gün izin/raporda ise kalan net görev süresinin tamamı <strong>fazla mesai</strong> olarak otomatik onaylanır</li>
+                                        {hasOffDay && <li>Gerçek tatil/çalışılmayan hafta sonu günlerinde tüm süre <strong>brüt fazla mesai</strong> sayılır; öğle kesilmez</li>}
                                         <li>Aynı gün kart verisi varsa birleştirilir</li>
                                     </ul>
                                 </div>

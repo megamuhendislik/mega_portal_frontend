@@ -9,10 +9,9 @@ import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import {
-    buildNonWorkingDayApprovalMessage,
+    buildOvertimeApprovalWarnings,
     getSubstituteLeaveType,
 } from '../../components/requests/nonWorkingDayOvertimeUtils';
-import { isMidnightBoundary } from '../../utils/midnightWarning';
 import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
@@ -872,16 +871,25 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (r._isSubstitute) return handleSubstituteApprove(r);
             return handleApprove(r, notes);
         };
-        const statusDayApprovalMessage = buildNonWorkingDayApprovalMessage(r);
-        if (statusDayApprovalMessage) {
+        const approvalWarnings = buildOvertimeApprovalWarnings(r);
+        if (approvalWarnings.length > 0) {
             return new Promise((resolve, reject) => {
                 Modal.confirm({
-                    title: 'İzin / Rapor Gününde Fazla Mesai',
+                    title: approvalWarnings.length > 1
+                        ? 'Fazla Mesai Uyarıları'
+                        : approvalWarnings[0].title,
                     content: (
-                        <div className="space-y-2 text-sm text-slate-600">
-                            <p>{statusDayApprovalMessage}</p>
+                        <div className="space-y-3 text-sm text-slate-600">
+                            {approvalWarnings.map(warning => (
+                                <div key={warning.code} className="space-y-1">
+                                    {approvalWarnings.length > 1 && (
+                                        <p className="font-bold text-slate-700">{warning.title}</p>
+                                    )}
+                                    <p>{warning.message}</p>
+                                </div>
+                            ))}
                             <p className="font-medium text-amber-700">
-                                Bu bilgilendirme onaya engel değildir.
+                                Bu bilgilendirmeler onaya engel değildir.
                             </p>
                         </div>
                     ),
@@ -896,26 +904,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                             reject(error);
                         }
                     },
-                    onCancel: () => reject(new Error('cancelled')),
-                });
-            });
-        }
-        // 23:59 OT uyarı kontrolü
-        if ((r.type === 'OVERTIME' || r._type === 'OVERTIME') && isMidnightBoundary(r.end_time)) {
-            return new Promise((resolve, reject) => {
-                Modal.confirm({
-                    title: '⚠ Kartsız Çıkış İhtimali',
-                    content: 'Bu talep 23:59\'da sonlanan bir kayda dayanmaktadır. Çalışanın çıkış kartı basmamış olma ihtimali bulunmaktadır. Gerçek çalışma saatlerini doğruladığınızdan emin olunuz.',
-                    okText: 'Onayla',
-                    cancelText: 'İptal',
-                    okButtonProps: { danger: false },
-                    onOk: async () => {
-                        try {
-                            await performApproval();
-                            resolve();
-                        } catch (e) { reject(e); }
-                    },
-                    onCancel: () => reject(new Error('cancelled')),
+                    onCancel: () => resolve(false),
                 });
             });
         }
