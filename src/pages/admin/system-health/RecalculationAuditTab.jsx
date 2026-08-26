@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
 import {
     ArrowPathIcon,
@@ -17,12 +17,65 @@ import Phase2IssuePanel from './Phase2IssuePanel';
 import IntegrityFindingsPanel from './IntegrityFindingsPanel';
 import SanityCheckPanel from './SanityCheckPanel';
 import {
+    FRC_POLL_INTERVAL_MS,
+    buildFrcGroupStatusPath,
     buildFrcApplyConfirmation,
+    classifyFrcPollStatus,
+    createFrcOperationEpochFence,
+    getFrcDayReviewFindings,
+    getFrcEmployeeGroups,
     getFrcApplyBlockReason,
+    getFrcFullResultValidationError,
+    getFrcGroupValidationError,
+    getFrcGroupIdentity,
+    getFrcMessagePresentation,
+    getFrcPollMaxAttempts,
     getProtectedDayInfo,
+    mergeFrcChunkResults,
+    pollFrcDispatchUntilSettled,
+    selectFrcParallelFailure,
+    shouldRetryFrcPollError,
+    startFrcSupersedingRequest,
 } from './recalculationAuditSafety';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+const FRC_OBSERVATION_ENDED_MESSAGE = (
+    'İzleme sona erdi; backend görevi başarısız kabul edilmedi. ' +
+    'Görev kimliği korundu; sayfayı yenileyerek izlemeye devam edebilir veya ' +
+    'Güvenli Durdur seçeneğini kullanabilirsiniz.'
+);
+
+function createFrcObservationEndedError() {
+    const error = new Error(FRC_OBSERVATION_ENDED_MESSAGE);
+    error.frcObservationEnded = true;
+    return error;
+}
+
+function isFrcResultUnavailable(error) {
+    const response = error?.response;
+    const resultStatus = response?.data?.status || response?.data?.code;
+    return response?.status === 410 && resultStatus === 'RESULT_UNAVAILABLE';
+}
+
+function getFrcErrorMessage(error, fallback = 'Bilinmeyen hata') {
+    if (isFrcResultUnavailable(error)) {
+        return (
+            'Tam sonuç artık kullanılamıyor; metadata uygulama için yeterli değildir. ' +
+            'Lütfen yeni bir Tam Yeniden Hesaplama (SİMÜLASYON) çalıştırın.'
+        );
+    }
+    return error?.response?.data?.error || error?.message || fallback;
+}
+
+function requireVerifiedFrcFullResult(payload, expectedIdentity) {
+    const validationError = getFrcFullResultValidationError(
+        payload,
+        expectedIdentity,
+    );
+    if (validationError) throw new Error(validationError);
+    return { ...payload, _full_result_verified: true };
+}
 
 function fmtSeconds(s) {
     if (s === null || s === undefined || Number.isNaN(Number(s))) return '0 sn';
@@ -174,6 +227,9 @@ export default function RecalculationAuditTab() {
     const [frcError, setFrcError] = useState(null);
     const [frcProgress, setFrcProgress] = useState(null);  // canlı ilerleme barı (TYR)
     const [frcParallel, setFrcParallel] = useState(null);  // paralel chunk'lar (N grup, N bar)
+    const [frcGroupIdentity, setFrcGroupIdentity] = useState(null);
+    const [frcObservationEnded, setFrcObservationEnded] = useState(false);
+    const frcOperationFence = useRef(createFrcOperationEpochFence());
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
@@ -183,6 +239,19 @@ export default function RecalculationAuditTab() {
         details: frcProtectedDayDetails,
     } = getProtectedDayInfo(frcResult);
     const frcApplyBlockReason = getFrcApplyBlockReason(frcResult);
+    const frcMessagePresentation = getFrcMessagePresentation(
+        frcObservationEnded,
+    );
+    const {
+        changed: frcChangedEmployees,
+        monthlyOnly: frcMonthlyOnlyEmployees,
+        reviewOnly: frcReviewOnlyEmployees,
+    } = getFrcEmployeeGroups(frcResult);
+    const frcListedEmployees = [
+        ...frcChangedEmployees,
+        ...frcMonthlyOnlyEmployees,
+        ...frcReviewOnlyEmployees,
+    ];
 
     // OT Request Audit state
     const [otAuditLoading, setOtAuditLoading] = useState(false);
@@ -263,48 +332,237 @@ export default function RecalculationAuditTab() {
         }
     };
 
-    // Sayfa açıldığında son task durumunu kontrol et
+    // Sayfa yenilendiğinde TEK "latest task" yerine dayanıklı grup manifestini
+    // kurtar.  Böylece 1/N chunk hiçbir zaman bütün rapor gibi görünmez.
     useEffect(() => {
         let cancelled = false;
-        const checkLatest = async () => {
-            try {
-                const res = await api.get('/system/health-check/full-recalculation-status/');
-                if (cancelled) return;
-                const st = res.data;
-                if (st.status === 'COMPLETED' && st.has_result) {
-                    // Son tamamlanan hesaplamanın tam JSON'unu yükle
-                    try {
-                        const fullRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}&full=true`);
-                        if (!cancelled) setFrcResult(fullRes.data);
-                    } catch {
-                        // JSON yoksa summary'den göster
-                        if (!cancelled) setFrcResult({ summary: st.summary, text_log: '', _fromCache: true });
+        const operationFence = frcOperationFence.current;
+        const operationEpoch = operationFence.begin();
+        const isCurrentOperation = () => (
+            !cancelled && operationFence.isCurrent(operationEpoch)
+        );
+        const maxAttempts = getFrcPollMaxAttempts();
+
+        const pause = () => new Promise((resolve) => {
+            window.setTimeout(resolve, FRC_POLL_INTERVAL_MS);
+        });
+
+        const pollManifestTask = async (
+            task,
+            index,
+            loadFullResult,
+            identity,
+        ) => {
+            let attempts = 0;
+            let consecutiveErrors = 0;
+            while (isCurrentOperation() && attempts < maxAttempts) {
+                attempts += 1;
+                try {
+                    const response = await api.get(
+                        buildFrcGroupStatusPath(identity, {
+                            taskId: task.task_id,
+                        }),
+                        { timeout: 180000 },
+                    );
+                    if (!isCurrentOperation()) return null;
+                    consecutiveErrors = 0;
+                    const pollState = classifyFrcPollStatus(response.data.status);
+                    setFrcParallel((previous) => previous
+                        ? previous.map((chunk, chunkIndex) => (
+                            chunkIndex === index
+                                ? {
+                                    ...chunk,
+                                    progress: response.data,
+                                    status: response.data.status,
+                                }
+                                : chunk
+                        ))
+                        : previous);
+                    if (pollState === 'completed') {
+                        if (!loadFullResult) return response.data;
+                        const fullResponse = await api.get(
+                            buildFrcGroupStatusPath(identity, {
+                                taskId: task.task_id,
+                                full: true,
+                            }),
+                            { timeout: 120000 },
+                        );
+                        return requireVerifiedFrcFullResult(
+                            fullResponse.data,
+                            {
+                                runId: identity.runId,
+                                taskId: task.task_id,
+                            },
+                        );
                     }
-                } else if (st.status === 'RUNNING') {
-                    setFrcLoading(true);
-                    setFrcProgress(st);
-                    const pollInterval = setInterval(async () => {
-                        try {
-                            const pollRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}`);
-                            if (cancelled) { clearInterval(pollInterval); return; }
-                            if (pollRes.data.status === 'RUNNING') setFrcProgress(pollRes.data);
-                            if (pollRes.data.status === 'COMPLETED') {
-                                clearInterval(pollInterval);
-                                const fullRes = await api.get(`/system/health-check/full-recalculation-status/?task_id=${st.task_id}&full=true`);
-                                setFrcResult(fullRes.data);
-                                setFrcLoading(false);
-                            } else if (pollRes.data.status === 'FAILED') {
-                                clearInterval(pollInterval);
-                                setFrcError(pollRes.data.error || 'Hesaplama başarısız');
-                                setFrcLoading(false);
-                            }
-                        } catch { /* ignore poll errors */ }
-                    }, 5000);
+                    if (pollState === 'failed') {
+                        throw new Error(response.data.error || 'Hesaplama başarısız');
+                    }
+                    if (pollState === 'terminal_missing') {
+                        throw new Error('Hesaplama iptal edildi veya artık bulunamıyor.');
+                    }
+                    if (pollState !== 'running') {
+                        throw new Error(
+                            `Bilinmeyen hesaplama durumu: ${response.data.status || '-'}`,
+                        );
+                    }
+                } catch (pollError) {
+                    if (!isCurrentOperation()) return null;
+                    consecutiveErrors += 1;
+                    if (!shouldRetryFrcPollError(
+                        pollError,
+                        consecutiveErrors,
+                        attempts,
+                        maxAttempts,
+                    )) throw pollError;
                 }
-            } catch { /* no previous task */ }
+                await pause();
+            }
+            if (!isCurrentOperation()) return null;
+            throw createFrcObservationEndedError();
         };
-        checkLatest();
-        return () => { cancelled = true; };
+
+        const recoverLatestGroup = async () => {
+            try {
+                const response = await api.get(
+                    '/system/health-check/full-recalculation-status/?group=true',
+                    { timeout: 120000 },
+                );
+                if (!isCurrentOperation() || response.data.status !== 'GROUP') return;
+                let manifest = response.data;
+                const identity = getFrcGroupIdentity(manifest);
+                if (!identity) {
+                    throw new Error('Dayanıklı grup generation kimliği eksik.');
+                }
+                setFrcGroupIdentity(identity);
+                setFrcLoading(true);
+                setFrcError(null);
+                setFrcObservationEnded(false);
+
+                // Endpoint manifesti task yayınları arasında DISPATCHING olarak
+                // görülebilir. Bu terminal hata değildir; exact run/generation
+                // üzerinden tamamlanana kadar izlenir. Böylece sayfa yenileme
+                // 1/3 task kaydını eksik grup sanıp sahte hata göstermez.
+                const dispatchResult = await pollFrcDispatchUntilSettled({
+                    initialManifest: manifest,
+                    maxAttempts,
+                    pause,
+                    isActive: isCurrentOperation,
+                    fetchManifest: async () => {
+                        const dispatchResponse = await api.get(
+                            buildFrcGroupStatusPath(identity, { group: true }),
+                            { timeout: 120000 },
+                        );
+                        return dispatchResponse.data;
+                    },
+                });
+                if (!isCurrentOperation()) return;
+                manifest = dispatchResult.manifest;
+                const dispatchState = dispatchResult.state;
+                if (dispatchResult.exhausted) {
+                    throw createFrcObservationEndedError();
+                }
+                if (dispatchState !== 'ready') {
+                    throw new Error(
+                        dispatchState === 'failed'
+                            ? (manifest.error || 'Görev grubu kuyruğa alınamadı.')
+                            : dispatchState === 'cancelled'
+                                ? 'Görev grubu güvenli biçimde durduruldu.'
+                                : 'Görev grup dispatch durumu doğrulanamadı.',
+                    );
+                }
+                const tasks = Array.isArray(manifest.tasks) ? manifest.tasks : [];
+                const taskIds = tasks.map((task) => task.task_id).filter(Boolean);
+                const manifestError = getFrcGroupValidationError(manifest, {
+                    operation: manifest.operation,
+                    runId: manifest.run_id,
+                    taskIds,
+                    stageGeneration: identity.stageGeneration,
+                    applyAttempt: identity.applyAttempt,
+                });
+                if (manifestError) throw new Error(manifestError);
+
+                setFrcParallel(tasks.map((task) => ({
+                    ...task,
+                    progress: null,
+                    status: 'RUNNING',
+                })));
+                const isPreview = manifest.operation === 'preview';
+                const results = await Promise.all(tasks.map((task, index) => (
+                    pollManifestTask(task, index, isPreview, identity)
+                )));
+                if (!isCurrentOperation()) return;
+
+                const finalGroupResponse = await api.get(
+                    buildFrcGroupStatusPath(identity, { group: true }),
+                    { timeout: 120000 },
+                );
+                if (!isCurrentOperation()) return;
+                const finalManifest = finalGroupResponse.data;
+                const requiredRunStatus = isPreview ? 'STAGED' : 'APPLIED';
+                const finalError = getFrcGroupValidationError(finalManifest, {
+                    operation: manifest.operation,
+                    runId: manifest.run_id,
+                    taskIds,
+                    applyAttempt: isPreview ? undefined : manifest.apply_attempt,
+                    stageGeneration: isPreview
+                        ? manifest.stage_generation
+                        : undefined,
+                    requiredRunStatus,
+                });
+                if (finalError) throw new Error(finalError);
+
+                if (isPreview) {
+                    const merged = mergeFrcChunkResults(results, {
+                        expectedChunks: tasks.length,
+                        runId: manifest.run_id,
+                        runStatus: finalManifest.run_status,
+                        taskIds,
+                    });
+                    if (!merged) {
+                        throw new Error('Eksiksiz staged grup sonucu birleştirilemedi.');
+                    }
+                    setFrcResult(merged);
+                    setFrcObservationEnded(false);
+                } else {
+                    setFrcResult({
+                        mode: 'apply',
+                        run_id: manifest.run_id,
+                        summary: {},
+                        employees: [],
+                        text_log: '',
+                        _complete_group: true,
+                        _appliedStaged: true,
+                        _apply_attempt: manifest.apply_attempt,
+                        _applied_run_status: finalManifest.run_status,
+                    });
+                    setFrcObservationEnded(false);
+                }
+            } catch (recoveryError) {
+                if (isCurrentOperation()) {
+                    setFrcObservationEnded(
+                        recoveryError?.frcObservationEnded === true,
+                    );
+                    setFrcError(getFrcErrorMessage(
+                        recoveryError,
+                        'Hesaplama grubu kurtarılamadı.',
+                    ));
+                }
+            } finally {
+                if (isCurrentOperation()) {
+                    setFrcLoading(false);
+                    setFrcParallel(null);
+                }
+            }
+        };
+
+        recoverLatestGroup();
+        return () => {
+            cancelled = true;
+            if (operationFence.isCurrent(operationEpoch)) {
+                operationFence.invalidate();
+            }
+        };
     }, []);
 
     const fetchUnifiedLogText = async () => {
@@ -378,12 +636,18 @@ export default function RecalculationAuditTab() {
             if (!window.confirm(buildFrcApplyConfirmation(protectedDaysSkipped))) return;
         }
 
+        const operationEpoch = frcOperationFence.current.begin();
+        const isCurrentOperation = () => (
+            frcOperationFence.current.isCurrent(operationEpoch)
+        );
         setFrcLoading(true);
         setFrcError(null);
+        setFrcObservationEnded(false);
         setFrcProgress(null);
-        // Apply (staged run_id VEYA cache): sim sonucunu silme — staged apply
+        if (mode !== 'apply') setFrcGroupIdentity(null);
+        // Apply: sim sonucunu silme — staged apply
         // frcResult.run_id'ye ihtiyaç duyar; fail durumunda kullanıcı eski raporu görebilsin.
-        if (!(mode === 'apply' && (frcResult?.run_id || frcResult?.cache_token))) {
+        if (!(mode === 'apply' && frcResult?.run_id)) {
             setFrcResult(null);
         }
         setFrcExpandedEmps(new Set());
@@ -404,27 +668,43 @@ export default function RecalculationAuditTab() {
                         '/system/health-check/apply-staged/',
                         { run_id: frcResult.run_id },
                         { timeout: 60000 });
+                    if (!isCurrentOperation()) return;
                     // apply-staged async chunk task'ları döndürür → hepsini izle.
                     const stagedTaskIds = (stagedRes.data.tasks || [])
                         .map(t => t.task_id).filter(Boolean);
+                    const applyAttempt = stagedRes.data.apply_attempt;
                     if (stagedTaskIds.length === 0) throw new Error('Apply task başlatılamadı');
+                    const applyIdentity = getFrcGroupIdentity({
+                        ...stagedRes.data,
+                        operation: 'apply',
+                    });
+                    if (!applyIdentity) {
+                        throw new Error('Apply exact generation kimliği alınamadı.');
+                    }
+                    setFrcGroupIdentity(applyIdentity);
 
                     // Tüm chunk task'ları COMPLETED olana kadar bekle (run APPLIED
                     // tüm chunk'lar bitince işaretlenir). Birinde FAILED → hata.
                     const pending = new Set(stagedTaskIds);
                     let aAttempts = 0;
-                    const A_POLL_MS = 5000;
-                    const A_MAX_MIN = 67;
-                    const aMaxAttempts = (A_MAX_MIN * 60 * 1000) / A_POLL_MS;
+                    const aMaxAttempts = getFrcPollMaxAttempts();
                     let aPollErrors = 0;
-                    while (pending.size > 0 && aAttempts < aMaxAttempts) {
-                        await new Promise(r => setTimeout(r, A_POLL_MS));
+                    while (
+                        isCurrentOperation()
+                        && pending.size > 0
+                        && aAttempts < aMaxAttempts
+                    ) {
+                        await new Promise(r => setTimeout(r, FRC_POLL_INTERVAL_MS));
+                        if (!isCurrentOperation()) return;
                         aAttempts++;
                         try {
                             for (const tid of Array.from(pending)) {
                                 const sRes = await api.get(
-                                    `/system/health-check/full-recalculation-status/?task_id=${tid}`,
+                                    buildFrcGroupStatusPath(applyIdentity, {
+                                        taskId: tid,
+                                    }),
                                     { timeout: 60000 });
+                                if (!isCurrentOperation()) return;
                                 const sSt = sRes.data;
                                 if (sSt.status === 'COMPLETED') {
                                     pending.delete(tid);
@@ -436,21 +716,49 @@ export default function RecalculationAuditTab() {
                             }
                             aPollErrors = 0;
                         } catch (aPollErr) {
-                            // Kendi attığımız hata (FAILED/iptal — axios DEĞİL) → hemen yükselt.
-                            // Geçici axios poll hatası → birkaç kez tolere et.
-                            if (!aPollErr?.isAxiosError) throw aPollErr;
+                            if (!isCurrentOperation()) return;
                             aPollErrors++;
-                            if (aPollErrors >= 12) throw aPollErr;
+                            if (!shouldRetryFrcPollError(
+                                aPollErr,
+                                aPollErrors,
+                                aAttempts,
+                                aMaxAttempts,
+                            )) throw aPollErr;
                         }
                     }
+                    if (!isCurrentOperation()) return;
                     if (pending.size > 0) {
-                        throw new Error(`Uygulama zaman aşımına uğradı (${A_MAX_MIN}dk).`);
+                        throw createFrcObservationEndedError();
                     }
+                    const groupRes = await api.get(
+                        buildFrcGroupStatusPath(applyIdentity, { group: true }),
+                        { timeout: 120000 },
+                    );
+                    if (!isCurrentOperation()) return;
+                    const groupError = getFrcGroupValidationError(
+                        groupRes.data,
+                        {
+                            operation: 'apply',
+                            runId: frcResult.run_id,
+                            taskIds: stagedTaskIds,
+                            applyAttempt,
+                            requiredRunStatus: 'APPLIED',
+                        },
+                    );
+                    if (groupError) throw new Error(groupError);
                     // Başarı: sim raporunu koru, mode=apply işaretle (UI "uygulandı" gösterir).
-                    setFrcResult({ ...frcResult, mode: 'apply', _appliedStaged: true });
+                    setFrcResult({
+                        ...frcResult,
+                        mode: 'apply',
+                        _appliedStaged: true,
+                        _apply_attempt: applyAttempt,
+                        _applied_run_status: groupRes.data.run_status,
+                    });
+                    setFrcObservationEnded(false);
                     setFrcLoading(false);
                     return;
                 } catch (stagedErr) {
+                    if (!isCurrentOperation()) return;
                     const sData = stagedErr?.response?.data || {};
                     const sStatus = stagedErr?.response?.status;
                     // 409 EXPIRED / already-applied / APPLYING → taze sim gerekli.
@@ -463,91 +771,106 @@ export default function RecalculationAuditTab() {
                         return;
                     }
                     // Diğer hata (network vb.) → kullanıcıya bildir.
-                    setFrcError(sData.error || stagedErr.message || 'Uygulama hatası');
+                    setFrcObservationEnded(
+                        stagedErr?.frcObservationEnded === true,
+                    );
+                    setFrcError(getFrcErrorMessage(stagedErr, 'Uygulama hatası'));
                     setFrcLoading(false);
                     return;
                 }
             }
 
-            // GERİ-UYUM FAST-PATH: run_id yok (eski sim) ama cache_token var →
-            // tekrar hesaplamadan direkt uygula (eski yol).
-            if (mode === 'apply' && frcResult?.cache_token) {
-                body.from_cache = true;
-                body.cache_token = frcResult.cache_token;
-                try {
-                    // Fast-path sync apply: targeted recalc + MWS cascade dakikalar
-                    // sürebilir → 67dk timeout (default 30s yetmez).
-                    const fastRes = await api.post('/system/health-check/full-recalculation/', body,
-                        { timeout: 67 * 60 * 1000 });
-                    setFrcResult({ ...frcResult, ...fastRes.data, mode: 'apply' });
-                    setFrcLoading(false);
-                    return;
-                } catch (fastErr) {
-                    // Cache expired → full pipeline fallback
-                    const errData = fastErr?.response?.data || {};
-                    if (errData.cache_expired) {
-                        // Cache silinmiş, kullanıcıya bildir + sim tekrar çekmesini iste
-                        setFrcError('Sim cache süresi doldu (1 saat). Lütfen Tam Yeniden Hesaplama (SIMULASYON) tekrar çalıştırın, sonra Uygula\'ya basın.');
-                        setFrcLoading(false);
-                        return;
-                    }
-                    // Diğer hata → normal apply pipeline'a düş
-                    delete body.from_cache;
-                    delete body.cache_token;
-                }
+            if (mode === 'apply') {
+                throw new Error(
+                    'Mühürlü staged run_id olmadan doğrudan uygulama güvenlik nedeniyle kapalıdır.',
+                );
             }
 
-            // Async endpoint — Celery task başlat (sim veya cache-less apply)
+            // Async endpoint — yalnız staged SIMÜLASYON task'ı başlat
             // NOT: api default timeout 30s. Backend AĞIR yük altındaysa (gunicorn 3
             // sync worker'ı diğer uzun audit'lerce dolu) task dispatch bile gecikir
             // → 120s ver (yoksa 'timeout of 60000ms').
             const startRes = await api.post('/system/health-check/full-recalculation-async/', body,
                 { timeout: 120000 });
+            if (!isCurrentOperation()) return;
             const taskId = startRes.data.task_id;
             if (!taskId) throw new Error('Task ID alınamadı');
             // STAGE-THEN-APPLY: dry-run + stage → backend ORTAK run_id döndürür.
             // "Uygula" bunu apply-staged'e verir (status JSON'da kaybolursa fallback).
             const stageRunId = startRes.data.run_id || null;
+            const previewIdentity = getFrcGroupIdentity({
+                ...startRes.data,
+                operation: 'preview',
+            });
+            if (!previewIdentity) {
+                throw new Error('Preview exact generation kimliği alınamadı.');
+            }
+            setFrcGroupIdentity(previewIdentity);
 
-            // Poll task status
-            // Tüm dönem (65 çalışan × ~90 gün) TYR'si ~18-22dk sürebiliyor; yoğun
-            // günlerde + kart-replay ile çok daha uzun. Kullanıcı isteği (2026-06-20):
-            // en az 2 saat.
-            // Backend Celery task: soft_time_limit=7200s (2h), time_limit=7800s (130dk).
-            // Frontend tavanı 132dk: backend hard limit'in HAFİF üstünde — böylece
-            // backend zaman aşımına uğrarsa onun FAILED durumunu gösterir, kendi
-            // generic timeout'unu değil.
+            // Poll task status. UI gözlem bütçesi backend task/result saklama
+            // süresiyle aynıdır; bütçe dolması backend FAILED anlamına gelmez.
             let attempts = 0;
-            const POLL_INTERVAL_MS = 5000;
-            const MAX_MINUTES = 132;
-            const maxAttempts = (MAX_MINUTES * 60 * 1000) / POLL_INTERVAL_MS; // 720
+            const maxAttempts = getFrcPollMaxAttempts();
             let consecutivePollErrors = 0;
-            while (attempts < maxAttempts) {
-                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+            let completed = false;
+            while (isCurrentOperation() && attempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, FRC_POLL_INTERVAL_MS));
+                if (!isCurrentOperation()) return;
                 attempts++;
                 try {
                     // Her poll'a açık 180s timeout: TYR DB'yi doyurunca + gunicorn 3
                     // worker dolunca hafif status-poll bile 60s'de yanıt alamayıp
                     // patlıyordu ('timeout of 60000ms'); 12 ardışık hata → sahte vazgeç.
                     const statusRes = await api.get(
-                        `/system/health-check/full-recalculation-status/?task_id=${taskId}`,
+                        buildFrcGroupStatusPath(previewIdentity, {
+                            taskId,
+                        }),
                         { timeout: 180000 });
+                    if (!isCurrentOperation()) return;
                     const st = statusRes.data;
                     consecutivePollErrors = 0;
                     if (st.status === 'RUNNING') setFrcProgress(st);
 
                     if (st.status === 'COMPLETED') {
                         // Tam JSON sonucu al (summary + employees + text_log) — büyük olabilir
-                        const fullRes = await api.get(
-                            `/system/health-check/full-recalculation-status/?task_id=${taskId}&full=true`,
-                            { timeout: 120000 }
+                        const [fullRes, groupRes] = await Promise.all([
+                            api.get(
+                                buildFrcGroupStatusPath(previewIdentity, {
+                                    taskId,
+                                    full: true,
+                                }),
+                                { timeout: 120000 },
+                            ),
+                            api.get(
+                                buildFrcGroupStatusPath(previewIdentity, {
+                                    group: true,
+                                }),
+                                { timeout: 120000 },
+                            ),
+                        ]);
+                        if (!isCurrentOperation()) return;
+                        const groupError = getFrcGroupValidationError(
+                            groupRes.data,
+                            {
+                                operation: 'preview',
+                                runId: stageRunId,
+                                taskIds: [taskId],
+                                stageGeneration: previewIdentity.stageGeneration,
+                                requiredRunStatus: 'STAGED',
+                            },
                         );
-                        // run_id status JSON'da varsa onu kullan, yoksa async start
-                        // response'undakiyle tamamla (apply-staged için zorunlu).
+                        if (groupError) throw new Error(groupError);
+                        const verifiedFullResult = requireVerifiedFrcFullResult(
+                            fullRes.data,
+                            { runId: previewIdentity.runId, taskId },
+                        );
                         setFrcResult({
-                            ...fullRes.data,
-                            run_id: fullRes.data.run_id || stageRunId,
+                            ...verifiedFullResult,
+                            _complete_group: true,
+                            _staged_run_status: groupRes.data.run_status,
                         });
+                        setFrcObservationEnded(false);
+                        completed = true;
                         break;
                     } else if (st.status === 'FAILED') {
                         throw new Error(st.error || 'Hesaplama başarısız');
@@ -556,51 +879,38 @@ export default function RecalculationAuditTab() {
                     }
                     // RUNNING — devam et
                 } catch (pollErr) {
-                    // Geçici network/poll hatası — birkaç kez tolere et, hemen iptal etme
+                    if (!isCurrentOperation()) return;
                     consecutivePollErrors++;
-                    if (consecutivePollErrors >= 12) throw pollErr; // ~1dk üst üste hata → vazgeç
-                    if (attempts >= maxAttempts) throw pollErr;
+                    if (!shouldRetryFrcPollError(
+                        pollErr,
+                        consecutivePollErrors,
+                        attempts,
+                        maxAttempts,
+                    )) throw pollErr;
                 }
             }
-            if (attempts >= maxAttempts) {
-                throw new Error(`Hesaplama zaman aşımına uğradı (${MAX_MINUTES}dk). Daha kısa tarih aralığı veya tek çalışan deneyin.`);
+            if (!isCurrentOperation()) return;
+            if (!completed && attempts >= maxAttempts) {
+                throw createFrcObservationEndedError();
             }
         } catch (e) {
-            setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
+            if (isCurrentOperation()) {
+                setFrcObservationEnded(e?.frcObservationEnded === true);
+                setFrcError(getFrcErrorMessage(e));
+            }
         } finally {
-            setFrcLoading(false);
+            if (isCurrentOperation()) setFrcLoading(false);
         }
     };
 
     // ── PARALEL TYR: çalışanları N gruba böl, her grubu ayrı task'ta koştur ──
     // 27dk tek koşu → ~9dk (24 vCPU). Her grup kendi barıyla ayrı izlenir; hepsi
     // bitince 3 rapor TEK rapora birleştirilir (mevcut rapor görünümü çalışsın).
-    const mergeChunkResults = (results) => {
-        const valid = results.filter(Boolean);
-        if (!valid.length) return null;
-        const employees = [].concat(...valid.map(r => r.employees || []));
-        const summary = {};
-        for (const r of valid) {
-            for (const [k, v] of Object.entries(r.summary || {})) {
-                if (typeof v === 'number') summary[k] = (summary[k] || 0) + v;
-                else if (Array.isArray(v)) summary[k] = (summary[k] || []).concat(v);
-                else if (summary[k] === undefined) summary[k] = v;
-            }
-        }
-        const text_log = valid.map((r, i) => `═══════ GRUP ${i + 1}/${valid.length} ═══════\n${r.text_log || ''}`).join('\n\n');
-        return {
-            ...valid[0],
-            summary,
-            employees,
-            text_log,
-            mode: valid[0]?.mode || 'dry_run',
-            date_range: valid[0]?.date_range,
-            elapsed: Math.max(...valid.map(r => r.elapsed || 0)),
-            parallel_chunks: valid.length,
-        };
-    };
-
     const runParallelRecalculation = async (chunks = 3) => {
+        const operationEpoch = frcOperationFence.current.begin();
+        const isCurrentOperation = () => (
+            frcOperationFence.current.isCurrent(operationEpoch)
+        );
         // Paralel dry_run (rollback=güvenli) + STAGE: backend 3 gruba ORTAK run_id
         // üretir (full-recalculation-parallel, stage:true), her grup değişen günlerini
         // AYNI run'a stage'ler. "Uygula" bu ortak run_id'yi apply-staged'e verir →
@@ -609,8 +919,10 @@ export default function RecalculationAuditTab() {
         // eşzamanlı-yazıcı riski yok (2026-06-23: paralel-apply kablolaması).
         setFrcLoading(true);
         setFrcError(null);
+        setFrcObservationEnded(false);
         setFrcProgress(null);
         setFrcParallel(null);
+        setFrcGroupIdentity(null);
         setFrcResult(null);
         setFrcExpandedEmps(new Set());
         setFrcExpandedDays(new Set());
@@ -622,29 +934,41 @@ export default function RecalculationAuditTab() {
             };
             const startRes = await api.post('/system/health-check/full-recalculation-parallel/', body,
                 { timeout: 120000 });
+            if (!isCurrentOperation()) return;
             // STAGE-THEN-APPLY: paralel endpoint 3 grup için ORTAK run_id döndürür.
             // merged.run_id'ye koy → "Uygula" (runFullRecalculation('apply')) bunu
             // apply-staged'e verir (frcResult.run_id). Yoksa eski/yavaş tam-recompute
             // apply'a düşer ve timeout'ta kısmi kalırdı (yalnız ilk grup yazılırdı).
             const commonRunId = startRes.data?.run_id || null;
+            const previewIdentity = getFrcGroupIdentity({
+                ...startRes.data,
+                operation: 'preview',
+            });
+            if (!previewIdentity) {
+                throw new Error('Paralel preview exact generation kimliği alınamadı.');
+            }
+            setFrcGroupIdentity(previewIdentity);
             const tasks = startRes.data?.tasks || [];
             if (!tasks.length) throw new Error('Paralel grup başlatılamadı');
+            const taskIds = tasks.map((task) => task.task_id);
             setFrcParallel(tasks.map(t => ({ ...t, progress: null, status: 'RUNNING' })));
 
-            const POLL_INTERVAL_MS = 5000;
-            const MAX_MINUTES = 132;
-            const maxAttempts = (MAX_MINUTES * 60 * 1000) / POLL_INTERVAL_MS;
+            const maxAttempts = getFrcPollMaxAttempts();
 
             const pollChunk = async (task, idx) => {
                 let attempts = 0;
                 let consecutiveErrors = 0;
-                while (attempts < maxAttempts) {
-                    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                while (isCurrentOperation() && attempts < maxAttempts) {
+                    await new Promise(r => setTimeout(r, FRC_POLL_INTERVAL_MS));
+                    if (!isCurrentOperation()) return null;
                     attempts++;
                     try {
                         const statusRes = await api.get(
-                            `/system/health-check/full-recalculation-status/?task_id=${task.task_id}`,
+                            buildFrcGroupStatusPath(previewIdentity, {
+                                taskId: task.task_id,
+                            }),
                             { timeout: 180000 });
+                        if (!isCurrentOperation()) return null;
                         const st = statusRes.data;
                         consecutiveErrors = 0;
                         setFrcParallel(prev => prev
@@ -652,24 +976,42 @@ export default function RecalculationAuditTab() {
                             : prev);
                         if (st.status === 'COMPLETED') {
                             const fullRes = await api.get(
-                                `/system/health-check/full-recalculation-status/?task_id=${task.task_id}&full=true`,
+                                buildFrcGroupStatusPath(previewIdentity, {
+                                    taskId: task.task_id,
+                                    full: true,
+                                }),
                                 { timeout: 120000 });
-                            return fullRes.data;
+                            if (!isCurrentOperation()) return null;
+                            return requireVerifiedFrcFullResult(
+                                fullRes.data,
+                                {
+                                    runId: previewIdentity.runId,
+                                    taskId: task.task_id,
+                                },
+                            );
                         } else if (st.status === 'FAILED') {
                             throw new Error(st.error || `Grup ${idx + 1} başarısız`);
                         } else if (['CANCELLED', 'NOT_FOUND', 'NO_TASK'].includes(st.status)) {
                             throw new Error(`Grup ${idx + 1} iptal edildi/bulunamadı`);
                         }
                     } catch (pollErr) {
+                        if (!isCurrentOperation()) return null;
                         consecutiveErrors++;
-                        if (consecutiveErrors >= 12 || attempts >= maxAttempts) throw pollErr;
+                        if (!shouldRetryFrcPollError(
+                            pollErr,
+                            consecutiveErrors,
+                            attempts,
+                            maxAttempts,
+                        )) throw pollErr;
                     }
                 }
-                throw new Error(`Grup ${idx + 1} zaman aşımına uğradı (${MAX_MINUTES}dk)`);
+                if (!isCurrentOperation()) return null;
+                throw createFrcObservationEndedError();
             };
 
             // Tüm grupları PARALEL poll et; biri patlasa da diğerlerini bekle (allSettled)
             const settled = await Promise.allSettled(tasks.map((t, i) => pollChunk(t, i)));
+            if (!isCurrentOperation()) return;
             // SAĞLAM TOPLAMA (2026-06-21): DB yük altında status-poll geçici timeout alıp
             // bir grubu DÜŞÜREBİLİR — ama backend task COMPLETED olup sonuç dosyasını
             // ZATEN yazmıştır. Bu yüzden poll'dan sonra HER task_id için SON bir full=true
@@ -677,40 +1019,87 @@ export default function RecalculationAuditTab() {
             // koru, düşürdüğünü dosyadan kurtar. Böylece "6 grubun sadece 1'i görünüyor"
             // (düşen chunk'lar merge'den eksik) ortadan kalkar.
             const finalResults = await Promise.all(tasks.map(async (t, i) => {
+                if (!isCurrentOperation()) return null;
                 const fromPoll = settled[i].status === 'fulfilled' ? settled[i].value : null;
-                if (fromPoll && (((fromPoll.employees || []).length > 0) || fromPoll.text_log)) {
+                const fromPollError = fromPoll
+                    ? getFrcFullResultValidationError(fromPoll, {
+                        runId: previewIdentity.runId,
+                        taskId: t.task_id,
+                    })
+                    : 'Poll tam sonuç döndürmedi.';
+                if (fromPoll && !fromPollError) {
                     return fromPoll;
                 }
                 try {
                     const r = await api.get(
-                        `/system/health-check/full-recalculation-status/?task_id=${t.task_id}&full=true`,
+                        buildFrcGroupStatusPath(previewIdentity, {
+                            taskId: t.task_id,
+                            full: true,
+                        }),
                         { timeout: 120000 });
-                    if (r.data && (((r.data.employees || []).length > 0) || r.data.text_log)) {
-                        return r.data;
+                    if (!isCurrentOperation()) return null;
+                    return requireVerifiedFrcFullResult(
+                        r.data,
+                        {
+                            runId: previewIdentity.runId,
+                            taskId: t.task_id,
+                        },
+                    );
+                } catch (fullResultError) {
+                    if (isFrcResultUnavailable(fullResultError)) {
+                        throw new Error(getFrcErrorMessage(fullResultError));
                     }
-                } catch { /* bu grup gerçekten alınamadı */ }
+                }
                 return null;
             }));
-            const ok = finalResults.filter(Boolean);
-            if (!ok.length) {
-                const firstErr = settled.find(s => s.status === 'rejected');
-                throw new Error(firstErr?.reason?.message || 'Tüm gruplar başarısız');
-            }
-            const merged = mergeChunkResults(ok);
-            // ORTAK staged run_id'yi merged'e koy → "Uygula" apply-staged ile 3 grubun
-            // tamamını yazar (frcResult.run_id). mergeChunkResults ilk chunk'tan run_id
-            // taşıyabilir ama ortak run_id AUTORİTER (endpoint başında üretildi).
-            if (commonRunId) merged.run_id = commonRunId;
-            const missing = tasks.length - ok.length;
+            if (!isCurrentOperation()) return;
+            const missing = finalResults.filter((result) => !result).length;
             if (missing > 0) {
-                merged._partial_note = `${missing}/${tasks.length} grup sonucu alınamadı — rapor kısmi.`;
+                const selectedFailure = selectFrcParallelFailure(settled);
+                if (selectedFailure) throw selectedFailure;
+                throw new Error(
+                    `${missing}/${tasks.length} grup sonucu alınamadı; eksik rapor oluşturulmadı.`,
+                );
+            }
+            const groupRes = await api.get(
+                buildFrcGroupStatusPath(previewIdentity, { group: true }),
+                { timeout: 120000 },
+            );
+            if (!isCurrentOperation()) return;
+            const groupError = getFrcGroupValidationError(
+                groupRes.data,
+                {
+                    operation: 'preview',
+                    runId: commonRunId,
+                    taskIds,
+                    stageGeneration: previewIdentity.stageGeneration,
+                    requiredRunStatus: 'STAGED',
+                },
+            );
+            if (groupError) throw new Error(groupError);
+            const merged = mergeFrcChunkResults(finalResults, {
+                expectedChunks: tasks.length,
+                runId: commonRunId,
+                runStatus: groupRes.data.run_status,
+                taskIds,
+            });
+            if (!merged) {
+                throw new Error(
+                    'Paralel sonuçlar aynı mühürlü koşuya ait eksiksiz bir grup oluşturmuyor.',
+                );
             }
             setFrcResult(merged);
+            setFrcObservationEnded(false);
         } catch (e) {
-            setFrcError(e.response?.data?.error || e.message || 'Bilinmeyen hata');
+            if (isCurrentOperation()) {
+                setFrcObservationEnded(e?.frcObservationEnded === true);
+                setFrcError(getFrcErrorMessage(e));
+            }
         } finally {
-            setFrcLoading(false);
-            setFrcParallel(null);
+            if (isCurrentOperation()) {
+                setFrcLoading(false);
+                setFrcParallel(null);
+            }
         }
     };
 
@@ -1594,12 +1983,14 @@ export default function RecalculationAuditTab() {
             )}
 
             {/* ══════ Tam Yeniden Hesaplama ══════ */}
-            {frcLoading && (
+            {(frcLoading || (frcObservationEnded && frcGroupIdentity)) && (
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                        <ArrowPathIcon className="w-8 h-8 text-violet-500 animate-spin" />
+                        <ArrowPathIcon className={`w-8 h-8 text-violet-500 ${frcLoading ? 'animate-spin' : ''}`} />
                         <p className="text-sm text-gray-500 font-medium">
-                            Tam yeniden hesaplama arka planda calisiyor...
+                            {frcObservationEnded
+                                ? 'İzleme sona erdi; backend görevi başarısız kabul edilmedi.'
+                                : 'Tam yeniden hesaplama arka planda calisiyor...'}
                         </p>
                         {frcParallel ? (
                             <div className="w-[28rem] max-w-full space-y-3">
@@ -1657,27 +2048,61 @@ export default function RecalculationAuditTab() {
                         )}
                         <button
                             onClick={async () => {
+                                const cancellation = startFrcSupersedingRequest(
+                                    frcOperationFence.current,
+                                    () => api.get(
+                                        buildFrcGroupStatusPath(
+                                            frcGroupIdentity,
+                                            { group: true, cancel: true },
+                                        ),
+                                        { timeout: 120000 },
+                                    ),
+                                );
+                                setFrcLoading(true);
                                 try {
-                                    await api.get('/system/health-check/full-recalculation-status/?cancel=true');
+                                    const response = await cancellation.response;
+                                    if (!cancellation.isCurrent()) return;
                                     setFrcLoading(false);
                                     setFrcResult(null);
-                                    setFrcError(null);
+                                    setFrcError(
+                                        response.data?.message
+                                        || 'Güvenli durdurma istendi.',
+                                    );
                                     setFrcProgress(null);
-                                } catch {
-                                    // Polling will surface any persistent backend error.
+                                    setFrcParallel(null);
+                                    setFrcObservationEnded(false);
+                                } catch (cancelError) {
+                                    if (!cancellation.isCurrent()) return;
+                                    setFrcLoading(false);
+                                    setFrcObservationEnded(true);
+                                    setFrcError(
+                                        cancelError.response?.data?.error
+                                        || cancelError.message
+                                        || 'Güvenli durdurma başarısız.',
+                                    );
                                 }
                             }}
-                            className="mt-2 px-4 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+                            disabled={!frcGroupIdentity}
+                            className="mt-2 px-4 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            Iptal Et / Sifirla
+                            Güvenli Durdur / Sıfırla
                         </button>
                     </div>
                 </div>
             )}
 
             {frcError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                    <XCircleIcon className="w-5 h-5 shrink-0" />
+                <div
+                    role={frcMessagePresentation.role}
+                    className={`p-4 rounded-lg text-sm flex items-center gap-2 ${
+                        frcMessagePresentation.severity === 'warning'
+                            ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                            : 'bg-red-50 border border-red-200 text-red-700'
+                    }`}
+                >
+                    {frcMessagePresentation.severity === 'warning'
+                        ? <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
+                        : <XCircleIcon className="w-5 h-5 shrink-0" />}
                     {frcError}
                 </div>
             )}
@@ -1870,6 +2295,14 @@ export default function RecalculationAuditTab() {
                             value={frcResult.summary?.total_employees_changed || 0}
                             color={frcResult.summary?.total_employees_changed > 0 ? 'purple' : 'green'}
                         />
+                        {(frcResult.summary?.total_employees_monthly_changed || 0) > 0 && (
+                            <SummaryCard
+                                icon={<ArrowPathIcon className="w-5 h-5 text-indigo-500" />}
+                                label="Yalniz Aylik Ozet"
+                                value={frcResult.summary.total_employees_monthly_changed}
+                                color="blue"
+                            />
+                        )}
                         <SummaryCard
                             icon={<ClockIcon className="w-5 h-5 text-amber-500" />}
                             label="Degisen Gun"
@@ -2008,6 +2441,8 @@ export default function RecalculationAuditTab() {
 
                     {/* No changes */}
                     {frcResult.summary?.total_employees_changed === 0
+                        && (frcResult.summary?.total_employees_monthly_changed || 0) === 0
+                        && (frcResult.summary?.total_employees_with_issues || 0) === 0
                         && frcProtectedDaysSkipped === 0
                         && !frcApplyBlockReason && (
                         <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-bold">
@@ -2017,12 +2452,24 @@ export default function RecalculationAuditTab() {
                     )}
 
                     {/* Employee List */}
-                    {frcResult.employees?.length > 0 && (
+                    {frcListedEmployees.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h4 className="text-sm font-bold text-gray-800">
-                                    Degisen Calisanlar ({frcResult.employees.length})
-                                </h4>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h4 className="text-sm font-bold text-gray-800">
+                                        Degisen Calisanlar ({frcChangedEmployees.length})
+                                    </h4>
+                                    {frcReviewOnlyEmployees.length > 0 && (
+                                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                                            Yalniz inceleme: {frcReviewOnlyEmployees.length}
+                                        </span>
+                                    )}
+                                    {frcMonthlyOnlyEmployees.length > 0 && (
+                                        <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold">
+                                            Yalniz aylik ozet: {frcMonthlyOnlyEmployees.length}
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex flex-wrap gap-1.5 text-[9px] font-bold">
                                     <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">0-5dk</span>
                                     <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">5-30dk</span>
@@ -2030,10 +2477,14 @@ export default function RecalculationAuditTab() {
                                     <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">2sa+</span>
                                 </div>
                             </div>
-                            {[...frcResult.employees].sort((a, b) => {
+                            {[...frcListedEmployees].sort((a, b) => {
                                 // Gerçek değişenler (günlük cd>0 veya ghost) üste; sonra kapanmış-ay
                                 // gerçek farkına göre. Açık-ay zaman-kayması maxMonthlyDiff'e girmez.
-                                const rank = (e) => ((e.cd || 0) > 0 || (e.ghost || 0) > 0 ? 1 : 0);
+                                const rank = (e) => {
+                                    if ((e.cd || 0) > 0 || (e.ghost || 0) > 0) return 3;
+                                    if (e.monthly_changed || (e.staged_months || []).length > 0) return 2;
+                                    return 1;
+                                };
                                 const r = rank(b) - rank(a);
                                 if (r !== 0) return r;
                                 return maxMonthlyDiff(b) - maxMonthlyDiff(a);
@@ -2055,6 +2506,16 @@ export default function RecalculationAuditTab() {
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevStyle.badge}`}>
                                                     {emp.cd} gun degisti
                                                 </span>
+                                                {(emp.cd || 0) === 0 && emp.monthly_changed && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                        Yalniz aylik ozet degisikligi
+                                                    </span>
+                                                )}
+                                                {(emp.cd || 0) === 0 && !emp.monthly_changed && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                        Uygulama disi inceleme
+                                                    </span>
+                                                )}
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sevStyle.chip}`}>
                                                     En buyuk fark: {fmtSeconds(maxDiff)} / {sevStyle.label}
                                                 </span>
@@ -2487,6 +2948,7 @@ function SummaryCard({ icon, label, value, color }) {
         amber: 'bg-amber-50 border-amber-200',
         gray: 'bg-gray-50 border-gray-200',
         purple: 'bg-purple-50 border-purple-200',
+        blue: 'bg-indigo-50 border-indigo-200',
     };
     return (
         <div className={`p-4 rounded-xl border ${colors[color] || colors.gray} flex items-center gap-3`}>
@@ -2556,6 +3018,10 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
     const needsLazy = expanded && empId && day?.date
         && (((day.before?.rc || 0) > 0 && !(day.before?.recs?.length))
             || ((day.after?.rc || 0) > 0 && !(day.after?.recs?.length)));
+    const reviewFindings = getFrcDayReviewFindings(day);
+    const hasBlockingReview = reviewFindings.some((finding) => (
+        finding.type === 'request' || finding.type === 'gate'
+    ));
     useEffect(() => {
         if (!needsLazy || lazyRecs !== null || lazyLoading) return;
         let cancelled = false;
@@ -2600,6 +3066,26 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                         <span>Tolerans: {day.rules?.tol || 0}dk</span>
                         <span>Mola: {day.rules?.brk || 0}dk</span>
                     </div>
+                    {reviewFindings.length > 0 && (
+                        <div className="p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900">
+                            <h6 className="text-[10px] font-bold uppercase">
+                                Denetim uyarıları
+                                {hasBlockingReview ? ' · Bu gün otomatik uygulanmadı' : ''}
+                            </h6>
+                            <div className="mt-1.5 space-y-1.5">
+                                {reviewFindings.map((finding, index) => (
+                                    <div key={`${finding.type}-${index}`} className="text-[11px]">
+                                        <div className="font-bold">{finding.label}</div>
+                                        {finding.detail && (
+                                            <div className="mt-0.5 font-mono text-[10px] text-rose-800 whitespace-pre-wrap">
+                                                {finding.detail}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {day.reqs?.length > 0 && (
                         <div>
                             <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Talepler</h6>
