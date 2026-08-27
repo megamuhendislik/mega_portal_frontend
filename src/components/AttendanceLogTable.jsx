@@ -42,6 +42,8 @@ const RECORD_TYPE_CONFIG = {
     hospital_visit: { icon: Stethoscope,label: 'Hastane',    bg: 'bg-purple-50',  border: 'border-purple-200',text: 'text-purple-600',  dot: 'bg-purple-500'  },
     external_duty:  { icon: Briefcase,  label: 'Dış Görev',  bg: 'bg-violet-50',  border: 'border-violet-200',text: 'text-violet-600',  dot: 'bg-violet-500'  },
     special_leave:  { icon: Calendar,   label: 'Özel İzin',  bg: 'bg-teal-50',    border: 'border-teal-200',  text: 'text-teal-700',    dot: 'bg-teal-500'    },
+    // İzin kredi satırı: aynı DUTY source'unu kullanır ama dış görev DEĞİLDİR.
+    leave:          { icon: Calendar,   label: 'İzin',       bg: 'bg-amber-50',   border: 'border-amber-200', text: 'text-amber-700',   dot: 'bg-amber-500'   },
     overtime:       { icon: Timer,      label: 'Fazla Mesai',   bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' },
     split:          { icon: Scissors,   label: 'Bölme',      bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
     system:         { icon: Settings,   label: 'Sistem',     bg: 'bg-gray-50',    border: 'border-gray-200',  text: 'text-gray-500',    dot: 'bg-gray-400'    },
