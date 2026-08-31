@@ -615,6 +615,57 @@ test('yalnız değişenler filtresi temiz çalışanı saklar, değişen ve ince
     );
 });
 
+test('gün görünüm durumu yalnız gerçekten hesaplanmış ve temiz günü yeşil işaretler', () => {
+    const clean = safetyModule.getFrcDayDisplayState({
+        date: '2026-08-01',
+        before: { rc: 1 },
+        after: { rc: 1 },
+        has_diff: false,
+        day_balance_ok: true,
+        recalc_status: 'RECALCULATED',
+    });
+    assert.equal(clean.isClean, true);
+    assert.equal(clean.needsReview, false);
+    assert.equal(clean.isUnprocessed, false);
+
+    for (const day of [
+        {
+            before: { rc: 1 },
+            after: { rc: 1 },
+            day_balance_ok: false,
+            recalc_status: 'RECALCULATED',
+        },
+        {
+            before: { rc: 1 },
+            after: { rc: 1 },
+            recalc_status: 'FAILED',
+        },
+        {
+            before: { rc: 1 },
+            after: { rc: 1 },
+            recalc_status: 'MANUAL_REVIEW_REQUIRED',
+        },
+    ]) {
+        const state = safetyModule.getFrcDayDisplayState(day);
+        assert.equal(state.isClean, false);
+        assert.equal(state.needsReview, true);
+    }
+});
+
+test('gelecek, atlanan veya ayrıntısı oluşmamış gün değişiklik yok sayılmaz', () => {
+    const cases = [
+        { is_future: true, before: null, after: null },
+        { before: null, after: null, recalc_status: 'SKIPPED' },
+        { before: null, after: null },
+    ];
+
+    for (const day of cases) {
+        const state = safetyModule.getFrcDayDisplayState(day);
+        assert.equal(state.isClean, false);
+        assert.equal(state.isUnprocessed, true);
+    }
+});
+
 test('günün manuel talep, gate ve kapsam bulgularını görünür satırlara çevirir', () => {
     const findings = safetyModule.getFrcDayReviewFindings({
         request_math_manual_reviews: [{

@@ -22,6 +22,7 @@ import {
     buildFrcApplyConfirmation,
     classifyFrcPollStatus,
     createFrcOperationEpochFence,
+    getFrcDayDisplayState,
     getFrcDayReviewFindings,
     getFrcEmployeeDisplay,
     getFrcEmployeeGroups,
@@ -3052,8 +3053,8 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
     // rc/totaller saklı ama ağır detaylar boş → gün açılınca GERÇEK Attendance ve ham Gate
     // verisini on-demand çek (RAM-güvenli, salt-okunur, tek çalışan-gün).
     const [lazySnapshot, setLazySnapshot] = useState(null);
-    const [lazyLoading, setLazyLoading] = useState(false);
     const [lazyError, setLazyError] = useState(null);
+    const workDate = day?.date;
     const hasInlineHeavyDetail = Boolean(
         day?.before?.recs?.length
         || day?.after?.recs?.length
@@ -3061,52 +3062,75 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
         || day?.logs?.length,
     );
     const canLazyLoad = Boolean(
-        empId && day?.date && !hasInlineHeavyDetail,
+        empId && workDate && !hasInlineHeavyDetail,
+    );
+    const lazyLoading = Boolean(
+        expanded && canLazyLoad && lazySnapshot === null && lazyError === null,
     );
     const lazyRecs = lazySnapshot?.recs || null;
     const gateEvents = day?.gate_events?.length
         ? day.gate_events
         : (lazySnapshot?.gate_events || []);
     const reviewFindings = getFrcDayReviewFindings(day);
-    const hasBlockingReview = reviewFindings.some((finding) => (
-        finding.type === 'request' || finding.type === 'gate'
-    ));
-    const hasDayChange = Boolean(day?.has_diff || day?.ch?.length || day?.is_ghost);
-    const isCleanDay = !hasDayChange
-        && !day?.protected_skip
-        && reviewFindings.length === 0;
-    const loadDayDetail = async () => {
-        if (!canLazyLoad || lazySnapshot !== null || lazyLoading) return;
-        setLazyLoading(true);
-        setLazyError(null);
-        try {
-            const response = await api.post(
-                '/system/health-check/frc-day-detail/',
-                { employee_id: empId, work_date: day.date },
-            );
-            setLazySnapshot(
-                response.data?.snapshot || { recs: [], gate_events: [] },
-            );
-        } catch (requestError) {
-            setLazySnapshot({ recs: [], gate_events: [] });
-            setLazyError(
-                requestError?.response?.data?.error
-                || requestError?.message
-                || 'Gün ayrıntısı alınamadı.',
-            );
-        } finally {
-            setLazyLoading(false);
+    const dayDisplayState = getFrcDayDisplayState(day);
+    const {
+        hasChange: hasDayChange,
+        needsReview: hasBlockingReview,
+        isUnprocessed: isUnprocessedDay,
+        isClean: isCleanDay,
+    } = dayDisplayState;
+
+    useEffect(() => {
+        if (
+            !expanded
+            || !canLazyLoad
+            || lazySnapshot !== null
+            || lazyError !== null
+        ) {
+            return undefined;
         }
-    };
-    const handleToggle = () => {
-        const isOpening = !expanded;
-        onToggle();
-        if (isOpening) void loadDayDetail();
-    };
+
+        let cancelled = false;
+
+        api.post(
+                '/system/health-check/frc-day-detail/',
+                { employee_id: empId, work_date: workDate },
+            )
+            .then((response) => {
+                if (!cancelled) {
+                    setLazySnapshot(
+                        response.data?.snapshot
+                        || { recs: [], gate_events: [] },
+                    );
+                    setLazyError(null);
+                }
+            })
+            .catch((requestError) => {
+                if (!cancelled) {
+                    setLazyError(
+                        requestError?.response?.data?.error
+                        || requestError?.message
+                        || 'Gün ayrıntısı alınamadı.',
+                    );
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        canLazyLoad,
+        empId,
+        expanded,
+        lazyError,
+        lazySnapshot,
+        workDate,
+    ]);
+
     return (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-                onClick={handleToggle}
+                onClick={onToggle}
                 className="w-full flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
                 <div className="flex items-center gap-2 text-xs">
@@ -3127,9 +3151,14 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                             KORUMA NEDENİYLE UYGULANMADI
                         </span>
                     )}
-                    {reviewFindings.length > 0 && !day?.protected_skip && (
+                    {hasBlockingReview && !day?.protected_skip && (
                         <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">
                             İNCELEME GEREKLİ
+                        </span>
+                    )}
+                    {isUnprocessedDay && !hasDayChange && !hasBlockingReview && (
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[9px] font-bold">
+                            HENÜZ HESAPLANMADI
                         </span>
                     )}
                     {isCleanDay && (
@@ -3157,8 +3186,15 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                         </div>
                     )}
                     {lazyError && (
-                        <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800">
-                            Günün salt-okunur ayrıntısı alınamadı: {lazyError}
+                        <div className="flex items-center justify-between gap-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800">
+                            <span>Günün salt-okunur ayrıntısı alınamadı: {lazyError}</span>
+                            <button
+                                type="button"
+                                onClick={() => setLazyError(null)}
+                                className="shrink-0 px-2 py-1 rounded border border-red-300 bg-white font-bold hover:bg-red-100"
+                            >
+                                Tekrar dene
+                            </button>
                         </div>
                     )}
                     {reviewFindings.length > 0 && (

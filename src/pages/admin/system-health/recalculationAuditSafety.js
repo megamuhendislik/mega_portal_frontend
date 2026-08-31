@@ -439,22 +439,69 @@ function hasItems(value) {
     return Array.isArray(value) && value.length > 0;
 }
 
+const FRC_COMPLETED_DAY_STATUSES = new Set([
+    'RECALCULATED',
+    'RECALCULATED_PROTECTED',
+]);
+
+export function getFrcDayDisplayState(day) {
+    if (!day || typeof day !== 'object') {
+        return {
+            hasChange: false,
+            needsReview: false,
+            isUnprocessed: true,
+            isClean: false,
+        };
+    }
+
+    const recalcStatus = typeof day.recalc_status === 'string'
+        ? day.recalc_status.toUpperCase()
+        : '';
+    const hasChange = Boolean(
+        day.has_diff
+        || hasItems(day.ch)
+        || day.is_ghost,
+    );
+    const needsReview = Boolean(
+        day.protected_skip
+        || day.is_ghost
+        || day.day_balance_ok === false
+        || recalcStatus === 'FAILED'
+        || recalcStatus === 'MANUAL_REVIEW_REQUIRED'
+        || hasItems(day.request_math_manual_reviews)
+        || hasItems(day.gate_manual_reviews)
+        || hasItems(day.frc_scope_warnings)
+    );
+    const hasSnapshots = Boolean(
+        day.before && typeof day.before === 'object'
+        && day.after && typeof day.after === 'object',
+    );
+    const isUnprocessed = Boolean(
+        day.is_future
+        || !hasSnapshots
+        || (
+            !needsReview
+            && !FRC_COMPLETED_DAY_STATUSES.has(recalcStatus)
+        )
+    );
+
+    return {
+        hasChange,
+        needsReview,
+        isUnprocessed,
+        isClean: !hasChange && !needsReview && !isUnprocessed,
+    };
+}
+
 function employeeNeedsReview(employee) {
     if (!employee || typeof employee !== 'object') return false;
     if (normalizeCount(employee.ghost) > 0) return true;
     if (normalizeCount(employee.protected_skips) > 0) return true;
     if (employee.balance_ok === false) return true;
     if (hasItems(employee.anomalies)) return true;
-    return (Array.isArray(employee.days) ? employee.days : []).some((day) => (
-        day?.protected_skip
-        || day?.is_ghost
-        || day?.day_balance_ok === false
-        || day?.recalc_status === 'FAILED'
-        || day?.recalc_status === 'MANUAL_REVIEW_REQUIRED'
-        || hasItems(day?.request_math_manual_reviews)
-        || hasItems(day?.gate_manual_reviews)
-        || hasItems(day?.frc_scope_warnings)
-    ));
+    return (Array.isArray(employee.days) ? employee.days : []).some(
+        (day) => getFrcDayDisplayState(day).needsReview,
+    );
 }
 
 export function getFrcEmployeeGroups(result) {
