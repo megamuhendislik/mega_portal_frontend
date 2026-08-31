@@ -473,6 +473,18 @@ export function getFrcEmployeeGroups(result) {
     return { changed, monthlyOnly, reviewOnly };
 }
 
+export function getFrcEmployeeDisplay(result, onlyChanges = false) {
+    const employees = (Array.isArray(result?.employees) ? result.employees : [])
+        .filter((employee) => employee && typeof employee === 'object');
+    if (!onlyChanges) return employees;
+    return employees.filter((employee) => (
+        normalizeCount(employee?.cd) > 0
+        || employee?.monthly_changed === true
+        || hasItems(employee?.staged_months)
+        || employeeNeedsReview(employee)
+    ));
+}
+
 function findingDetail(value) {
     if (typeof value === 'string') return value;
     if (!value || typeof value !== 'object') return '';

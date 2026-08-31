@@ -23,6 +23,7 @@ import {
     classifyFrcPollStatus,
     createFrcOperationEpochFence,
     getFrcDayReviewFindings,
+    getFrcEmployeeDisplay,
     getFrcEmployeeGroups,
     getFrcApplyBlockReason,
     getFrcFullResultValidationError,
@@ -233,7 +234,7 @@ export default function RecalculationAuditTab() {
     const [frcExpandedEmps, setFrcExpandedEmps] = useState(new Set());
     const [frcExpandedMonths, setFrcExpandedMonths] = useState(new Set());
     const [frcExpandedDays, setFrcExpandedDays] = useState(new Set());
-    const [showAllDays, setShowAllDays] = useState(false);
+    const [onlyChangedEmployees, setOnlyChangedEmployees] = useState(false);
     const {
         count: frcProtectedDaysSkipped,
         details: frcProtectedDayDetails,
@@ -247,11 +248,24 @@ export default function RecalculationAuditTab() {
         monthlyOnly: frcMonthlyOnlyEmployees,
         reviewOnly: frcReviewOnlyEmployees,
     } = getFrcEmployeeGroups(frcResult);
-    const frcListedEmployees = [
-        ...frcChangedEmployees,
-        ...frcMonthlyOnlyEmployees,
-        ...frcReviewOnlyEmployees,
-    ];
+    const frcAllEmployees = getFrcEmployeeDisplay(frcResult);
+    const frcListedEmployees = getFrcEmployeeDisplay(
+        frcResult,
+        onlyChangedEmployees,
+    );
+    const frcReviewEmployeeIds = new Set(
+        frcReviewOnlyEmployees.map((employee) => employee.id),
+    );
+    const frcMonthlyOnlyEmployeeIds = new Set(
+        frcMonthlyOnlyEmployees.map((employee) => employee.id),
+    );
+    const frcCleanEmployeeCount = Math.max(
+        0,
+        frcAllEmployees.length
+            - frcChangedEmployees.length
+            - frcMonthlyOnlyEmployees.length
+            - frcReviewOnlyEmployees.length,
+    );
 
     // OT Request Audit state
     const [otAuditLoading, setOtAuditLoading] = useState(false);
@@ -653,7 +667,7 @@ export default function RecalculationAuditTab() {
         setFrcExpandedEmps(new Set());
         setFrcExpandedDays(new Set());
         try {
-            const body = { date_from: startDate, date_to: endDate, mode, show_all_days: showAllDays };
+            const body = { date_from: startDate, date_to: endDate, mode, show_all_days: true };
             if (employeeId) body.employee_id = parseInt(employeeId);
             // STAGE-THEN-APPLY: dry-run (SIMULASYON) sonucu FrcStagedRun'a stage'lensin
             // → backend ORTAK run_id üretir, "Uygula" bu run'ı YENİDEN HESAPLAMADAN
@@ -929,7 +943,7 @@ export default function RecalculationAuditTab() {
         try {
             const body = {
                 date_from: startDate, date_to: endDate,
-                mode: 'dry_run', show_all_days: showAllDays, chunks,
+                mode: 'dry_run', show_all_days: true, chunks,
                 stage: true,  // ORTAK run_id üret → "Uygula" apply-staged ile tüm grupları yazar
             };
             const startRes = await api.post('/system/health-check/full-recalculation-parallel/', body,
@@ -1332,9 +1346,9 @@ export default function RecalculationAuditTab() {
                         {uniLoading ? 'Tarama...' : uniFixing ? 'Duzeltiliyor...' : 'Hesaplama Denetimi'}
                     </button>
                     <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
-                        <input type="checkbox" checked={showAllDays} onChange={e => setShowAllDays(e.target.checked)}
+                        <input type="checkbox" checked={onlyChangedEmployees} onChange={e => setOnlyChangedEmployees(e.target.checked)}
                             className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
-                        Tum Gunler
+                        Yalnız değişen / inceleme gerekenler
                     </label>
                     <button
                         onClick={() => runFullRecalculation('dry_run')}
@@ -2452,23 +2466,29 @@ export default function RecalculationAuditTab() {
                     )}
 
                     {/* Employee List */}
-                    {frcListedEmployees.length > 0 && (
+                    {frcAllEmployees.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h4 className="text-sm font-bold text-gray-800">
-                                        Degisen Calisanlar ({frcChangedEmployees.length})
+                                        Taranan Çalışanlar ({frcListedEmployees.length}/{frcAllEmployees.length})
                                     </h4>
+                                    <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 text-[10px] font-bold">
+                                        Değişen: {frcChangedEmployees.length}
+                                    </span>
                                     {frcReviewOnlyEmployees.length > 0 && (
                                         <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold">
-                                            Yalniz inceleme: {frcReviewOnlyEmployees.length}
+                                            İnceleme: {frcReviewOnlyEmployees.length}
                                         </span>
                                     )}
                                     {frcMonthlyOnlyEmployees.length > 0 && (
                                         <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold">
-                                            Yalniz aylik ozet: {frcMonthlyOnlyEmployees.length}
+                                            Yalnız aylık özet: {frcMonthlyOnlyEmployees.length}
                                         </span>
                                     )}
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                                        Değişiklik yok: {frcCleanEmployeeCount}
+                                    </span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 text-[9px] font-bold">
                                     <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">0-5dk</span>
@@ -2483,7 +2503,8 @@ export default function RecalculationAuditTab() {
                                 const rank = (e) => {
                                     if ((e.cd || 0) > 0 || (e.ghost || 0) > 0) return 3;
                                     if (e.monthly_changed || (e.staged_months || []).length > 0) return 2;
-                                    return 1;
+                                    if (frcReviewEmployeeIds.has(e.id)) return 1;
+                                    return 0;
                                 };
                                 const r = rank(b) - rank(a);
                                 if (r !== 0) return r;
@@ -2492,6 +2513,11 @@ export default function RecalculationAuditTab() {
                                 const maxDiff = maxMonthlyDiff(emp);
                                 const severity = changeSeverity(maxDiff);
                                 const sevStyle = CHANGE_STYLES[severity];
+                                const isReviewOnly = frcReviewEmployeeIds.has(emp.id);
+                                const isMonthlyOnly = frcMonthlyOnlyEmployeeIds.has(emp.id);
+                                const isClean = (emp.cd || 0) === 0
+                                    && !isReviewOnly
+                                    && !isMonthlyOnly;
                                 return (
                                 <div key={emp.id} className={`border rounded-xl overflow-hidden ${sevStyle.shell}`}>
                                     {/* Employee Header */}
@@ -2503,17 +2529,24 @@ export default function RecalculationAuditTab() {
                                             <div className="flex flex-wrap items-center gap-3 text-xs">
                                                 <span className={`font-bold ${sevStyle.text}`}>{emp.name}</span>
                                                 <span className="text-gray-500">{emp.dept}</span>
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevStyle.badge}`}>
-                                                    {emp.cd} gun degisti
-                                                </span>
-                                                {(emp.cd || 0) === 0 && emp.monthly_changed && (
-                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                                                        Yalniz aylik ozet degisikligi
+                                                {(emp.cd || 0) > 0 && (
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevStyle.badge}`}>
+                                                        {emp.cd} gün değişti
                                                     </span>
                                                 )}
-                                                {(emp.cd || 0) === 0 && !emp.monthly_changed && (
+                                                {isMonthlyOnly && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                        Yalnız aylık özet değişikliği
+                                                    </span>
+                                                )}
+                                                {isReviewOnly && (
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                                        Uygulama disi inceleme
+                                                        İnceleme gerekli
+                                                    </span>
+                                                )}
+                                                {isClean && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                                        Değişiklik yok
                                                     </span>
                                                 )}
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sevStyle.chip}`}>
@@ -2609,6 +2642,11 @@ export default function RecalculationAuditTab() {
                                 </div>
                                 );
                             })}
+                            {frcListedEmployees.length === 0 && (
+                                <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-600">
+                                    Bu filtrede değişen veya inceleme gereken çalışan yok. Tüm çalışanları görmek için filtreyi kapatın.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -3011,32 +3049,64 @@ const SRC_COLORS = {
 // Tek gün kartı (Ay → Gün ağacında kullanılır). expanded/onToggle dışarıdan.
 function FrcDayCard({ day, empId, expanded, onToggle }) {
     // Kayıt yok fix (2026-06-24): değişmeyen günler slim snapshot (recs:[]) ile gelir —
-    // rc/totaller saklı ama liste boş → eski "(N kayit) + Kayıt yok" çelişkisi. Gün açılınca
-    // (recs boş + rc>0) o gün için GERÇEK kayıtları on-demand çek (RAM-güvenli, tek gün).
-    const [lazyRecs, setLazyRecs] = useState(null);
+    // rc/totaller saklı ama ağır detaylar boş → gün açılınca GERÇEK Attendance ve ham Gate
+    // verisini on-demand çek (RAM-güvenli, salt-okunur, tek çalışan-gün).
+    const [lazySnapshot, setLazySnapshot] = useState(null);
     const [lazyLoading, setLazyLoading] = useState(false);
-    const needsLazy = expanded && empId && day?.date
-        && (((day.before?.rc || 0) > 0 && !(day.before?.recs?.length))
-            || ((day.after?.rc || 0) > 0 && !(day.after?.recs?.length)));
+    const [lazyError, setLazyError] = useState(null);
+    const hasInlineHeavyDetail = Boolean(
+        day?.before?.recs?.length
+        || day?.after?.recs?.length
+        || day?.gate_events?.length
+        || day?.logs?.length,
+    );
+    const canLazyLoad = Boolean(
+        empId && day?.date && !hasInlineHeavyDetail,
+    );
+    const lazyRecs = lazySnapshot?.recs || null;
+    const gateEvents = day?.gate_events?.length
+        ? day.gate_events
+        : (lazySnapshot?.gate_events || []);
     const reviewFindings = getFrcDayReviewFindings(day);
     const hasBlockingReview = reviewFindings.some((finding) => (
         finding.type === 'request' || finding.type === 'gate'
     ));
-    useEffect(() => {
-        if (!needsLazy || lazyRecs !== null || lazyLoading) return;
-        let cancelled = false;
+    const hasDayChange = Boolean(day?.has_diff || day?.ch?.length || day?.is_ghost);
+    const isCleanDay = !hasDayChange
+        && !day?.protected_skip
+        && reviewFindings.length === 0;
+    const loadDayDetail = async () => {
+        if (!canLazyLoad || lazySnapshot !== null || lazyLoading) return;
         setLazyLoading(true);
-        api.post('/system/health-check/frc-day-detail/', { employee_id: empId, work_date: day.date })
-            .then(res => { if (!cancelled) setLazyRecs(res.data?.snapshot?.recs || []); })
-            .catch(() => { if (!cancelled) setLazyRecs([]); })
-            .finally(() => { if (!cancelled) setLazyLoading(false); });
-        return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [needsLazy, empId, day?.date]);
+        setLazyError(null);
+        try {
+            const response = await api.post(
+                '/system/health-check/frc-day-detail/',
+                { employee_id: empId, work_date: day.date },
+            );
+            setLazySnapshot(
+                response.data?.snapshot || { recs: [], gate_events: [] },
+            );
+        } catch (requestError) {
+            setLazySnapshot({ recs: [], gate_events: [] });
+            setLazyError(
+                requestError?.response?.data?.error
+                || requestError?.message
+                || 'Gün ayrıntısı alınamadı.',
+            );
+        } finally {
+            setLazyLoading(false);
+        }
+    };
+    const handleToggle = () => {
+        const isOpening = !expanded;
+        onToggle();
+        if (isOpening) void loadDayDetail();
+    };
     return (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-                onClick={onToggle}
+                onClick={handleToggle}
                 className="w-full flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
                 <div className="flex items-center gap-2 text-xs">
@@ -3048,10 +3118,25 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                     {day.rules?.hol && (
                         <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold">{day.rules.hol}</span>
                     )}
-                    <span className="text-gray-400">|</span>
+                    {day.ch?.length > 0 && <span className="text-gray-400">|</span>}
                     {day.ch?.map((c, ci) => (
                         <span key={ci} className="text-gray-600">{c}</span>
                     ))}
+                    {day?.protected_skip && (
+                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">
+                            KORUMA NEDENİYLE UYGULANMADI
+                        </span>
+                    )}
+                    {reviewFindings.length > 0 && !day?.protected_skip && (
+                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">
+                            İNCELEME GEREKLİ
+                        </span>
+                    )}
+                    {isCleanDay && (
+                        <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[9px] font-bold">
+                            DEĞİŞİKLİK YOK
+                        </span>
+                    )}
                 </div>
                 {expanded ?
                     <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" /> :
@@ -3066,6 +3151,16 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                         <span>Tolerans: {day.rules?.tol || 0}dk</span>
                         <span>Mola: {day.rules?.brk || 0}dk</span>
                     </div>
+                    {isCleanDay && (
+                        <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-900">
+                            Dry-run bu gün için fark üretmedi. ÖNCE ve SONRA toplamları aynıdır; aşağıdaki kayıtlar doğrulama amacıyla gösterilir.
+                        </div>
+                    )}
+                    {lazyError && (
+                        <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800">
+                            Günün salt-okunur ayrıntısı alınamadı: {lazyError}
+                        </div>
+                    )}
                     {reviewFindings.length > 0 && (
                         <div className="p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900">
                             <h6 className="text-[10px] font-bold uppercase">
@@ -3117,13 +3212,13 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                             ))}
                         </div>
                     )}
-                    {day.gate_events?.length > 0 && (
+                    {gateEvents.length > 0 && (
                         <div>
                             <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                Ham Kart (Gate) — {day.gate_events.length} olay
+                                Ham Kart (Gate) — {gateEvents.length} olay
                             </h6>
                             <div className="flex flex-wrap gap-1.5">
-                                {day.gate_events.map((g, gi) => (
+                                {gateEvents.map((g, gi) => (
                                     <span key={gi} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
                                         g.dir === 'IN' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                                         'bg-rose-50 text-rose-700 border border-rose-200'
@@ -3132,6 +3227,11 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                                     </span>
                                 ))}
                             </div>
+                        </div>
+                    )}
+                    {!lazyLoading && !lazyError && gateEvents.length === 0 && (
+                        <div className="p-2 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-500">
+                            Ham Kart (Gate): Bu gün için kart okuyucu olayı yok.
                         </div>
                     )}
                     {day.logs?.length > 0 && (

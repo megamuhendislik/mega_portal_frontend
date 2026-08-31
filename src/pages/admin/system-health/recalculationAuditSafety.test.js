@@ -579,6 +579,42 @@ test('show_all_days sonucu temiz çalışanları değişen çalışan sayısına
     );
 });
 
+test('tam yeniden hesaplama görünümü varsayılan olarak temiz çalışanları da listeler', () => {
+    const result = {
+        employees: [
+            { id: 1, cd: 2, days: [{ has_diff: true }] },
+            { id: 2, cd: 0, days: [{ date: '2026-08-01', has_diff: false }] },
+            {
+                id: 3,
+                cd: 0,
+                days: [{ request_math_manual_reviews: [{ code: 'AMBIGUOUS' }] }],
+            },
+            { id: 4, cd: 0, monthly_changed: true, staged_months: ['2026-08'] },
+        ],
+    };
+
+    assert.deepEqual(
+        safetyModule.getFrcEmployeeDisplay(result),
+        result.employees,
+    );
+});
+
+test('yalnız değişenler filtresi temiz çalışanı saklar, değişen ve inceleme gerekenleri korur', () => {
+    const result = {
+        employees: [
+            { id: 1, cd: 1, days: [] },
+            { id: 2, cd: 0, days: [{ date: '2026-08-01', has_diff: false }] },
+            { id: 3, cd: 0, protected_skips: 1, days: [] },
+            { id: 4, cd: 0, monthly_changed: true, staged_months: ['2026-08'] },
+        ],
+    };
+
+    assert.deepEqual(
+        safetyModule.getFrcEmployeeDisplay(result, true),
+        [result.employees[0], result.employees[2], result.employees[3]],
+    );
+});
+
 test('günün manuel talep, gate ve kapsam bulgularını görünür satırlara çevirir', () => {
     const findings = safetyModule.getFrcDayReviewFindings({
         request_math_manual_reviews: [{
@@ -614,4 +650,9 @@ test('eksik veya bozuk çalışan listesi güvenli boş gruplar döndürür', ()
         safetyModule.getFrcEmployeeGroups(null),
         { changed: [], monthlyOnly: [], reviewOnly: [] },
     );
+    assert.deepEqual(
+        safetyModule.getFrcEmployeeDisplay({ employees: 'invalid' }),
+        [],
+    );
+    assert.deepEqual(safetyModule.getFrcEmployeeDisplay(null), []);
 });
