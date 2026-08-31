@@ -9,6 +9,9 @@ import {
     CreditCardIcon,
     DocumentTextIcon,
     ArrowPathIcon,
+    EyeIcon,
+    ShieldCheckIcon,
+    ArrowRightIcon,
 } from '@heroicons/react/24/outline';
 
 export default function DailyRecordAuditTab() {
@@ -19,9 +22,6 @@ export default function DailyRecordAuditTab() {
     const [employeesLoading, setEmployeesLoading] = useState(true);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
-    const [recoveryMessage, setRecoveryMessage] = useState(null);
-    const [recoveryError, setRecoveryError] = useState(null);
-    const [recoveryLoading, setRecoveryLoading] = useState(false);
 
     useEffect(() => {
         api.get('/employees/', { params: { page_size: 500 } })
@@ -44,14 +44,12 @@ export default function DailyRecordAuditTab() {
 
     const handleQuery = async () => {
         if (!selectedEmployee || !date) {
-            setError('Calisan ve tarih secimi zorunludur.');
+            setError('Çalışan ve tarih seçimi zorunludur.');
             return;
         }
         setLoading(true);
         setError(null);
         setResult(null);
-        setRecoveryMessage(null);
-        setRecoveryError(null);
         try {
             const res = await api.get(`/system/health-check/daily-record-audit/?employee_id=${selectedEmployee.id}&date=${date}`);
             setResult(res.data);
@@ -68,63 +66,52 @@ export default function DailyRecordAuditTab() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `kayit_denetim_${selectedEmployee?.id}_${date}.txt`;
+        a.download = `gun_ici_hesap_izi_${selectedEmployee?.id}_${date}.txt`;
         a.click();
         URL.revokeObjectURL(url);
     };
 
-    const handleRecovery = async () => {
-        if (!selectedEmployee || !date) return;
-        if (!window.confirm(
-            `${selectedEmployee.full_name || 'Çalışan'} — ${date}\n\n` +
-            `GateEventLog kayıtlarından bu güne ait Attendance kayıtları yeniden ` +
-            `oluşturulacak/onarılacaktır. Devam edilsin mi?`
-        )) return;
-
-        setRecoveryLoading(true);
-        setRecoveryError(null);
-        setRecoveryMessage(null);
-        try {
-            const res = await api.post('/system/health-check/quick-gate-fix/', {
-                work_date: date,
-                employee_id: selectedEmployee.id,
-                dry_run: false,
-            });
-            const d = res.data || {};
-            const parts = [
-                `Yeni kayıt: ${d.total_new_records ?? 0}`,
-                `Güncellenen: ${d.total_updated_records ?? 0}`,
-                `Silinen (stale): ${d.total_deleted_stale ?? 0}`,
-                `Yeniden hesaplanan: ${d.total_recalculated ?? 0}`,
-            ];
-            const errCount = (d.errors || []).length;
-            const noChange =
-                (d.total_new_records ?? 0) === 0 &&
-                (d.total_updated_records ?? 0) === 0 &&
-                (d.total_deleted_stale ?? 0) === 0;
-            setRecoveryMessage(
-                (noChange
-                    ? 'Onarım tamamlandı — değişiklik gerekmedi (kayıtlar zaten kart verisiyle uyumlu). '
-                    : 'Kart verisinden onarım tamamlandı. ') +
-                parts.join(' · ') +
-                (errCount > 0 ? ` · ${errCount} hata` : '') +
-                '. Verileri yenilemek için tekrar "Sorgula" edin. Tutarlılık için "Tam Yeniden Hesaplama" gerekebilir.'
-            );
-        } catch (e) {
-            setRecoveryError(
-                'Onarım başarısız: ' + (e.response?.data?.error || e.message)
-            );
-        } finally {
-            setRecoveryLoading(false);
-        }
-    };
-
     const formatSeconds = (s) => {
         if (s == null) return '-';
-        const h = Math.floor(Math.abs(s) / 3600);
-        const m = Math.floor((Math.abs(s) % 3600) / 60);
-        return `${s < 0 ? '-' : ''}${h}sa ${m}dk`;
+        const absolute = Math.abs(Number(s) || 0);
+        const h = Math.floor(absolute / 3600);
+        const m = Math.floor((absolute % 3600) / 60);
+        const sec = Math.floor(absolute % 60);
+        const pieces = [];
+        if (h) pieces.push(`${h}sa`);
+        if (m) pieces.push(`${m}dk`);
+        if (sec || pieces.length === 0) pieces.push(`${sec}sn`);
+        return `${s < 0 ? '-' : ''}${pieces.join(' ')}`;
     };
+
+    const formatAuditDate = (value) => {
+        if (!value) return '-';
+        const [year, month, day] = value.split('-');
+        return `${day}.${month}.${year}`;
+    };
+
+    const presenceTone = (status) => {
+        if (status === 'INSIDE' || status === 'OVERTIME') {
+            return 'border-emerald-300 bg-emerald-50 text-emerald-800';
+        }
+        if (status === 'OUTSIDE') {
+            return 'border-slate-300 bg-slate-50 text-slate-700';
+        }
+        return 'border-amber-300 bg-amber-50 text-amber-800';
+    };
+
+    const triggerLabel = (trigger) => ({
+        LIVE_RECALC: 'Canlı hesap',
+        GATE_EVENT: 'Kart olayı',
+    }[trigger] || trigger || 'Durum değişikliği');
+
+    const warningLabel = (warning) => ({
+        GATE_IN_WITHOUT_OPEN_ATTENDANCE: 'Son kart GİRİŞ fakat açık Attendance yok',
+        GATE_OUT_WITH_OPEN_ATTENDANCE: 'Son kart ÇIKIŞ fakat Attendance hâlâ açık',
+        FUTURE_GATE_EVENT_IGNORED: 'Gelecek zamanlı kart olayı hesaba katılmadı',
+        CARD_ATTENDANCE_WITHOUT_GATE_EVENT: 'CARD Attendance var fakat ham kart olayı yok',
+        CROSS_MIDNIGHT_GATE_CARRY: 'Önceki günün son GİRİŞ/ÇIKIŞ kanıtı gece yarısından taşındı',
+    }[warning] || warning);
 
     const sourceColor = (source) => {
         const colors = {
@@ -160,21 +147,18 @@ export default function DailyRecordAuditTab() {
         return colors[status] || 'text-gray-600 bg-gray-50';
     };
 
-    const hasMissingCardDiagnosis = result?.diagnosis?.some(
-        d => d.includes('kart') || d.includes('KART') || d.includes('gate') || d.includes('GATE') || d.includes('KRiTiK')
-    );
-
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
                     <MagnifyingGlassIcon className="w-5 h-5 text-indigo-600" />
-                    Gunluk Kayit Denetimi (Forensic Audit)
+                    Günlük Canlı Hesap Denetimi
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                    Bir calisanin belirli bir gundeki tum veritabani kayitlarini goruntuleyin.
-                    Kart verisi, attendance, saglik raporu, fazla mesai, izin ve kartsiz giris kayitlari tek ekranda.
+                    Bir çalışanın kart hareketini, motorun ürettiği Attendance parçalarını ve
+                    ekranda gösterilen “Ofiste / Dışarıda” kararını aynı zaman çizgisinde inceleyin.
+                    Bu ekran salt okunurdur; kayıtları değiştirmez.
                 </p>
 
                 <div className="flex flex-wrap items-end gap-4">
@@ -232,41 +216,160 @@ export default function DailyRecordAuditTab() {
                     {/* Action Bar */}
                     <div className="flex flex-wrap justify-between items-center gap-3">
                         <h3 className="text-sm font-bold text-gray-600">
-                            Sonuclar: {result.employee?.full_name} — {new Date(result.date).toLocaleDateString('tr-TR')}
+                            Sonuçlar: {result.employee?.full_name} — {formatAuditDate(result.date)}
                         </h3>
                         <div className="flex items-center gap-2">
-                            {hasMissingCardDiagnosis && (
-                                <button
-                                    onClick={handleRecovery}
-                                    disabled={recoveryLoading}
-                                    className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    <ArrowPathIcon className={`w-4 h-4 ${recoveryLoading ? 'animate-spin' : ''}`} />
-                                    {recoveryLoading ? 'Onarılıyor...' : "GateEventLog'dan Recovery"}
-                                </button>
-                            )}
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                                <ShieldCheckIcon className="h-4 w-4" />
+                                Salt okunur
+                            </span>
                             <button
                                 onClick={downloadTxt}
                                 className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-2"
                             >
                                 <DocumentArrowDownIcon className="w-4 h-4" />
-                                TXT Indir
+                                Kanıt TXT’sini indir
                             </button>
                         </div>
                     </div>
 
-                    {recoveryMessage && (
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-start gap-2">
-                            <CheckCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                            {recoveryMessage}
+                    {/* Live calculation evidence */}
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white">
+                            <div>
+                                <div className="flex items-center gap-2 text-sm font-semibold">
+                                    <EyeIcon className="h-5 w-5 text-cyan-300" />
+                                    Gün içi hesap izi
+                                </div>
+                                <p className="mt-1 text-xs text-slate-300">
+                                    Kart kanıtı → motor sonucu → kullanıcıya gösterilen durum
+                                </p>
+                            </div>
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                result.timeline_mode === 'OBSERVED'
+                                    ? 'bg-cyan-300 text-slate-950'
+                                    : 'bg-amber-300 text-slate-950'
+                            }`}>
+                                {result.timeline_mode === 'OBSERVED'
+                                    ? `${result.live_timeline?.length || 0} gözlenmiş değişiklik`
+                                    : result.timeline_mode === 'RECONSTRUCTED_CURRENT'
+                                        ? 'Yeniden oluşturulmuş son durum'
+                                        : 'Kayıt yok'}
+                            </span>
                         </div>
-                    )}
-                    {recoveryError && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
-                            <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                            {recoveryError}
-                        </div>
-                    )}
+
+                        {result.timeline_mode !== 'OBSERVED' && (
+                            <div className="border-b border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+                                {result.timeline_mode === 'RECONSTRUCTED_CURRENT'
+                                    ? 'Bu gün için geçmiş ara fotoğraf yok. Aşağıdaki hüküm ham kart ve sorgu anındaki son kayıtlardan yeniden oluşturuldu; o anda ekranda görülen değerin kesin kanıtı değildir.'
+                                    : 'Bu çalışan-gün için ham kart, Attendance veya gözlenmiş canlı hesap izi bulunamadı.'}
+                            </div>
+                        )}
+
+                        {result.live_timeline?.length > 0 ? (
+                            <div className="divide-y divide-slate-200">
+                                {result.live_timeline.map((snapshot, index) => {
+                                    const lastGate = snapshot.last_gate_event;
+                                    const totals = snapshot.totals || {};
+                                    return (
+                                        <article key={snapshot.id} className="grid gap-4 px-5 py-5 lg:grid-cols-[110px_1fr]">
+                                            <div className="relative border-l-2 border-cyan-300 pl-4">
+                                                <span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-cyan-500 ring-4 ring-cyan-50" />
+                                                <div className="font-mono text-sm font-bold text-slate-900">{snapshot.observed_time}</div>
+                                                <div className="mt-1 text-xs text-slate-500">Değişim {String(index + 1).padStart(2, '0')}</div>
+                                                <div className="mt-2 text-xs font-medium text-cyan-700">{triggerLabel(snapshot.trigger)}</div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch">
+                                                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                        <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600">Ham kart</div>
+                                                        {lastGate ? (
+                                                            <>
+                                                                <div className="mt-2 font-mono text-sm font-bold text-blue-950">
+                                                                    {lastGate.date} {lastGate.time} · {lastGate.normalized_direction === 'IN' ? 'GİRİŞ' : 'ÇIKIŞ'}
+                                                                </div>
+                                                                <div className="mt-1 break-all text-xs text-blue-700">{lastGate.event_id} · {lastGate.status}</div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="mt-2 text-sm text-blue-700">Geçerli kart hükmü yok</div>
+                                                        )}
+                                                    </div>
+                                                    <ArrowRightIcon className="hidden h-5 w-5 self-center text-slate-300 md:block" />
+                                                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                                                        <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">Motor hesabı</div>
+                                                        <div className="mt-2 text-sm font-semibold text-violet-950">
+                                                            {totals.attendance_count || 0} parça
+                                                        </div>
+                                                        <div className="mt-1 text-xs leading-5 text-violet-700">
+                                                            Normal {formatSeconds(totals.normal_seconds)} · Mesai {formatSeconds(totals.calculated_overtime_seconds)} · Eksik {formatSeconds(totals.missing_seconds)}
+                                                        </div>
+                                                    </div>
+                                                    <ArrowRightIcon className="hidden h-5 w-5 self-center text-slate-300 md:block" />
+                                                    <div className={`rounded-lg border p-3 ${presenceTone(snapshot.presence_status)}`}>
+                                                        <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">Ekranda görünen</div>
+                                                        <div className="mt-2 text-sm font-bold">{snapshot.presence_label || snapshot.presence_status}</div>
+                                                        <div className="mt-1 text-xs leading-5">{snapshot.presence_reason || 'Açıklama yok'}</div>
+                                                    </div>
+                                                </div>
+
+                                                {snapshot.warnings?.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {snapshot.warnings.map(warning => (
+                                                            <span key={warning} className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                                                                {warningLabel(warning)}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                <details className="rounded-lg border border-slate-200 bg-slate-50">
+                                                    <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+                                                        Bu anda kullanılan ham veriyi ve Attendance parçalarını göster
+                                                    </summary>
+                                                    <div className="grid gap-4 border-t border-slate-200 p-4 xl:grid-cols-2">
+                                                        <div>
+                                                            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Kart olayları ({snapshot.gate_events?.length || 0})</div>
+                                                            <div className="space-y-1 font-mono text-xs text-slate-700">
+                                                                {snapshot.gate_events?.length > 0
+                                                                    ? snapshot.gate_events.map(event => (
+                                                                        <div key={event.id} className="rounded bg-white px-2 py-1.5">
+                                                                            {event.time} {event.normalized_direction || event.direction} · {event.status} · {event.event_id}
+                                                                            {event.is_future ? ' · HESABA KATILMADI (gelecek)' : ''}
+                                                                        </div>
+                                                                    ))
+                                                                    : <div className="text-slate-400">Kart olayı yok</div>}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Attendance ({snapshot.attendance_records?.length || 0})</div>
+                                                            <div className="space-y-1 font-mono text-xs text-slate-700">
+                                                                {snapshot.attendance_records?.length > 0
+                                                                    ? snapshot.attendance_records.map(record => (
+                                                                        <div key={record.id} className="rounded bg-white px-2 py-1.5">
+                                                                            #{record.id} · {record.check_in_time || '?'} → {record.check_out_time || 'AÇIK'} · {record.source} · N {formatSeconds(record.normal_seconds)} · M {formatSeconds(record.calculated_overtime_seconds)} · E {formatSeconds(record.missing_seconds)}
+                                                                        </div>
+                                                                    ))
+                                                                    : <div className="text-slate-400">Attendance parçası yok</div>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        ) : result.current_presence && (
+                            <div className="px-5 py-5">
+                                <div className={`rounded-lg border p-4 ${presenceTone(result.current_presence.status)}`}>
+                                    <div className="text-xs font-bold uppercase tracking-wider opacity-70">Sorgu anındaki hüküm</div>
+                                    <div className="mt-2 text-base font-bold">{result.current_presence.label || result.current_presence.status}</div>
+                                    <div className="mt-1 text-sm">{result.current_presence.reason}</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Diagnosis */}
                     {result.diagnosis?.length > 0 && (
