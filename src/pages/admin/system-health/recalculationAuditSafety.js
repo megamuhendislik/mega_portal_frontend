@@ -443,12 +443,14 @@ const FRC_COMPLETED_DAY_STATUSES = new Set([
     'RECALCULATED',
     'RECALCULATED_PROTECTED',
 ]);
+const FRC_CARD_INPUT_REQUIRED_STATUS = 'UNMATCHED_GATE_INPUT_REQUIRED';
 
 export function getFrcDayDisplayState(day) {
     if (!day || typeof day !== 'object') {
         return {
             hasChange: false,
             needsReview: false,
+            needsCardInput: false,
             isUnprocessed: true,
             isClean: false,
         };
@@ -462,7 +464,8 @@ export function getFrcDayDisplayState(day) {
         || hasItems(day.ch)
         || day.is_ghost,
     );
-    const needsReview = Boolean(
+    const needsCardInput = recalcStatus === FRC_CARD_INPUT_REQUIRED_STATUS;
+    const needsReview = !needsCardInput && Boolean(
         day.protected_skip
         || day.is_ghost
         || day.day_balance_ok === false
@@ -477,20 +480,44 @@ export function getFrcDayDisplayState(day) {
         && day.after && typeof day.after === 'object',
     );
     const isUnprocessed = Boolean(
-        day.is_future
-        || !hasSnapshots
-        || (
-            !needsReview
-            && !FRC_COMPLETED_DAY_STATUSES.has(recalcStatus)
+        !needsCardInput
+        && (
+            day.is_future
+            || !hasSnapshots
+            || (
+                !needsReview
+                && !FRC_COMPLETED_DAY_STATUSES.has(recalcStatus)
+            )
         )
     );
 
     return {
         hasChange,
         needsReview,
+        needsCardInput,
         isUnprocessed,
-        isClean: !hasChange && !needsReview && !isUnprocessed,
+        isClean: (
+            !hasChange
+            && !needsReview
+            && !needsCardInput
+            && !isUnprocessed
+        ),
     };
+}
+
+export function frcDayNeedsLazyDetail(day) {
+    if (!day || typeof day !== 'object') return false;
+    const hasAttendanceRows = Boolean(
+        day?.before?.recs?.length || day?.after?.recs?.length,
+    );
+    const hasGateEvents = Boolean(day?.gate_events?.length);
+    if (getFrcDayDisplayState(day).needsCardInput) {
+        // Bu durum eşleşmemiş Gate kanıtı + mevcut CARD/SPLIT projeksiyonu
+        // gerektirir. Motor logu ağır kanıt yerine geçmez; iki veri kümesi de
+        // görünür olana kadar salt-okunur gün detayını yükle.
+        return !hasAttendanceRows || !hasGateEvents;
+    }
+    return !hasAttendanceRows && !hasGateEvents;
 }
 
 function employeeNeedsReview(employee) {
@@ -501,6 +528,13 @@ function employeeNeedsReview(employee) {
     if (hasItems(employee.anomalies)) return true;
     return (Array.isArray(employee.days) ? employee.days : []).some(
         (day) => getFrcDayDisplayState(day).needsReview,
+    );
+}
+
+function employeeNeedsCardInput(employee) {
+    if (!employee || typeof employee !== 'object') return false;
+    return (Array.isArray(employee.days) ? employee.days : []).some(
+        (day) => getFrcDayDisplayState(day).needsCardInput,
     );
 }
 
@@ -517,7 +551,8 @@ export function getFrcEmployeeGroups(result) {
         && !hasItems(employee?.staged_months)
         && employeeNeedsReview(employee)
     ));
-    return { changed, monthlyOnly, reviewOnly };
+    const inputRequired = employees.filter(employeeNeedsCardInput);
+    return { changed, monthlyOnly, reviewOnly, inputRequired };
 }
 
 export function getFrcEmployeeDisplay(result, onlyChanges = false) {
@@ -529,6 +564,7 @@ export function getFrcEmployeeDisplay(result, onlyChanges = false) {
         || employee?.monthly_changed === true
         || hasItems(employee?.staged_months)
         || employeeNeedsReview(employee)
+        || employeeNeedsCardInput(employee)
     ));
 }
 

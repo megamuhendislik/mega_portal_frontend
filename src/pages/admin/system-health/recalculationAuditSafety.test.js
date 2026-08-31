@@ -561,13 +561,31 @@ test('show_all_days sonucu temiz çalışanları değişen çalışan sayısına
                     gate_manual_reviews: [{ code: 'UNMATCHED_GATE_EVENT' }],
                 }],
             },
+            {
+                id: 8,
+                cd: 0,
+                days: [{
+                    before: { rc: 3 },
+                    after: { rc: 3 },
+                    recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+                }],
+            },
+            {
+                id: 9,
+                cd: 1,
+                days: [{
+                    before: { rc: 2 },
+                    after: { rc: 2 },
+                    recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+                }],
+            },
         ],
     };
 
     assert.deepEqual(
         safetyModule.getFrcEmployeeGroups(result),
         {
-            changed: [result.employees[0]],
+            changed: [result.employees[0], result.employees[8]],
             monthlyOnly: [result.employees[5]],
             reviewOnly: [
                 result.employees[2],
@@ -575,6 +593,7 @@ test('show_all_days sonucu temiz çalışanları değişen çalışan sayısına
                 result.employees[4],
                 result.employees[6],
             ],
+            inputRequired: [result.employees[7], result.employees[8]],
         },
     );
 });
@@ -606,12 +625,76 @@ test('yalnız değişenler filtresi temiz çalışanı saklar, değişen ve ince
             { id: 2, cd: 0, days: [{ date: '2026-08-01', has_diff: false }] },
             { id: 3, cd: 0, protected_skips: 1, days: [] },
             { id: 4, cd: 0, monthly_changed: true, staged_months: ['2026-08'] },
+            {
+                id: 5,
+                cd: 0,
+                days: [{ recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED' }],
+            },
         ],
     };
 
     assert.deepEqual(
         safetyModule.getFrcEmployeeDisplay(result, true),
-        [result.employees[0], result.employees[2], result.employees[3]],
+        [
+            result.employees[0],
+            result.employees[2],
+            result.employees[3],
+            result.employees[4],
+        ],
+    );
+});
+
+test('kartsız kayıt bekleyen gün temiz, hesaplanmamış veya manuel inceleme sayılmaz', () => {
+    const state = safetyModule.getFrcDayDisplayState({
+        date: '2026-07-27',
+        before: { rc: 3 },
+        after: { rc: 3 },
+        has_diff: false,
+        recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+    });
+
+    assert.equal(state.needsCardInput, true);
+    assert.equal(state.needsReview, false);
+    assert.equal(state.isUnprocessed, false);
+    assert.equal(state.isClean, false);
+});
+
+test('kartsız giriş gereken durum kapsam uyarısı ve future işaretine rağmen tek ana kategoride kalır', () => {
+    const state = safetyModule.getFrcDayDisplayState({
+        date: '2026-07-27',
+        before: { rc: 3, recs: [] },
+        after: { rc: 3, recs: [] },
+        is_future: true,
+        frc_scope_warnings: [{ code: 'OUT_OF_SCOPE_NEIGHBOR' }],
+        recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+    });
+
+    assert.equal(state.needsCardInput, true);
+    assert.equal(state.needsReview, false);
+    assert.equal(state.isUnprocessed, false);
+    assert.equal(state.isClean, false);
+});
+
+test('kartsız giriş gereken slim gün motor logu olsa da kart ve Attendance detayını yükler', () => {
+    assert.equal(
+        safetyModule.frcDayNeedsLazyDetail({
+            recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+            before: { rc: 3, recs: [] },
+            after: { rc: 3, recs: [] },
+            gate_events: [],
+            logs: ['[KART-TAMAMLAMA] gün korundu'],
+        }),
+        true,
+    );
+    assert.equal(
+        safetyModule.frcDayNeedsLazyDetail({
+            recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
+            before: { rc: 3, recs: [{ id: 1 }] },
+            after: { rc: 3, recs: [{ id: 1 }] },
+            gate_events: [{ ts: '11:39:07', dir: 'IN' }],
+            logs: ['[KART-TAMAMLAMA] gün korundu'],
+        }),
+        false,
     );
 });
 
@@ -695,11 +778,21 @@ test('günün manuel talep, gate ve kapsam bulgularını görünür satırlara �
 test('eksik veya bozuk çalışan listesi güvenli boş gruplar döndürür', () => {
     assert.deepEqual(
         safetyModule.getFrcEmployeeGroups({ employees: 'invalid' }),
-        { changed: [], monthlyOnly: [], reviewOnly: [] },
+        {
+            changed: [],
+            monthlyOnly: [],
+            reviewOnly: [],
+            inputRequired: [],
+        },
     );
     assert.deepEqual(
         safetyModule.getFrcEmployeeGroups(null),
-        { changed: [], monthlyOnly: [], reviewOnly: [] },
+        {
+            changed: [],
+            monthlyOnly: [],
+            reviewOnly: [],
+            inputRequired: [],
+        },
     );
     assert.deepEqual(
         safetyModule.getFrcEmployeeDisplay({ employees: 'invalid' }),

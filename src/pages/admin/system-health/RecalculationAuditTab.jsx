@@ -22,6 +22,7 @@ import {
     buildFrcApplyConfirmation,
     classifyFrcPollStatus,
     createFrcOperationEpochFence,
+    frcDayNeedsLazyDetail,
     getFrcDayDisplayState,
     getFrcDayReviewFindings,
     getFrcEmployeeDisplay,
@@ -248,6 +249,7 @@ export default function RecalculationAuditTab() {
         changed: frcChangedEmployees,
         monthlyOnly: frcMonthlyOnlyEmployees,
         reviewOnly: frcReviewOnlyEmployees,
+        inputRequired: frcInputRequiredEmployees,
     } = getFrcEmployeeGroups(frcResult);
     const frcAllEmployees = getFrcEmployeeDisplay(frcResult);
     const frcListedEmployees = getFrcEmployeeDisplay(
@@ -257,16 +259,21 @@ export default function RecalculationAuditTab() {
     const frcReviewEmployeeIds = new Set(
         frcReviewOnlyEmployees.map((employee) => employee.id),
     );
+    const frcChangedEmployeeIds = new Set(
+        frcChangedEmployees.map((employee) => employee.id),
+    );
     const frcMonthlyOnlyEmployeeIds = new Set(
         frcMonthlyOnlyEmployees.map((employee) => employee.id),
     );
-    const frcCleanEmployeeCount = Math.max(
-        0,
-        frcAllEmployees.length
-            - frcChangedEmployees.length
-            - frcMonthlyOnlyEmployees.length
-            - frcReviewOnlyEmployees.length,
+    const frcInputRequiredEmployeeIds = new Set(
+        frcInputRequiredEmployees.map((employee) => employee.id),
     );
+    const frcCleanEmployeeCount = frcAllEmployees.filter((employee) => (
+        !frcChangedEmployeeIds.has(employee.id)
+        && !frcMonthlyOnlyEmployeeIds.has(employee.id)
+        && !frcReviewEmployeeIds.has(employee.id)
+        && !frcInputRequiredEmployeeIds.has(employee.id)
+    )).length;
 
     // OT Request Audit state
     const [otAuditLoading, setOtAuditLoading] = useState(false);
@@ -1349,7 +1356,7 @@ export default function RecalculationAuditTab() {
                     <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
                         <input type="checkbox" checked={onlyChangedEmployees} onChange={e => setOnlyChangedEmployees(e.target.checked)}
                             className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
-                        Yalnız değişen / inceleme gerekenler
+                        Yalnız değişen / işlem bekleyenler
                     </label>
                     <button
                         onClick={() => runFullRecalculation('dry_run')}
@@ -2459,6 +2466,7 @@ export default function RecalculationAuditTab() {
                         && (frcResult.summary?.total_employees_monthly_changed || 0) === 0
                         && (frcResult.summary?.total_employees_with_issues || 0) === 0
                         && frcProtectedDaysSkipped === 0
+                        && frcInputRequiredEmployees.length === 0
                         && !frcApplyBlockReason && (
                         <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-bold">
                             <CheckCircleIcon className="w-5 h-5" />
@@ -2480,6 +2488,11 @@ export default function RecalculationAuditTab() {
                                     {frcReviewOnlyEmployees.length > 0 && (
                                         <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold">
                                             İnceleme: {frcReviewOnlyEmployees.length}
+                                        </span>
+                                    )}
+                                    {frcInputRequiredEmployees.length > 0 && (
+                                        <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-300 text-[10px] font-bold">
+                                            Kartsız giriş/çıkış işlemi gereken çalışan: {frcInputRequiredEmployees.length}
                                         </span>
                                     )}
                                     {frcMonthlyOnlyEmployees.length > 0 && (
@@ -2505,6 +2518,7 @@ export default function RecalculationAuditTab() {
                                     if ((e.cd || 0) > 0 || (e.ghost || 0) > 0) return 3;
                                     if (e.monthly_changed || (e.staged_months || []).length > 0) return 2;
                                     if (frcReviewEmployeeIds.has(e.id)) return 1;
+                                    if (frcInputRequiredEmployeeIds.has(e.id)) return 1;
                                     return 0;
                                 };
                                 const r = rank(b) - rank(a);
@@ -2516,9 +2530,11 @@ export default function RecalculationAuditTab() {
                                 const sevStyle = CHANGE_STYLES[severity];
                                 const isReviewOnly = frcReviewEmployeeIds.has(emp.id);
                                 const isMonthlyOnly = frcMonthlyOnlyEmployeeIds.has(emp.id);
+                                const isInputRequired = frcInputRequiredEmployeeIds.has(emp.id);
                                 const isClean = (emp.cd || 0) === 0
                                     && !isReviewOnly
-                                    && !isMonthlyOnly;
+                                    && !isMonthlyOnly
+                                    && !isInputRequired;
                                 return (
                                 <div key={emp.id} className={`border rounded-xl overflow-hidden ${sevStyle.shell}`}>
                                     {/* Employee Header */}
@@ -2543,6 +2559,11 @@ export default function RecalculationAuditTab() {
                                                 {isReviewOnly && (
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                                                         İnceleme gerekli
+                                                    </span>
+                                                )}
+                                                {isInputRequired && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-900 border border-sky-300">
+                                                        Kartsız giriş/çıkış işlemi gerekli
                                                     </span>
                                                 )}
                                                 {isClean && (
@@ -3055,14 +3076,8 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
     const [lazySnapshot, setLazySnapshot] = useState(null);
     const [lazyError, setLazyError] = useState(null);
     const workDate = day?.date;
-    const hasInlineHeavyDetail = Boolean(
-        day?.before?.recs?.length
-        || day?.after?.recs?.length
-        || day?.gate_events?.length
-        || day?.logs?.length,
-    );
     const canLazyLoad = Boolean(
-        empId && workDate && !hasInlineHeavyDetail,
+        empId && workDate && frcDayNeedsLazyDetail(day),
     );
     const lazyLoading = Boolean(
         expanded && canLazyLoad && lazySnapshot === null && lazyError === null,
@@ -3076,6 +3091,7 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
     const {
         hasChange: hasDayChange,
         needsReview: hasBlockingReview,
+        needsCardInput,
         isUnprocessed: isUnprocessedDay,
         isClean: isCleanDay,
     } = dayDisplayState;
@@ -3156,6 +3172,11 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                             İNCELEME GEREKLİ
                         </span>
                     )}
+                    {needsCardInput && (
+                        <span className="px-1.5 py-0.5 bg-sky-100 text-sky-900 border border-sky-300 rounded text-[9px] font-bold">
+                            KART GİRİŞ/ÇIKIŞI EKSİK — İŞLEM GEREKLİ
+                        </span>
+                    )}
                     {isUnprocessedDay && !hasDayChange && !hasBlockingReview && (
                         <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[9px] font-bold">
                             HENÜZ HESAPLANMADI
@@ -3183,6 +3204,14 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                     {isCleanDay && (
                         <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-900">
                             Dry-run bu gün için fark üretmedi. ÖNCE ve SONRA toplamları aynıdır; aşağıdaki kayıtlar doğrulama amacıyla gösterilir.
+                        </div>
+                    )}
+                    {needsCardInput && (
+                        <div className="p-3 bg-sky-50 border border-sky-300 rounded-lg text-[11px] text-sky-950">
+                            <div className="font-bold">Bu gün güvenlik amacıyla tamamen korundu.</div>
+                            <div className="mt-1">
+                                Ham kart giriş–çıkışlarından biri eşleşmiyor ve mevcut Attendance kayıtları bu eksik parçaya dayanıyor. Dry-run hiçbir kaydı silmedi, bu günü değişiklik paketine eklemedi ve Uygula adımı da bu günü değiştirmeyecek. Kartsız giriş/çıkış işlemi tamamlandıktan sonra çalışan-gün yeniden hesaplanabilir.
+                            </div>
                         </div>
                     )}
                     {lazyError && (
