@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Upload, Button, Card, Table, Tag, Alert, Statistic, Row, Col, Popconfirm, message, Spin } from 'antd';
-import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined, UndoOutlined } from '@ant-design/icons';
+import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
 // PDKS Mutabakat & Tam İçe Aktarma — dry-run mutabakat raporu + onayla→tam import.
 // Backend RECALC YAPMAZ; import sonrası kullanıcı ayrı "Tam Yeniden Hesaplama" çalıştırır.
@@ -37,7 +37,7 @@ export default function PdksReconcileTab() {
       });
       setResults(data);
       const s = data.summary || {};
-      message.info(`Ön izleme: ${s.to_add || 0} eklenecek, ${s.spurious || 0} fazla cihaz-CARD, ${s.unmatched || 0} eşleşmeyen sicil.`);
+      message.info(`Ön izleme: ${s.to_add || 0} eklenecek, ${s.replacements || 0} düzeltilecek, ${s.spurious || 0} fazla cihaz-CARD, ${s.unmatched || 0} eşleşmeyen sicil.`);
     } catch (err) {
       message.error(err.response?.data?.error || 'Ön izleme sırasında hata oluştu.');
     } finally {
@@ -91,8 +91,11 @@ export default function PdksReconcileTab() {
       });
       setResults(data);
       const a = data.applied || {};
-      const parts = [`${a.created || 0} event eklendi`];
-      if (a.deleted) parts.push(`${a.deleted} fazla cihaz-CARD silindi`);
+      const added = a.added ?? Math.max((a.created || 0) - (a.replaced || 0), 0);
+      const deletedSpurious = a.deleted_spurious ?? Math.max((a.deleted || 0) - (a.replaced || 0), 0);
+      const parts = [`${added} event eklendi`];
+      if (a.replaced) parts.push(`${a.replaced} event düzeltildi`);
+      if (deletedSpurious) parts.push(`${deletedSpurious} fazla cihaz-CARD silindi`);
       message.success(parts.join(', '));
       // Apply sonucu TXT'yi backend hazır gönderdiyse doğrudan indir — İKİNCİ apply POST'u YAPMA (FE-02).
       if (data.txt_report) {
@@ -166,6 +169,9 @@ export default function PdksReconcileTab() {
   const applied = results?.applied;
   const warnings = results?.warnings || [];
   const outOfScope = results?.out_of_scope || [];
+  const replacements = results?.replacements || [];
+  const appliedAdded = applied?.added ?? Math.max((applied?.created || 0) - (applied?.replaced || 0), 0);
+  const appliedDeletedSpurious = applied?.deleted_spurious ?? Math.max((applied?.deleted || 0) - (applied?.replaced || 0), 0);
   // Backend EventID yoksa silmeyi zorla false'a çeker (delete_spurious_effective).
   const deleteEffective = results?.delete_spurious_effective;
   const deleteDisabledByBackend = deleteSpurious && deleteEffective === false;
@@ -203,6 +209,36 @@ export default function PdksReconcileTab() {
     { title: 'Event ID', dataIndex: 'event_id', key: 'event_id', render: v => <span className="font-mono text-xs text-gray-400">{v}</span> },
   ];
 
+  const replacementColumns = [
+    {
+      title: 'Çalışan', key: 'employee', width: 200,
+      render: (_, r) => <span>{r.name || '—'}{r.sicil_id ? <span className="text-gray-400 text-xs"> #{r.sicil_id}</span> : null}</span>,
+    },
+    {
+      title: 'Sistemdeki kayıt', key: 'old_value', width: 230,
+      render: (_, r) => (
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs">{r.old_timestamp || '—'}</span>
+          <Tag color={r.old_direction === 'IN' ? 'cyan' : 'orange'}>{r.old_direction || '—'}</Tag>
+        </div>
+      ),
+    },
+    {
+      title: 'CSV doğrusu', key: 'new_value', width: 230,
+      render: (_, r) => {
+        const isIn = r.direction === 'GİRİŞ' || r.direction === 'IN' || r.direction === 'GIRIS';
+        return (
+          <div className="flex items-center gap-2">
+            <SwapOutlined className="text-purple-500" />
+            <span className="font-mono text-xs">{r.datetime || '—'}</span>
+            <Tag color={isIn ? 'cyan' : 'orange'}>{isIn ? 'GİRİŞ' : 'ÇIKIŞ'}</Tag>
+          </div>
+        );
+      },
+    },
+    { title: 'Event ID', dataIndex: 'event_id', key: 'event_id', render: v => <span className="font-mono text-xs text-gray-400">{v}</span> },
+  ];
+
   const truncatedNote = (key) => truncated[key] ? (
     <Alert
       type="info"
@@ -217,7 +253,7 @@ export default function PdksReconcileTab() {
       <Card size="small" title="PDKS Mutabakat & Tam İçe Aktarma" className="shadow-sm">
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen log CSV&apos;sini yükleyin. Önce <strong>Ön İzleme</strong> ile mutabakat raporunu inceleyin
-          (eklenecek eventler, cihazda fazla CARD kayıtları, eşleşmeyen siciller), ardından <strong>Tam İçe Aktar</strong> ile uygulayın.
+          (eklenecek, aynı EventID ile düzeltilecek, cihazda fazla CARD kayıtları ve eşleşmeyen siciller), ardından <strong>Tam İçe Aktar</strong> ile uygulayın.
           Eklenen event&apos;ler en geç ~15 dakika içinde otomatik işlenmeye başlar; <strong>silmeler dahil tüm çalışma saatlerini hemen ve eksiksiz güncellemek için &quot;Tam Yeniden Hesaplama&quot; çalıştırın.</strong>
         </p>
 
@@ -239,6 +275,7 @@ export default function PdksReconcileTab() {
           </label>
           <span className="text-xs text-gray-400">
             CSV&apos;de olmayan ama sistemde duran cihaz kaynaklı (CARD) kayıtları siler. Varsayılan kapalı.
+            Aynı EventID&apos;deki yön/saat farkları bu kutudan bağımsız düzeltilir.
           </span>
         </div>
 
@@ -263,8 +300,8 @@ export default function PdksReconcileTab() {
           <Popconfirm
             title="Tam içe aktarma yapılsın mı?"
             description={deleteSpurious
-              ? `Eksik eventler eklenecek ve cihazda fazla ${summary.spurious || 0} CARD kaydı silinecek${truncated.spurious ? ' (önizlemede 500 gösterildi, tamamı silinecek)' : ''}. Korunan flag-li kayıtlara dokunulmaz.`
-              : 'Eksik eventler eklenecek. Fazla CARD silme kapalı.'}
+              ? `${summary.to_add || 0} eksik event eklenecek, ${summary.replacements || 0} event düzeltilecek ve cihazda fazla ${summary.spurious || 0} CARD kaydı silinecek${truncated.spurious ? ' (önizlemede 500 gösterildi, tamamı silinecek)' : ''}. Korunan flag-li kayıtlara dokunulmaz.`
+              : `${summary.to_add || 0} eksik event eklenecek ve ${summary.replacements || 0} event düzeltilecek. Fazla CARD silme kapalı.`}
             onConfirm={handleApply}
             okText="Evet, İçe Aktar"
             cancelText="İptal"
@@ -317,7 +354,7 @@ export default function PdksReconcileTab() {
             <Alert
               type="success"
               showIcon
-              message={`İçe aktarma tamamlandı: ${applied.created || 0} event eklendi${applied.deleted ? `, ${applied.deleted} fazla CARD silindi` : ''}.`}
+              message={`İçe aktarma tamamlandı: ${appliedAdded} event eklendi${applied.replaced ? `, ${applied.replaced} event düzeltildi` : ''}${appliedDeletedSpurious ? `, ${appliedDeletedSpurious} fazla CARD silindi` : ''}.`}
             />
           )}
 
@@ -338,11 +375,11 @@ export default function PdksReconcileTab() {
               showIcon
               icon={<UndoOutlined />}
               message="Bu içe aktarmayı geri alabilirsiniz."
-              description="Geri alma; eklenen eventleri kaldırır ve silinen fazla CARD kayıtlarını geri yükler. Sonrasında 'Tam Yeniden Hesaplama' çalıştırın."
+              description="Geri alma; eklenen/düzeltilen eventleri kaldırır, düzeltilen kayıtların önceki halini ve silinen fazla CARD kayıtlarını geri yükler. Sonrasında 'Tam Yeniden Hesaplama' çalıştırın."
               action={
                 <Popconfirm
                   title="İçe aktarma geri alınsın mı?"
-                  description="Eklenen eventler kaldırılacak ve silinen fazla CARD kayıtları geri yüklenecek. Bu işlemden sonra Tam Yeniden Hesaplama çalıştırın."
+                  description="Eklenen/düzeltilen eventler geri alınacak ve silinen fazla CARD kayıtları geri yüklenecek. Bu işlemden sonra Tam Yeniden Hesaplama çalıştırın."
                   onConfirm={handleUndo}
                   okText="Evet, Geri Al"
                   cancelText="İptal"
@@ -366,29 +403,52 @@ export default function PdksReconcileTab() {
               showIcon
               icon={<ReloadOutlined />}
               message="Veri güncellendi. Çalışma saatlerini güncellemek için şimdi 'Tam Yeniden Hesaplama' çalıştırın."
-              description="Eklenen event'ler arka planda ~15 dk içinde otomatik işlenmeye başlar; silmeler ve eksiksiz/anlık güncelleme için 'Tam Yeniden Hesaplama' çalıştırın."
+              description="Eklenen ve düzeltilen event'ler arka planda ~15 dk içinde otomatik işlenmeye başlar; silmeler ve eksiksiz/anlık güncelleme için 'Tam Yeniden Hesaplama' çalıştırın."
             />
           )}
 
           {/* Özet kartları */}
           <Row gutter={[12, 12]}>
-            <Col xs={12} md={6}>
+            <Col xs={24} sm={12} lg={8}>
               <Card size="small" className="shadow-sm">
                 <Statistic
                   title={isApplyMode ? 'Eklenen' : 'Eklenecek'}
-                  value={isApplyMode ? (applied?.created ?? summary.to_add ?? 0) : (summary.to_add || 0)}
+                  value={isApplyMode ? appliedAdded : (summary.to_add || 0)}
                   valueStyle={{ color: '#52c41a' }}
                   prefix={<CheckCircleOutlined />}
                 />
               </Card>
             </Col>
-            <Col xs={12} md={6}>
+            <Col xs={24} sm={12} lg={8}>
+              <Card size="small" className="shadow-sm">
+                <Statistic
+                  title={isApplyMode ? 'Düzeltilen' : 'Düzeltilecek'}
+                  value={isApplyMode ? (applied?.replaced ?? summary.replacements ?? 0) : (summary.replacements || 0)}
+                  valueStyle={{ color: summary.replacements > 0 ? '#722ed1' : '#52c41a' }}
+                  prefix={<SwapOutlined />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
               <Card size="small" className="shadow-sm">
                 <Statistic
                   title={isApplyMode ? 'Silinen fazla CARD' : 'Fazla cihaz-CARD'}
-                  value={isApplyMode ? (applied?.deleted ?? summary.spurious ?? 0) : (summary.spurious || 0)}
+                  value={isApplyMode ? appliedDeletedSpurious : (summary.spurious || 0)}
                   valueStyle={{ color: summary.spurious > 0 ? '#ff4d4f' : '#52c41a' }}
                   prefix={<DeleteOutlined />}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* İkincil özet */}
+          <Row gutter={[12, 12]}>
+            <Col xs={12} md={6}>
+              <Card size="small" className="shadow-sm">
+                <Statistic
+                  title="Mevcut (zaten var)"
+                  value={summary.existing || 0}
+                  valueStyle={{ color: '#8c8c8c' }}
                 />
               </Card>
             </Col>
@@ -412,19 +472,6 @@ export default function PdksReconcileTab() {
                 />
               </Card>
             </Col>
-          </Row>
-
-          {/* İkincil özet */}
-          <Row gutter={[12, 12]}>
-            <Col xs={12} md={6}>
-              <Card size="small" className="shadow-sm">
-                <Statistic
-                  title="Mevcut (zaten var)"
-                  value={summary.existing || 0}
-                  valueStyle={{ color: '#8c8c8c' }}
-                />
-              </Card>
-            </Col>
             <Col xs={12} md={6}>
               <Card size="small" className="shadow-sm">
                 <Statistic
@@ -435,17 +482,16 @@ export default function PdksReconcileTab() {
                 />
               </Card>
             </Col>
-            {(results.date_from || results.date_to) && (
-              <Col xs={24} md={12}>
-                <Card size="small" className="shadow-sm">
-                  <div className="text-xs text-gray-500">Tarih Aralığı</div>
-                  <div className="text-base font-semibold mt-1">
-                    {results.date_from || '?'} &mdash; {results.date_to || '?'}
-                  </div>
-                </Card>
-              </Col>
-            )}
           </Row>
+
+          {(results.date_from || results.date_to) && (
+            <Card size="small" className="shadow-sm">
+              <div className="text-xs text-gray-500">Tarih Aralığı</div>
+              <div className="text-base font-semibold mt-1">
+                {results.date_from || '?'} &mdash; {results.date_to || '?'}
+              </div>
+            </Card>
+          )}
 
           {/* Parse hataları */}
           {results.parse_errors?.length > 0 && (
@@ -532,20 +578,48 @@ export default function PdksReconcileTab() {
             </Card>
           )}
 
+          {/* Aynı EventID ile sistemde bulunan ama CSV içeriğinden farklı eventler */}
+          {replacements.length > 0 && (
+            <Card
+              size="small"
+              title={`Düzeltilecek Eventler (${summary.replacements || replacements.length})${isApplyMode && applied?.replaced ? ' — düzeltildi' : ''}`}
+              className="shadow-sm border-purple-200"
+            >
+              <Alert
+                type="info"
+                showIcon
+                icon={<SwapOutlined />}
+                className="mb-2"
+                message={isApplyMode
+                  ? `${applied?.replaced || 0} aynı-EventID kaydı CSV doğrusu ile düzeltildi.`
+                  : 'Aynı EventID bulundu; sistemdeki yön/saat CSV doğrusu ile değiştirilecek. Fazla CARD silme kutusundan bağımsızdır.'}
+              />
+              {truncatedNote('replacements')}
+              <Table
+                dataSource={replacements}
+                columns={replacementColumns}
+                rowKey={(r) => r.event_id}
+                size="small"
+                scroll={{ x: 860 }}
+                pagination={{ pageSize: 20, showSizeChanger: true, showTotal: t => `${t} kayıt` }}
+              />
+            </Card>
+          )}
+
           {/* Silinecek fazla CARD kayıtları */}
           {results.spurious?.length > 0 && (
             <Card
               size="small"
               title={`Fazla cihaz-CARD (${summary.spurious || results.spurious.length})${
                 isApplyMode
-                  ? (applied?.deleted > 0 ? ' — silindi' : '')
+                  ? (appliedDeletedSpurious > 0 ? ' — silindi' : '')
                   : (deleteSpurious ? ' — silinecek' : ' — silme kapalı')
               }`}
               className="shadow-sm"
             >
               {/* Apply modunda: kayıtlar zaten işlendi, "silinecek" uyarıları gösterme */}
               {isApplyMode ? (
-                applied?.deleted > 0 && (
+                appliedDeletedSpurious > 0 && (
                   <Alert
                     type="info"
                     showIcon
