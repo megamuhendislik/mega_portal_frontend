@@ -244,7 +244,7 @@ const helpContent = [
         },
         {
             title: 'Tarih ve Saatleri Girme',
-            description: 'İlgili tarihi seçin, gerçek giriş ve çıkış saatlerinizi girin ve durumu açıklayan bir not yazın. Form, seçtiğiniz günün vardiya bilgisini gösterir.'
+            description: 'İlgili tarihi seçin, gerçek giriş ve çıkış saatlerinizi girin ve durumu açıklayan bir not yazın. Vardiya dışındaki saatler ile hafta sonu ve resmî tatil günleri de seçilebilir; form vardiya bilgisini yalnızca bilgilendirme amacıyla gösterir.'
         },
         {
             title: 'Onay Süreci',
@@ -252,7 +252,7 @@ const helpContent = [
         },
         {
             title: 'Onay Sonrası Otomatik Puantaj',
-            description: 'Talep onaylandığında puantaj kaydınız belirttiğiniz saatlerle otomatik oluşturulur ve o günün çalışma süresi yeniden hesaplanır.'
+            description: 'Talep onaylandığında puantaj kaydınız belirttiğiniz saatlerle otomatik oluşturulur. Mesai içindeki bölüm normal çalışma, vardiya dışındaki veya çalışılmayan gündeki bölüm fazla mesai olarak ayrılır ve aynı kararla onaylanır.'
         },
         {
             title: 'Talebi Takip Etme',
@@ -264,12 +264,14 @@ const helpContent = [
         { type: 'info', text: 'Kartsız giriş talebi geriye dönük 2 mali ay içindeki tarihler için verilebilir; daha eski tarihler için talep oluşturulamaz.' },
         { type: 'warning', text: 'Aynı gün için bekleyen veya onaylanmış bir kartsız giriş talebiniz varken yeni talep veremezsiniz. Önce mevcut talebin sonuçlanması gerekir.' },
         { type: 'warning', text: 'Kilitli mali dönemdeki tarihler için kartsız giriş talebi oluşturulamaz.' },
+        { type: 'warning', text: 'Talebin oluşturacağı fazla mesai haftalık ek mesai limitini aşarsa onay işlemi yapılmaz.' },
         { type: 'success', text: 'Saatleri gerçeğe uygun girin; onay sonrası gün otomatik yeniden hesaplandığı için doğru saatler doğru puantaj demektir.' }
     ],
     faq: [
         { q: 'Talebim onaylandı ama puantajım ne zaman düzelir?', a: 'Onayla birlikte puantaj kaydı otomatik oluşturulur ve gün anında yeniden hesaplanır; ek bir işlem gerekmez.' },
         { q: 'Aynı gün için ikinci bir talep verebilir miyim?', a: 'Hayır. O gün için bekleyen veya onaylı bir kartsız giriş talebi varken yenisi oluşturulamaz. Hatalı talebinizi (bekliyorsa) iptal edip yenisini verebilirsiniz.' },
         { q: 'Ne kadar geriye dönük talep verebilirim?', a: 'Tüm talep türlerinde olduğu gibi geriye dönük pencere 2 mali aydır.' },
+        { q: 'Mesai dışında veya tatil gününde talep oluşturabilir miyim?', a: 'Evet. Gerçek saatlerinizi girerek vardiya öncesi/sonrası, hafta sonu ve resmî tatil günleri için talep oluşturabilirsiniz. Onayda normal çalışma ile fazla mesai bölümleri otomatik ayrılır.' },
         { q: 'Yarım gün çalıştım, sadece çıkışı mı unuttum?', a: 'Gerçek giriş ve çıkış saatlerinizin tamamını belirterek talep oluşturun; onay sonrası gün bu saatlere göre hesaplanır.' },
         { q: 'Talebim reddedilirse ne olur?', a: 'Puantajınızda değişiklik yapılmaz ve size red bildirimi gelir. Gerekirse yöneticinizle görüşüp yeni bir talep oluşturabilirsiniz.' }
     ]

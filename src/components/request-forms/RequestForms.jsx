@@ -2123,10 +2123,11 @@ export const CardlessEntryForm = ({
         )}
 
         {!cardlessScheduleLoading && cardlessSchedule && !isCardlessWorkDay && (
-            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
-                <AlertCircle size={18} className="text-red-500 shrink-0" />
-                <span className="text-sm font-medium text-red-700">
-                    {cardlessSchedule.reason || 'Seçilen tarih mesai günü değildir. Lütfen başka bir tarih seçin.'}
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+                <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-amber-800">
+                    {cardlessSchedule.reason || 'Seçilen tarih mesai günü değildir.'}{' '}
+                    Bu aralıktaki çalışma, talep onaylandığında fazla mesai olarak onaylanır.
                 </span>
             </div>
         )}
@@ -2135,7 +2136,7 @@ export const CardlessEntryForm = ({
             <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2">
                 <Clock size={16} className="text-purple-500 shrink-0" />
                 <span className="text-sm font-medium text-purple-700">
-                    Mesai saatleri: <strong>{scheduleStart}</strong> – <strong>{scheduleEnd}</strong> · Saatler bu aralık dışına çıkamaz
+                    Mesai saatleri: <strong>{scheduleStart}</strong> – <strong>{scheduleEnd}</strong> · Mesai içindeki süre normal çalışma, dışındaki süre fazla mesai olarak değerlendirilir ve birlikte onaylanır.
                 </span>
             </div>
         )}
@@ -2147,9 +2148,7 @@ export const CardlessEntryForm = ({
                     required
                     type="time"
                     value={cardlessEntryForm.check_in_time}
-                    min={scheduleStart || undefined}
-                    max={scheduleEnd || undefined}
-                    disabled={!isCardlessWorkDay || cardlessScheduleLoading}
+                    disabled={cardlessScheduleLoading}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_in_time: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -2160,9 +2159,7 @@ export const CardlessEntryForm = ({
                     required
                     type="time"
                     value={cardlessEntryForm.check_out_time}
-                    min={scheduleStart || undefined}
-                    max={scheduleEnd || undefined}
-                    disabled={!isCardlessWorkDay || cardlessScheduleLoading}
+                    disabled={cardlessScheduleLoading}
                     onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, check_out_time: e.target.value })}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -2182,7 +2179,6 @@ export const CardlessEntryForm = ({
                 required
                 rows="3"
                 value={cardlessEntryForm.reason}
-                disabled={!isCardlessWorkDay}
                 onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, reason: e.target.value })}
                 className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="Kartsız giriş gerekçesini belirtiniz..."
@@ -2196,7 +2192,6 @@ export const CardlessEntryForm = ({
                 type="checkbox"
                 id="send_to_sub_cardless"
                 checked={cardlessEntryForm.send_to_substitute}
-                disabled={!isCardlessWorkDay}
                 onChange={e => setCardlessEntryForm({ ...cardlessEntryForm, send_to_substitute: e.target.checked })}
                 className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
             />

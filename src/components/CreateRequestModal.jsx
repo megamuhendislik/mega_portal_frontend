@@ -1357,7 +1357,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         </div>
     );
 
-    // Computed values for cardless entry (used in submit button disabled check)
+    // Computed values for cardless entry schedule guidance
     const isCardlessWorkDay = cardlessSchedule?.is_work_day !== false;
     const scheduleStart = cardlessSchedule?.start_time || null;
     const scheduleEnd = cardlessSchedule?.end_time || null;
@@ -1816,7 +1816,7 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                             <button
                                 form="requestForm"
                                 type="submit"
-                                disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && !isCardlessWorkDay) || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (selectedType === 'HEALTH_REPORT' && healthReportFiles.length === 0) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
+                                disabled={loading || isInsufficientBalance || (selectedType === 'CARDLESS_ENTRY' && cardlessEntryForm.check_in_time && cardlessEntryForm.check_out_time && cardlessEntryForm.check_in_time >= cardlessEntryForm.check_out_time) || (selectedType === 'HOSPITAL_VISIT' && (!hospitalVisitForm.date || hospitalVisitFiles.length === 0 || !hospitalVisitForm.start_time || !hospitalVisitForm.end_time || hospitalVisitForm.start_time >= hospitalVisitForm.end_time)) || (selectedType === 'HEALTH_REPORT' && healthReportFiles.length === 0) || (availableApprovers.length > 1 && !selectedApproverId && selectedType !== 'MEAL' && selectedType !== 'HEALTH_REPORT' && selectedType !== 'HOSPITAL_VISIT' && !(selectedType === 'LEAVE' && typeof leaveForm.request_type === 'string' && leaveForm.request_type.startsWith('SPECIAL:')))}
                                 className={`px-5 sm:px-8 py-2.5 rounded-xl text-white font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm
                                     ${selectedType === 'LEAVE' ? 'bg-blue-600 hover:bg-blue-700' :
                                         selectedType === 'OVERTIME' ? 'bg-red-500 hover:bg-red-600' :
