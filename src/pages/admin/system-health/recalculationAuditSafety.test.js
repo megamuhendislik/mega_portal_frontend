@@ -593,7 +593,7 @@ test('show_all_days sonucu temiz çalışanları değişen çalışan sayısına
                 result.employees[4],
                 result.employees[6],
             ],
-            inputRequired: [result.employees[7], result.employees[8]],
+            inputRequired: [],
         },
     );
 });
@@ -639,12 +639,11 @@ test('yalnız değişenler filtresi temiz çalışanı saklar, değişen ve ince
             result.employees[0],
             result.employees[2],
             result.employees[3],
-            result.employees[4],
         ],
     );
 });
 
-test('kartsız kayıt bekleyen gün temiz, hesaplanmamış veya manuel inceleme sayılmaz', () => {
+test('eski kart-tamamlama durumu temiz gün olarak gösterilir', () => {
     const state = safetyModule.getFrcDayDisplayState({
         date: '2026-07-27',
         before: { rc: 3 },
@@ -653,13 +652,13 @@ test('kartsız kayıt bekleyen gün temiz, hesaplanmamış veya manuel inceleme 
         recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
     });
 
-    assert.equal(state.needsCardInput, true);
+    assert.equal(state.needsCardInput, false);
     assert.equal(state.needsReview, false);
     assert.equal(state.isUnprocessed, false);
-    assert.equal(state.isClean, false);
+    assert.equal(state.isClean, true);
 });
 
-test('kartsız giriş gereken durum kapsam uyarısı ve future işaretine rağmen tek ana kategoride kalır', () => {
+test('eski kart-tamamlama durumu gerçek kapsam uyarısını maskelemez', () => {
     const state = safetyModule.getFrcDayDisplayState({
         date: '2026-07-27',
         before: { rc: 3, recs: [] },
@@ -669,20 +668,35 @@ test('kartsız giriş gereken durum kapsam uyarısı ve future işaretine rağme
         recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
     });
 
-    assert.equal(state.needsCardInput, true);
-    assert.equal(state.needsReview, false);
-    assert.equal(state.isUnprocessed, false);
+    assert.equal(state.needsCardInput, false);
+    assert.equal(state.needsReview, true);
+    assert.equal(state.isUnprocessed, true);
     assert.equal(state.isClean, false);
 });
 
-test('kartsız giriş gereken slim gün motor logu olsa da kart ve Attendance detayını yükler', () => {
+test('eşleşmemiş ham kart ucu güvenle yok sayılan temiz gündür', () => {
+    const state = safetyModule.getFrcDayDisplayState({
+        date: '2026-07-27',
+        before: { rc: 3 },
+        after: { rc: 3 },
+        has_diff: false,
+        recalc_status: 'UNMATCHED_GATE_IGNORED',
+    });
+
+    assert.equal(state.needsCardInput, false);
+    assert.equal(state.needsReview, false);
+    assert.equal(state.isUnprocessed, false);
+    assert.equal(state.isClean, true);
+});
+
+test('yok sayılan eşleşmemiş kart günü slim ise ham detayını yükler', () => {
     assert.equal(
         safetyModule.frcDayNeedsLazyDetail({
             recalc_status: 'UNMATCHED_GATE_INPUT_REQUIRED',
             before: { rc: 3, recs: [] },
             after: { rc: 3, recs: [] },
             gate_events: [],
-            logs: ['[KART-TAMAMLAMA] gün korundu'],
+            logs: ['[KART-KANITI] ham sınır süreye çevrilmedi'],
         }),
         true,
     );
@@ -692,7 +706,7 @@ test('kartsız giriş gereken slim gün motor logu olsa da kart ve Attendance de
             before: { rc: 3, recs: [{ id: 1 }] },
             after: { rc: 3, recs: [{ id: 1 }] },
             gate_events: [{ ts: '11:39:07', dir: 'IN' }],
-            logs: ['[KART-TAMAMLAMA] gün korundu'],
+            logs: ['[KART-KANITI] ham sınır süreye çevrilmedi'],
         }),
         false,
     );

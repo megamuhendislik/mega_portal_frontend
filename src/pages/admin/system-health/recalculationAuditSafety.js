@@ -442,8 +442,11 @@ function hasItems(value) {
 const FRC_COMPLETED_DAY_STATUSES = new Set([
     'RECALCULATED',
     'RECALCULATED_PROTECTED',
+    'UNMATCHED_GATE_IGNORED',
+    // Eski dry-run artifact'ları yeni sürümde de sorun/işlem gerektiriyor
+    // gibi gösterilmemeli. Güvenlik katmanı bu günleri zaten değiştirmedi.
+    'UNMATCHED_GATE_INPUT_REQUIRED',
 ]);
-const FRC_CARD_INPUT_REQUIRED_STATUS = 'UNMATCHED_GATE_INPUT_REQUIRED';
 
 export function getFrcDayDisplayState(day) {
     if (!day || typeof day !== 'object') {
@@ -464,7 +467,7 @@ export function getFrcDayDisplayState(day) {
         || hasItems(day.ch)
         || day.is_ghost,
     );
-    const needsCardInput = recalcStatus === FRC_CARD_INPUT_REQUIRED_STATUS;
+    const needsCardInput = false;
     const needsReview = !needsCardInput && Boolean(
         day.protected_skip
         || day.is_ghost
