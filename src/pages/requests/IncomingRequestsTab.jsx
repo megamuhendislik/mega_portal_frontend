@@ -12,6 +12,7 @@ import {
     buildOvertimeApprovalWarnings,
     getSubstituteLeaveType,
 } from '../../components/requests/nonWorkingDayOvertimeUtils';
+import { getApiErrorMessage } from '../../utils/requestActions';
 import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
@@ -219,7 +220,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
             // Hata durumunda force refresh ile güncel veri al
-            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch { /* Ana hata zaten gösterildi. */ }
         }
     };
 
@@ -246,7 +247,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             console.error('[handleReject] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
             message.error(errorMsg);
-            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch { /* Ana hata zaten gösterildi. */ }
         }
     };
 
@@ -281,8 +282,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             message.success('Talep vekil olarak onaylandı');
             onDataChange?.();
         } catch (e) {
-            message.error(e.response?.data?.error || 'İşlem başarısız');
-            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
+            message.error(getApiErrorMessage(e, 'İşlem başarısız'));
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch { /* Ana hata zaten gösterildi. */ }
         }
     };
 
@@ -317,8 +318,8 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             message.success('Talep vekil olarak reddedildi');
             onDataChange?.();
         } catch (e) {
-            message.error(e.response?.data?.error || 'İşlem başarısız');
-            try { await fetchAllData(undefined, { forceRefresh: true }); } catch {}
+            message.error(getApiErrorMessage(e, 'İşlem başarısız'));
+            try { await fetchAllData(undefined, { forceRefresh: true }); } catch { /* Ana hata zaten gösterildi. */ }
         }
     };
 
@@ -331,10 +332,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // Override detail modal (from ExpandableRequestRow "Karar Değiştir" button)
     const handleViewDetail = (req) => {
-        // Vekil (substitute) kalemleri için karar değiştirme: generic override_decision
-        // endpoint'i vekil bağlamını (acting_as_substitute_for) taşımadığından,
-        // mevcut handleSubstitute* handler'larıyla kararı TERS çeviririz.
-        if (req._isSubstitute) {
+        // İzin ve fazla mesaideki mevcut vekil karar değiştirme akışı korunur.
+        // Kartsız giriş, vekil bağlamını taşıyan gerçek override endpoint'ini kullanır.
+        if (req._isSubstitute && req.type !== 'CARDLESS_ENTRY') {
             return handleSubstituteOverride(req);
         }
         setSelectedRequest(req);
@@ -566,10 +566,10 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (!r.status || r.status === 'PENDING') return;
             items.push(buildItem(r, 'OVERTIME', { start_date: r.date }));
         });
-        // NOT: Karar verilmiş CARDLESS_ENTRY override edilemez — backend cardless
-        // approve/reject non-PENDING'i HTTP 400 ile reddeder (cardless'ta override
-        // yolu YOK, leave/OT'den farklı). Bu yüzden "Değiştir" bölümüne hiç eklenmez.
-        // PENDING cardless aynen Onay Bekleyen tablosunda Onayla/Reddet ile çalışır.
+        (substituteData.cardless_entry_requests || []).forEach(r => {
+            if (!r.status || r.status === 'PENDING') return;
+            items.push(buildItem(r, 'CARDLESS_ENTRY', { start_date: r.date }));
+        });
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
         return items;
     }, [substituteData]);

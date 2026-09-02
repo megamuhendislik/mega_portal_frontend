@@ -7,6 +7,7 @@ import api from '../services/api';
 import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
 import NonWorkingDayOvertimeWarning from './requests/NonWorkingDayOvertimeWarning';
+import { buildOverridePayload, getApiErrorMessage } from '../utils/requestActions';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
@@ -97,7 +98,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
     try {
       await onApprove(request, 'Onaylandı');
       onClose();
-    } catch (err) {
+    } catch {
       // Error handled by parent
     } finally {
       setApproveLoading(false);
@@ -112,7 +113,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       setRejectMode(false);
       setRejectReason('');
       onClose();
-    } catch (err) {
+    } catch {
       // Error handled by parent
     } finally {
       setRejectLoading(false);
@@ -389,17 +390,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
         return;
       }
 
-      await api.post(endpoint, {
-        action: overrideAction,
-        reason: overrideReason
-      });
+      await api.post(
+        endpoint,
+        buildOverridePayload(request, overrideAction, overrideReason),
+      );
 
       setShowOverrideModal(false);
       setOverrideReason('');
       if (onUpdate) onUpdate();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Override işlemi başarısız oldu');
+      setError(getApiErrorMessage(err, 'Override işlemi başarısız oldu'));
     } finally {
       setLoading(false);
     }
