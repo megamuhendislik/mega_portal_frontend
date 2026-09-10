@@ -60,9 +60,18 @@ function flattenSegments(items) {
   return result;
 }
 
+function formatBridgeDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(`${dateStr}T00:00:00`);
+  const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${days[d.getDay()]}`;
+}
+
 export default function ClaimConfirmPanel({
   type,
   claimTarget,
+  bridge,
   weeklyStatus,
   approvers,
   onBack,
@@ -160,6 +169,9 @@ export default function ClaimConfirmPanel({
     onConfirm({
       type,
       claimTarget,
+      bridge: bridge
+        ? { request_ids: bridge.request_ids, bridge_key: bridge.bridge_key }
+        : null,
       reason,
       target_approver_id: selectedApproverId,
       send_to_substitute: sendToSubstitute,
@@ -168,6 +180,32 @@ export default function ClaimConfirmPanel({
       selected_segments: isPartialClaim ? selectedSegmentTimes : null,
     });
   };
+
+  const bridgeNotice = bridge ? (
+    <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3">
+      <p className="text-sm font-semibold text-indigo-900">
+        Gece yarısını geçen mesai
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-indigo-800">
+        Bu tek bir seans. Tek talep gönderiyorsunuz ve yönetici tek karar
+        veriyor. Kayıtlar iki güne ayrı yazılıyor.
+      </p>
+      <div className="mt-2 space-y-1 text-xs text-indigo-900">
+        <div className="flex items-center justify-between gap-3">
+          <span>{formatBridgeDate(bridge.first?.date)}</span>
+          <span className="font-medium">
+            {bridge.first?.start_time?.slice(0, 8)} – gece yarısı
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span>{formatBridgeDate(bridge.second?.date)}</span>
+          <span className="font-medium">
+            gece yarısı – {bridge.second?.end_time?.slice(0, 8)}
+          </span>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -181,6 +219,7 @@ export default function ClaimConfirmPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-4">
+        {bridgeNotice}
         <div className="flex items-center gap-2">
           <span className="font-semibold text-slate-800">{formatDate(date)}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

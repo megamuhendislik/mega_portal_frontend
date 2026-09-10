@@ -192,6 +192,33 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         if (refreshTrigger > 0) fetchAllData(undefined, { forceRefresh: true });
     }, [refreshTrigger, fetchAllData]);
 
+    // Gece yarısını geçen mesai iki güne yazılır ama tek seanstır. Yönetici
+    // varsayılan olarak ikisini birlikte karara bağlar; isterse geceyi bölüp
+    // yalnız seçtiği günü işleyebilir.
+    const askBridgeScope = (req, actionLabel) => new Promise(resolve => {
+        if (!req?.bridge_key) {
+            resolve(true);
+            return;
+        }
+        Modal.confirm({
+            title: 'Gece yarısını geçen mesai',
+            content: (
+                <span>
+                    Bu mesai tek bir seans ve iki güne yazıldı.
+                    {' '}Gecenin tamamını birlikte {actionLabel} mi, yoksa yalnız
+                    {' '}bu günü mü işleyelim?
+                </span>
+            ),
+            okText: `Gecenin tamamını ${actionLabel}`,
+            cancelText: 'Yalnız bu günü işle',
+            closable: false,
+            maskClosable: false,
+            keyboard: false,
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+        });
+    });
+
     // --- Approval / Rejection Handlers ---
     const handleApprove = async (req, notes) => {
         const effectiveType = req._type || req.type;
@@ -201,7 +228,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 console.log('[handleApprove] → POST /leave/requests/' + req.id + '/approve_reject/');
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
             } else if (req.type === 'OVERTIME') {
-                await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
+                const applyToBridge = await askBridgeScope(req, 'onayla');
+                await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
+                    action: 'approve',
+                    notes: notes || 'Onaylandı',
+                    apply_to_bridge: applyToBridge,
+                });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
             } else {
@@ -231,7 +263,12 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'reject', reason });
             } else if (req.type === 'OVERTIME') {
-                await api.post(`/overtime-requests/${req.id}/approve_reject/`, { action: 'reject', reason });
+                const applyToBridge = await askBridgeScope(req, 'reddet');
+                await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
+                    action: 'reject',
+                    reason,
+                    apply_to_bridge: applyToBridge,
+                });
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/reject/`, { reason });
             } else {

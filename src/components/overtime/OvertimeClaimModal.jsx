@@ -21,6 +21,7 @@ function getIstanbulToday() {
 
 export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const [claimableData, setClaimableData] = useState(null);
+  const [bridges, setBridges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [approvers, setApprovers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -41,11 +42,17 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [claimRes, mgrRes] = await Promise.allSettled([
+      const [claimRes, mgrRes, bridgeRes] = await Promise.allSettled([
         api.get('/overtime-assignments/claimable/'),
         api.get('/overtime-requests/my-managers/'),
+        api.get('/overtime-requests/midnight-bridges/'),
       ]);
       if (claimRes.status === 'fulfilled') setClaimableData(claimRes.value.data);
+      setBridges(
+        bridgeRes.status === 'fulfilled'
+          ? (bridgeRes.value.data?.bridges || [])
+          : [],
+      );
       if (mgrRes.status === 'fulfilled') {
         const mgrs = mgrRes.value.data;
         setApprovers(mgrs);
@@ -119,7 +126,11 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   };
 
   const handlePotentialClaim = (dayGroup) => {
-    setConfirmData({ type: 'potential', claimTarget: dayGroup });
+    setConfirmData({
+      type: 'potential',
+      claimTarget: dayGroup,
+      bridge: dayGroup.bridge || null,
+    });
     setView('confirm');
   };
 
@@ -131,6 +142,15 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
           send_to_substitute: payload.send_to_substitute,  // #54: vekile de gönder
+        });
+      } else if (payload.bridge) {
+        // Gece yarısını geçen tek seans: iki gün TEK talepte gönderilir,
+        // kayıtlar backend tarafında günlere ayrı yazılır.
+        await api.post('/overtime-requests/claim-bridge/', {
+          overtime_request_ids: payload.bridge.request_ids,
+          reason: payload.reason,
+          target_approver_id: payload.target_approver_id,
+          send_to_substitute: payload.send_to_substitute,
         });
       } else {
         const ids = payload.selected_ids;
@@ -245,6 +265,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                 <div className="animate-slideInRight">
                   <PotentialClaimList
                     items={potential}
+            bridges={bridges}
                     weeklyStatus={weeklyStatus}
                     onBack={goBack}
                     onClaim={handlePotentialClaim}
@@ -282,6 +303,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                   <ClaimConfirmPanel
                     type={confirmData.type}
                     claimTarget={confirmData.claimTarget}
+                    bridge={confirmData.bridge}
                     weeklyStatus={weeklyStatus}
                     approvers={approvers}
                     onBack={goBack}

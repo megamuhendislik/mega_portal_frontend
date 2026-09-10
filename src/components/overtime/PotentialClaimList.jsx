@@ -55,14 +55,41 @@ function getDisplaySegments(item) {
   }];
 }
 
-export default function PotentialClaimList({ items, weeklyStatus, onBack, onClaim, claimingId }) {
+export default function PotentialClaimList({ items, bridges, weeklyStatus, onBack, onClaim, claimingId }) {
   const dayGroups = useMemo(() => {
     const groups = {};
     const claimable = items.filter(i => i.can_claim || i.is_rejected);
+
+    // Gece yarısını geçen seans iki güne bölünür ama tek mesaidir: iki günü
+    // tek kartta topla, talep tek seferde gitsin.
+    const bridgeByDate = {};
+    (bridges || []).forEach(bridge => {
+      const firstDate = bridge.first?.date;
+      const secondDate = bridge.second?.date;
+      if (!firstDate || !secondDate) return;
+      bridgeByDate[firstDate] = bridge;
+      bridgeByDate[secondDate] = bridge;
+    });
+
     claimable.forEach(item => {
-      const key = item.date;
+      const bridge = bridgeByDate[item.date];
+      const isBridgeMember = Boolean(
+        bridge
+        && [bridge.first?.id, bridge.second?.id].includes(item.overtime_request_id),
+      );
+      const key = isBridgeMember ? `bridge:${bridge.bridge_key}` : item.date;
       if (!groups[key]) {
-        groups[key] = { date: key, items: [], totalSeconds: 0, isRejected: false, rejectionReason: '' };
+        groups[key] = {
+          date: isBridgeMember ? bridge.first.date : item.date,
+          endDate: isBridgeMember ? bridge.second.date : null,
+          bridge: isBridgeMember
+            ? { ...bridge, request_ids: [bridge.first.id, bridge.second.id] }
+            : null,
+          items: [],
+          totalSeconds: 0,
+          isRejected: false,
+          rejectionReason: '',
+        };
       }
       groups[key].items.push(item);
       groups[key].totalSeconds += item.actual_overtime_seconds || 0;
@@ -72,7 +99,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
       }
     });
     return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
-  }, [items]);
+  }, [items, bridges]);
 
   return (
     <div className="flex flex-col h-full">
@@ -101,7 +128,7 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
           const totalSegCount = allSegments.length;
 
           return (
-            <div key={group.date}
+            <div key={group.bridge ? group.bridge.bridge_key : group.date}
               className={`p-4 rounded-xl border transition-all ${
                 group.isRejected
                   ? 'border-l-4 border-l-red-500 border-red-200 bg-red-50/30'
@@ -109,7 +136,16 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
               }`}>
               {/* Üst satır */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="font-semibold text-slate-800 text-sm">{formatDate(group.date)}</span>
+                <span className="font-semibold text-slate-800 text-sm">
+                  {group.endDate
+                    ? `${formatDate(group.date)} → ${formatDate(group.endDate)}`
+                    : formatDate(group.date)}
+                </span>
+                {group.bridge && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                    Gece yarısını geçen mesai
+                  </span>
+                )}
                 {typeInfo && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${typeInfo.cls}`}>
                     {typeInfo.label}
@@ -153,6 +189,12 @@ export default function PotentialClaimList({ items, weeklyStatus, onBack, onClai
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                   {group.rejectionReason}
                 </div>
+              )}
+
+              {group.bridge && (
+                <p className="mt-2 text-[11px] leading-relaxed text-indigo-700">
+                  Tek talep gönderilir, kayıtlar iki güne ayrı yazılır.
+                </p>
               )}
 
               {/* Talep Et butonu */}
