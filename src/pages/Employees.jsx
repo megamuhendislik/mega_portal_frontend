@@ -1418,39 +1418,78 @@ const Employees = () => {
     };
 
     const handleDeactivate = async (employeeId) => {
+        const emp = employees.find((e) => e.id === employeeId);
+        let preview = null;
+        try {
+            preview = (await api.get(`/employees/${employeeId}/deactivation-preview/`)).data;
+        } catch { /* önizleme yoksa yine de sor */ }
+        const todayIso = getIstanbulToday();
+        const state = { date: todayIso, reason: '' };
         Modal.confirm({
-            title: 'Çalışanı Pasife Al',
+            title: 'Çalışanı İşten Çıkar',
+            width: 520,
             content: (
-                <div className="space-y-2 text-sm">
-                    <p className="text-red-600 font-bold">Bu çalışan pasife alınacaktır.</p>
-                    <p>Tüm bekleyen talepleri iptal edilecek ve erişimi kapatılacaktır.</p>
+                <div className="space-y-3 text-sm">
+                    <p>{emp ? `${emp.first_name} ${emp.last_name}` : 'Çalışan'} için son çalışma gününü girin. O gün dahil çalışmış sayılır; ertesi günden itibaren ekip, rehber ve org şemasından çıkar, girişi kapanır ve hedef/eksik birikmez.</p>
+                    <label className="block text-xs font-medium text-slate-700">Son çalışma günü
+                        <input type="date" defaultValue={todayIso} min={emp?.hired_date || undefined}
+                            onChange={(e) => { state.date = e.target.value; }}
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-700">Neden (isteğe bağlı)
+                        <input type="text" maxLength={255} onChange={(e) => { state.reason = e.target.value; }}
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                    </label>
+                    {preview && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800 space-y-0.5">
+                            {Object.values(preview.pending_requests || {}).some((n) => n > 0) && <p>Bekleyen talepleri iptal edilecek.</p>}
+                            {preview.subordinates_with_pending > 0 && <p>{preview.subordinates_with_pending} ast talebi {preview.fallback_manager ? `${preview.fallback_manager.name}'e devredilecek` : 'iptal edilecek'}.</p>}
+                            {preview.active_manager_relations > 0 && <p>{preview.active_manager_relations} yönetici ilişkisi kapanacak.</p>}
+                        </div>
+                    )}
+                    <p className="text-slate-500 text-xs">İleri bir tarih girerseniz çıkış planlanır; tarih gelene kadar her şey normal devam eder. Veriler silinmez.</p>
                 </div>
             ),
-            okText: 'Pasife Al',
+            okText: 'İşten Çıkar',
             cancelText: 'Vazgeç',
             okButtonProps: { danger: true },
             onOk: async () => {
                 try {
-                    await api.post(`/employees/${employeeId}/deactivate/`);
-                    toast.success('Çalışan pasife alındı.');
+                    const res = await api.post(`/employees/${employeeId}/deactivate/`, {
+                        termination_date: state.date, reason: state.reason,
+                    });
+                    toast.success(res.data?.status === 'scheduled'
+                        ? `Çıkış ${state.date} için planlandı.` : 'Çalışan işten çıkarıldı.');
                     fetchInitialData();
                 } catch (err) {
-                    toast.error(err.response?.data?.detail || 'Pasife alma başarısız.');
+                    toast.error(err.response?.data?.detail || 'İşten çıkarma başarısız.');
+                    throw err;
                 }
+            },
+        });
+    };
+
+    const handleCancelTermination = (employeeId) => {
+        Modal.confirm({
+            title: 'Planlı Çıkışı İptal Et', content: 'Planlı işten çıkış iptal edilecek; çalışan normal devam eder.',
+            okText: 'İptal Et', cancelText: 'Vazgeç',
+            onOk: async () => {
+                try { await api.post(`/employees/${employeeId}/cancel-termination/`); toast.success('Planlı çıkış iptal edildi.'); fetchInitialData(); }
+                catch (err) { toast.error(err.response?.data?.detail || 'İşlem başarısız.'); }
             },
         });
     };
 
     const handleActivate = async (employeeId) => {
         Modal.confirm({
-            title: 'Çalışanı Aktif Et',
+            title: 'Çalışanı İşe Geri Al',
             content: 'Bu çalışan tekrar aktif edilecektir.',
-            okText: 'Aktif Et',
+            okText: 'İşe Geri Al',
             cancelText: 'Vazgeç',
             onOk: async () => {
                 try {
                     await api.post(`/employees/${employeeId}/activate/`);
-                    toast.success('Çalışan aktif edildi.');
+                    toast.success('Çalışan işe geri alındı.');
                     fetchInitialData();
                 } catch (err) {
                     toast.error(err.response?.data?.detail || 'Aktif etme başarısız.');
@@ -1839,7 +1878,14 @@ const Employees = () => {
                             <span className={`font-semibold text-sm truncate ${empData && empData.is_active === false ? 'line-through' : ''} ${hasChildren ? 'text-slate-900' : 'text-slate-700'}`}>{emp.name}</span>
                             {emp.is_secondary && <span className="text-[9px] font-bold bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded">Matrix</span>}
                             {empData && empData.is_active === false && (
-                                <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">PASİF</span>
+                                <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                                    {empData.termination_date ? `AYRILDI ${empData.termination_date.split('-').reverse().join('.')}` : 'PASİF'}
+                                </span>
+                            )}
+                            {empData?.is_termination_scheduled && (
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                                    PLANLI ÇIKIŞ {empData.termination_date.split('-').reverse().join('.')}
+                                </span>
                             )}
                             {empData?.is_frozen && (
                                 <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">DONDURULMUŞ</span>
@@ -1864,9 +1910,12 @@ const Employees = () => {
                         {showSettings && hasPermission('PAGE_EMPLOYEES') && empData && !empData.is_admin && (
                             <>
                                 {empData.is_active ? (
-                                    <button onClick={() => handleDeactivate(empData.id)} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors" title="Pasife Al"><UserX size={15} /></button>
+                                    <button onClick={() => handleDeactivate(empData.id)} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors" title="İşten Çıkar"><UserX size={15} /></button>
                                 ) : (
                                     <button onClick={() => handleActivate(empData.id)} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors" title="Aktif Et"><UserCheck size={15} /></button>
+                                )}
+                                {empData?.is_termination_scheduled && (
+                                    <button onClick={() => handleCancelTermination(empData.id)} className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50" title="Planlı Çıkışı İptal Et"><UserCheck size={15} /></button>
                                 )}
                                 <button onClick={() => handleDelete(empData.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash2 size={15} /></button>
                             </>
