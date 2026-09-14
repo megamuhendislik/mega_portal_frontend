@@ -17,7 +17,7 @@ import {
     validateServiceUsagePeriods,
     isServiceActiveOn,
 } from '../utils/serviceUsagePeriods';
-import { getIstanbulToday } from '../utils/dateUtils';
+import { getIstanbulToday, formatIstanbulDate } from '../utils/dateUtils';
 
 const EmployeeDetail = () => {
     const { id } = useParams();
@@ -1035,7 +1035,7 @@ const EmployeeDetail = () => {
                                 {jobPositions.find(p => p.id === parseInt(formData.job_position))?.name || '-'}
                             </p>
                             {(() => {
-                                const dt = formData.termination_date ? formData.termination_date.split('-').reverse().join('.') : '';
+                                const dt = formData.termination_date ? formatIstanbulDate(formData.termination_date) : '';
                                 if (formData.is_frozen) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Dondurulmuş</div>;
                                 if (!formData.is_active) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">{dt ? `Ayrıldı · ${dt}` : 'Pasif'}</div>;
                                 if (formData.is_termination_scheduled) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Planlı Çıkış · {dt}</div>;
@@ -1053,14 +1053,6 @@ const EmployeeDetail = () => {
                                             >
                                                 <UserX size={14} /> İşten Çıkar
                                             </button>
-                                            {formData.is_termination_scheduled && (
-                                                <button
-                                                    onClick={handleCancelTermination}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
-                                                >
-                                                    <UserCheck size={14} /> Çıkışı İptal Et
-                                                </button>
-                                            )}
                                             <button
                                                 onClick={handleFreeze}
                                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
@@ -1068,6 +1060,14 @@ const EmployeeDetail = () => {
                                                 <Snowflake size={14} /> Dondur
                                             </button>
                                         </>
+                                    )}
+                                    {formData.is_active && formData.is_termination_scheduled && formData.termination_date && (
+                                        <button
+                                            onClick={handleCancelTermination}
+                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                                        >
+                                            <UserCheck size={14} /> Çıkışı İptal Et
+                                        </button>
                                     )}
                                     {!formData.is_active && (
                                         <>
@@ -1113,7 +1113,7 @@ const EmployeeDetail = () => {
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">İşten Çıkış</span>
                                 <span className="font-medium text-slate-800">
-                                    {formData.termination_date ? formData.termination_date.split('-').reverse().join('.') : '—'}
+                                    {formData.termination_date ? formatIstanbulDate(formData.termination_date) : '—'}
                                 </span>
                             </div>
                             {formData.termination_reason && (
