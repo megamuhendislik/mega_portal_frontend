@@ -522,7 +522,7 @@ const helpContent = [
             { type: 'success', text: 'Yeni başladıysanız departmanınızın adını aratarak ekip arkadaşlarınızı hızla tanıyabilirsiniz.' }
         ],
         faq: [
-            { q: 'İşten ayrılan bir çalışanı neden rehberde bulamıyorum?', a: 'Rehber yalnızca aktif çalışanları listeler. Pasif duruma alınan personel otomatik olarak listeden çıkarılır.' },
+            { q: 'İşten ayrılan bir çalışanı neden rehberde bulamıyorum?', a: 'Rehber yalnızca aktif çalışanları listeler. İşten çıkış tarihi girilen personel, son çalışma gününün ertesinden itibaren listeden otomatik çıkar.' },
             { q: 'Rehberde TC kimlik numarası veya adres görünür mü?', a: 'Hayır. Hassas kişisel veriler rehberde gösterilmez. Yalnızca kurumsal iletişim için gerekli temel bilgiler yer alır.' },
             { q: 'Rehberdeki bilgilerim yanlış, nasıl düzeltebilirim?', a: 'Ad, departman ve pozisyon bilgileri Çalışan Yönetimi sayfasından yönetici tarafından güncellenir. İK birimine veya yöneticinize başvurun.' },
             { q: 'Arama nasıl çalışır?', a: 'Arama kutusuna yazdığınız metin, çalışan adı ve departman adı üzerinde anında süzme yapar. Sayfayı yenilemenize gerek yoktur.' }
@@ -926,7 +926,7 @@ const helpContent = [
         id: 'calisanlar',
         title: 'Çalışanlar',
         icon: Users,
-        description: 'Personel listesi, yeni çalışan ekleme, bilgi düzenleme, yönetici atamaları ve pasife alma işlemleri. (Yöneticiler ve sistem yöneticileri görebilir)',
+        description: 'Personel listesi, yeni çalışan ekleme, bilgi düzenleme, yönetici atamaları ve işten çıkarma işlemleri. (Yöneticiler ve sistem yöneticileri görebilir)',
         permission: 'PAGE_EMPLOYEES',
         link: '/employees',
         images: [
@@ -957,21 +957,21 @@ const helpContent = [
                 description: 'Bu adımda çalışma tipi, mali takvim ataması ve birbirleriyle çakışmayan başlangıç/bitiş tarihli servis kullanım dönemleri tanımlanır; bitiş tarihi boş bırakılan dönem devam eder. Servis toleransı yalnızca aktif dönemin kapsadığı tarihlerde geçerlidir. Haftalık fazla mesai limiti (varsayılan 30 saat) Pazartesi-Pazar takvim haftasında onaylı + bekleyen mesai toplamına uygulanır.'
             },
             {
-                title: 'Çalışanı Pasife Alma',
-                description: '"Yönet" düğmesiyle yönetim modunu açın. Çalışan satırında turuncu "Pasife Al" simgesi belirir. Tıkladığınızda onay penceresi açılır; onaylarsanız çalışan pasife alınır ve sisteme giriş yapamaz. Pasif çalışanı daha sonra tekrar aktife alabilirsiniz.'
+                title: 'Çalışanı İşten Çıkarma',
+                description: '"Yönet" düğmesiyle yönetim modunu açın. Çalışan satırındaki "İşten Çıkar" simgesine tıklayın, son çalışma gününü (isteğe bağlı nedenle) girin. O gün dahil çalışmış sayılır; ertesi günden itibaren ekip, rehber ve org şemasından çıkar, girişi kapanır, hedef ve eksik birikmez. İleri tarih girerseniz çıkış planlanır ve tarih gelince otomatik uygulanır; "Çıkışı İptal Et" ile geri alınabilir. Veriler silinmez; kişi çalıştığı aylarda rapor ve analizlerde görünmeye devam eder.'
             }
         ],
         tips: [
             { type: 'info', text: 'Birincil yönetici değiştiğinde çalışanın BEKLEYEN talepleri otomatik olarak yeni yöneticiye devredilir. Bu durumda çalışan, eski yönetici ve yeni yönetici olmak üzere üç taraf da bildirim alır.' },
-            { type: 'warning', text: 'Pasife alma işlemi çalışanın sistem erişimini kapatır. Silme yerine pasife alma kullanılır; geçmiş puantaj ve talep kayıtları korunur.' },
+            { type: 'warning', text: 'İşten çıkarma işlemi çalışanın sistem erişimini kapatır. Silme yerine işten çıkarma kullanılır; geçmiş puantaj ve talep kayıtları korunur.' },
             { type: 'info', text: 'Servis toleransı yalnızca aktif servis kullanım döneminin kapsadığı tarihlerde giriş/çıkış saatlerini vardiya sınırına yuvarlar. Tam yeniden hesaplama, geçmişteki her tarih için o günün dönemini ayrıca değerlendirir. Diğer tolerans değerleri çalışan üzerinden değil, mali takvimden okunur.' },
             { type: 'success', text: 'İzin Yönetimi adımında yıllık izin bakiyesi, avans izin limiti ve yıllık hak ediş oranı tanımlanır. İşe giriş tarihi kıdem ve hak ediş hesabında kullanılır.' }
         ],
         faq: [
             { q: 'Yeni eklediğim çalışan sisteme nasıl giriş yapar?', a: 'Kayıt sırasında oluşturulan kullanıcı adı (veya e-posta) ve ilk şifre ile giriş yapar. İlk girişten sonra çalışan şifresini Profilim sayfasından değiştirebilir.' },
             { q: 'Bir çalışanın yöneticisini değiştirirsem bekleyen talepleri ne olur?', a: 'Bekleyen talepler otomatik olarak yeni birincil yöneticiye devredilir. Çalışan, eski ve yeni yönetici bildirim alır; talepler kaybolmaz.' },
-            { q: 'Pasife alınan çalışanın verileri silinir mi?', a: 'Hayır. Puantaj, izin ve talep geçmişi korunur; yalnızca sistem erişimi kapanır ve listede pasif olarak işaretlenir. "Pasif Göster" ile görüntüleyebilirsiniz.' },
-            { q: '"Pasife Al" düğmesini göremiyorum, neden?', a: 'Önce sağ üstteki "Yönet" düğmesiyle yönetim modunu açmanız gerekir. Ayrıca PAGE_EMPLOYEES yetkiniz olmalı ve admin kullanıcılar pasife alınamaz.' },
+            { q: 'İşten çıkarılan çalışanın verileri silinir mi?', a: 'Hayır. Puantaj, izin ve talep geçmişi korunur; yalnızca sistem erişimi kapanır ve listede "Ayrıldı" olarak işaretlenir. "Pasif Göster" ile görüntüleyebilirsiniz.' },
+            { q: '"İşten Çıkar" düğmesini göremiyorum, neden?', a: 'Önce sağ üstteki "Yönet" düğmesiyle yönetim modunu açmanız gerekir. Ayrıca PAGE_EMPLOYEES yetkiniz olmalı ve admin kullanıcılar işten çıkarılamaz.' },
             { q: 'Çalışanın haftalık fazla mesai limitini nasıl değiştiririm?', a: 'Çalışanı düzenleyin ve Detaylar & Yetkinlik adımındaki haftalık fazla mesai limiti alanını güncelleyin. Varsayılan 30 saattir; limit Pazartesi-Pazar sabit takvim haftasında onaylı + bekleyen mesai toplamına uygulanır ve her Pazartesi sıfırlanır.' },
             { q: 'Birden fazla yönetici atayabilir miyim?', a: 'Evet. Birden fazla birincil ve ikincil (fonksiyonel/proje) yönetici atanabilir. Onay akışında ilk birincil yönetici ana raporlama hattıdır.' }
         ]

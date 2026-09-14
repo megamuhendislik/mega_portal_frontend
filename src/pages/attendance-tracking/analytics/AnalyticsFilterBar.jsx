@@ -481,7 +481,7 @@ export default function AnalyticsFilterBar() {
                         <MultiSelect
                             value={ctx.excludeEmployeeIds || []}
                             onChange={(vals) => ctx.setExcludeEmployeeIds(vals.map((v) => typeof v === 'string' ? parseInt(v, 10) : v).filter((v) => !isNaN(v)))}
-                            options={(ctx.employees || []).map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
+                            options={(ctx.employees || []).map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}${e.has_left ? ' (ayrıldı)' : ''}` }))}
                             placeholder="Hariç tutulacak kişiler"
                             className="w-full"
                             size="small"

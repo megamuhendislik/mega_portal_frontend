@@ -465,13 +465,15 @@ export function AnalyticsProvider({ children }) {
         (async () => {
             setEmployeesLoading(true);
             try {
-                const res = await api.get('/employees/subordinates/', { params: { relationship_type: 'PRIMARY', include_indirect: true } });
+                const params = { relationship_type: 'PRIMARY', include_indirect: true };
+                if (startDate) params.include_left_since = startDate; // ayrılanlar: aralıkla kesişenler
+                const res = await api.get('/employees/subordinates/', { params });
                 const d = res.data;
                 setEmployees(Array.isArray(d) ? d : d.results || []);
             } catch { setEmployees([]); }
             setEmployeesLoading(false);
         })();
-    }, []);
+    }, [startDate]);
 
     // Fetch primary data
     const fetchData = useCallback(async () => {
