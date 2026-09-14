@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, ChevronDown, ChevronRight, Check, X, XCircle, UserPlus, Building, Briefcase, Phone, FileText, ArrowRight, ArrowLeft, Loader2, Save, Key, Calculator, Network } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { getIstanbulToday, getIstanbulYear } from '../utils/dateUtils';
+import { getIstanbulToday, getIstanbulYear, formatIstanbulDate } from '../utils/dateUtils';
 import { Settings, Trash2, Edit2, Download, Upload, CalendarRange, UserX, UserCheck } from 'lucide-react';
 import { Modal } from 'antd';
 import toast, { Toaster } from 'react-hot-toast';
@@ -1475,7 +1475,7 @@ const Employees = () => {
             okText: 'İptal Et', cancelText: 'Vazgeç',
             onOk: async () => {
                 try { await api.post(`/employees/${employeeId}/cancel-termination/`); toast.success('Planlı çıkış iptal edildi.'); fetchInitialData(); }
-                catch (err) { toast.error(err.response?.data?.detail || 'İşlem başarısız.'); }
+                catch (err) { toast.error(err.response?.data?.detail || 'İşlem başarısız.'); throw err; }
             },
         });
     };
@@ -1879,12 +1879,12 @@ const Employees = () => {
                             {emp.is_secondary && <span className="text-[9px] font-bold bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded">Matrix</span>}
                             {empData && empData.is_active === false && (
                                 <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
-                                    {empData.termination_date ? `AYRILDI ${empData.termination_date.split('-').reverse().join('.')}` : 'PASİF'}
+                                    {empData.termination_date ? `AYRILDI ${formatIstanbulDate(empData.termination_date)}` : 'PASİF'}
                                 </span>
                             )}
-                            {empData?.is_termination_scheduled && (
+                            {empData?.is_termination_scheduled && empData?.termination_date && (
                                 <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                                    PLANLI ÇIKIŞ {empData.termination_date.split('-').reverse().join('.')}
+                                    PLANLI ÇIKIŞ {formatIstanbulDate(empData.termination_date)}
                                 </span>
                             )}
                             {empData?.is_frozen && (
