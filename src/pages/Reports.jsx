@@ -38,6 +38,10 @@ const Reports = () => {
     const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
     const [employees, setEmployees] = useState([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+    // Veri kesme tarihi (YYYY-MM-DD). Varsayılan bugün = rapor anına kadar.
+    // Geçmiş gün seçilirse rapor o günün SONU itibarıyla üretilir
+    // ("14'ünü gece almışım gibi"); sonrası hedefe/eksiğe girmez.
+    const [cutoffDate, setCutoffDate] = useState(() => getIstanbulToday());
     // İndirme durumu: { format: 'excel'|'pdf', scope: 'company'|'department'|'single' } | null
     const [downloading, setDownloading] = useState(null);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
@@ -112,11 +116,28 @@ const Reports = () => {
         fetchPeriods();
     }, [selectedCalendarId]);
 
+    // Kesme tarihi yalnız açık dönemde ve bugünden önceyse gönderilir;
+    // bugün = varsayılan davranış (parametre yok).
+    const effectiveCutoff = () => {
+        const todayIso = getIstanbulToday();
+        const open = !!(selectedPeriod?.end_date && selectedPeriod.end_date >= todayIso);
+        if (!open || !cutoffDate || cutoffDate >= todayIso) return null;
+        return cutoffDate;
+    };
+
+    // Dönem değişince kesme tarihi bugüne döner (eski seçim yeni dönemin
+    // dışında kalabilir; backend dönem başından önceki tarihi reddeder).
+    useEffect(() => {
+        setCutoffDate(getIstanbulToday());
+    }, [selectedPeriod]);
+
     const buildParams = () => {
         const params = { year: selectedPeriod.year, month: selectedPeriod.month };
         if (selectedCalendarId) params.calendar_id = selectedCalendarId;
         if (selectedEmployeeId) params.employee_id = selectedEmployeeId;
         if (selectedDepartmentId) params.department_id = selectedDepartmentId;
+        const cutoff = effectiveCutoff();
+        if (cutoff) params.as_of_date = cutoff;
         return params;
     };
 
@@ -161,9 +182,11 @@ const Reports = () => {
             const suffix = selectedEmployeeId
                 ? `_emp${selectedEmployeeId}`
                 : (selectedDepartmentId ? `_dep${selectedDepartmentId}` : '');
+            const cutoff = effectiveCutoff();
+            const cutoffSuffix = cutoff ? `_kesme${cutoff.replace(/-/g, '')}` : '';
             link.setAttribute(
                 'download',
-                `${report.file}_${selectedPeriod.year}_${selectedPeriod.month}${suffix}.${ext}`
+                `${report.file}_${selectedPeriod.year}_${selectedPeriod.month}${suffix}${cutoffSuffix}.${ext}`
             );
             document.body.appendChild(link);
             link.click();
@@ -228,6 +251,12 @@ const Reports = () => {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
     });
+    const selectedCutoff = effectiveCutoff();
+    const cutoffLabel = selectedCutoff
+        ? `${new Date(selectedCutoff + 'T00:00:00').toLocaleDateString('tr-TR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Istanbul',
+        })} gün sonu`
+        : null;
 
     const ReportIcon = MONTHLY_REPORT.icon;
     const scopeLabel = {
@@ -349,13 +378,43 @@ const Reports = () => {
                     Gelmemiş günler hedefe/eksiğe yazılmaz — dosyanın başlığında
                     da aynı damga bulunur. */}
                 {isOpenPeriod && (
-                    <div className="bg-amber-50 border border-amber-200 mt-2 p-2 sm:p-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
-                        <Clock size={16} className="text-amber-600 flex-shrink-0" />
-                        <span className="text-xs text-amber-800">
-                            Bu dönem devam ediyor. Rapor <strong>{nowLabel}</strong> itibarıyla
-                            gerçekleşen veriyi içerir; sonraki saatler ve günler hedefe ve eksiğe
-                            eklenmez. Damga raporun ilk satırında da yazar.
-                        </span>
+                    <div className="bg-amber-50 border border-amber-200 mt-2 p-2 sm:p-3 rounded-lg flex flex-col gap-2">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
+                            <Clock size={16} className="text-amber-600 flex-shrink-0" />
+                            <span className="text-xs text-amber-800">
+                                Bu dönem devam ediyor. Rapor{' '}
+                                <strong>{cutoffLabel || nowLabel}</strong> itibarıyla
+                                gerçekleşen veriyi içerir; sonraki saatler ve günler hedefe ve eksiğe
+                                eklenmez. Damga raporun ilk satırında da yazar.
+                            </span>
+                        </div>
+                        {/* Kesme tarihi: varsayılan bugün (rapor anına kadar). Geçmiş gün
+                            seçilirse o gün TAM sayılır, sonrası "Henüz gerçekleşmedi". */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                            <label htmlFor="report-cutoff-date" className="text-xs font-medium text-amber-900">
+                                Veri kesme tarihi
+                            </label>
+                            <input
+                                id="report-cutoff-date"
+                                type="date"
+                                value={cutoffDate}
+                                min={selectedPeriod?.start_date || undefined}
+                                max={todayIso}
+                                onChange={(e) => setCutoffDate(e.target.value || todayIso)}
+                                className="px-2 py-1 border border-amber-300 rounded-md text-xs bg-white focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setCutoffDate(todayIso)}
+                                disabled={cutoffDate === todayIso}
+                                className="text-xs text-amber-700 underline disabled:no-underline disabled:opacity-50"
+                            >
+                                Bugün
+                            </button>
+                            <span className="text-[11px] text-amber-700">
+                                Seçilen gün tam sayılır; ör. 14'ü seçersen rapor 14'ünün gece yarısı alınmış gibi üretilir.
+                            </span>
+                        </div>
                     </div>
                 )}
 
