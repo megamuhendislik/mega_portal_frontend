@@ -17,6 +17,7 @@ import {
     validateServiceUsagePeriods,
     isServiceActiveOn,
 } from '../utils/serviceUsagePeriods';
+import { getIstanbulToday } from '../utils/dateUtils';
 
 const EmployeeDetail = () => {
     const { id } = useParams();
@@ -44,6 +45,8 @@ const EmployeeDetail = () => {
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
     const [deactivationPreview, setDeactivationPreview] = useState(null);
     const [lifecycleLoading, setLifecycleLoading] = useState(false);
+    const [terminationDate, setTerminationDate] = useState('');
+    const [terminationReason, setTerminationReason] = useState('');
 
     // Form Data State (Unified)
     const [formData, setFormData] = useState({
@@ -58,6 +61,7 @@ const EmployeeDetail = () => {
         primary_managers: [], secondary_managers: [],
         is_active: true,
         is_frozen: false,
+        termination_date: '', termination_reason: '', is_termination_scheduled: false,
         is_profile_editable: false,
 
         // Work Schedule
@@ -111,6 +115,9 @@ const EmployeeDetail = () => {
             is_active: emp.is_active,
             is_frozen: emp.is_frozen || false,
             is_profile_editable: emp.is_profile_editable || false,
+            termination_date: emp.termination_date || '',
+            termination_reason: emp.termination_reason || '',
+            is_termination_scheduled: emp.is_termination_scheduled || false,
 
             // Map managers to structured format
             primary_managers: (managers.primary_managers || []).map(m => ({
@@ -327,6 +334,8 @@ const EmployeeDetail = () => {
         try {
             const res = await api.get(`/employees/${id}/deactivation-preview/`);
             setDeactivationPreview(res.data);
+            setTerminationDate(getIstanbulToday());
+            setTerminationReason('');
             setShowDeactivateModal(true);
         } catch (err) {
             toast.error('Önizleme yüklenemedi.');
@@ -338,12 +347,15 @@ const EmployeeDetail = () => {
     const handleDeactivateConfirm = async () => {
         setLifecycleLoading(true);
         try {
-            await api.post(`/employees/${id}/deactivate/`);
-            toast.success('Çalışan pasife alındı.');
+            const res = await api.post(`/employees/${id}/deactivate/`, {
+                termination_date: terminationDate, reason: terminationReason,
+            });
+            toast.success(res.data?.status === 'scheduled'
+                ? 'Çıkış planlandı.' : 'Çalışan işten çıkarıldı.');
             setShowDeactivateModal(false);
             fetchInitialData();
         } catch (err) {
-            toast.error(err.response?.data?.detail || 'Pasife alma başarısız.');
+            toast.error(err.response?.data?.detail || 'İşten çıkarma başarısız.');
         } finally {
             setLifecycleLoading(false);
         }
@@ -351,18 +363,37 @@ const EmployeeDetail = () => {
 
     const handleActivate = () => {
         Modal.confirm({
-            title: 'Çalışanı Aktif Et',
+            title: 'Çalışanı İşe Geri Al',
             content: 'Bu çalışanı tekrar aktif etmek istediğinize emin misiniz? Sisteme giriş yapabilecek.',
-            okText: 'Aktif Et',
+            okText: 'İşe Geri Al',
             cancelText: 'Vazgeç',
             okButtonProps: { className: 'bg-emerald-600' },
             onOk: async () => {
                 try {
                     await api.post(`/employees/${id}/activate/`);
-                    toast.success('Çalışan aktif edildi.');
+                    toast.success('Çalışan işe geri alındı.');
                     fetchInitialData();
                 } catch (err) {
                     toast.error(err.response?.data?.detail || 'Aktivasyon başarısız.');
+                }
+            },
+        });
+    };
+
+    const handleCancelTermination = () => {
+        Modal.confirm({
+            title: 'Planlı Çıkışı İptal Et',
+            content: 'Planlı işten çıkış iptal edilecek; çalışan normal devam eder.',
+            okText: 'İptal Et',
+            cancelText: 'Vazgeç',
+            onOk: async () => {
+                try {
+                    await api.post(`/employees/${id}/cancel-termination/`);
+                    toast.success('Planlı çıkış iptal edildi.');
+                    fetchInitialData();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || 'İşlem başarısız.');
+                    throw err;
                 }
             },
         });
@@ -1003,9 +1034,13 @@ const EmployeeDetail = () => {
                             <p className="text-slate-500 font-medium">
                                 {jobPositions.find(p => p.id === parseInt(formData.job_position))?.name || '-'}
                             </p>
-                            <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${formData.is_frozen ? 'bg-blue-100 text-blue-700' : formData.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                {formData.is_frozen ? 'Dondurulmuş' : formData.is_active ? 'Aktif Çalışan' : 'Pasif'}
-                            </div>
+                            {(() => {
+                                const dt = formData.termination_date ? formData.termination_date.split('-').reverse().join('.') : '';
+                                if (formData.is_frozen) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Dondurulmuş</div>;
+                                if (!formData.is_active) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">{dt ? `Ayrıldı · ${dt}` : 'Pasif'}</div>;
+                                if (formData.is_termination_scheduled) return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Planlı Çıkış · {dt}</div>;
+                                return <div className="mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Aktif Çalışan</div>;
+                            })()}
                             {/* Status Management Buttons */}
                             {hasPermission('PAGE_EMPLOYEES') && (
                                 <div className="mt-3 flex flex-col gap-2">
@@ -1016,8 +1051,16 @@ const EmployeeDetail = () => {
                                                 disabled={lifecycleLoading}
                                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
                                             >
-                                                <UserX size={14} /> Pasife Al
+                                                <UserX size={14} /> İşten Çıkar
                                             </button>
+                                            {formData.is_termination_scheduled && (
+                                                <button
+                                                    onClick={handleCancelTermination}
+                                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                                                >
+                                                    <UserCheck size={14} /> Çıkışı İptal Et
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={handleFreeze}
                                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
@@ -1032,7 +1075,7 @@ const EmployeeDetail = () => {
                                                 onClick={handleActivate}
                                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
                                             >
-                                                <UserCheck size={14} /> Aktif Et
+                                                <UserCheck size={14} /> İşe Geri Al
                                             </button>
                                             {canEdit && !targetIsAdmin && (
                                                 <button
@@ -1068,6 +1111,18 @@ const EmployeeDetail = () => {
                                 <span className="font-medium text-slate-800">{formData.hired_date || '-'}</span>
                             </div>
                             <div className="flex justify-between text-sm">
+                                <span className="text-slate-500">İşten Çıkış</span>
+                                <span className="font-medium text-slate-800">
+                                    {formData.termination_date ? formData.termination_date.split('-').reverse().join('.') : '—'}
+                                </span>
+                            </div>
+                            {formData.termination_reason && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">Çıkış Nedeni</span>
+                                    <span className="font-medium text-slate-800 text-right">{formData.termination_reason}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Yöneticiler</span>
                                 <span className="font-medium text-slate-800">{formData.primary_managers.length} Birincil, {formData.secondary_managers.length} İkincil</span>
                             </div>
@@ -1087,19 +1142,29 @@ const EmployeeDetail = () => {
             {/* Deactivation Confirmation Modal */}
             <Modal
                 open={showDeactivateModal}
-                title="Çalışanı Pasife Al"
+                title="Çalışanı İşten Çıkar"
                 onCancel={() => setShowDeactivateModal(false)}
                 onOk={handleDeactivateConfirm}
                 confirmLoading={lifecycleLoading}
-                okText="Pasife Al"
+                okText="İşten Çıkar"
                 cancelText="Vazgeç"
                 okButtonProps={{ danger: true }}
             >
                 {deactivationPreview && (
                     <div className="space-y-3 text-sm">
                         <p className="font-medium text-slate-800">
-                            {formData.first_name} {formData.last_name} pasife alınacak.
+                            {formData.first_name} {formData.last_name} işten çıkarılacak.
                         </p>
+                        <label className="block text-xs font-medium text-slate-700">Son çalışma günü
+                            <input type="date" value={terminationDate} min={formData.hired_date || undefined}
+                                onChange={(e) => setTerminationDate(e.target.value)}
+                                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                        </label>
+                        <label className="block text-xs font-medium text-slate-700">Neden (isteğe bağlı)
+                            <input type="text" maxLength={255} value={terminationReason}
+                                onChange={(e) => setTerminationReason(e.target.value)}
+                                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                        </label>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
                             <p className="font-medium text-amber-800">Etkilenecek kayıtlar:</p>
                             {Object.entries(deactivationPreview.pending_requests).map(([key, count]) => count > 0 && (
@@ -1122,7 +1187,7 @@ const EmployeeDetail = () => {
                                 <p className="text-amber-700">{deactivationPreview.active_substitute_authorities} vekalet yetkisi pasife alınacak</p>
                             )}
                         </div>
-                        <p className="text-red-600 font-medium">Bu çalışan artık sisteme giriş yapamayacak.</p>
+                        <p className="text-red-600 font-medium">Son çalışma gününün ertesinden itibaren sisteme giriş yapamayacak.</p>
                     </div>
                 )}
             </Modal>
