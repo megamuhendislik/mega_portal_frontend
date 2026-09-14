@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    FileDown, FileText, FileSpreadsheet, Calendar, Building2, Loader2,
+    FileDown, FileText, FileSpreadsheet, Calendar, Building2, Loader2, Clock,
 } from 'lucide-react';
 import api from '../services/api';
 import ModalOverlay from '../components/ui/ModalOverlay';
@@ -221,6 +221,14 @@ const Reports = () => {
         return String(depId) === String(selectedDepartmentId);
     });
 
+    // Dönem bugünü kapsıyorsa rapor "bugüne kadar" doludur.
+    const todayIso = getIstanbulToday();
+    const isOpenPeriod = !!(selectedPeriod?.end_date && selectedPeriod.end_date >= todayIso);
+    const nowLabel = new Date().toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
+    });
+
     const ReportIcon = MONTHLY_REPORT.icon;
     const scopeLabel = {
         company: 'Tüm şirket',
@@ -333,6 +341,20 @@ const Reports = () => {
                         <span className="text-xs text-blue-700">
                             Rapor Aralığı: <strong>{formatDate(selectedPeriod.start_date)}</strong> — <strong>{formatDate(selectedPeriod.end_date)}</strong>
                             {selectedPeriod.is_locked ? ' · 🔒 Kilitli (kesinleşmiş)' : ' · Açık dönem (değişebilir)'}
+                        </span>
+                    </div>
+                )}
+
+                {/* Dönem henüz bitmediyse: rapor yalnız GERÇEKLEŞENİ içerir.
+                    Gelmemiş günler hedefe/eksiğe yazılmaz — dosyanın başlığında
+                    da aynı damga bulunur. */}
+                {isOpenPeriod && (
+                    <div className="bg-amber-50 border border-amber-200 mt-2 p-2 sm:p-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
+                        <Clock size={16} className="text-amber-600 flex-shrink-0" />
+                        <span className="text-xs text-amber-800">
+                            Bu dönem devam ediyor. Rapor <strong>{nowLabel}</strong> itibarıyla
+                            gerçekleşen veriyi içerir; sonraki saatler ve günler hedefe ve eksiğe
+                            eklenmez. Damga raporun ilk satırında da yazar.
                         </span>
                     </div>
                 )}

@@ -1171,6 +1171,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                   <Clock size={16} className="text-amber-600" />
                   <h4 className="text-sm font-bold text-amber-700">Aylık Çalışma Özeti</h4>
                 </div>
+                {/* Açık ayda hedef/bakiye BUGÜNE KADARDIR — henüz gelmemiş
+                    günlerin saatleri eksik olarak sayılmaz. */}
+                {s.is_open_month && (
+                  <p className="text-[11px] text-amber-700/80 font-semibold mb-2 -mt-2">
+                    Ay devam ediyor — hedef ve bakiye bugüne kadarki süreye göredir.
+                  </p>
+                )}
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Hedef</span>
