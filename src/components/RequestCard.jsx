@@ -183,6 +183,13 @@ const RequestCard = ({ request, type, statusBadge, onEdit, onDelete, onApprove, 
                                     <Clock size={12} />
                                     Aylık Mesai Özeti
                                 </h5>
+                                {/* Açık ayda hedef/bakiye BUGÜNE KADARDIR — henüz
+                                    gelmemiş günler eksik olarak gösterilmez. */}
+                                {s.is_open_month && (
+                                    <p className="text-[10px] text-amber-700/80 font-semibold -mt-1">
+                                        Ay devam ediyor — hedef ve bakiye bugüne kadardır.
+                                    </p>
+                                )}
                                 <div className="grid grid-cols-3 gap-1.5 text-center">
                                     <div className="bg-white/60 p-1.5 rounded">
                                         <span className="block text-[10px] text-slate-400 font-bold">Hedef</span>

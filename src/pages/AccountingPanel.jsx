@@ -164,6 +164,11 @@ const AccountingPanel = () => {
 
 
     const { params, ready } = periodState;
+    // Sayfa açıldığı/yenilendiği an — TXT dökümündeki damga ile aynı anlam.
+    const viewStamp = new Date().toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
+    });
 
     return (
         <div className="space-y-8 pb-12 animate-fade-in">
@@ -179,6 +184,11 @@ const AccountingPanel = () => {
                         </h1>
                         <p className="text-slate-500 font-medium">
                             Tüm çalışanların izin, fazla mesai, kart verisi ve durumları — salt-okunur görüntüleme
+                        </p>
+                        {/* Ekrandaki ve TXT'deki veri bu dakikaya kadardır. */}
+                        <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                            Veriler {viewStamp} itibarıyladır; dönem devam ediyorsa
+                            sonrası henüz gerçekleşmemiştir.
                         </p>
                     </div>
                 </div>
