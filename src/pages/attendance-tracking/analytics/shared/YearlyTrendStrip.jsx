@@ -64,6 +64,7 @@ function getCompanySeries(data, metric) {
             monthIdx: m.index,
             sum: row[sumKey] ?? 0,
             avg: row[avgKey] ?? 0,
+            contributors: row.contributors ?? 0,
             cumAvg: 0, // doldurulacak
         };
     });
@@ -143,6 +144,8 @@ export default function YearlyTrendStrip() {
     const [scope, setScope] = useState('company');
     const [metric, setMetric] = useState('all');
     const [chartMode, setChartMode] = useState('line'); // 'line' | 'bar' | 'area' | 'cumulative'
+    // Toplam + ortalama (2026-09-16): 'both' çift eksen (Toplam sol / Kişi Ort. sağ), 'sum', 'avg'
+    const [valueMode, setValueMode] = useState('both');
     const [selectedPersons, setSelectedPersons] = useState([]);
     const [selectedDepts, setSelectedDepts] = useState([]);
     const [drillMonth, setDrillMonth] = useState(null); // 1-12 — tıklanan mali ay
@@ -226,6 +229,10 @@ export default function YearlyTrendStrip() {
                     normal: row.avg_normal_h ?? 0,
                     ot: row.avg_ot_h ?? 0,
                     missing: row.avg_missing_h ?? 0,
+                    normal_sum: row.sum_normal_h ?? 0,
+                    ot_sum: row.sum_ot_h ?? 0,
+                    missing_sum: row.sum_missing_h ?? 0,
+                    contributors: row.contributors ?? 0,
                 };
             });
         }
@@ -248,6 +255,8 @@ export default function YearlyTrendStrip() {
         const selected = scope === 'department' ? selectedDepts : selectedPersons;
 
         const metricKeys = metric === 'all' ? ['normal_h', 'ot_h', 'missing_h'] : [metric];
+        // Departman satırları ortalama (kişi başı); 'Toplam' seçildiyse backend sum_* alanı
+        const useSum = scope === 'department' && valueMode === 'sum';
 
         const rows = monthIdxs.map((idx, i) => {
             const m = months[i];
@@ -257,11 +266,11 @@ export default function YearlyTrendStrip() {
                 if (!row) return;
                 const md = (row.monthly || [])[i] || {};
                 if (metric === 'all') {
-                    point[`${key}_normal_h`] = md.normal_h ?? md.avg_normal_h ?? 0;
-                    point[`${key}_ot_h`] = md.ot_h ?? md.avg_ot_h ?? 0;
-                    point[`${key}_missing_h`] = md.missing_h ?? md.avg_missing_h ?? 0;
+                    point[`${key}_normal_h`] = useSum ? (md.sum_normal_h ?? 0) : (md.normal_h ?? md.avg_normal_h ?? 0);
+                    point[`${key}_ot_h`] = useSum ? (md.sum_ot_h ?? 0) : (md.ot_h ?? md.avg_ot_h ?? 0);
+                    point[`${key}_missing_h`] = useSum ? (md.sum_missing_h ?? 0) : (md.missing_h ?? md.avg_missing_h ?? 0);
                 } else {
-                    point[key] = md[metric] ?? md[`avg_${metric.replace('_h', '_h')}`] ?? 0;
+                    point[key] = useSum ? (md[`sum_${metric}`] ?? 0) : (md[metric] ?? md[`avg_${metric}`] ?? 0);
                 }
             });
             return point;
@@ -281,7 +290,7 @@ export default function YearlyTrendStrip() {
         });
 
         return { rows, series };
-    }, [data, scope, metric, selectedDepts, selectedPersons, deptLookup, personLookup]);
+    }, [data, scope, metric, valueMode, selectedDepts, selectedPersons, deptLookup, personLookup]);
 
     if (loading && !data) {
         return (
@@ -349,6 +358,22 @@ export default function YearlyTrendStrip() {
                     ]}
                 />
 
+                {/* Değer: Toplam (saat) / Kişi Ort. (saat) / ikisi — kişiler ham saat, kümülatif kendi gösterimi */}
+                {chartMode !== 'cumulative' && scope !== 'persons' && (
+                    <Segmented
+                        size="small"
+                        value={scope === 'department' && valueMode === 'both' ? 'avg' : valueMode}
+                        onChange={setValueMode}
+                        options={[
+                            ...(scope === 'company'
+                                ? [{ value: 'both', label: <span className="text-[10px] px-1 font-bold">Toplam + Ort.</span> }]
+                                : []),
+                            { value: 'sum', label: <span className="text-[10px] px-1">Toplam</span> },
+                            { value: 'avg', label: <span className="text-[10px] px-1">Kişi Ort.</span> },
+                        ]}
+                    />
+                )}
+
                 {scope === 'persons' && (
                     <Select
                         mode="multiple"
@@ -382,7 +407,7 @@ export default function YearlyTrendStrip() {
 
             <div className="p-4">
                 {/* Üst KPI şeridi — Şirket geneli */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
                     <KpiTile
                         label="Yıllık Toplam Normal"
                         value={data.company?.totals_sum?.normal_h}
@@ -403,6 +428,16 @@ export default function YearlyTrendStrip() {
                         value={data.company?.avg_monthly_per_member?.normal_h}
                         suffix="sa" color="emerald" icon={Target}
                     />
+                    <KpiTile
+                        label="Kişi/Ay Ort. OT"
+                        value={data.company?.avg_monthly_per_member?.ot_h}
+                        suffix="sa" color="emerald" icon={Target}
+                    />
+                    <KpiTile
+                        label="Kişi/Ay Ort. Eksik"
+                        value={data.company?.avg_monthly_per_member?.missing_h}
+                        suffix="sa" color="emerald" icon={Target}
+                    />
                 </div>
 
                 {/* Ana chart */}
@@ -411,6 +446,7 @@ export default function YearlyTrendStrip() {
                         data={companyChartData}
                         metric={metric}
                         chartMode={chartMode}
+                        valueMode={valueMode}
                         yearAvg={yearAvg}
                         onMonthClick={(idx) => setDrillMonth(idx)}
                     />
@@ -471,7 +507,7 @@ function KpiTile({ label, value, suffix, color = 'slate', icon: Icon }) {
     );
 }
 
-function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
+function CompanyChart({ data, metric, chartMode, valueMode = 'both', yearAvg, onMonthClick }) {
     if (!data || data.length === 0) {
         return <Empty description="Veri yok" />;
     }
@@ -538,25 +574,99 @@ function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
         );
     }
 
+    const axisLabel = (text) => ({ value: text, angle: -90, position: 'insideLeft', offset: 12, style: { fontSize: 10, fontWeight: 600, fill: '#64748b' } });
+    const axisLabelR = (text) => ({ value: text, angle: 90, position: 'insideRight', offset: 12, style: { fontSize: 10, fontWeight: 600, fill: '#64748b' } });
+
+    // Hepsi — 3 metrik
     if (metric === 'all') {
+        const bars = [
+            { sum: 'normal_sum', avg: 'normal', label: 'Normal', color: METRIC_COLORS.normal_h },
+            { sum: 'ot_sum', avg: 'ot', label: 'OT', color: METRIC_COLORS.ot_h },
+            { sum: 'missing_sum', avg: 'missing', label: 'Eksik', color: METRIC_COLORS.missing_h },
+        ];
+        if (valueMode === 'both') {
+            // Çift eksen: Toplam (sa) bar SOL, Kişi Ort. (sa) çizgi SAĞ
+            return (
+                <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={data} barGap={2} barCategoryGap="22%" onClick={handleBarClick} style={{ cursor: 'pointer' }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                            <YAxis yAxisId="L" tick={{ fontSize: 10 }} unit="sa" orientation="left" label={axisLabel('Toplam (sa)')} />
+                            <YAxis yAxisId="R" tick={{ fontSize: 10 }} unit="sa" orientation="right" label={axisLabelR('Kişi Ort. (sa)')} />
+                            <RTooltip content={<HoursTooltip />} />
+                            <Legend wrapperStyle={{ fontSize: 10 }} />
+                            {bars.map((b) => (
+                                <Bar key={b.sum} yAxisId="L" dataKey={b.sum} name={`Toplam ${b.label}`} fill={b.color} fillOpacity={0.85} radius={[3, 3, 0, 0]} />
+                            ))}
+                            {bars.map((b) => (
+                                <Line key={b.avg} yAxisId="R" type="monotone" dataKey={b.avg} name={`Kişi Ort. ${b.label}`} stroke={b.color} strokeWidth={2} strokeDasharray="4 3" dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                            ))}
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            );
+        }
+        const useSum = valueMode === 'sum';
         return (
             <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} barGap={2} barCategoryGap="22%" onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} unit="sa" />
-                        <RTooltip />
+                        <YAxis tick={{ fontSize: 10 }} unit="sa" label={axisLabel(useSum ? 'Toplam (sa)' : 'Kişi Ort. (sa)')} />
+                        <RTooltip content={<HoursTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 10 }} />
-                        <Bar dataKey="normal" name="Normal" fill={METRIC_COLORS.normal_h} radius={[3, 3, 0, 0]} />
-                        <Bar dataKey="ot" name="OT" fill={METRIC_COLORS.ot_h} radius={[3, 3, 0, 0]} />
-                        <Bar dataKey="missing" name="Eksik" fill={METRIC_COLORS.missing_h} radius={[3, 3, 0, 0]} />
+                        {bars.map((b) => (
+                            <Bar key={b.sum} dataKey={useSum ? b.sum : b.avg} name={`${useSum ? 'Toplam' : 'Kişi Ort.'} ${b.label}`} fill={b.color} radius={[3, 3, 0, 0]} />
+                        ))}
                     </BarChart>
                 </ResponsiveContainer>
             </div>
         );
     }
+
+    // Tek metrik
     const color = METRIC_COLORS[metric];
+    if (valueMode === 'both') {
+        // Çift eksen: Toplam (grafik tipine göre bar/çizgi/alan) SOL, Kişi Ort. kesikli çizgi SAĞ
+        return (
+            <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} onClick={handleBarClick} style={{ cursor: 'pointer' }}>
+                        <defs>
+                            <linearGradient id={`grad-${metric}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                                <stop offset="100%" stopColor={color} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis yAxisId="L" tick={{ fontSize: 10 }} unit="sa" orientation="left" label={axisLabel('Toplam (sa)')} />
+                        <YAxis yAxisId="R" tick={{ fontSize: 10 }} unit="sa" orientation="right" label={axisLabelR('Kişi Ort. (sa)')} />
+                        <RTooltip content={<HoursTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        {chartMode === 'bar' ? (
+                            <Bar yAxisId="L" dataKey="sum" name="Toplam" fill={color} fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                        ) : chartMode === 'area' ? (
+                            <Area yAxisId="L" type="monotone" dataKey="sum" name="Toplam" stroke={color} fill={`url(#grad-${metric})`} strokeWidth={2} />
+                        ) : (
+                            <Line yAxisId="L" type="monotone" dataKey="sum" name="Toplam" stroke={color} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        )}
+                        {yearAvg != null && (
+                            <ReferenceLine yAxisId="R" y={yearAvg} stroke="#64748b" strokeDasharray="4 3"
+                                label={{ value: `Yıl Ort: ${yearAvg.toFixed(1)}sa`, position: 'right', fontSize: 9, fill: '#64748b' }} />
+                        )}
+                        <Line yAxisId="R" type="monotone" dataKey="avg" name="Kişi Ort." stroke="#334155" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
+        );
+    }
+    const useSum = valueMode === 'sum';
+    const vKey = useSum ? 'sum' : 'avg';
+    const vName = useSum ? 'Toplam' : 'Kişi Ort.';
+    const vAxis = axisLabel(useSum ? 'Toplam (sa)' : 'Kişi Ort. (sa)');
     return (
         <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -564,13 +674,13 @@ function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
                     <BarChart data={data} onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} unit="sa" />
-                        <RTooltip />
-                        {yearAvg != null && (
+                        <YAxis tick={{ fontSize: 10 }} unit="sa" label={vAxis} />
+                        <RTooltip content={<HoursTooltip />} />
+                        {!useSum && yearAvg != null && (
                             <ReferenceLine y={yearAvg} stroke="#64748b" strokeDasharray="4 3"
                                 label={{ value: `Yıl Ort: ${yearAvg.toFixed(1)}sa`, position: 'right', fontSize: 9, fill: '#64748b' }} />
                         )}
-                        <Bar dataKey="avg" name="Kişi Ort." fill={color} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey={vKey} name={vName} fill={color} radius={[4, 4, 0, 0]} />
                     </BarChart>
                 ) : chartMode === 'area' ? (
                     <ComposedChart data={data} onClick={handleBarClick}>
@@ -582,27 +692,51 @@ function CompanyChart({ data, metric, chartMode, yearAvg, onMonthClick }) {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} unit="sa" />
-                        <RTooltip />
-                        <Area type="monotone" dataKey="avg" name="Kişi Ort." stroke={color} fill={`url(#grad-${metric})`} strokeWidth={2} />
-                        <Line type="monotone" dataKey="cumAvg" name="Kümülatif Ort." stroke={color} strokeDasharray="4 3" strokeWidth={2} dot={false} />
+                        <YAxis tick={{ fontSize: 10 }} unit="sa" label={vAxis} />
+                        <RTooltip content={<HoursTooltip />} />
+                        <Area type="monotone" dataKey={vKey} name={vName} stroke={color} fill={`url(#grad-${metric})`} strokeWidth={2} />
+                        {!useSum && (
+                            <Line type="monotone" dataKey="cumAvg" name="Kümülatif Ort." stroke={color} strokeDasharray="4 3" strokeWidth={2} dot={false} />
+                        )}
                     </ComposedChart>
                 ) : (
                     <LineChart data={data} onClick={handleBarClick}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} unit="sa" />
-                        <RTooltip />
+                        <YAxis tick={{ fontSize: 10 }} unit="sa" label={vAxis} />
+                        <RTooltip content={<HoursTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 10 }} />
-                        {yearAvg != null && (
+                        {!useSum && yearAvg != null && (
                             <ReferenceLine y={yearAvg} stroke="#64748b" strokeDasharray="4 3"
                                 label={{ value: `Yıl Ort: ${yearAvg.toFixed(1)}sa`, position: 'right', fontSize: 9, fill: '#64748b' }} />
                         )}
-                        <Line type="monotone" dataKey="avg" name="Kişi Ort." stroke={color} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                        <Line type="monotone" dataKey="cumAvg" name="Kümülatif Ort." stroke={color} strokeDasharray="4 3" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey={vKey} name={vName} stroke={color} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        {!useSum && (
+                            <Line type="monotone" dataKey="cumAvg" name="Kümülatif Ort." stroke={color} strokeDasharray="4 3" strokeWidth={2} dot={false} />
+                        )}
                     </LineChart>
                 )}
             </ResponsiveContainer>
+        </div>
+    );
+}
+
+// Saat tooltip'i — her seri "X sa", başlıkta katkıcı sayısı
+function HoursTooltip({ active, payload, label }) {
+    if (!active || !payload?.length) return null;
+    const contributors = payload[0]?.payload?.contributors;
+    return (
+        <div className="rounded-lg border border-slate-200 bg-white/95 shadow-md px-3 py-2 text-[11px]">
+            <div className="font-bold text-slate-700 mb-1">
+                {label}{contributors ? ` · ${contributors} kişi` : ''}
+            </div>
+            {payload.map((p) => (
+                <div key={p.dataKey} className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: p.color || p.stroke || '#64748b' }} />
+                    <span className="text-slate-500">{p.name}:</span>
+                    <span className="font-bold tabular-nums">{Number(p.value ?? 0).toFixed(1)} sa</span>
+                </div>
+            ))}
         </div>
     );
 }
