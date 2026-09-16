@@ -28,6 +28,17 @@ const PERSON_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
                        '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#84cc16'];
 const AVG_COLORS = ['#94a3b8', '#64748b', '#475569', '#334155'];
 
+const TR_MONTHS_SHORT = ['', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+function fmtFiscalPeriod(period) {
+    if (!period?.start || !period?.end) return null;
+    const [sy, sm, sd] = period.start.split('-').map(Number);
+    const [ey, em, ed] = period.end.split('-').map(Number);
+    if (!sy || !sm || !sd || !ey || !em || !ed) return null;
+    const label = period.month ? `${TR_MONTHS_SHORT[period.month]} ${period.year} mali ayı · ` : '';
+    return `${label}${sd} ${TR_MONTHS_SHORT[sm]} ${sy} – ${ed} ${TR_MONTHS_SHORT[em]} ${ey}`;
+}
+
 const MODES = [
     {
         value: 'compare',
@@ -67,6 +78,13 @@ export default function ComparisonTab() {
         if (mode === 'compare') {
             if (selectedItems.length === 0) return;
             params.items = selectedItems.join(',');
+            // Dönem çapası (2026-09-16): filtre çubuğunun seçtiği mali ay
+            // gönderilmiyordu → snapshot/seri hep bugünün ayına çapalıydı ve
+            // üstten Ağustos/Eylül seçmek Karşılaştırma'yı değiştirmiyordu.
+            if (startDate && endDate) {
+                params.start_date = startDate;
+                params.end_date = endDate;
+            }
         } else if (mode === 'periods') {
             if (!periodEmpId || !periodA || !periodB) return;
             params.emp_id = periodEmpId;
@@ -84,7 +102,7 @@ export default function ComparisonTab() {
         } finally {
             setLoading(false);
         }
-    }, [mode, months, selectedItems, periodEmpId, periodA, periodB]);
+    }, [mode, months, selectedItems, periodEmpId, periodA, periodB, startDate, endDate]);
 
     useEffect(() => { fetchComparison(); }, [fetchComparison]);
 
@@ -217,6 +235,8 @@ export default function ComparisonTab() {
         if (!data || data.mode !== 'compare') return null;
         const snap = data.snapshot || [];
         if (!snap.length) return null;
+        // Backend `period` = snapshot'ın çapalandığı mali ay (filtre çubuğundan)
+        const snapshotPeriodText = fmtFiscalPeriod(data.period);
 
         const metrics = [
             { key: 'efficiency_pct', label: 'Yapılan Normal Mesai %', color: '#6366f1' },
@@ -245,7 +265,7 @@ export default function ComparisonTab() {
         }));
 
         return (
-            <SectionCard title="Anlık Karşılaştırma" collapsible={false}>
+            <SectionCard title="Anlık Karşılaştırma" subtitle={snapshotPeriodText} collapsible={false}>
                 <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={barData} margin={{ top: 5, right: 5, bottom: 60, left: 0 }}>
