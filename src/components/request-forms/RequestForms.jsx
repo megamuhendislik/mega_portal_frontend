@@ -23,10 +23,8 @@ export const LeaveRequestForm = ({
     workingDaysInfo,
     fifoPreview,
     approverDropdown,
-    duration,
     recentLeaveHistory,
     excuseBalance,
-    excuseScheduleLoading,
     entitlementInfo,
     leaveBalance,
 }) => {
@@ -40,11 +38,32 @@ export const LeaveRequestForm = ({
         if (!recentLeaveHistory?.length || !leaveForm.start_date) return [];
         const reqStart = leaveForm.start_date;
         const reqEnd = leaveForm.end_date || leaveForm.start_date;
-        return recentLeaveHistory.filter(h =>
-            ['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status) &&
-            h.start_date <= reqEnd && h.end_date >= reqStart
-        );
-    }, [recentLeaveHistory, leaveForm.start_date, leaveForm.end_date]);
+        const isHourly = !isAnnualLeave && reqStart === reqEnd && leaveForm.start_time && leaveForm.end_time;
+        const toSeconds = value => {
+            const [hours, minutes, seconds = 0] = value.split(':').map(Number);
+            return hours * 3600 + minutes * 60 + seconds;
+        };
+        const effectiveSegments = (start, end) => {
+            const s = toSeconds(start);
+            const e = toSeconds(end);
+            if (e <= s) return [];
+            const schedule = excuseBalance?.schedule_info;
+            if (!schedule?.lunch_start || !schedule?.lunch_end) return [[s, e]];
+            const ls = toSeconds(schedule.lunch_start);
+            const le = toSeconds(schedule.lunch_end);
+            if (ls >= le || e <= ls || s >= le) return [[s, e]];
+            return [[s, Math.min(e, ls)], [Math.max(s, le), e]].filter(([a, b]) => a < b);
+        };
+        return recentLeaveHistory.filter(h => {
+            if (h.request_type_detail?.category !== 'LEAVE' ||
+                !['PENDING', 'APPROVED', 'ESCALATED'].includes(h.status) ||
+                h.start_date > reqEnd || h.end_date < reqStart) return false;
+            if (!isHourly || !h.start_time || !h.end_time || h.start_date !== h.end_date) return true;
+            const existing = effectiveSegments(h.start_time, h.end_time);
+            return effectiveSegments(leaveForm.start_time, leaveForm.end_time).some(([s, e]) =>
+                existing.some(([otherStart, otherEnd]) => s < otherEnd && otherStart < e));
+        });
+    }, [recentLeaveHistory, leaveForm.start_date, leaveForm.end_date, leaveForm.start_time, leaveForm.end_time, isAnnualLeave, excuseBalance?.schedule_info]);
 
     return (
         <div className="space-y-3">
@@ -1436,8 +1455,6 @@ export const ExternalDutyForm = ({
                         )}
 
                         {dutyHoursPreview && (() => {
-                            const firstWorkingDay = dutyHoursPreview.days?.find(d => !d.is_off_day);
-                            const shiftTargetMin = firstWorkingDay?.shift_target_minutes;
                             const hasOffDay = dutyHoursPreview.days?.some(d => d.is_off_day);
                             return (
                                 <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 space-y-1.5">
