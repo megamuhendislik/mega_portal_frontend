@@ -17,6 +17,7 @@ import {
   SafetyCertificateOutlined, ExclamationCircleOutlined,
   CodeOutlined, DownOutlined, RightOutlined,
   SwapOutlined, BugOutlined, ExperimentOutlined, WalletOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import api from '../../../services/api';
 
@@ -162,6 +163,13 @@ const DOMAINS = [
     icon: <SafetyCertificateOutlined />,
     color: '#d4380d',
     description: 'Çift-IN/aynı-OUT overlapping phantom KAYNAKTA önlenir: içerdeyken gelen sahte 2. IN ignore + self-heal consumed-guard. KART VERİSİ SİLİNMEZ — mevcut çakışan kayıtlar recalc\'ta hesaba katılmaz (parent tam, kopya 0/0/0) ama korunur',
+  },
+  {
+    key: 'sep28',
+    label: '28 Eylül Düzeltmeleri',
+    icon: <CalculatorOutlined />,
+    color: '#389e0d',
+    description: 'Saatlik izin (Mazeret) ve hastane ziyareti kredisi rapor/puantaj/grafikte motorun kanonik değeriyle; dış görev günü eksiği aylık özette + normal mesai kuralları (görev ∩ vardiya − öğle, vardiya sonrası FM); dış görev FM\'si haftalık FM sınırından muaf, görev dışı FM sınırda engellenir. Mali Eylül 2026 (26.08) öncesi ödenmiş dönem eski kuralla korunur',
   },
 ];
 
