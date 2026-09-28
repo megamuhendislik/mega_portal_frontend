@@ -8,6 +8,7 @@ import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
 import NonWorkingDayOvertimeWarning from './requests/NonWorkingDayOvertimeWarning';
 import { buildOverridePayload, getApiErrorMessage } from '../utils/requestActions';
+import { fmtSaDkSec } from '../utils/dateUtils';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
@@ -1231,8 +1232,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 </button>
                 {expandedSections.logs && (
                   <div className="p-3 space-y-2">
-                    {request.attendance_logs.map((log, i) => (
+                    {request.attendance_logs.map((log, i) => log.record_type === 'leave' ? (
+                      // İzin kredi satırı gerçek kart girişi değil: izin türü + kredi süresi
+                      <div key={log.id || i} className="flex items-center gap-3 bg-violet-50 rounded-lg p-2.5 border border-violet-100 text-xs">
+                        <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-700 font-bold">{log.label || 'İzin'}</span>
+                        <span className="font-bold text-violet-700 tabular-nums">{log.check_in || '—'}–{log.check_out || '—'}</span>
+                        <span className="flex-1 text-violet-600">
+                          İzin süresi: <span className="font-bold">{fmtSaDkSec(log.leave_credit_seconds)}</span>
+                        </span>
+                      </div>
+                    ) : (
                       <div key={log.id || i} className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-slate-100 text-xs">
+                        {log.record_type === 'external_duty' && (
+                          <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-700 font-bold">{log.label || 'Dış Görev'}</span>
+                        )}
                         <div className="flex items-center gap-1.5 min-w-[80px]">
                           <LogIn size={12} className="text-emerald-500" />
                           <span className="font-bold text-emerald-700">{log.check_in || '—'}</span>

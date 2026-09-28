@@ -1,5 +1,7 @@
 // Muhasebe Paneli — saf formatlayıcılar ve durum haritaları (JSX yok).
 
+import { formatIstanbulTime } from '../../utils/dateUtils';
+
 // =========== DURUM / STATUS HARITALARI ===========
 
 // Roster çalışan durumu
@@ -95,10 +97,15 @@ export const fmtDateTime = (s) => {
 };
 
 // "14:30:00" -> "14:30"  (HH:MM:SS veya HH:MM)
+// ISO datetime (puantaj check_in/check_out: "2026-09-21T08:30:00+03:00" / "...Z")
+// -> İstanbul saatiyle "08:30". Çözülemeyen girdi olduğu gibi döner.
 export const fmtTime = (s) => {
     if (!s) return '—';
-    const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-    return m ? `${m[1].padStart(2, '0')}:${m[2]}` : s;
+    const str = String(s);
+    const m = str.match(/^(\d{1,2}):(\d{2})/);
+    if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str)) return formatIstanbulTime(str) || s;
+    return s;
 };
 
 // Tarih aralığı: tek günse "12.03.2026", aksi "12.03.2026 – 14.03.2026"

@@ -5,6 +5,7 @@ import {
     Info, AlertTriangle, Shield
 } from 'lucide-react';
 import NonWorkingDayOvertimeWarning from './NonWorkingDayOvertimeWarning';
+import { fmtSaDkSec } from '../../utils/dateUtils';
 
 // ─── Static Tailwind color lookup (avoids dynamic class purging) ──────────
 const sectionColors = {
@@ -331,6 +332,10 @@ const OvertimePanel = ({ req, mode }) => {
     const currentApprovedCount = stats.ot_requests_approved || 0;
     const weeklyOtLimit = 30; // default
 
+    const logs = req.attendance_logs || [];
+    const cardLogs = logs.filter((log) => log.record_type !== 'leave');
+    const leaveLogs = logs.filter((log) => log.record_type === 'leave');
+
     return (
         <>
             <Section title="Kapsam" icon={<Clock size={14} className="text-amber-600" />} color="amber">
@@ -343,18 +348,36 @@ const OvertimePanel = ({ req, mode }) => {
                 <InfoRow label="Kaynak" value={getSourceLabel(req.source_type)} />
                 {req.reason && <InfoRow label="Sebep" value={req.reason} />}
 
-                {/* Attendance logs */}
-                {req.attendance_logs && req.attendance_logs.length > 0 && (
+                {/* Attendance logs — izin kredi satırı gerçek giriş değil, ayrı gösterilir */}
+                {cardLogs.length > 0 && (
                     <div className="pt-2 border-t border-amber-100">
                         <p className="text-xs font-bold text-slate-500 mb-1.5">Gerçek Giriş/Çıkış</p>
                         <div className="flex flex-wrap gap-2">
-                            {req.attendance_logs.map((log, i) => (
+                            {cardLogs.map((log, i) => (
                                 <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1 font-medium text-slate-700">
+                                    {log.record_type === 'external_duty' && (
+                                        <span className="text-sky-700 font-bold">{log.label || 'Dış Görev'}</span>
+                                    )}
                                     <LogIn size={10} className="text-emerald-500" />
                                     {log.check_in || '--:--'}
                                     <ArrowRight size={10} className="text-slate-300" />
                                     <LogOut size={10} className="text-red-400" />
                                     {log.check_out || '--:--'}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {leaveLogs.length > 0 && (
+                    <div className="pt-2 border-t border-amber-100">
+                        <p className="text-xs font-bold text-slate-500 mb-1.5">İzin</p>
+                        <div className="flex flex-wrap gap-2">
+                            {leaveLogs.map((log, i) => (
+                                <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1 font-medium text-violet-700">
+                                    <span className="font-bold">{log.label || 'İzin'}</span>
+                                    <span className="tabular-nums">{log.check_in || '--:--'}–{log.check_out || '--:--'}</span>
+                                    <span className="text-violet-400">·</span>
+                                    {fmtSaDkSec(log.leave_credit_seconds)}
                                 </span>
                             ))}
                         </div>

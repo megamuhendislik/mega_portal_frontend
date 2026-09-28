@@ -16,7 +16,7 @@ import {
 } from './accountingFormat';
 import {
     renderLeaveDetail, renderOvertimeDetail, renderMealDetail,
-    renderCardlessDetail, renderAttendanceDetail,
+    renderCardlessDetail, renderAttendanceDetail, renderAttendanceNormal,
 } from './accountingDetail';
 
 // =========== Bölüm tanımları (tür göster/gizle çipleri ile aynı) ===========
@@ -237,7 +237,8 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
         { title: 'Tarih', dataIndex: 'work_date', key: 'd', sorter: byDate('work_date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Giriş', dataIndex: 'check_in', key: 'i', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
         { title: 'Çıkış', dataIndex: 'check_out', key: 'o', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
-        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', sorter: byNum('normal_seconds'), render: (v) => <span className="tabular-nums">{fmtHourMin(v)}</span> },
+        // İzin kredi satırı: kart süresi yerine izin türü + izin süresi
+        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', sorter: byNum('normal_seconds'), render: (_, r) => renderAttendanceNormal(r) },
         { title: 'Fazla', dataIndex: 'overtime_seconds', key: 'ot', align: 'right', sorter: byNum('overtime_seconds'), render: (v) => <span className="tabular-nums text-amber-600">{fmtHourMin(v)}</span> },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => r.status_display || v || '—' },
     ], []);

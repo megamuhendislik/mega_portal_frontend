@@ -6,6 +6,7 @@ import {
     LogIn, LogOut, HeartPulse
 } from 'lucide-react';
 import ModalOverlay from './ui/ModalOverlay';
+import { fmtSaDkSec } from '../utils/dateUtils';
 
 const SourceBadge = ({ source, principalName }) => {
     const config = {
@@ -432,8 +433,18 @@ const RequestListTable = ({ requests, onViewDetails, onApprove, onReject, onEdit
                                             {/* OT Attendance Logs (giriş/çıkış bilgisi) */}
                                             {req.type === 'OVERTIME' && req.attendance_logs && req.attendance_logs.length > 0 && (
                                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                                    {req.attendance_logs.map((log, li) => (
+                                                    {req.attendance_logs.map((log, li) => log.record_type === 'leave' ? (
+                                                        // İzin kredi satırı kart girişi değil: izin türü + süre
+                                                        <span key={li} className="text-[11px] text-violet-600 flex items-center gap-1">
+                                                            <span className="font-bold">{log.label || 'İzin'}</span>
+                                                            <span className="tabular-nums">{log.check_in || '—'}–{log.check_out || '—'}</span>
+                                                            <span className="text-violet-300">·</span>{fmtSaDkSec(log.leave_credit_seconds)}
+                                                        </span>
+                                                    ) : (
                                                         <span key={li} className="text-[11px] text-slate-500 flex items-center gap-1">
+                                                            {log.record_type === 'external_duty' && (
+                                                                <span className="font-bold text-sky-700">{log.label || 'Dış Görev'}</span>
+                                                            )}
                                                             <LogIn size={9} className="text-emerald-500" />{log.check_in || '—'}
                                                             <span className="text-slate-300">→</span>
                                                             <LogOut size={9} className="text-red-400" />{log.check_out || '—'}

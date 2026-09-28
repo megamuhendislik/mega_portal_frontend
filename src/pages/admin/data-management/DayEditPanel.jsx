@@ -71,6 +71,8 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
     const [leaveBalance, setLeaveBalance] = useState([]);
     const [requestTypes, setRequestTypes] = useState([]);
     const [dailyTarget, setDailyTarget] = useState(0);
+    // Hedeften düşülen saatlik izin (dailyTarget brüttür)
+    const [partialLeaveSeconds, setPartialLeaveSeconds] = useState(0);
     const [scheduleInfo, setScheduleInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [deleteIds, setDeleteIds] = useState([]);
@@ -232,6 +234,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
             setLeaveBalance(res.data.leave_balance || []);
             setRequestTypes(res.data.request_types || []);
             setDailyTarget(res.data.daily_target_seconds || 0);
+            setPartialLeaveSeconds(res.data.partial_leave_seconds || 0);
             setScheduleInfo(res.data.schedule_info || null);
             setCardlessRequests(res.data.cardless_requests || []);
             setMealRequests(res.data.meal_requests || []);
@@ -383,9 +386,17 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
         message.info(`+${otDuration} saat mesai kaydı eklendi.`);
     };
 
+    // İzin kredi satırının penceresi (ör. mazeret 08:30–09:15) çalışma değildir →
+    // toplam çalışmadan hariç; izin süresi ayrıca gösterilir.
+    const isLeaveCreditRow = (r) => r.source === 'DUTY' && r.record_type === 'leave';
+    const leaveCreditSeconds = records
+        .filter(isLeaveCreditRow)
+        .reduce((s, r) => s + (r.leave_credit_seconds || 0), 0);
+
     const totalHours = () => {
         let t = 0;
         records.forEach(r => {
+            if (isLeaveCreditRow(r)) return;
             if (r.check_in && r.check_out) {
                 const d = new Date(r.check_out) - new Date(r.check_in);
                 if (d > 0) t += d;
@@ -779,6 +790,26 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
     const overtimeSeconds = records.reduce((s, r) => s + (r.overtime_seconds || 0), 0);
     const missingSeconds = records.reduce((s, r) => s + (r.missing_seconds || 0), 0);
 
+    // İzin kredi satırı / dış görev: çıplak "DUTY" yerine tür adı (+ izin süresi).
+    // Saatlik izin satırı normal_seconds=0 taşır; süre leave_credit_seconds'tadır.
+    // Kaynak düzenlemede DUTY'den değiştirilirse sunucu etiketi bayatlar → ham kaynak.
+    const recordKindTag = (rec) => {
+        if (rec.source !== 'DUTY') {
+            return <Tag className="!text-[10px] !m-0">{rec.source}</Tag>;
+        }
+        if (rec.record_type === 'leave') {
+            return (
+                <Tag color="purple" className="!text-[10px] !m-0">
+                    {rec.label || 'İzin'}{rec.leave_credit_seconds > 0 ? ` · ${fmtSec(rec.leave_credit_seconds)}` : ''}
+                </Tag>
+            );
+        }
+        if (rec.record_type === 'external_duty') {
+            return <Tag color="geekblue" className="!text-[10px] !m-0">{rec.label || 'Dış Görev'}</Tag>;
+        }
+        return <Tag className="!text-[10px] !m-0">{rec.source}</Tag>;
+    };
+
     /* ───── render ───── */
     if (loading) {
         return (
@@ -835,6 +866,11 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                         prefix={<ClockCircleOutlined className="text-blue-500" />}
                         valueStyle={{ fontSize: 16, color: '#2563eb' }}
                     />
+                    {partialLeaveSeconds > 0 && (
+                        <div className="text-[10px] text-purple-600 mt-0.5">
+                            Saatlik izin −{fmtSec(partialLeaveSeconds)} · Net {fmtSec(Math.max(0, dailyTarget - partialLeaveSeconds))}
+                        </div>
+                    )}
                 </Card>
                 <Card size="small" className="!border-green-200">
                     <Statistic
@@ -875,14 +911,14 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                                     {formatLocalTime(rec.check_in)} → {formatLocalTime(rec.check_out)}
                                 </span>
                                 <Space size={4}>
-                                    <Tag className="!text-[10px] !m-0">{rec.source}</Tag>
+                                    {recordKindTag(rec)}
                                     {rec.is_manual_override && (
                                         <Tag color="purple" className="!text-[10px] !m-0">Elle Düzenlendi</Tag>
                                     )}
                                     <Tag color={statusColor[rec.status] || 'default'} className="!text-[10px] !m-0">
                                         {statusLabel[rec.status] || rec.status}
                                     </Tag>
-                                    {rec.normal_seconds > 0 && (
+                                    {rec.record_type !== 'leave' && rec.normal_seconds > 0 && (
                                         <span className="text-[10px] text-green-600">{fmtSec(rec.normal_seconds)}</span>
                                     )}
                                 </Space>
@@ -1035,7 +1071,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                                         <Tag color={statusColor[rec.status] || 'default'} className="!text-[10px] !m-0">
                                             {statusLabel[rec.status] || rec.status}
                                         </Tag>
-                                        <Tag className="!text-[10px] !m-0">{rec.source}</Tag>
+                                        {recordKindTag(rec)}
                                         {rec.is_manual_override && (
                                             <Tag color="purple" className="!text-[10px] !m-0">Elle Düzenlendi</Tag>
                                         )}
@@ -1143,7 +1179,12 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
             {records.length > 0 && (
                 <div className="flex justify-between items-center text-sm bg-slate-50 rounded-lg p-3 border">
                     <span className="text-slate-500 font-medium">Toplam Çalışma:</span>
-                    <span className="font-bold text-slate-800 text-base">{totalHours()} saat</span>
+                    <span className="text-right">
+                        <span className="font-bold text-slate-800 text-base">{totalHours()} saat</span>
+                        {leaveCreditSeconds > 0 && (
+                            <span className="block text-[11px] text-purple-600">+ İzin: {fmtSec(leaveCreditSeconds)}</span>
+                        )}
+                    </span>
                 </div>
             )}
 
@@ -2190,6 +2231,7 @@ export default function DayEditPanel({ employee, date, onSaveSuccess, onStageOp,
                 </h3>
                 <div className="text-xs text-slate-500 mt-1 flex gap-3 flex-wrap">
                     <span>Toplam: <b className="text-slate-800">{totalHours()} saat</b></span>
+                    {leaveCreditSeconds > 0 && <span>İzin: <b className="text-purple-600">{fmtSec(leaveCreditSeconds)}</b></span>}
                     {dailyTarget > 0 && <span>Hedef: <b className="text-blue-600">{fmtSec(dailyTarget)}</b></span>}
                     {scheduleInfo?.shift_start && !scheduleInfo?.is_off_day && (
                         <span>Vardiya: <b className="text-slate-700">{scheduleInfo.shift_start}-{scheduleInfo.shift_end}</b></span>

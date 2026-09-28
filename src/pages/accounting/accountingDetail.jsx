@@ -5,7 +5,7 @@
 // (boş/eksik alanlar otomatik atlanır) → kayıttan kayda temiz, yer kaplamayan detay.
 
 import React from 'react';
-import { Descriptions } from 'antd';
+import { Descriptions, Tag } from 'antd';
 import {
     RequestStatusTag, MealStatusTag, CardlessStatusTag,
 } from './accountingTags';
@@ -227,17 +227,47 @@ export function renderCardlessDetail(r) {
 
 // ============================ GÜNLÜK PUANTAJ ============================
 
+/**
+ * Puantaj "Normal" hücresi. İzin kredi satırı (record_type='leave') kart
+ * oturumu değildir: saatlik izinde normal_seconds=0 taşır (süre günlük hedeften
+ * düşer), bu yüzden izin kredisi mor renkle ve izin etiketiyle gösterilir.
+ * showLabel=false → ayrı "Kaynak" sütunu olan tablolar için kısa "İzin S:DD".
+ */
+export function renderAttendanceNormal(r, { showLabel = true } = {}) {
+    if (r?.record_type === 'leave') {
+        const label = r.record_type_label || 'İzin';
+        const title = `${label} — izin süresi (kart çalışması değil)`;
+        if (!showLabel) {
+            return (
+                <span className="tabular-nums text-purple-600" title={title}>
+                    İzin {fmtHourMin(r.leave_credit_seconds)}
+                </span>
+            );
+        }
+        return (
+            <span className="whitespace-nowrap" title={title}>
+                <Tag color="purple" className="!mr-1">{label}</Tag>
+                <span className="tabular-nums text-purple-600">{fmtHourMin(r.leave_credit_seconds)}</span>
+            </span>
+        );
+    }
+    return <span className="tabular-nums">{fmtHourMin(r?.normal_seconds)}</span>;
+}
+
 export function renderAttendanceDetail(r) {
     if (!r) return null;
+    const isLeave = r.record_type === 'leave';
     const items = [
         { key: 'tarih', label: 'Tarih', children: fmtDate(r.work_date) },
         { key: 'durum', label: 'Durum', children: r.status_display || r.status },
         { key: 'giris', label: 'Giriş', children: fmtTime(r.check_in) },
         { key: 'cikis', label: 'Çıkış', children: fmtTime(r.check_out) },
-        { key: 'normal', label: 'Normal', children: r.normal_seconds != null ? fmtHourMin(r.normal_seconds) : null },
+        isLeave
+            ? { key: 'izin', label: 'İzin Süresi', children: fmtHourMin(r.leave_credit_seconds) }
+            : { key: 'normal', label: 'Normal', children: r.normal_seconds != null ? fmtHourMin(r.normal_seconds) : null },
         { key: 'fazla', label: 'Fazla Mesai', children: r.overtime_seconds != null ? fmtHourMin(r.overtime_seconds) : null },
         { key: 'eksik', label: 'Eksik', children: r.missing_seconds != null ? fmtHourMin(r.missing_seconds) : null },
-        { key: 'kaynak', label: 'Kaynak', children: r.source_display || r.source },
+        { key: 'kaynak', label: 'Kaynak', children: r.record_type_label || r.source_display || r.source },
         { key: 'not', label: 'Not', children: r.note },
     ];
     return renderDesc(items);

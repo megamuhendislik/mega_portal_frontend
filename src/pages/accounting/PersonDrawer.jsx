@@ -9,6 +9,7 @@ import { RequestStatusTag, DirectionTag } from './accountingTags';
 import {
     fmtDate, fmtDateTime, fmtTime, fmtRange, fmtDurationFromMinutes, fmtHourMin,
 } from './accountingFormat';
+import { renderAttendanceNormal } from './accountingDetail';
 
 function initials(name) {
     if (!name) return '?';
@@ -98,7 +99,8 @@ export default function PersonDrawer({
         { title: 'Tarih', dataIndex: 'work_date', key: 'd', render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Giriş', dataIndex: 'check_in', key: 'i', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
         { title: 'Çıkış', dataIndex: 'check_out', key: 'o', render: (v) => <span className="tabular-nums">{fmtTime(v)}</span> },
-        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', render: (v) => <span className="tabular-nums">{fmtHourMin(v)}</span> },
+        // İzin kredi satırı: kart süresi yerine izin türü + izin süresi
+        { title: 'Normal', dataIndex: 'normal_seconds', key: 'n', align: 'right', render: (_, r) => renderAttendanceNormal(r) },
         { title: 'Fazla', dataIndex: 'overtime_seconds', key: 'ot', align: 'right', render: (v) => <span className="tabular-nums text-amber-600">{fmtHourMin(v)}</span> },
         { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => r.status_display || v || '—' },
     ];

@@ -6,6 +6,7 @@ import { DirectionTag } from './accountingTags';
 import {
     fmtDate, fmtDateTime, fmtTime, fmtHourMin, emptyStateText,
 } from './accountingFormat';
+import { renderAttendanceNormal } from './accountingDetail';
 
 const ATT_SOURCE_COLORS = {
     CARD: 'blue',
@@ -188,7 +189,8 @@ export default function CardDataTab({
             key: 'normal_seconds',
             width: 90,
             align: 'right',
-            render: (v) => <span className="tabular-nums">{fmtHourMin(v)}</span>,
+            // İzin kredi satırı: kart süresi yerine izin süresi (mor)
+            render: (_, r) => renderAttendanceNormal(r, { showLabel: false }),
         },
         {
             title: 'Fazla',
@@ -222,7 +224,12 @@ export default function CardDataTab({
             width: 110,
             align: 'center',
             responsive: ['lg'],
-            render: (v, r) => v ? <Tag color={ATT_SOURCE_COLORS[v] || 'default'}>{r.source_display || v}</Tag> : '—',
+            // DUTY hem izin kredisini hem dış görevi taşır → record_type_label ayırır
+            render: (v, r) => v ? (
+                <Tag color={r.record_type === 'leave' ? 'purple' : (ATT_SOURCE_COLORS[v] || 'default')}>
+                    {r.record_type_label || r.source_display || v}
+                </Tag>
+            ) : '—',
         },
     ];
 
