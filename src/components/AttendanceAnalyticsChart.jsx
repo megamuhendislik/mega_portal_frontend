@@ -157,7 +157,10 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 .filter(isLeaveRow)
                 .reduce((acc, l) => acc + (l.leave_credit_seconds ?? l.normal_seconds ?? 0), 0);
             const healthReport = sourceSeconds(['HEALTH_REPORT']);
-            const hospitalVisit = dayLogs.reduce((acc, l) => acc + (l.hospital_visit_seconds || (l.source === 'HOSPITAL_VISIT' ? (l.normal_seconds || 0) : 0)), 0);
+            // hospital_visit_seconds motorun sakladığı HAM pencere toplamıdır (mükerrer/çakışan
+            // ziyaret dahil); kredi = hospital_visit_credit_seconds (eski backend'de ham alana düş).
+            const hospitalVisit = dayLogs.reduce((acc, l) => acc + (l.hospital_visit_credit_seconds
+                ?? (l.hospital_visit_seconds || (l.source === 'HOSPITAL_VISIT' ? (l.normal_seconds || 0) : 0))), 0);
             const specialLeave = sourceSeconds(['SPECIAL_LEAVE']);
             const totalNormal = dayLogs
                 .filter(l => !isCreditRow(l))

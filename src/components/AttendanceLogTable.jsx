@@ -41,6 +41,8 @@ const formatMinutes = (minutes) => `${Math.floor(minutes / 60)}s ${minutes % 60}
 // Saatlik izinde normal_seconds=0 (süre günlük hedef düşümünde) → kredi leave_credit_seconds'tan.
 const isLeaveRow = (log) => log.record_type === 'leave';
 const leaveCreditSeconds = (log) => log.leave_credit_seconds ?? log.normal_seconds ?? 0;
+// hospital_visit_seconds HAM pencere toplamıdır (mükerrer/çakışan ziyaret dahil); kredi kanonik alandan.
+const hospitalCreditSeconds = (log) => log.hospital_visit_credit_seconds ?? (log.hospital_visit_seconds || log.total_seconds);
 const leaveCreditMinutes = (log) => Math.round(leaveCreditSeconds(log) / 60);
 
 // --- RecordTypeBadge ---
@@ -322,6 +324,8 @@ const buildDisplayRows = (logs, leaveCoverageMap, visibleDates = null) => {
                     total_minutes: Math.round(durationSeconds / 60),
                     normal_seconds: source === 'HEALTH_REPORT' ? durationSeconds : 0,
                     hospital_visit_seconds: source === 'HOSPITAL_VISIT' ? durationSeconds : 0,
+                    // Ziyaret bazında kanonik kredi (mükerrer ziyaret 0); eski backend'de pencere süresi.
+                    hospital_visit_credit_seconds: source === 'HOSPITAL_VISIT' ? (coverage.credit_seconds ?? durationSeconds) : 0,
                     source,
                     source_display: coverage.type_name,
                     record_type: coverageRecordType(coverage),
@@ -367,7 +371,7 @@ const ProcessedDetailChips = ({ log }) => {
     // İzin satırında normal_seconds izin kredisidir (çalışma değil) → yukarıdaki izin chip'inde gösterilir.
     const normal = isLeaveRow(log) ? null : formatDurationSeconds(log.normal_seconds);
     const hospitalVisit = ['hospital_visit'].includes(type)
-        ? formatDurationSeconds(log.hospital_visit_seconds || log.total_seconds)
+        ? formatDurationSeconds(hospitalCreditSeconds(log))
         : null;
     const approvedOt = formatDurationSeconds(log.ot_approved_seconds || log.overtime_seconds);
     const pendingOt = formatDurationSeconds(log.pending_overtime_seconds);

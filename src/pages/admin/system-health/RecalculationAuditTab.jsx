@@ -3444,9 +3444,15 @@ function FrcRecordTable({ title, data, color, lazyRecs, lazyLoading }) {
                 <span>Normal: {fmtSeconds(data.tn)}</span>
                 <span>Mesai: {fmtSeconds(data.to)}</span>
                 <span>Eksik: {fmtSeconds(data.tm)}</span>
-                {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
+                {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster. thv motorun sakladığı
+                    HAM pencere toplamı (mükerrer/çakışan dahil); gösterilen kredi kanonik thv_net. */}
                 {(data.thv || 0) > 0 && (
-                    <span className="text-purple-600">Raporlu: {fmtSeconds(data.thv)}</span>
+                    <span
+                        className="text-purple-600"
+                        title={(data.thv_net ?? data.thv) !== data.thv ? `Ham pencere toplamı: ${fmtSeconds(data.thv)}` : undefined}
+                    >
+                        Raporlu: {fmtSeconds(data.thv_net ?? data.thv)}
+                    </span>
                 )}
             </div>
         </div>
