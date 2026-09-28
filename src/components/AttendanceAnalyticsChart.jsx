@@ -146,18 +146,27 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 .filter(l => sources.includes(l.source))
                 .reduce((acc, l) => acc + valueFn(l), 0);
             const creditSources = ['DUTY', 'HEALTH_REPORT', 'HOSPITAL_VISIT', 'SPECIAL_LEAVE'];
-            const externalDuty = sourceSeconds(['DUTY']);
+            // İzin kredi satırı da source='DUTY' taşır ama dış görev DEĞİLDİR; ayrım record_type'tan.
+            // Saatlik izin satırı normal_seconds=0 taşır (süre hedef düşümünde) → süre leave_credit_seconds'tan.
+            const isLeaveRow = (l) => l.record_type === 'leave';
+            const isCreditRow = (l) => isLeaveRow(l) || creditSources.includes(l.source);
+            const externalDuty = dayLogs
+                .filter(l => l.record_type === 'external_duty')
+                .reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
+            const leave = dayLogs
+                .filter(isLeaveRow)
+                .reduce((acc, l) => acc + (l.leave_credit_seconds ?? l.normal_seconds ?? 0), 0);
             const healthReport = sourceSeconds(['HEALTH_REPORT']);
             const hospitalVisit = dayLogs.reduce((acc, l) => acc + (l.hospital_visit_seconds || (l.source === 'HOSPITAL_VISIT' ? (l.normal_seconds || 0) : 0)), 0);
             const specialLeave = sourceSeconds(['SPECIAL_LEAVE']);
             const totalNormal = dayLogs
-                .filter(l => !creditSources.includes(l.source))
+                .filter(l => !isCreditRow(l))
                 .reduce((acc, l) => acc + (l.normal_seconds || 0), 0);
             const totalBreak = dayLogs.reduce((acc, l) => acc + (l.break_seconds || 0), 0);
             const otApproved = dayLogs.reduce((acc, l) => acc + (l.ot_approved_seconds || 0), 0);
             const otPending = dayLogs.reduce((acc, l) => acc + (l.pending_overtime_seconds || 0), 0);
             const totalCalcOt = dayLogs.reduce((acc, l) => acc + (l.calculated_overtime_seconds || 0), 0);
-            const isCreditOnlyDay = dayLogs.length > 0 && dayLogs.every(l => creditSources.includes(l.source));
+            const isCreditOnlyDay = dayLogs.length > 0 && dayLogs.every(isCreditRow);
             const otPotential = isCreditOnlyDay ? 0 : Math.max(0, totalCalcOt - otApproved - otPending);
             const totalMissing = dayLogs.filter(l => !l.is_overtime_record).reduce((acc, l) => acc + (l.missing_seconds || 0), 0);
             const dayTarget = dayLogs.length > 0
@@ -173,14 +182,16 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                 health_report: parseFloat((healthReport / 3600).toFixed(2)),
                 hospital_visit: parseFloat((hospitalVisit / 3600).toFixed(2)),
                 special_leave: parseFloat((specialLeave / 3600).toFixed(2)),
+                leave: parseFloat((leave / 3600).toFixed(2)),
                 ot_approved: parseFloat((otApproved / 3600).toFixed(2)),
                 ot_pending: parseFloat((otPending / 3600).toFixed(2)),
                 ot_potential: parseFloat((otPotential / 3600).toFixed(2)),
                 // İzin günlerinde de missing gösterilmeli — kısmi izinlerde (mazeret izni vb.)
                 // missing olabilir. DB'deki gerçek değer kullanılır.
-                missing: parseFloat((totalMissing / 3600).toFixed(1)),
+                // Hassasiyet diğer dilimlerle aynı (2 hane): normal + izin + eksik = hedef çizgisine oturur.
+                missing: parseFloat((totalMissing / 3600).toFixed(2)),
                 break_time: parseFloat((totalBreak / 3600).toFixed(2)),
-                target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(1)) : null,
+                target: dayTarget > 0 ? parseFloat((dayTarget / 3600).toFixed(2)) : null,
                 isFuture: dateStr > getIstanbulToday()
             });
         }
@@ -243,6 +254,7 @@ const WeeklyView = ({ logs, showBreaks, employeeId, onDateClick }) => {
                         <Bar dataKey="health_report" stackId="a" fill="#ef4444" name="Sağlık Raporu" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="hospital_visit" stackId="a" fill="#a855f7" name="Hastane" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="special_leave" stackId="a" fill="#14b8a6" name="Özel İzin" onClick={(d) => onDateClick && onDateClick(d.date)} />
+                        <Bar dataKey="leave" stackId="a" fill="#06b6d4" name="İzin" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} name="Normal" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_approved" stackId="a" fill="#10b981" name="Onaylı Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />
                         <Bar dataKey="ot_pending" stackId="a" fill="url(#striped-pending)" stroke="#f59e0b" strokeWidth={1} name="Bekleyen Mesai" onClick={(d) => onDateClick && onDateClick(d.date)} />
@@ -277,6 +289,12 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
                             <span className="font-bold">{fmtHM(d.avg_normal)}</span>
+                        </div>
+                    )}
+                    {d?.avg_leave > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />İzin</span>
+                            <span className="font-bold">{fmtHM(d.avg_leave)}</span>
                         </div>
                     )}
                     {d?.avg_ot_approved > 0 && (
@@ -317,7 +335,7 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                                 <span className="font-bold">{fmtHM(d?.total_work)}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-500" />Toplam Mesai</span>
+                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-600" />Toplam Mesai</span>
                                 <span className="font-bold">{fmtHM(d?.total_ot)}</span>
                             </div>
                         </div>
@@ -373,6 +391,7 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
 
                     {/* Average daily bars */}
                     <Bar yAxisId="left" dataKey="avg_normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Ort. Normal" />
+                    <Bar yAxisId="left" dataKey="avg_leave" stackId="a" fill="#06b6d4" name="Ort. İzin" />
                     <Bar yAxisId="left" dataKey="avg_ot_approved" stackId="a" fill="#10b981" name="Ort. Onaylı Mesai" />
                     <Bar yAxisId="left" dataKey="avg_ot_pending" stackId="a" fill="url(#striped-m-pending)" stroke="#f59e0b" strokeWidth={1} name="Ort. Bekleyen" />
                     <Bar yAxisId="left" dataKey="avg_ot_potential" stackId="a" fill="url(#striped-m-potential)" stroke="#94a3b8" strokeWidth={1} name="Ort. Potansiyel" />
@@ -388,7 +407,7 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
                         <Line yAxisId="right" type="monotone" dataKey="total_work" name="Toplam Çalışma" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                     )}
                     {showTotals && (
-                        <Line yAxisId="right" type="monotone" dataKey="total_ot" name="Toplam Mesai" stroke="#06b6d4" strokeWidth={2.5} strokeDasharray="6 3" dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="right" type="monotone" dataKey="total_ot" name="Toplam Mesai" stroke="#475569" strokeWidth={2.5} strokeDasharray="6 3" dot={{ r: 4, fill: '#475569', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                     )}
                 </ComposedChart>
             </ResponsiveContainer>
@@ -397,6 +416,14 @@ const MonthlyBarView = ({ data, showBreaks, showTotals }) => {
 };
 
 // ─── Yearly View (Yıllık — Aylık Toplam + Kümülatif) ─────────────────
+// Gelecek / sistem-öncesi ayları soluk çizen bar şekli (render dışında: her render'da yeniden oluşmasın)
+const CustomBar = (props) => {
+    const { x, y, width, height, payload, fill, radius } = props;
+    const opacity = payload?._isFuture ? 0.15 : payload?._isBeforeStart ? 0.08 : 1;
+    const r = radius || [0, 0, 0, 0];
+    return <rect x={x} y={y} width={width} height={height} fill={fill} opacity={opacity} rx={r[0] || 0} ry={r[0] || 0} />;
+};
+
 const YearlyView = ({ data }) => {
     const isMobile = useIsMobile();
 
@@ -404,13 +431,6 @@ const YearlyView = ({ data }) => {
         ...m,
         total_mesai: parseFloat(((m.ot_approved || 0) + (m.ot_pending || 0) + (m.ot_potential || 0)).toFixed(1)),
     })), [data]);
-
-    const CustomBar = (props) => {
-        const { x, y, width, height, payload, fill, radius } = props;
-        const opacity = payload?._isFuture ? 0.15 : payload?._isBeforeStart ? 0.08 : 1;
-        const r = radius || [0, 0, 0, 0];
-        return <rect x={x} y={y} width={width} height={height} fill={fill} opacity={opacity} rx={r[0] || 0} ry={r[0] || 0} />;
-    };
 
     const CustomXTick = ({ x, y, payload: tickPayload }) => {
         const item = simplifiedData.find(d => d.name === tickPayload?.value);
@@ -447,7 +467,8 @@ const YearlyView = ({ data }) => {
         const { x, y, width, index } = props;
         const item = simplifiedData[index];
         if (!item?._isPast && !item?._isCurrent) return null;
-        const totalHours = Math.round((item.normal || 0) + (item.total_mesai || 0));
+        // İzin eskiden normal içindeydi; ayrı dilim olunca toplam etiketi korunur
+        const totalHours = Math.round((item.normal || 0) + (item.leave || 0) + (item.total_mesai || 0));
         if (totalHours <= 0) return null;
         return (
             <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={isMobile ? 8 : 9} fill="#64748B" fontWeight="700">
@@ -478,6 +499,12 @@ const YearlyView = ({ data }) => {
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
                         <span className="font-bold">{fmtHM(d?.normal)}</span>
                     </div>
+                    {d?.leave > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />İzin</span>
+                            <span className="font-bold">{fmtHM(d.leave)}</span>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Toplam Mesai</span>
                         <span className="font-bold">{fmtHM(d?.total_mesai)}</span>
@@ -518,6 +545,7 @@ const YearlyView = ({ data }) => {
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
 
                     <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" shape={<CustomBar />} label={renderBarLabel} />
+                    <Bar yAxisId="left" dataKey="leave" stackId="a" fill="#06b6d4" name="İzin (Sa)" shape={<CustomBar />} />
                     <Bar yAxisId="left" dataKey="total_mesai" stackId="a" fill="#10b981" name="Mesai (Sa)" shape={<CustomBar />} />
                     <Bar yAxisId="left" dataKey="missing" stackId="a" fill="#fb7185" radius={[4, 4, 0, 0]} name="Eksik (Sa)" shape={<CustomBar />} />
 
@@ -565,6 +593,8 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                             name: new Date(2000, m.month - 1, 1).toLocaleString('tr-TR', { month: 'short', timeZone: 'Europe/Istanbul' }),
                             month: m.month,
                             normal: isBeforeStart ? 0 : m.normal_hours,
+                            // İzin kredisi normal_hours'tan ayrı gelir (eski backend: alan yok → 0, izin normal içinde)
+                            leave: isBeforeStart ? 0 : (m.leave_hours ?? 0),
                             overtime: isBeforeStart ? 0 : m.overtime_hours,
                             ot_approved: isBeforeStart ? 0 : (m.ot_approved_hours || 0),
                             ot_pending: isBeforeStart ? 0 : (m.ot_pending_hours || 0),
@@ -583,6 +613,8 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                         day_count: w.day_count || 0,
                         // Average daily values (bars)
                         avg_normal: w.normal,
+                        // İzin kredisi normal'den ayrı gelir (eski backend: alan yok → 0, izin normal içinde)
+                        avg_leave: w.leave ?? 0,
                         avg_overtime: w.overtime,
                         avg_ot_approved: w.ot_approved || 0,
                         avg_ot_pending: w.ot_pending || 0,
@@ -590,8 +622,10 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                         avg_missing: w.missing || 0,
                         avg_break: w.break || 0,
                         // Weekly totals (lines)
+                        // İzin eskiden normal içinde sayılıyordu; ayrıldıktan sonra toplam korunur (normal + izin + mesai)
                         total_work: parseFloat((
                             (w.total_normal ?? (w.normal || 0) * (w.day_count || 1)) +
+                            (w.total_leave ?? (w.leave ?? 0) * (w.day_count || 1)) +
                             (w.total_overtime ?? (w.overtime || 0) * (w.day_count || 1))
                         ).toFixed(1)),
                         total_ot: parseFloat((

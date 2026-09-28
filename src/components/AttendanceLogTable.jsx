@@ -34,6 +34,15 @@ const formatDurationSeconds = (seconds) => {
     return parts.join(' ');
 };
 
+// Dakika → "Xs Ydk" (Süre/Beklenen sütunlarının biçimi)
+const formatMinutes = (minutes) => `${Math.floor(minutes / 60)}s ${minutes % 60}dk`;
+
+// İzin kredi satırı (record_type='leave'): source='DUTY' taşır ama çalışma/dış görev değildir.
+// Saatlik izinde normal_seconds=0 (süre günlük hedef düşümünde) → kredi leave_credit_seconds'tan.
+const isLeaveRow = (log) => log.record_type === 'leave';
+const leaveCreditSeconds = (log) => log.leave_credit_seconds ?? log.normal_seconds ?? 0;
+const leaveCreditMinutes = (log) => Math.round(leaveCreditSeconds(log) / 60);
+
 // --- RecordTypeBadge ---
 const RECORD_TYPE_CONFIG = {
     card:           { icon: CreditCard, label: 'Kart',      bg: 'bg-slate-50',   border: 'border-slate-200', text: 'text-slate-600',   dot: 'bg-slate-400'   },
@@ -340,6 +349,10 @@ const ProcessedDetailChips = ({ log }) => {
     if (['external_duty', 'health_report', 'hospital_visit', 'special_leave'].includes(type)) {
         chips.push({ key: 'processed', label: 'İşlenmiş Talep', value: sourceLabel, cls: 'bg-violet-50 text-violet-700 border-violet-200' });
     }
+    if (isLeaveRow(log)) {
+        const leaveCredit = formatDurationSeconds(leaveCreditSeconds(log));
+        chips.push({ key: 'leave', label: log.related_leave_type_name || sourceLabel || 'İzin', value: leaveCredit, cls: 'bg-amber-50 text-amber-700 border-amber-200' });
+    }
     if (type === 'overtime' || log.ot_status) {
         const statusLabel = {
             APPROVED: 'Onaylı Mesai',
@@ -351,7 +364,8 @@ const ProcessedDetailChips = ({ log }) => {
         chips.push({ key: 'ot-status', label: statusLabel, value: log.ot_source_type || '', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
     }
 
-    const normal = formatDurationSeconds(log.normal_seconds);
+    // İzin satırında normal_seconds izin kredisidir (çalışma değil) → yukarıdaki izin chip'inde gösterilir.
+    const normal = isLeaveRow(log) ? null : formatDurationSeconds(log.normal_seconds);
     const hospitalVisit = ['hospital_visit'].includes(type)
         ? formatDurationSeconds(log.hospital_visit_seconds || log.total_seconds)
         : null;
@@ -426,14 +440,21 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {}, visibleDates = null }
                                 <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_in)}</td>
                                 <td className="p-2 md:p-3 lg:p-5 font-mono text-xs sm:text-sm text-slate-600 font-semibold">{formatTime(log.check_out)}</td>
                                 <td className="p-2 md:p-3 lg:p-5">
-                                    <span className="font-bold text-slate-800 text-xs sm:text-sm">
-                                        {log.total_minutes ? `${Math.floor(log.total_minutes / 60)}s ${log.total_minutes % 60}dk` : '-'}
+                                    {/* İzin satırı: süre = izin kredisi (saatlik izinde total_minutes 0 gelir) */}
+                                    <span className={`font-bold text-xs sm:text-sm ${isLeaveRow(log) ? 'text-amber-700' : 'text-slate-800'}`}>
+                                        {isLeaveRow(log)
+                                            ? (leaveCreditMinutes(log) ? formatMinutes(leaveCreditMinutes(log)) : '-')
+                                            : (log.total_minutes ? formatMinutes(log.total_minutes) : '-')}
                                     </span>
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5 text-slate-400 font-medium text-xs">
-                                    {log.normal_minutes || log.missing_minutes ?
-                                        `${Math.floor(((log.normal_minutes || 0) + (log.missing_minutes || 0)) / 60)}s ${((log.normal_minutes || 0) + (log.missing_minutes || 0)) % 60}dk`
-                                        : '-'
+                                    {/* İzin satırı: hedefin izinle karşılanan kısmı = kredi. Aynı günün kart satırı
+                                        Beklenen'i (normal+eksik) izin düşülmüş hedeftir; ikisinin toplamı günlük hedef. */}
+                                    {isLeaveRow(log)
+                                        ? (leaveCreditMinutes(log) ? formatMinutes(leaveCreditMinutes(log)) : '-')
+                                        : (log.normal_minutes || log.missing_minutes
+                                            ? formatMinutes((log.normal_minutes || 0) + (log.missing_minutes || 0))
+                                            : '-')
                                     }
                                 </td>
                                 <td className="p-2 md:p-3 lg:p-5">
@@ -452,8 +473,9 @@ const AttendanceLogTable = ({ logs, leaveCoverageMap = {}, visibleDates = null }
                                         {getCoverageItemsForLog(leaveCoverageMap[log.work_date], log).map((coverage, index) => (
                                             <LeaveBadge key={`${coverage.type}-${coverage.request_id || index}-${coverage.start_time || ''}`} leave={{ is_on_leave: true, ...coverage }} size="sm" />
                                         ))}
-                                        {/* Tam gün izin/rapor varsa attendance status badge gösterme; coverage satırları zaten onaylıdır. */}
-                                        {!(getCoverageItemsForLog(leaveCoverageMap[log.work_date], log).some(coverage => !coverage.is_hourly) && !log.isCoverageRow) && getStatusBadge(log)}
+                                        {/* Tam gün izin/rapor varsa attendance status badge gösterme; coverage satırları zaten onaylıdır.
+                                            İzin kredi satırı çalışma değildir → "NORMAL" vb. mesai durumu gösterilmez. */}
+                                        {!isLeaveRow(log) && !(getCoverageItemsForLog(leaveCoverageMap[log.work_date], log).some(coverage => !coverage.is_hourly) && !log.isCoverageRow) && getStatusBadge(log)}
                                         {log.overtime_minutes > 0 && (
                                             <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 pl-1">
                                                 <span className="w-1 h-1 rounded-full bg-emerald-500"></span>

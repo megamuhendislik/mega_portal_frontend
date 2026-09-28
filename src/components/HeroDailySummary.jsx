@@ -26,8 +26,14 @@ const HeroDailySummary = ({ summary, loading }) => {
     const workPercent = workTargetSeconds > 0 ? Math.min(100, Math.round((normalWorkSeconds / workTargetSeconds) * 100)) : 0;
 
     const isOffDay = safeSummary.is_off_day || false;
+    // on_leave yalnız TAM GÜN izinde true. Saatlik izin (mazeret vb.) günü izinli yapmaz;
+    // kredisi partial_leave_seconds olarak gelir ve tamamlanmaya sayılır (daily_expected brüt hedef).
     const onLeave = safeSummary.on_leave || false;
     const onDuty = safeSummary.on_duty || false;
+    const partialLeaveSeconds = (!onLeave && !isOffDay) ? (safeSummary.partial_leave_seconds || 0) : 0;
+    const partialLeaveLabel = (safeSummary.partial_leave_names || []).join(', ') || 'İzin';
+    const partialLeavePercent = workTargetSeconds > 0 ? Math.min(100 - workPercent, Math.round((partialLeaveSeconds / workTargetSeconds) * 100)) : 0;
+    const completionPercent = workTargetSeconds > 0 ? Math.min(100, Math.round(((normalWorkSeconds + partialLeaveSeconds) / workTargetSeconds) * 100)) : 0;
     // Off-day'de çalışma varsa: tüm çalışma OT'dir, Normal Mesai gösterilmez
     const isOffDayWithWork = isOffDay && totalWorkSeconds > 0;
     const usedBreakSeconds = isOffDay ? 0 : (safeSummary.break_used || 0);
@@ -134,13 +140,21 @@ const HeroDailySummary = ({ summary, loading }) => {
                                     <>Hedef: <span className="text-slate-600">{Math.floor(workTargetSeconds / 3600)}s {Math.floor((workTargetSeconds % 3600) / 60)}dk</span></>
                                 )}
                             </p>
+                            {partialLeaveSeconds > 0 && (
+                                <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 pl-1 mt-1" title="Onaylı saatlik izin — günlük hedefe sayılır">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>
+                                    <span className="text-cyan-600 font-bold">{partialLeaveLabel}</span>
+                                    — <span className="text-slate-600">{fmtSaDkSec(partialLeaveSeconds)}</span>
+                                </p>
+                            )}
                         </div>
 
                         <div className="mt-8">
-                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
                                 <div
                                     className={clsx(
-                                        "h-full rounded-full relative",
+                                        "h-full relative",
+                                        partialLeavePercent > 0 ? "rounded-l-full" : "rounded-full",
                                         onDuty
                                             ? "bg-gradient-to-r from-purple-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
                                             : onLeave
@@ -153,6 +167,14 @@ const HeroDailySummary = ({ summary, loading }) => {
                                 >
                                     <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white/50"></div>
                                 </div>
+                                {/* Saatlik izin kredisi: çalışmanın devamına ayrı dilim */}
+                                {partialLeavePercent > 0 && (
+                                    <div
+                                        className="h-full rounded-r-full bg-gradient-to-r from-cyan-400 to-cyan-500"
+                                        style={{ width: `${partialLeavePercent}%`, transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                                        title={`${partialLeaveLabel}: ${fmtSaDkSec(partialLeaveSeconds)}`}
+                                    ></div>
+                                )}
                             </div>
                             <div className="flex justify-between mt-3 text-[10px] font-bold tracking-wide uppercase">
                                 <span className={clsx(
@@ -166,7 +188,7 @@ const HeroDailySummary = ({ summary, loading }) => {
                                      onLeave ? 'İZİNLİ GÜN' :
                                      isOffDayWithWork ? 'EK MESAİ GÜNÜ' :
                                      isOffDay ? 'TATİL GÜNÜ' :
-                                     `%${workPercent} Tamamlandı`}
+                                     `%${completionPercent} Tamamlandı`}
                                 </span>
                             </div>
                         </div>

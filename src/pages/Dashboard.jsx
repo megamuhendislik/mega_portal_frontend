@@ -376,6 +376,10 @@ const Dashboard = () => {
         return `${h}:${String(m).padStart(2, '0')}`;
     };
     const formatMin = (sec) => Math.floor((sec || 0) / 60);
+    // on_leave yalnız TAM GÜN izinde true; saatlik izin (mazeret vb.) kredisi ayrı gelir → hedefin yanına not.
+    const todayPartialLeaveNote = !todaySummary?.on_leave && todaySummary?.partial_leave_seconds > 0
+        ? ` · ${(todaySummary.partial_leave_names || []).join(', ') || 'İzin'} ${fmtSaDkSec(todaySummary.partial_leave_seconds)}`
+        : '';
 
     // Request Item Component
     const RequestItem = ({ req }) => {
@@ -553,7 +557,7 @@ const Dashboard = () => {
                 <StatCard
                     title={todaySummary?.on_duty ? 'ŞİRKET DIŞI ÇALIŞMA' : todaySummary?.on_leave ? 'BUGÜN İZİNLİ' : 'BUGÜN ÇALIŞMA'}
                     value={`${formatHours(todaySummary?.total_worked)} sa`}
-                    subValue={todaySummary?.on_duty ? `Görevde — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : todaySummary?.on_leave ? `İzin kredisi — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : `Hedef: ${formatHours(todaySummary?.daily_expected)} sa`}
+                    subValue={todaySummary?.on_duty ? `Görevde — Hedef: ${formatHours(todaySummary?.daily_expected)} sa${todayPartialLeaveNote}` : todaySummary?.on_leave ? `İzin kredisi — Hedef: ${formatHours(todaySummary?.daily_expected)} sa` : `Hedef: ${formatHours(todaySummary?.daily_expected)} sa${todayPartialLeaveNote}`}
                     icon={Briefcase}
                     color={todaySummary?.on_duty ? 'purple' : todaySummary?.on_leave ? 'purple' : 'indigo'}
                 />
