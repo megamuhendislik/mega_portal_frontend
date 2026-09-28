@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
-import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts, getWeekMondayISO, parseLocalDate } from '../../utils/dateUtils';
+import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
 import api from '../../services/api';
@@ -939,6 +939,10 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
 // Props:
 //   externalDutyForm, setExternalDutyForm, duration, approverDropdown
 // ============================================================
+// Dış görev FM'sinin haftalık limitten muaf olduğu ilk gün (backend
+// DUTY_OT_WEEKLY_LIMIT_EXEMPT_FROM ile aynı; ISO tarih dizgisi karşılaştırılır).
+const DUTY_OT_LIMIT_EXEMPT_FROM = '2026-08-26';
+
 export const ExternalDutyForm = ({
     externalDutyForm,
     setExternalDutyForm,
@@ -947,7 +951,6 @@ export const ExternalDutyForm = ({
     dutyHoursPreview,
     dutyHoursLoading,
     fetchDutyHoursPreview,
-    weeklyOtForDuty,
     holidays,
     calendarLeaveHistory,
 }) => {
@@ -1866,43 +1869,15 @@ export const ExternalDutyForm = ({
                     const totalOtMin = dutyHoursPreview.totals.total_overtime_minutes;
                     const fmtHrs = (min) => Math.round((min / 60) * 10) / 10;
 
-                    // Projeksiyon OT'sini SABİT Pzt–Paz haftalarına böl (backend gün-bazlı
-                    // limit uyguluyor; her hafta AYRI değerlendirilir). Farklı haftalardaki
-                    // günlerin toplamını tek haftanın kalanıyla kıyaslamak YANLIŞ uyarı üretir.
-                    const projByWeek = {};
-                    (dutyHoursPreview.days || []).forEach(d => {
-                        const ot = d.overtime_minutes || 0;
-                        if (ot <= 0 || !d.date) return;
-                        const wk = getWeekMondayISO(d.date);
-                        if (!wk) return;
-                        projByWeek[wk] = (projByWeek[wk] || 0) + ot;
-                    });
-                    const byWeek = weeklyOtForDuty?.byWeek || {};
-                    const weekMondays = Object.keys(projByWeek).sort();
-
-                    const fmtWeekLabel = (mondayISO) => {
-                        const mon = parseLocalDate(mondayISO);
-                        const sun = new Date(mon);
-                        sun.setDate(mon.getDate() + 6);
-                        const f = (dt) => dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-                        return `${f(mon)} – ${f(sun)}`;
-                    };
-
-                    const weekRows = weekMondays.map(wk => {
-                        const usage = byWeek[wk] || null;
-                        const projMin = projByWeek[wk];
-                        const isUnlimited = !!usage?.is_unlimited;
-                        // Karşılaştırma HAM SANİYEDE (backend guard'ı: used + eklenen > limit)
-                        const usedSec = usage ? (usage.used_seconds ?? Math.round((usage.used_hours || 0) * 3600)) : 0;
-                        const limitSec = usage ? (usage.limit_seconds ?? Math.round((usage.limit_hours || 0) * 3600)) : null;
-                        const projSec = Math.round(projMin * 60);
-                        const wouldExceed = !isUnlimited && limitSec != null && (usedSec + projSec > limitSec);
-                        return { wk, usage, projMin, isUnlimited, wouldExceed };
-                    });
-                    const shownRows = weekRows.filter(r => r.usage && !r.isUnlimited);
-                    const anyExceed = weekRows.some(r => r.wouldExceed);
-                    const multiWeek = shownRows.length > 1;
-
+                    // Dış görev Fazla Mesaisi haftalık limitten MUAFTIR (2026-09-28): hafta
+                    // dolu olsa da tamamı onaylanır ve kart/manuel limitini tüketmez. Yalnız
+                    // 26.08.2026 (mali Eylül) ve sonrası; öncesi ödenmiş dönem → eski kural.
+                    // Backend: attendance/services/rule_effective_dates.py
+                    const otDates = (dutyHoursPreview.days || [])
+                        .filter(d => (d.overtime_minutes || 0) > 0 && d.date)
+                        .map(d => d.date);
+                    const hasExemptOt = otDates.some(dt => dt >= DUTY_OT_LIMIT_EXEMPT_FROM);
+                    const hasPreCutoffOt = otDates.some(dt => dt < DUTY_OT_LIMIT_EXEMPT_FROM);
                     return (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -1917,28 +1892,14 @@ export const ExternalDutyForm = ({
                             <div className="text-xs text-amber-600 mt-1 ml-6">
                                 Toplam Fazla Mesai: {fmtHrs(totalOtMin)} saat
                             </div>
-                            {shownRows.length > 0 && (
-                                <div className="text-xs mt-1.5 ml-6 space-y-0.5">
-                                    {multiWeek && (
-                                        <div className="text-slate-500">Haftalık limit (Pzt–Paz) her hafta ayrı değerlendirilir:</div>
-                                    )}
-                                    {shownRows.map(r => {
-                                        const u = r.usage;
-                                        return (
-                                            <div key={r.wk} className={r.wouldExceed ? 'text-red-600' : 'text-amber-600'}>
-                                                {multiWeek && <span className="text-slate-500">{fmtWeekLabel(r.wk)}: </span>}
-                                                bu talep +{fmtHrs(r.projMin)} sa · mevcut {u.used_hours}/{u.limit_hours} sa · kalan {u.remaining_hours} sa
-                                                {r.wouldExceed && <span className="font-medium"> — limit aşılıyor</span>}
-                                            </div>
-                                        );
-                                    })}
-                                    {anyExceed && (
-                                        <div className="text-red-600 font-medium mt-0.5">
-                                            {multiWeek
-                                                ? 'Limiti aşan hafta(lar)ın Fazla Mesai kısmı potansiyel olarak kalacak; diğer haftalar normal onaya gider.'
-                                                : 'Haftalık limit aşılacak — Fazla Mesai kısmı potansiyel olarak kalacak'}
-                                        </div>
-                                    )}
+                            {hasExemptOt && (
+                                <div className="text-xs text-slate-500 mt-1 ml-6">
+                                    Dış görev Fazla Mesaisi haftalık limitten muaftır; limite sayılmaz.
+                                </div>
+                            )}
+                            {hasPreCutoffOt && (
+                                <div className="text-xs text-amber-700 mt-1 ml-6">
+                                    26.08.2026 öncesi günlerde görev Fazla Mesaisi haftalık limite tabidir; limit doluysa potansiyel olarak kalır.
                                 </div>
                             )}
                         </div>

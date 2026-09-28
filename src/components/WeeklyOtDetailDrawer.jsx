@@ -91,7 +91,9 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       dataIndex: 'source_type',
       key: 'source_type',
       width: 85,
-      render: (s) => <span className="text-xs text-gray-500">{SOURCE_LABELS[s] || s || '-'}</span>,
+      render: (s, r) => (r.is_duty
+        ? <Tag color="purple" className="text-[10px]" title="Dış görev Fazla Mesaisi haftalık limitten muaftır">Dış görev · muaf</Tag>
+        : <span className="text-xs text-gray-500">{SOURCE_LABELS[s] || s || '-'}</span>),
     },
   ];
 
@@ -152,6 +154,11 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
               <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
                 <AlertCircle size={12} />
                 Haftalık limit aşıldı!
+              </div>
+            )}
+            {data.duty_hours > 0 && (
+              <div className="mt-2 text-xs text-purple-600">
+                + {fmtSaDk(data.duty_hours)} dış görev Fazla Mesaisi (limitten muaf, kullanıma sayılmaz)
               </div>
             )}
           </div>

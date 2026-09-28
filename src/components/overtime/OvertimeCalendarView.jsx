@@ -771,7 +771,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
             <div className="text-right">
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                 Haftalık Mesai
-                <Tooltip title="Bu hafta (Pzt-Paz) toplam fazla mesai saatiniz. Onaylı + bekleyen talepler sayılır. Her Pazartesi sıfırlanır.">
+                <Tooltip title="Bu hafta (Pzt-Paz) toplam fazla mesai saatiniz. Onaylı + bekleyen talepler sayılır; dış görev Fazla Mesaisi 26.08.2026'dan itibaren limitten muaftır, sayılmaz. Her Pazartesi sıfırlanır.">
                   <Info size={11} className="text-slate-400 cursor-help" />
                 </Tooltip>
               </div>

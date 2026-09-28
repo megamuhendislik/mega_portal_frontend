@@ -303,7 +303,7 @@ const helpContent = [
         },
         {
             title: 'Haftalık Limit Takibi',
-            description: 'Takvimin üstündeki çubuk haftalık fazla mesai limitinizi gösterir. Limit varsayılan 30 saattir; Pazartesi-Pazar sabit takvim haftasında onaylı ve bekleyen mesai toplamı sayılır ve her Pazartesi sıfırlanır. Limit dolduğunda yeni talep oluşturulamaz.'
+            description: 'Takvimin üstündeki çubuk haftalık fazla mesai limitinizi gösterir. Limit varsayılan 30 saattir; Pazartesi-Pazar sabit takvim haftasında onaylı ve bekleyen mesai toplamı sayılır ve her Pazartesi sıfırlanır. Limit dolduğunda yeni talep oluşturulamaz. 26 Ağustos 2026 (mali Eylül) ve sonrasında onaylı dış görevden gelen fazla mesai bu limitten muaftır ve kullanıma sayılmaz.'
         },
         {
             title: 'Yönetici: Mesai Atama',
@@ -369,7 +369,7 @@ const helpContent = [
         }
     ],
     tips: [
-        { type: 'success', text: 'Onaylanan dış görevin hesaplanan fazla mesai kısmı otomatik onaylanır; olağan çalışma gününde vardiya dışı süre, tam gün izin/raporda öğle kesintisinden kalan net sürenin tamamı ve gerçek tatil gününde brüt süre için ayrıca mesai talebi oluşturmanız gerekmez.' },
+        { type: 'success', text: 'Onaylanan dış görevin hesaplanan fazla mesai kısmı otomatik onaylanır; olağan çalışma gününde vardiya dışı süre, tam gün izin/raporda öğle kesintisinden kalan net sürenin tamamı ve gerçek tatil gününde brüt süre için ayrıca mesai talebi oluşturmanız gerekmez. 26 Ağustos 2026 (mali Eylül) ve sonrasındaki günlerde dış görev fazla mesaisi haftalık fazla mesai limitinden muaftır; hafta dolu olsa da onaylanır ve limitinize sayılmaz.' },
         { type: 'info', text: 'Yarım gün tatillerde kesim saatinden sonraki görev çalışması fazla mesai sayılır. Tam resmi tatil ve takvimde çalışılmayan hafta sonunda görev süresi brüt fazla mesaidir; çalışma günü olarak planlanan hafta sonu ise vardiya ve öğle kurallarını izler.' },
         { type: 'warning', text: 'Çok günlü görevde yalnızca dahil işaretlediğiniz ve saatlerini doldurduğunuz günler gönderilir. Hafta sonunu çalışmayacaksanız o günleri hariç bırakın; aksi halde o günler görev günü olarak işlenir.' },
         { type: 'info', text: 'Geriye dönük dış görev talebi 2 mali ay penceresi ile sınırlıdır; kilitli mali dönemlerdeki tarihler için talep oluşturulamaz.' }

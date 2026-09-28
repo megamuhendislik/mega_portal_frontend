@@ -1147,6 +1147,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                         <div className="h-3 bg-blue-100 rounded-full overflow-hidden mb-2">
                           <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                         </div>
+                        {weeklyOtStatus.duty_hours > 0 && (
+                          <div className="text-[11px] text-slate-500 mb-2">
+                            Dış görev Fazla Mesaisi ({weeklyOtStatus.duty_hours} sa) limitten muaftır, kullanıma sayılmaz.
+                          </div>
+                        )}
                         {request.status === 'PENDING' && (
                           <div className={`text-xs ${projColor} font-bold bg-white/60 rounded-lg p-2 border border-blue-100`}>
                             Bu talep dahil: {projected} sa ({projPct}%) — Kalan: {Math.max(0, round(limit - projected, 1))} sa
