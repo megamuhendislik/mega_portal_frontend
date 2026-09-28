@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Drawer, Tag } from 'antd';
 import {
     Clock, AlarmClock, Coffee, TrendingUp, Calendar as CalendarIcon,
-    CheckCircle2, XCircle, AlertTriangle, Target, BarChart3, Stethoscope,
+    CheckCircle2, XCircle, AlertTriangle, Target, BarChart3, Stethoscope, Umbrella,
 } from 'lucide-react';
 
 /**
@@ -16,13 +16,17 @@ import {
  *  - onClose: () => void
  *  - day: {
  *      date: 'YYYY-MM-DD',
- *      worked: number,
+ *      worked: number,        // normal + ot (izin HARİÇ)
+ *      normal?: number,
  *      ot: number,
- *      target: number,
+ *      missing?: number,
+ *      leave?: number,        // saatlik/tam gün izin kredisi (saat)
+ *      leave_label?: string,  // örn. 'Mazeret İzni'
+ *      target: number|null,   // takvimden brüt günlük hedef (tatil 0, bilinmiyor null)
  *      status: string,
  *    } | null
  *  - employeeName?: string
- *  - calendarStatus?: 'full' | 'partial' | 'absent' | 'off' | 'future'
+ *  - calendarStatus?: 'full' | 'partial' | 'absent' | 'leave' | 'off' | 'future'
  *  - entryExit?: { first_check_in, last_check_out } (varsa)
  */
 
@@ -44,6 +48,7 @@ const CALENDAR_STATUS = {
     full: { label: 'Tam Çalışma', color: 'success', icon: CheckCircle2 },
     partial: { label: 'Kısmi Çalışma', color: 'warning', icon: AlertTriangle },
     absent: { label: 'Devamsız', color: 'error', icon: XCircle },
+    leave: { label: 'İzinli', color: 'blue', icon: Umbrella },
     off: { label: 'Tatil / Hafta Sonu', color: 'default', icon: CalendarIcon },
     future: { label: 'Gelecek Tarih', color: 'processing', icon: CalendarIcon },
 };
@@ -74,11 +79,19 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
 
     const worked = day?.worked ?? 0;
     const ot = day?.ot ?? 0;
-    const target = day?.target ?? 8;
+    // Hedef yok/bilinmiyor (tatil 0, kayıtsız gün null) → "Hedefsiz gün"
+    const target = day?.target ?? 0;
+    const hasTarget = target > 0;
     // Backend gün-başına toplam alanları gönderiyor (normal/missing/break_*)
     const normal = day?.normal != null ? day.normal : Math.max(0, worked - ot);
-    const deficit = day?.missing != null ? day.missing : Math.max(0, target - normal);
-    const efficiency = target > 0 ? Math.round((worked / target) * 100) : 0;
+    // İzin (saatlik mazeret / tam gün) çalışma değildir ama hedefi karşılar.
+    const leave = day?.leave ?? 0;
+    const leaveLabel = day?.leave_label || 'İzin';
+    const covered = normal + leave;
+    const deficit = day?.missing != null ? day.missing : Math.max(0, target - covered);
+    const efficiency = hasTarget ? Math.round((covered / target) * 100) : 0;
+    const barTotal = Math.max(target, covered + ot + deficit) || 1;
+    const barWidth = (h) => `${Math.min(100, (h / barTotal) * 100)}%`;
     const hasBreak = day?.break_total != null;
     // Raporlu/İzinli (hospital visit) — DISPLAY-ONLY: normale yazılmaz, ayrı kategori.
     // Gün verisinden saat cinsinden okunur (saniye varsa saate çevrilir); yalnız >0 ise gösterilir.
@@ -155,19 +168,23 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 <div className="text-2xl font-black text-indigo-800 tabular-nums">
                                     {formatHours(worked)}
                                 </div>
-                                <p className="text-[10px] text-slate-500 mt-0.5">Hedef: {formatHours(target)}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                    Hedef: {hasTarget ? formatHours(target) : 'yok'}
+                                </p>
                             </div>
 
-                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4" title="(Normal + İzin) / Hedef">
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <Target size={11} className="text-emerald-600" />
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Doluluk</span>
                                 </div>
                                 <div className="text-2xl font-black text-emerald-800 tabular-nums">
-                                    {efficiency}<span className="text-base text-slate-400 ml-0.5">%</span>
+                                    {hasTarget ? (
+                                        <>{efficiency}<span className="text-base text-slate-400 ml-0.5">%</span></>
+                                    ) : '—'}
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {efficiency >= 100 ? 'Hedef üstü' : efficiency >= 80 ? 'İyi' : efficiency >= 60 ? 'Orta' : 'Düşük'}
+                                    {!hasTarget ? 'Hedefsiz gün' : efficiency >= 100 ? 'Hedef üstü' : efficiency >= 80 ? 'İyi' : efficiency >= 60 ? 'Orta' : 'Düşük'}
                                 </p>
                             </div>
 
@@ -193,9 +210,25 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                     {deficit > 0 ? formatHours(deficit) : '—'}
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {deficit > 0 ? 'Hedef altı' : 'Hedefe ulaşıldı'}
+                                    {deficit > 0 ? 'Hedef altı' : hasTarget ? 'Hedefe ulaşıldı' : 'Hedefsiz gün'}
                                 </p>
                             </div>
+
+                            {/* İzin (saatlik mazeret / tam gün) — çalışmaya eklenmez, hedefe sayılır */}
+                            {leave > 0 && (
+                                <div className="rounded-xl border border-cyan-200 bg-cyan-50/50 p-4">
+                                    <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                                        <Umbrella size={11} className="text-cyan-600 flex-shrink-0" />
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em] truncate" title={leaveLabel}>
+                                            {leaveLabel}
+                                        </span>
+                                    </div>
+                                    <div className="text-2xl font-black text-cyan-800 tabular-nums">
+                                        {formatHours(leave)}
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">Çalışma değil, hedefe sayılır</p>
+                                </div>
+                            )}
 
                             {/* Raporlu/İzinli (hastane ziyareti) — yalnız HV>0 ise göster */}
                             {hospitalVisit > 0 && (
@@ -218,30 +251,54 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
                                     Çalışma Dağılımı
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-700 tabular-nums">
-                                    {formatHours(worked)} / {formatHours(target)}
+                                <span className="text-[10px] font-bold text-slate-700 tabular-nums" title="(Normal + İzin) / Hedef">
+                                    {formatHours(covered)} / {hasTarget ? formatHours(target) : 'hedef yok'}
                                 </span>
                             </div>
                             <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex">
                                 {normal > 0 && (
                                     <div
                                         className="h-full bg-indigo-500 transition-all"
-                                        style={{ width: `${Math.min(100, (normal / Math.max(target, worked)) * 100)}%` }}
+                                        style={{ width: barWidth(normal) }}
                                         title={`Normal: ${formatHours(normal)}`}
+                                    />
+                                )}
+                                {leave > 0 && (
+                                    <div
+                                        className="h-full bg-cyan-500 transition-all"
+                                        style={{ width: barWidth(leave) }}
+                                        title={`${leaveLabel}: ${formatHours(leave)}`}
+                                    />
+                                )}
+                                {deficit > 0 && (
+                                    <div
+                                        className="h-full bg-rose-300 transition-all"
+                                        style={{ width: barWidth(deficit) }}
+                                        title={`Eksik: ${formatHours(deficit)}`}
                                     />
                                 )}
                                 {ot > 0 && (
                                     <div
                                         className="h-full bg-amber-500 transition-all"
-                                        style={{ width: `${Math.min(100, (ot / Math.max(target, worked)) * 100)}%` }}
+                                        style={{ width: barWidth(ot) }}
                                         title={`Fazla Mesai: ${formatHours(ot)}`}
                                     />
                                 )}
                             </div>
-                            <div className="flex items-center gap-3 mt-2 text-[10px]">
+                            <div className="flex items-center gap-3 mt-2 text-[10px] flex-wrap">
                                 <span className="flex items-center gap-1 text-slate-500">
                                     <span className="w-2 h-2 rounded-sm bg-indigo-500" /> Normal {formatHours(normal)}
                                 </span>
+                                {leave > 0 && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                        <span className="w-2 h-2 rounded-sm bg-cyan-500" /> {leaveLabel} {formatHours(leave)}
+                                    </span>
+                                )}
+                                {deficit > 0 && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                        <span className="w-2 h-2 rounded-sm bg-rose-300" /> Eksik {formatHours(deficit)}
+                                    </span>
+                                )}
                                 {ot > 0 && (
                                     <span className="flex items-center gap-1 text-slate-500">
                                         <span className="w-2 h-2 rounded-sm bg-amber-500" /> Fazla Mesai {formatHours(ot)}
@@ -313,7 +370,8 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                             <p className="text-[10px] text-slate-500 leading-relaxed flex items-start gap-2">
                                 <Coffee size={11} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                 <span>
-                                    Çalışma süresi mola hariç net süreyi gösterir. Ek mesai onaylı segmentleri kapsar.
+                                    Çalışma süresi mola hariç net süreyi gösterir; izin süresi çalışmaya eklenmez,
+                                    hedefi karşılayan ayrı kalem olarak gösterilir. Ek mesai onaylı segmentleri kapsar.
                                     Detaylı kayıtlar için ilgili çalışanın "Devam Takibi" sayfasını ziyaret edin.
                                 </span>
                             </p>

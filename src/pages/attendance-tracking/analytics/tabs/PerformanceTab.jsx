@@ -74,9 +74,17 @@ function DailyHoursTooltip({ active, payload }) {
         <div className="rounded-lg bg-white border border-slate-200 shadow-lg px-3 py-2 text-[11px] space-y-1 min-w-[200px]">
             <div className="font-black text-slate-800 mb-1">{d.dayLabel}</div>
             <TipLine c="#6366f1" label="Normal" val={d.normal} />
+            {d.izin > 0 && <TipLine c="#06b6d4" label={d.leaveLabel || 'İzin'} val={d.izin} />}
             <TipLine c="#f59e0b" label="Fazla Mesai" val={d.ot} />
             <TipLine label="Toplam Çalışma" val={d.worked} bold />
             <TipLine c="#ef4444" label="Eksik" val={d.eksik} />
+            {d.hedef != null ? (
+                <TipLine label="Hedef" val={d.hedef} />
+            ) : (
+                <div className="flex items-center justify-between gap-4 text-slate-500">
+                    <span>Hedef</span><span>Hedefsiz gün</span>
+                </div>
+            )}
             <div className="border-t border-slate-100 pt-1 mt-1">
                 <TipLine c="#10b981" label="Mola (öğle hariç)" val={d.molaTotal} />
                 <div className="flex items-center justify-between gap-4 text-[10px] text-slate-500 pl-3.5">
@@ -915,15 +923,19 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
             const dayName = dayNames[dt.getDay()];
             // Backend artık gün-başına TEK toplam + ayrı alanlar gönderiyor
             // (normal/ot/missing/break_total/break_usage/break_overage).
+            // İzin (saatlik/tam gün) normal'e dahil DEĞİL; ayrı 'leave' + 'leave_label'.
             const normal = d.normal != null ? r1(d.normal) : r1((d.worked || 0) - (d.ot || 0));
             return {
                 date: `${d.date?.slice(8)}/${d.date?.slice(5, 7)}`,
                 fullDate: d.date,
                 dayLabel: `${dayName} ${d.date?.slice(8)}`,
                 normal,
+                izin: r1(d.leave),
+                leaveLabel: d.leave_label,
                 ot: r1(d.ot),
                 eksik: r1(d.missing),
-                hedef: d.target || 8,
+                // Takvimden gerçek günlük hedef; tatil (0) → null, hedef çizgisi kırılır.
+                hedef: d.target > 0 ? d.target : null,
                 molaTotal: r1(d.break_total),
                 molaUsage: r1(d.break_usage),
                 molaOverage: r1(d.break_overage),
@@ -973,6 +985,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
         full: 'bg-emerald-400 hover:bg-emerald-500',
         partial: 'bg-amber-400 hover:bg-amber-500',
         absent: 'bg-red-400 hover:bg-red-500',
+        leave: 'bg-sky-400 hover:bg-sky-500',
         off: 'bg-slate-200 hover:bg-slate-300',
         future: 'bg-slate-100 hover:bg-slate-200',
     };
@@ -990,7 +1003,8 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
         if (!day || day.status === 'future') return;
         const daily = dailyHours.find((d) => d.fullDate === day.date);
         // If we have detailed daily hours, use them; otherwise build a stub
-        const dayDetail = daily ? daily._raw : { date: day.date, worked: 0, ot: 0, target: 8, status: day.status === 'absent' ? 'ABSENT' : '' };
+        // Kayıtsız gün: hedef bilinmiyor → null (drawer "Hedefsiz gün" gösterir)
+        const dayDetail = daily ? daily._raw : { date: day.date, worked: 0, ot: 0, target: null, status: day.status === 'absent' ? 'ABSENT' : '' };
         setSelectedDay({ ...dayDetail, calendarStatus: day.status });
         setDayDrawerOpen(true);
     };
@@ -1129,7 +1143,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                     {/* Daily hours composed chart */}
                     <SectionCard
                         title="Günlük Çalışma Saatleri" icon={Clock} iconGradient="from-indigo-500 to-indigo-600"
-                        subtitle="Gün başına toplam: normal + fazla mesai (üst üste) ve eksik — mola kırılımı için üzerine gelin"
+                        subtitle="Gün başına toplam: normal + izin + fazla mesai (üst üste) ve eksik — mola kırılımı için üzerine gelin"
                     >
                         {dailyHours.length > 0 ? (
                             <div className="h-80">
@@ -1140,12 +1154,15 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                         <YAxis tick={{ fontSize: 10 }} domain={[0, 'auto']} unit="h" />
                                         <Tooltip content={<DailyHoursTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)' }} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                        <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
-                                            label={{ value: 'Hedef 8h', position: 'right', style: { fontSize: 9, fill: '#ef4444' } }} />
-                                        {/* Normal + FM üst üste (stackId a) = toplam çalışma; Eksik ayrı çubuk (stackId b) */}
+                                        {/* Normal + İzin + FM üst üste (stackId a); Eksik ayrı çubuk (stackId b) */}
                                         <Bar dataKey="normal" name="Normal" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
+                                        <Bar dataKey="izin" name="İzin" stackId="a" fill="#06b6d4" radius={[0, 0, 0, 0]} />
                                         <Bar dataKey="ot" name="Fazla Mesai" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                                         <Bar dataKey="eksik" name="Eksik" stackId="b" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                                        {/* Gün bazlı gerçek hedef (takvimden); hedefsiz gün null → çizgi kırılır */}
+                                        <Line type="step" dataKey="hedef" name="Hedef" stroke="#ef4444" strokeWidth={1.5}
+                                            strokeDasharray="5 3" dot={false} activeDot={false} connectNulls={false}
+                                            isAnimationActive={false} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1249,7 +1266,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                         })}
                                     </div>
                                     <div className="flex items-center gap-3 mt-3 text-[9px] font-bold text-slate-400 flex-wrap">
-                                        {Object.entries({ full: 'Tam', partial: 'Kısmi', absent: 'Devamsız', off: 'Tatil' }).map(([k, v]) => (
+                                        {Object.entries({ full: 'Tam', partial: 'Kısmi', absent: 'Devamsız', leave: 'İzinli', off: 'Tatil' }).map(([k, v]) => (
                                             <div key={k} className="flex items-center gap-1">
                                                 <div className={`w-3 h-3 rounded ${statusColors[k]}`} />
                                                 {v}

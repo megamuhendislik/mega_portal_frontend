@@ -167,7 +167,11 @@ export default function AbsenceListModal({ open, onClose, calendarData = [], emp
                             {partials.map((a) => {
                                 const worked = a.daily?.worked ?? null;
                                 const target = a.daily?.target ?? 8;
-                                const deficit = worked != null ? Math.max(0, target - worked) : null;
+                                // İzin çalışmaya dahil değil ama hedefi karşılar; eksik backend'den.
+                                const leave = a.daily?.leave ?? 0;
+                                const deficit = a.daily?.missing != null
+                                    ? a.daily.missing
+                                    : (worked != null ? Math.max(0, target - worked - leave) : null);
                                 return (
                                     <div
                                         key={a.date}
@@ -184,7 +188,9 @@ export default function AbsenceListModal({ open, onClose, calendarData = [], emp
                                                 {a.fmt.day}
                                                 {worked != null && (
                                                     <span className="ml-2 text-amber-600 font-semibold tabular-nums">
-                                                        Çalışma: {worked}sa / Hedef: {target}sa
+                                                        Çalışma: {worked}sa
+                                                        {leave > 0 && ` + ${a.daily?.leave_label || 'İzin'}: ${leave}sa`}
+                                                        {' '}/ Hedef: {target}sa
                                                     </span>
                                                 )}
                                             </p>
