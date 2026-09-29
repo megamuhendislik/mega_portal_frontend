@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useCallback } from 'react';
 import { message } from 'antd';
-import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle } from 'lucide-react';
+import { BarChart3, User, GitCompare, Clock, FileText, HelpCircle, Sparkles, AlertTriangle, FileSignature } from 'lucide-react';
 import api from '../../../services/api';
 import { lazyRetry } from '../../../utils/lazyRetry';
 import { AnalyticsProvider, useAnalytics } from './AnalyticsContext';
@@ -20,6 +20,7 @@ const OverviewTab = lazyRetry(() => import('./tabs/OverviewTab'));
 const PerformanceTab = lazyRetry(() => import('./tabs/PerformanceTab'));
 const ComparisonTab = lazyRetry(() => import('./tabs/ComparisonTab'));
 const OvertimeMealTab = lazyRetry(() => import('./tabs/OvertimeMealTab'));
+const OvertimeSourcesTab = lazyRetry(() => import('./tabs/OvertimeSourcesTab'));
 const RequestAnalyticsTab = lazyRetry(() => import('./tabs/RequestAnalyticsTab'));
 const InsightsTab = lazyRetry(() => import('./tabs/InsightsTab'));
 const AnomaliesTab = lazyRetry(() => import('./tabs/AnomaliesTab'));
@@ -30,6 +31,7 @@ const TABS = [
     { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, fazla mesai ve eksik dağılımı' },
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
     { key: 'overtime_meal', label: 'Fazla Mesai & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
+    { key: 'overtime_sources', label: 'Ek Mesai Analizi', icon: FileSignature, desc: 'FM nereden geldi, hangi belgeyle, kim onayladı' },
     { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'Çalışan talepleri + Yönetici onayları (SLA)' },
     { key: 'anomalies', label: 'Anomaliler', icon: AlertTriangle, desc: 'Z-score sapma tespiti' },
 ];
@@ -186,6 +188,7 @@ function TeamAnalyticsInner() {
                     {activeTab === 'performance' && <PerformanceTab />}
                     {activeTab === 'comparison' && <ComparisonTab />}
                     {activeTab === 'overtime_meal' && <OvertimeMealTab />}
+                    {activeTab === 'overtime_sources' && <OvertimeSourcesTab />}
                     {activeTab === 'insights' && <InsightsTab />}
                     {activeTab === 'requests' && <RequestAnalyticsTab />}
                     {activeTab === 'anomalies' && <AnomaliesTab />}
