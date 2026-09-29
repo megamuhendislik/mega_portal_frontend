@@ -1,29 +1,27 @@
-// Ek Mesai Analizi sekmesinin saf yardımcıları (DOM/React bağımsız → node:test).
+// Ek Mesai Analizi yardımcıları.
 
 export const SOURCE_KEYS = ['CARD', 'MANUAL', 'INTENDED', 'DUTY', 'ATTENDANCE_ONLY'];
 
 export const SOURCE_META = {
-    CARD: { label: 'Kart (sistem tespiti)', short: 'Kart', color: '#f59e0b' },
-    MANUAL: { label: 'Manuel giriş', short: 'Manuel', color: '#10b981' },
+    CARD: { label: 'Kart', short: 'Kart', color: '#f59e0b' },
+    MANUAL: { label: 'Manuel', short: 'Manuel', color: '#10b981' },
     INTENDED: { label: 'Planlı atama', short: 'Planlı', color: '#6366f1' },
     DUTY: { label: 'Dış görev', short: 'Dış görev', color: '#0ea5e9' },
-    ATTENDANCE_ONLY: { label: 'Talepsiz puantaj kaydı', short: 'Talepsiz', color: '#94a3b8' },
+    ATTENDANCE_ONLY: { label: 'Talepsiz kayıt', short: 'Talepsiz', color: '#94a3b8' },
 };
 
 const ddmm = (iso) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
 
 export function weekLabel(start, end) {
-    return `${ddmm(start)}–${ddmm(end)}`;
+    return `${ddmm(start)}-${ddmm(end)}`;
 }
 
 const toHours = (seconds) => Math.round(((seconds || 0) / 3600) * 100) / 100;
 
-/** Özet haftalık listesini yığılmış grafik satırlarına (saat) çevirir.
- *  Dönem sınırını aşan hafta etiketi `*` ile işaretlenir. */
 export function toWeeklyChartRows(weekly = []) {
     return weekly.map((w) => {
         const row = {
-            label: weekLabel(w.week_start, w.week_end) + (w.partial ? '*' : ''),
+            label: weekLabel(w.week_start, w.week_end),
             week_start: w.week_start,
             partial: !!w.partial,
             total: toHours(w.total_seconds),
@@ -40,7 +38,6 @@ const sourceSeconds = (emp, key) => {
     return s ? (s.approved_seconds || 0) + (s.pending_seconds || 0) : 0;
 };
 
-/** Çalışan tablosu filtresi. Varsayılan: yalnız FM'si (onaylı+bekleyen) olanlar. */
 export function filterEmployees(employees = [], { onlyWithOt = true, source = null, overLimitOnly = false, search = '' } = {}) {
     const q = trLower(search.trim());
     return employees.filter((e) => {
@@ -52,7 +49,6 @@ export function filterEmployees(employees = [], { onlyWithOt = true, source = nu
     });
 }
 
-/** Kaynak kırılımı (onaylı + bekleyen) → pasta dilimleri; boş kaynaklar atılır. */
 export function sourceTotalsForPie(bySource = {}) {
     return SOURCE_KEYS
         .map((key) => ({
@@ -65,11 +61,30 @@ export function sourceTotalsForPie(bySource = {}) {
         .map((d) => ({ ...d, hours: toHours(d.seconds) }));
 }
 
-/** "Ne imzalatıldı, kim imzaladı" tek satır özeti. */
 export function signedSummary(row) {
     const s = row?.signed || {};
     const ref = s.ref_id ? `${s.label} #${s.ref_id}` : s.label || '';
-    if (row?.source === 'INTENDED' && s.assigned_by) return `${ref} · atayan: ${s.assigned_by}`;
-    if (row?.source === 'DUTY' && s.duty_approved_by) return `${ref} · görevi onaylayan: ${s.duty_approved_by}`;
+    if (row?.source === 'INTENDED' && s.assigned_by) return `${ref}, atayan: ${s.assigned_by}`;
+    if (row?.source === 'DUTY' && s.duty_approved_by) return `${ref}, onaylayan: ${s.duty_approved_by}`;
     return ref;
+}
+
+export function approvalStageTag(row) {
+    if (row?.approval_stage === 'ADMIN') return { color: 'purple', text: 'Sistem Yöneticisinde' };
+    return null;
+}
+
+// İki aşamalı onayda yönetici ve sistem yöneticisi ayrı satırda.
+export function approverLines(row) {
+    const stage = row?.approval_stage;
+    if (stage === 'ADMIN' || stage === 'COMPLETED') {
+        const lines = [{ label: 'Yönetici', value: row.manager_approved_by || '-' }];
+        if (stage === 'COMPLETED') {
+            lines.push({ label: 'Sistem yöneticisi', value: row.admin_decision_by || '-', at: row.admin_decision_at || null });
+        } else {
+            lines.push({ label: 'Sistem yöneticisi', value: 'Bekliyor', pending: true });
+        }
+        return lines;
+    }
+    return null;
 }

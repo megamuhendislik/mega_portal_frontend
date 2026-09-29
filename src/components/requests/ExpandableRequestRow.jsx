@@ -7,6 +7,14 @@ import {
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
+import {
+    ADMIN_PENDING_LABEL,
+    ADMIN_PENDING_STATUS,
+    ADMIN_REJECTED_LABEL,
+    ADMIN_REJECTED_STATUS,
+    isAwaitingAdmin,
+    resolveStatusKey,
+} from '../../utils/overtimeApprovalStage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const formatDate = (dateString) => {
@@ -150,6 +158,18 @@ const statusConfig = {
         text: 'text-blue-700',
         label: 'Teslim Edildi',
         icon: <CheckCircle2 size={12} />,
+    },
+    [ADMIN_PENDING_STATUS]: {
+        bg: 'bg-purple-100',
+        text: 'text-purple-700',
+        label: ADMIN_PENDING_LABEL,
+        icon: <Shield size={12} />,
+    },
+    [ADMIN_REJECTED_STATUS]: {
+        bg: 'bg-red-100',
+        text: 'text-red-700',
+        label: ADMIN_REJECTED_LABEL,
+        icon: <XCircle size={12} />,
     },
 };
 
@@ -441,6 +461,7 @@ const ExpandableRequestRow = ({
 
     const isPotential = req.status === 'POTENTIAL';
     const isPending = req.status === 'PENDING';
+    const awaitingAdmin = isAwaitingAdmin(req);
     const colCount = 7 + (showEmployeeColumn ? 1 : 0) + (mode === 'incoming' ? 1 : 0);
     const isHealthType = req.type === 'HEALTH_REPORT' || req.type === 'HOSPITAL_VISIT';
     const isSpecialLeave = req.type === 'SPECIAL_LEAVE';
@@ -546,8 +567,13 @@ const ExpandableRequestRow = ({
                 {/* Durum + Onaylayan */}
                 <td className="px-3 py-3">
                     <div className="flex flex-col gap-1">
-                        {getStatusBadge(req.status)}
-                        {mode === 'personal' && req.status === 'PENDING' && (
+                        {getStatusBadge(resolveStatusKey(req))}
+                        {mode === 'personal' && awaitingAdmin && req.manager_approved_by_name && (
+                            <span className="text-[10px] text-emerald-600 font-medium truncate max-w-[140px]" title={req.manager_approved_by_name}>
+                                ✓ {req.manager_approved_by_name}
+                            </span>
+                        )}
+                        {mode === 'personal' && req.status === 'PENDING' && !awaitingAdmin && (
                             isHealthType ? (
                                 <span className="text-[10px] text-blue-600 font-medium">
                                     ↗ Muhasebe onayı bekliyor
@@ -619,8 +645,14 @@ const ExpandableRequestRow = ({
                             </span>
                         )}
 
+                        {mode === 'incoming' && awaitingAdmin && (
+                            <span className="px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-[10px] font-bold text-purple-700 whitespace-nowrap">
+                                {ADMIN_PENDING_LABEL}
+                            </span>
+                        )}
+
                         {/* Non-actionable (another manager's request): view-only badge */}
-                        {mode === 'incoming' && isPending && !isReadOnlyType && req.is_actionable === false && (
+                        {mode === 'incoming' && isPending && !awaitingAdmin && !isReadOnlyType && req.is_actionable === false && (
                             <span className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500 whitespace-nowrap">
                                 Goruntuleme
                             </span>
@@ -641,7 +673,7 @@ const ExpandableRequestRow = ({
                         )}
 
                         {/* Personal mode: Edit / Delete */}
-                        {mode === 'personal' && (isPending || isPotential) && onEdit && (
+                        {mode === 'personal' && (isPending || isPotential) && !awaitingAdmin && onEdit && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onEdit(req); }}
                                 className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
@@ -685,8 +717,8 @@ const ExpandableRequestRow = ({
                             <RequestImpactPanel
                                 req={req}
                                 mode={mode}
-                                onApprove={isReadOnlyType || req.is_actionable === false ? null : onApprove}
-                                onReject={isReadOnlyType || req.is_actionable === false ? null : onReject}
+                                onApprove={isReadOnlyType || awaitingAdmin || req.is_actionable === false ? null : onApprove}
+                                onReject={isReadOnlyType || awaitingAdmin || req.is_actionable === false ? null : onReject}
                             />
                         </div>
                     </td>

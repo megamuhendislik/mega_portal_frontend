@@ -124,7 +124,7 @@ export default function OvertimeTab({ params, ready, search, active, onSelectEmp
             key: 'status',
             width: 130,
             align: 'center',
-            render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} />,
+            render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} approvalStage={r.approval_stage} />,
             filters: statusFilters,
             onFilter: (value, record) => record.status === value,
         },

@@ -31,7 +31,7 @@ const TABS = [
     { key: 'performance', label: 'Mesai Analizi', icon: User, desc: 'Doluluk, fazla mesai ve eksik dağılımı' },
     { key: 'comparison', label: 'Karşılaştırma', icon: GitCompare, desc: 'Kişi & ekip kıyaslama' },
     { key: 'overtime_meal', label: 'Fazla Mesai & Yemek', icon: Clock, desc: 'Mesai ve mola analizi' },
-    { key: 'overtime_sources', label: 'Ek Mesai Analizi', icon: FileSignature, desc: 'FM nereden geldi, hangi belgeyle, kim onayladı' },
+    { key: 'overtime_sources', label: 'Ek Mesai Analizi', icon: FileSignature, desc: 'Kaynak ve onaylayanlar' },
     { key: 'requests', label: 'Talep Analizi', icon: FileText, desc: 'Çalışan talepleri + Yönetici onayları (SLA)' },
     { key: 'anomalies', label: 'Anomaliler', icon: AlertTriangle, desc: 'Z-score sapma tespiti' },
 ];

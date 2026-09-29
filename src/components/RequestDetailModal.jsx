@@ -11,7 +11,18 @@ import { buildOverridePayload, getApiErrorMessage } from '../utils/requestAction
 import { dutyWarningTitle, postWithDutyOtLimitAck } from '../utils/dutyOtLimitWarning';
 import { DutyApprovalWarningBody } from './requests/DutyOtLimitWarning';
 import { confirmDutyOtLimit } from './requests/confirmDutyOtLimit';
+import OvertimeApprovalStages from './requests/OvertimeApprovalStages';
 import { fmtSaDkSec } from '../utils/dateUtils';
+import {
+  ADMIN_PENDING_LABEL,
+  ADMIN_PENDING_STATUS,
+  ADMIN_REJECTED_LABEL,
+  ADMIN_REJECTED_STATUS,
+  buildAdminDecisionPayload,
+  interpretApprovalResponse,
+  isAwaitingAdmin,
+  resolveStatusKey,
+} from '../utils/overtimeApprovalStage';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
@@ -62,7 +73,8 @@ const getEmployeeId = (request) => {
 const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestType, onUpdate, onApprove, onReject, mode = 'personal' }) => {
   // EXTERNAL_DUTY uses LEAVE endpoints/logic — normalize for all internal checks
   const requestType = rawRequestType === 'EXTERNAL_DUTY' ? 'LEAVE' : rawRequestType;
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const isSystemAdmin = typeof hasPermission === 'function' && hasPermission('SYSTEM_FULL_ACCESS');
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideAction, setOverrideAction] = useState('approve');
   const [overrideReason, setOverrideReason] = useState('');
@@ -102,7 +114,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
     setApproveLoading(true);
     try {
       const result = await onApprove(request, 'Onaylandı');
-      if (result === false) return; // Yönetici FM sınırı uyarısında vazgeçti
+      if (result === false) return; // uyarıda vazgeçildi
       onClose();
     } catch {
       // Error handled by parent
@@ -178,7 +190,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
     }
   }, [request?.id]);
 
-  // Dış görev onaylanırsa haftalık FM sınırı aşılır mı? (yönetici görünümü, onaydan önce)
+  // Dış görev onayı öncesi uyarılar (haftalık sınır, izin)
   useEffect(() => {
     setDutyOtLimit(null);
     const requestId = request?.id;
@@ -281,7 +293,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   // Düzgün segment-bazlı edit UI'ı yapılana kadar kullanıcı iptal+yeniden
   // oluştur akışını izlemeli.
   const isExternalDuty = request?.request_type_detail?.category === 'EXTERNAL_DUTY';
-  const canEdit = canEditOrCancel && !isExternalDuty;
+  const canEdit = canEditOrCancel && !isExternalDuty && !isAwaitingAdmin(request);
 
   const startEditing = () => {
     const fields = EDIT_FIELDS_MAP[requestType] || [];
@@ -418,6 +430,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       );
       if (result.cancelled) return;
 
+      if (requestType === 'OVERTIME' && overrideAction === 'approve') {
+        const outcome = interpretApprovalResponse(result.response?.data);
+        if (outcome.sentToAdmin) message.info(outcome.message);
+      }
+
       setShowOverrideModal(false);
       setOverrideReason('');
       if (onUpdate) onUpdate();
@@ -426,6 +443,18 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       setError(getApiErrorMessage(err, 'Override işlemi başarısız oldu'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminDecision = async (action, reason) => {
+    try {
+      await api.post(`/overtime-requests/${request.id}/admin_decision/`, buildAdminDecisionPayload(action, reason));
+      message.success(action === 'approve' ? 'Fazla mesai onaylandı' : 'Fazla mesai reddedildi');
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (err) {
+      message.error(getApiErrorMessage(err, 'İşlem başarısız'));
+      throw err;
     }
   };
 
@@ -481,7 +510,9 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       'ORDERED': { bg: 'bg-green-100', text: 'text-green-700', label: 'Sipariş Edildi' },
       'REJECTED': { bg: 'bg-red-100', text: 'text-red-700', label: 'Reddedildi' },
       'CANCELLED': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'İptal Edildi' },
-      'DELIVERED': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Teslim Edildi' }
+      'DELIVERED': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Teslim Edildi' },
+      [ADMIN_PENDING_STATUS]: { bg: 'bg-purple-100', text: 'text-purple-700', label: ADMIN_PENDING_LABEL },
+      [ADMIN_REJECTED_STATUS]: { bg: 'bg-red-100', text: 'text-red-700', label: ADMIN_REJECTED_LABEL }
     };
     const badge = badges[status] || badges['PENDING'];
     return (
@@ -564,7 +595,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                         {empPosition && <span>{empPosition}</span>}
                       </div>
                     </div>
-                    {getStatusBadge(request.status)}
+                    {getStatusBadge(resolveStatusKey(request))}
                   </div>
                 </div>
               );
@@ -872,17 +903,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               )
             )}
 
-            {/* Dış görev onay uyarıları (FM sınırı / çalışan izinde) — onaydan önce yöneticiye */}
             {requestType === 'LEAVE' && dutyOtLimit?.requires_ack && (
-              <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-300 space-y-3 text-sm text-amber-900">
+              <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-200 space-y-3 text-sm text-amber-900">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={16} className="text-amber-600" />
                   <h4 className="text-sm font-bold text-amber-800">{dutyWarningTitle(dutyOtLimit)}</h4>
                 </div>
                 <DutyApprovalWarningBody warning={dutyOtLimit} />
-                <p className="text-xs text-amber-800">
-                  Onay engellenmez; onaylarken ayrıca teyit istenir.
-                </p>
               </div>
             )}
 
@@ -1435,6 +1462,17 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               const approvedByName = request.approved_by_name || request.approved_by_detail?.full_name;
               const targetDept = isHealthType ? null : (request.target_approver_detail?.department_name || request.approver_target?.department);
 
+              if (requestType === 'OVERTIME' && request.requires_admin_approval) {
+                return (
+                  <OvertimeApprovalStages
+                    request={request}
+                    isSystemAdmin={isSystemAdmin}
+                    targetName={targetName}
+                    onAdminDecision={handleAdminDecision}
+                  />
+                );
+              }
+
               if (!targetName && !approvedByName) return null;
               return (
                 <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -1529,6 +1567,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 Onay ile birlikte <strong>
                 {Math.floor(dutyPreview.totals.total_overtime_minutes / 60)}s {dutyPreview.totals.total_overtime_minutes % 60}dk
                 </strong> fazla mesai otomatik onaylanacaktır.
+                {dutyOtLimit?.admin_approval_required && ' Haftalık sınırı aşan kısım sistem yöneticisi onayına gidecek.'}
               </span>
             </div>
           )}
@@ -1584,7 +1623,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
           </div>
           <div className="flex items-center gap-2">
             {/* Incoming mode: Approve/Reject buttons */}
-            {mode === 'incoming' && request?.status === 'PENDING' && request?.is_actionable !== false && onApprove && !rejectMode && !isEditing && (
+            {mode === 'incoming' && request?.status === 'PENDING' && !isAwaitingAdmin(request) && request?.is_actionable !== false && onApprove && !rejectMode && !isEditing && (
               <>
                 <button
                   onClick={handleModalApprove}

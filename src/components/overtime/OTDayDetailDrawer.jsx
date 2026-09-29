@@ -5,6 +5,15 @@ import {
 } from 'lucide-react';
 import { Drawer, Tag, Button, Popconfirm, Input, InputNumber, message, Spin, Collapse } from 'antd';
 import api from '../../services/api';
+import {
+  ADMIN_PENDING_LABEL,
+  ADMIN_PENDING_STATUS,
+  ADMIN_REJECTED_LABEL,
+  ADMIN_REJECTED_STATUS,
+  interpretApprovalResponse,
+  isAwaitingAdmin,
+  resolveStatusKey,
+} from '../../utils/overtimeApprovalStage';
 import { getIstanbulToday, fmtH, fmtSec } from '../../utils/dateUtils';
 
 // --- Config maps ---
@@ -15,6 +24,8 @@ const STATUS_CONFIG = {
   REJECTED: { label: 'Reddedildi', color: 'red', bg: '#dc2626' },
   CANCELLED: { label: 'İptal', color: 'default', bg: '#6b7280' },
   POTENTIAL: { label: 'Algılanan', color: 'blue', bg: '#3b82f6' },
+  [ADMIN_PENDING_STATUS]: { label: ADMIN_PENDING_LABEL, color: 'purple', bg: '#7c3aed' },
+  [ADMIN_REJECTED_STATUS]: { label: ADMIN_REJECTED_LABEL, color: 'red', bg: '#dc2626' },
 };
 
 const SOURCE_CONFIG = {
@@ -92,7 +103,7 @@ function RequestCard({ req, isManager, isOwnData, actionLoading, onApprove, onRe
   const [editEnd, setEditEnd] = useState(req.end_time?.slice(0, 5) || '');
   const [rejectReason, setRejectReason] = useState('');
 
-  const isPending = req.status === 'PENDING';
+  const isPending = req.status === 'PENDING' && !isAwaitingAdmin(req);
   const isReadOnly = !isPending;
 
   const handleSaveEdit = () => {
@@ -108,7 +119,7 @@ function RequestCard({ req, isManager, isOwnData, actionLoading, onApprove, onRe
     <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-3 space-y-2 hover:border-white/20 transition-all duration-200 hover:bg-white/[0.06]">
       {/* Top row: status + source + type */}
       <div className="flex items-center flex-wrap gap-1.5">
-        <StatusPill status={req.status} />
+        <StatusPill status={resolveStatusKey(req)} />
         <SourceBadge sourceType={req.source_type} />
         {req.ot_type && (
           <span className="text-[10px] font-bold text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
@@ -422,8 +433,10 @@ export default function OTDayDetailDrawer({
   const handleApprove = useCallback(async (requestId) => {
     setActionLoading(`approve-${requestId}`);
     try {
-      await api.post(`/overtime-requests/${requestId}/approve_reject/`, { action: 'approve' });
-      message.success('Talep onaylandı');
+      const res = await api.post(`/overtime-requests/${requestId}/approve_reject/`, { action: 'approve' });
+      const outcome = interpretApprovalResponse(res?.data);
+      if (outcome.sentToAdmin) message.info(outcome.message);
+      else message.success('Talep onaylandı');
       onRefresh?.();
     } catch (err) {
       message.error(err.response?.data?.error || 'Onaylama hatası');

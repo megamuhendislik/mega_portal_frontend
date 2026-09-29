@@ -16,6 +16,7 @@ import clsx from 'clsx';
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { getIstanbulToday, getIstanbulDateOffset, formatIstanbulTime, fmtSaDk, fmtSaDkSec } from '../utils/dateUtils';
+import { ADMIN_PENDING_STATUS, ADMIN_PENDING_LABEL, ADMIN_REJECTED_STATUS, resolveStatusKey } from '../utils/overtimeApprovalStage';
 
 // Yaklaşan Etkinlikler sabit tanımlar (component dışında — re-render'da yeniden oluşturulmaz)
 const eventTypeLabels = {
@@ -387,8 +388,14 @@ const Dashboard = () => {
             'APPROVED': 'bg-emerald-100 text-emerald-700',
             'PENDING': 'bg-amber-100 text-amber-700',
             'REJECTED': 'bg-red-100 text-red-700',
+            [ADMIN_PENDING_STATUS]: 'bg-purple-100 text-purple-700',
+            [ADMIN_REJECTED_STATUS]: 'bg-red-100 text-red-700',
         };
-        const statusLabels = { 'APPROVED': 'Onaylandı', 'PENDING': 'Bekliyor', 'REJECTED': 'Red' };
+        const statusLabels = {
+            'APPROVED': 'Onaylandı', 'PENDING': 'Bekliyor', 'REJECTED': 'Red',
+            [ADMIN_PENDING_STATUS]: ADMIN_PENDING_LABEL, [ADMIN_REJECTED_STATUS]: 'Red',
+        };
+        const statusKey = resolveStatusKey(req);
 
         return (
             <div className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100 mb-1">
@@ -401,8 +408,8 @@ const Dashboard = () => {
                         <p className="text-xs text-slate-500">{(req.start_date || req.created_at) ? format(new Date(req.start_date || req.created_at), 'd MMM', { locale: tr }) : '-'}</p>
                     </div>
                 </div>
-                <span className={clsx("text-[10px] px-2 py-0.5 rounded-full font-bold", statusColors[req.status] || 'bg-slate-100 text-slate-500')}>
-                    {statusLabels[req.status] || req.status}
+                <span className={clsx("text-[10px] px-2 py-0.5 rounded-full font-bold", statusColors[statusKey] || 'bg-slate-100 text-slate-500')}>
+                    {statusLabels[statusKey] || req.status}
                 </span>
             </div>
         );

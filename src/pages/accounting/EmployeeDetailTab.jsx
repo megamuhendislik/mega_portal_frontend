@@ -218,7 +218,7 @@ export default function EmployeeDetailTab({ params, ready, active, onExportPerso
         { title: 'Tarih', dataIndex: 'date', key: 'd', sorter: byDate('date'), render: (v) => <span className="tabular-nums">{fmtDate(v)}</span> },
         { title: 'Saat', key: 't', render: (_, r) => <span className="tabular-nums">{fmtTime(r.start_time)}–{fmtTime(r.end_time)}</span> },
         { title: 'Süre', dataIndex: 'duration_minutes', key: 'dur', align: 'right', sorter: byNum('duration_seconds'), render: (v, r) => fmtDurationFromMinutes(v != null ? v : (r.duration_seconds != null ? r.duration_seconds / 60 : null)) },
-        { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} /> },
+        { title: 'Durum', dataIndex: 'status', key: 's', render: (v, r) => <RequestStatusTag status={v} statusDisplay={r.status_display} approvalStage={r.approval_stage} /> },
     ], []);
 
     const mealCols = useMemo(() => [

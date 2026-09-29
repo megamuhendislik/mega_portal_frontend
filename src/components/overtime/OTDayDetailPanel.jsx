@@ -6,6 +6,15 @@ import {
 import { fmtH, fmtSec } from '../../utils/dateUtils';
 import { Tag, Button, Popconfirm, Input, message } from 'antd';
 import api from '../../services/api';
+import {
+  ADMIN_PENDING_LABEL,
+  ADMIN_PENDING_STATUS,
+  ADMIN_REJECTED_LABEL,
+  ADMIN_REJECTED_STATUS,
+  interpretApprovalResponse,
+  isAwaitingAdmin,
+  resolveStatusKey,
+} from '../../utils/overtimeApprovalStage';
 
 const STATUS_CONFIG = {
   APPROVED: { label: 'Onaylı', color: 'green' },
@@ -13,6 +22,8 @@ const STATUS_CONFIG = {
   REJECTED: { label: 'Reddedildi', color: 'red' },
   CANCELLED: { label: 'İptal', color: 'default' },
   POTENTIAL: { label: 'Algılanan', color: 'blue' },
+  [ADMIN_PENDING_STATUS]: { label: ADMIN_PENDING_LABEL, color: 'purple' },
+  [ADMIN_REJECTED_STATUS]: { label: ADMIN_REJECTED_LABEL, color: 'red' },
 };
 
 const SOURCE_CONFIG = {
@@ -69,8 +80,10 @@ export default function OTDayDetailPanel({
   const handleApprove = async (requestId) => {
     setActionLoading(`approve-${requestId}`);
     try {
-      await api.post(`/overtime-requests/${requestId}/approve_reject/`, { action: 'approve' });
-      message.success('Talep onaylandı');
+      const res = await api.post(`/overtime-requests/${requestId}/approve_reject/`, { action: 'approve' });
+      const outcome = interpretApprovalResponse(res?.data);
+      if (outcome.sentToAdmin) message.info(outcome.message);
+      else message.success('Talep onaylandı');
       onRefresh?.();
     } catch (err) {
       message.error(err.response?.data?.error || 'Onaylama hatası');
@@ -142,7 +155,7 @@ export default function OTDayDetailPanel({
           </h5>
           <div className="space-y-2">
             {requests.map((req) => {
-              const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING;
+              const statusCfg = STATUS_CONFIG[resolveStatusKey(req)] || STATUS_CONFIG.PENDING;
               const sourceCfg = SOURCE_CONFIG[req.source_type] || SOURCE_CONFIG.MANUAL;
 
               return (
@@ -201,7 +214,7 @@ export default function OTDayDetailPanel({
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
                       {/* Manager approve/reject */}
-                      {isManager && req.status === 'PENDING' && (
+                      {isManager && req.status === 'PENDING' && !isAwaitingAdmin(req) && (
                         <>
                           <Button
                             type="primary"

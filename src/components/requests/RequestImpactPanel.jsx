@@ -6,6 +6,15 @@ import {
 } from 'lucide-react';
 import NonWorkingDayOvertimeWarning from './NonWorkingDayOvertimeWarning';
 import { fmtSaDkSec } from '../../utils/dateUtils';
+import {
+    ADMIN_PENDING_LABEL,
+    ADMIN_PENDING_STATUS,
+    ADMIN_REJECTED_LABEL,
+    ADMIN_REJECTED_STATUS,
+    buildApprovalStages,
+    formatAdminLimitSnapshot,
+    resolveStatusKey,
+} from '../../utils/overtimeApprovalStage';
 
 // ─── Static Tailwind color lookup (avoids dynamic class purging) ──────────
 const sectionColors = {
@@ -237,12 +246,17 @@ const ApprovalInfoSection = ({ req }) => {
         PENDING: 'Beklemede', APPROVED: 'Onaylandı', REJECTED: 'Reddedildi',
         CANCELLED: 'İptal Edildi', POTENTIAL: 'Potansiyel', ORDERED: 'Sipariş Verildi',
         DELIVERED: 'Teslim Edildi', ESCALATED: 'Yönlendirildi',
+        [ADMIN_PENDING_STATUS]: ADMIN_PENDING_LABEL, [ADMIN_REJECTED_STATUS]: ADMIN_REJECTED_LABEL,
     };
     const statusColors = {
         APPROVED: 'text-emerald-700 bg-emerald-50', REJECTED: 'text-red-700 bg-red-50',
         PENDING: 'text-amber-700 bg-amber-50', CANCELLED: 'text-slate-500 bg-slate-50',
         ESCALATED: 'text-purple-700 bg-purple-50',
+        [ADMIN_PENDING_STATUS]: 'text-purple-700 bg-purple-50', [ADMIN_REJECTED_STATUS]: 'text-red-700 bg-red-50',
     };
+    const statusKey = resolveStatusKey(req);
+    const approvalStages = buildApprovalStages(req);
+    const limitSnapshot = formatAdminLimitSnapshot(req.admin_limit_snapshot);
 
     const approverName = req.target_approver_name
         || req.target_approver_detail?.full_name
@@ -258,17 +272,28 @@ const ApprovalInfoSection = ({ req }) => {
     return (
         <Section title="Onay Bilgisi" icon={<Info size={14} className="text-blue-600" />} color="blue">
             <InfoRow label="Durum" value={
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${statusColors[req.status] || 'text-slate-600 bg-slate-50'}`}>
-                    {statusLabels[req.status] || req.status}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${statusColors[statusKey] || 'text-slate-600 bg-slate-50'}`}>
+                    {statusLabels[statusKey] || statusKey}
                 </span>
             } />
             <InfoRow label="Oluşturulma" value={formatDateTime(req.created_at)} />
             {approverName && <InfoRow label="Gönderildiği Kişi" value={approverName} />}
 
-            {approvedByName && (
+            {approvalStages.map(stage => (
+                <InfoRow
+                    key={stage.key}
+                    label={stage.title}
+                    value={[stage.stateLabel, stage.by, stage.at ? formatDateTime(stage.at) : null].filter(Boolean).join(', ')}
+                    highlight={stage.state === 'done'}
+                    warning={stage.state === 'rejected'}
+                />
+            ))}
+            {limitSnapshot && <InfoRow label="Haftalık Fazla Mesai" value={limitSnapshot} />}
+
+            {approvalStages.length === 0 && approvedByName && (
                 <InfoRow label={req.status === 'REJECTED' ? 'Reddeden' : 'Onaylayan'} value={approvedByName} />
             )}
-            {approvedAt && (
+            {approvalStages.length === 0 && approvedAt && (
                 <InfoRow label={req.status === 'REJECTED' ? 'Red Tarihi' : 'Onay Tarihi'} value={formatDateTime(approvedAt)} />
             )}
 

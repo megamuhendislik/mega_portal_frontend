@@ -64,9 +64,10 @@ test('hafta satırları sa/dk biçiminde ve aşım bayrağıyla döner', () => {
     assert.equal(rows.length, 2);
     assert.deepEqual(rows[0], {
         key: '2026-09-07',
-        weekLabel: '07.09 – 13.09',
+        weekLabel: '07.09 - 13.09',
         counted: '28sa 29dk',
         existingDuty: '0dk',
+        existing: '28sa 29dk',
         projected: '17sa',
         total: '45sa 29dk',
         limit: '30sa',
@@ -75,7 +76,7 @@ test('hafta satırları sa/dk biçiminde ve aşım bayrağıyla döner', () => {
         limitExempt: true,
     });
     assert.equal(rows[1].exceeds, false);
-    assert.equal(rows[1].over, '—');
+    assert.equal(rows[1].over, '-');
 });
 
 test('aşım yoksa gönderim tek sefer ve bayraksız', async () => {
@@ -141,18 +142,18 @@ const leaveWarning = {
 
 test('izin çakışmaları gün/tür/durum/saat etiketleriyle döner', () => {
     assert.deepEqual(buildLeaveOverlapRows(leaveWarning), [
-        { key: '2026-09-03-5', dateLabel: '03.09', typeName: 'Yıllık İzin', statusLabel: 'onaylı', timeLabel: 'tam gün', pending: false },
-        { key: '2026-09-04-6', dateLabel: '04.09', typeName: 'Mazeret İzni', statusLabel: 'bekliyor', timeLabel: '09:00–11:00', pending: true },
+        { key: '2026-09-03-5', dateLabel: '03.09', typeName: 'Yıllık İzin', statusLabel: 'Onaylı', timeLabel: 'Tam gün', pending: false },
+        { key: '2026-09-04-6', dateLabel: '04.09', typeName: 'Mazeret İzni', statusLabel: 'Bekliyor', timeLabel: '09:00-11:00', pending: true },
     ]);
     assert.deepEqual(buildLeaveOverlapRows({}), []);
 });
 
 test('başlık hangi uyarıların olduğuna göre değişir', () => {
-    assert.equal(dutyWarningTitle(leaveWarning), 'Çalışan Görev Günlerinde İzinde');
-    assert.equal(dutyWarningTitle(warning), 'Haftalık Fazla Mesai Sınırı Aşılıyor');
+    assert.equal(dutyWarningTitle(leaveWarning), 'Çalışan bu tarihlerde izinli');
+    assert.equal(dutyWarningTitle(warning), 'Haftalık fazla mesai sınırı aşılıyor');
     assert.equal(
         dutyWarningTitle({ ...warning, has_leave_overlap: true }),
-        'Fazla Mesai Sınırı Aşılıyor ve Çalışan İzinde',
+        'Haftalık sınır aşılıyor, çalışan izinli',
     );
 });
 

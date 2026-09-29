@@ -3,12 +3,14 @@ import { Drawer, Progress, Table, Tag, Spin, Empty } from 'antd';
 import { Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import { fmtSaDk } from '../utils/dateUtils';
+import { ADMIN_PENDING_LABEL, ADMIN_PENDING_STATUS, resolveStatusKey } from '../utils/overtimeApprovalStage';
 
 const STATUS_CONFIG = {
   APPROVED:  { label: 'Onaylı',     color: 'green' },
   PENDING:   { label: 'Bekleyen',   color: 'orange' },
   REJECTED:  { label: 'Reddedilen', color: 'red' },
   POTENTIAL: { label: 'Potansiyel', color: 'blue' },
+  [ADMIN_PENDING_STATUS]: { label: ADMIN_PENDING_LABEL, color: 'purple' },
 };
 
 const SOURCE_LABELS = {
@@ -81,8 +83,9 @@ export default function WeeklyOtDetailDrawer({ open, onClose, employeeId, employ
       dataIndex: 'status',
       key: 'status',
       width: 95,
-      render: (s) => {
-        const cfg = STATUS_CONFIG[s] || { label: s, color: 'default' };
+      render: (s, r) => {
+        const key = resolveStatusKey({ ...r, status: s });
+        const cfg = STATUS_CONFIG[key] || { label: s, color: 'default' };
         return <Tag color={cfg.color} className="text-[10px]">{cfg.label}</Tag>;
       },
     },

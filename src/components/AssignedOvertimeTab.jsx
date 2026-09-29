@@ -10,6 +10,14 @@ import { useAuth } from '../context/AuthContext';
 import CreateAssignmentModal from './overtime/CreateAssignmentModal';
 import EditAssignmentModal from './overtime/EditAssignmentModal';
 import { getIstanbulToday, toIstanbulParts } from '../utils/dateUtils';
+import {
+    ADMIN_PENDING_LABEL,
+    ADMIN_PENDING_STATUS,
+    ADMIN_REJECTED_LABEL,
+    ADMIN_REJECTED_STATUS,
+    isAwaitingAdmin,
+    resolveStatusKey,
+} from '../utils/overtimeApprovalStage';
 import ModalOverlay from './ui/ModalOverlay';
 
 // ═══════════════════════════════════════════════════════════
@@ -79,7 +87,10 @@ const SourcePill = ({ type }) => {
 };
 
 const StatusPill = ({ status }) => {
-    const map = { PENDING: ['Bekliyor', 'amber'], APPROVED: ['Onaylandı', 'emerald'], REJECTED: ['Reddedildi', 'red'], CANCELLED: ['İptal', 'slate'] };
+    const map = {
+        PENDING: ['Bekliyor', 'amber'], APPROVED: ['Onaylandı', 'emerald'], REJECTED: ['Reddedildi', 'red'], CANCELLED: ['İptal', 'slate'],
+        [ADMIN_PENDING_STATUS]: [ADMIN_PENDING_LABEL, 'purple'], [ADMIN_REJECTED_STATUS]: [ADMIN_REJECTED_LABEL, 'red'],
+    };
     const [label, color] = map[status] || [status, 'slate'];
     return <Pill color={color}>{label}</Pill>;
 };
@@ -600,6 +611,7 @@ const RequestCard = ({ req }) => {
     const approverName = ['APPROVED', 'REJECTED'].includes(req.status)
         ? (req.approval_manager_name || req.target_approver_name)
         : req.target_approver_name;
+    const awaitingAdmin = isAwaitingAdmin(req);
 
     return (
         <div className="rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-all overflow-hidden">
@@ -612,7 +624,7 @@ const RequestCard = ({ req }) => {
                 <div className="flex-1 p-3 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
                         <SourcePill type={req.source_type} />
-                        <StatusPill status={req.status} />
+                        <StatusPill status={resolveStatusKey(req)} />
                         {req.start_time && req.end_time && (
                             <span className="text-xs text-slate-500 font-medium">
                                 {req.start_time?.slice(0, 5)} – {req.end_time?.slice(0, 5)}
@@ -625,7 +637,13 @@ const RequestCard = ({ req }) => {
                                 Süre: <strong className="text-slate-700">{formatDuration(req.duration_seconds)}</strong>
                             </span>
                         )}
-                        {approverName && (
+                        {awaitingAdmin && (
+                            <span className="flex items-center gap-1 text-slate-400">
+                                <CheckCircle2 size={10} className="text-emerald-500" />
+                                Yönetici: <span className="font-bold text-slate-600">{req.manager_approved_by_name || '-'}</span>
+                            </span>
+                        )}
+                        {approverName && !awaitingAdmin && (
                             <span className="flex items-center gap-1 text-slate-400">
                                 {req.status === 'APPROVED' && <CheckCircle2 size={10} className="text-emerald-500" />}
                                 {req.status === 'PENDING' && <Clock size={10} className="text-amber-500" />}

@@ -15,6 +15,7 @@ import {
 import { getApiErrorMessage } from '../../utils/requestActions';
 import { postWithDutyOtLimitAck } from '../../utils/dutyOtLimitWarning';
 import { confirmDutyOtLimit } from '../../components/requests/confirmDutyOtLimit';
+import { interpretApprovalResponse, isAwaitingAdmin } from '../../utils/overtimeApprovalStage';
 import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
@@ -225,26 +226,26 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const handleApprove = async (req, notes) => {
         const effectiveType = req._type || req.type;
         console.log('[handleApprove] req.id:', req.id, 'req.type:', req.type, '_type:', req._type, 'effectiveType:', effectiveType);
+        let outcome = interpretApprovalResponse(null);
         try {
             if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 console.log('[handleApprove] → POST /leave/requests/' + req.id + '/approve_reject/');
-                // Dış görev FM'si haftalık sınırı aşıyorsa backend 409 döner:
-                // yöneticiye hafta hafta uyarı + "Emin misiniz?" sorulur.
                 const result = await postWithDutyOtLimitAck(
                     extra => api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı', ...extra }),
                     confirmDutyOtLimit,
                 );
                 if (result.cancelled) {
-                    message.info('Onay yapılmadı; talep bekliyor.');
+                    message.info('Talep onaylanmadı.');
                     return false;
                 }
             } else if (req.type === 'OVERTIME') {
                 const applyToBridge = await askBridgeScope(req, 'onayla');
-                await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
+                const res = await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
                     action: 'approve',
                     notes: notes || 'Onaylandı',
                     apply_to_bridge: applyToBridge,
                 });
+                outcome = interpretApprovalResponse(res?.data);
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {});
             } else {
@@ -255,8 +256,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             console.log('[handleApprove] Başarılı, optimistic update...');
             // Optimistic: hemen local state güncelle (full refetch yok — cache sorununu önler)
             setIncomingRequests(prev => prev.filter(r => !(r.id === req.id && (r._type || r.type) === (req._type || req.type))));
-            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
-            message.success('Talep onaylandı');
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, ...outcome.patch } : r));
+            if (outcome.sentToAdmin) message.info(outcome.message);
+            else message.success('Talep onaylandı');
             onDataChange?.();
             return true;
         } catch (e) {
@@ -301,6 +303,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     };
 
     const handleSubstituteApprove = async (req) => {
+        let outcome = interpretApprovalResponse(null);
         try {
             if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 const result = await postWithDutyOtLimitAck(
@@ -310,13 +313,14 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     confirmDutyOtLimit,
                 );
                 if (result.cancelled) {
-                    message.info('Onay yapılmadı; talep bekliyor.');
+                    message.info('Talep onaylanmadı.');
                     return false;
                 }
             } else if (req.type === 'OVERTIME') {
-                await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
+                const res = await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
                     action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
                 });
+                outcome = interpretApprovalResponse(res?.data);
             } else if (req.type === 'CARDLESS_ENTRY') {
                 await api.post(`/cardless-entry-requests/${req.id}/approve/`, {
                     acting_as_substitute_for: req.principal_id,
@@ -334,8 +338,9 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                 }
                 return updated;
             });
-            setAllTeamData(prev => prev.map(r => (r.id === req.id && r.type === req.type) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
-            message.success('Talep vekil olarak onaylandı');
+            setAllTeamData(prev => prev.map(r => (r.id === req.id && r.type === req.type) ? { ...r, ...outcome.patch } : r));
+            if (outcome.sentToAdmin) message.info(outcome.message);
+            else message.success('Talep vekil olarak onaylandı');
             onDataChange?.();
             return true;
         } catch (e) {
@@ -499,7 +504,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
         // From all_team data: actionable pending
         allTeamNormalized.forEach(r => {
-            if (r.is_actionable && r.status === 'PENDING') {
+            if (r.is_actionable && r.status === 'PENDING' && !isAwaitingAdmin(r)) {
                 const key = `${r.type}-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);
@@ -538,6 +543,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             });
             (substituteData.overtime_requests || []).forEach(r => {
                 if (r.status && r.status !== 'PENDING') return; // decided → substituteDecided
+                if (isAwaitingAdmin(r)) return; // sistem yöneticisi onayında
                 const key = `OVERTIME-${r.id}`;
                 if (!seen.has(key)) {
                     seen.add(key);

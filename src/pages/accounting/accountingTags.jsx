@@ -8,6 +8,7 @@ import {
     MEAL_STATUS,
     CARDLESS_STATUS,
 } from './accountingFormat';
+import { ADMIN_PENDING_LABEL, ADMIN_REJECTED_LABEL } from '../../utils/overtimeApprovalStage';
 
 // Çalışan durumu rozeti (Genel Bakış)
 export const RosterStatusTag = ({ status }) => {
@@ -16,7 +17,9 @@ export const RosterStatusTag = ({ status }) => {
 };
 
 // İzin / mesai talep durumu rozeti
-export const RequestStatusTag = ({ status, statusDisplay }) => {
+export const RequestStatusTag = ({ status, statusDisplay, approvalStage }) => {
+    if (approvalStage === 'ADMIN' && status === 'PENDING') return <Tag color="purple">{ADMIN_PENDING_LABEL}</Tag>;
+    if (approvalStage === 'REJECTED_BY_ADMIN') return <Tag color="red">{ADMIN_REJECTED_LABEL}</Tag>;
     const color = REQUEST_STATUS_COLORS[status] || 'default';
     const label = statusDisplay || REQUEST_STATUS_LABELS[status] || status || '—';
     return <Tag color={color}>{label}</Tag>;

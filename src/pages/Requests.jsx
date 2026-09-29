@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-    Layers, ArrowDownLeft, CalendarCheck, Search, X
+    Layers, ArrowDownLeft, CalendarCheck, Search, X, ShieldCheck
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
 import OvertimeRequestsTab from './requests/OvertimeRequestsTab';
+import AdminApprovalQueueTab from './requests/AdminApprovalQueueTab';
 
 // =========== TAB BUTTON ===========
 const TabButton = ({ active, onClick, children, badge, icon }) => (
@@ -39,14 +40,17 @@ const TAB_ALIASES = {
     'overtime': 'overtime_requests',
     'overtime_requests': 'overtime_requests',
     'my_requests': 'my_requests',
+    'admin_approval': 'admin_approval',
 };
 
 const Requests = () => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
+    const isSystemAdmin = typeof hasPermission === 'function' && hasPermission('SYSTEM_FULL_ACCESS');
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
     const [activeTab, setActiveTab] = useState(initialTab);
-    const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true });
+    // rozet sayısı için kuyruk baştan yüklenir
+    const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true, admin_approval: true });
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Global search — shared across all tabs
@@ -66,6 +70,7 @@ const Requests = () => {
 
     // Badge for incoming tab
     const [incomingPendingCount, setIncomingPendingCount] = useState(0);
+    const [adminQueueCount, setAdminQueueCount] = useState(0);
 
     useEffect(() => {
         const fetchSubordinates = async () => {
@@ -91,7 +96,7 @@ const Requests = () => {
     const handleTabChange = useCallback((tab) => {
         setActiveTab(tab);
         setMountedTabs(prev => prev[tab] ? prev : { ...prev, [tab]: true });
-        setSearchParams(tab === 'my_requests' ? {} : { tab: tab.replace('_requests', '') }, { replace: true });
+        setSearchParams(tab === 'my_requests' ? {} : { tab: tab === 'admin_approval' ? tab : tab.replace('_requests', '') }, { replace: true });
     }, [setSearchParams]);
 
     // Cross-tab refresh: when any tab modifies data, bump trigger for all
@@ -108,6 +113,7 @@ const Requests = () => {
         my_requests: { title: 'Kendi Taleplerim', subtitle: 'Tüm izin, mesai ve diğer taleplerinizi tek yerden yönetin. Yeni talep oluşturmak için "Yeni Talep" butonunu kullanın.' },
         incoming_requests: { title: 'Gelen Talepler', subtitle: 'Ekibinizden gelen talepleri inceleyin, onaylayın veya reddedin. Önceki kararları değiştirmek için "Değiştir" butonunu kullanabilirsiniz.' },
         overtime_requests: { title: 'Fazla Mesai Talepleri', subtitle: 'Fazla mesai takvimini görüntüleyin, manuel talep oluşturun veya yöneticiyseniz ekibinize mesai atayın.' },
+        admin_approval: { title: 'Sistem Yöneticisi Onayı', subtitle: 'Haftalık sınırı aşan fazla mesaileri inceleyin, onaylayın veya reddedin.' },
     };
     const { title, subtitle } = titles[activeTab] || titles.my_requests;
 
@@ -169,6 +175,17 @@ const Requests = () => {
                     Fazla Mesai
                 </TabButton>
 
+                {isSystemAdmin && (
+                    <TabButton
+                        active={activeTab === 'admin_approval'}
+                        onClick={() => handleTabChange('admin_approval')}
+                        icon={<ShieldCheck size={18} />}
+                        badge={adminQueueCount}
+                    >
+                        Sistem Yöneticisi Onayı
+                    </TabButton>
+                )}
+
 
             </div>
 
@@ -196,6 +213,19 @@ const Requests = () => {
                                 parentSearchText={searchText}
                                 sharedPrimarySubordinates={primarySubordinates}
                                 sharedSecondarySubordinates={secondarySubordinates}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {isSystemAdmin && (
+                    <div style={{ display: activeTab === 'admin_approval' ? 'block' : 'none' }}>
+                        {mountedTabs.admin_approval && (
+                            <AdminApprovalQueueTab
+                                onCountChange={setAdminQueueCount}
+                                onDataChange={handleDataChange}
+                                refreshTrigger={refreshTrigger}
+                                searchText={searchText}
                             />
                         )}
                     </div>

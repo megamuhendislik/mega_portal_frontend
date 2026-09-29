@@ -1,11 +1,6 @@
-// Dış görev onayında uyarılar: haftalık FM sınırı aşımı ve çalışanın görev
-// günlerinde izinde olması.
-//
-// İkisi de onayı engellemez (görev FM'si sınırdan muaf; izin günündeki görevin
-// tamamı FM sayılır). Backend uyarı varsa onayı 409 + OT_LIMIT_ACK_REQUIRED ile
-// durdurur (`warnings`: OT_LIMIT_EXCEEDED / EMPLOYEE_ON_LEAVE). Yönetici
-// "Emin misiniz?" sorusunu kabul ederse istek `acknowledge_ot_limit: true` ile
-// tekrar gönderilir; tek bayrak gösterilen tüm uyarıları kapsar.
+// Dış görev onayı uyarıları (haftalık sınır aşımı, çalışan izinli).
+// Backend 409 OT_LIMIT_ACK_REQUIRED döner; yönetici onaylarsa istek
+// acknowledge_ot_limit: true ile tekrar gönderilir.
 import { fmtSaDkSec } from './dateUtils.js';
 
 export const DUTY_OT_LIMIT_ACK_CODE = 'OT_LIMIT_ACK_REQUIRED';
@@ -24,36 +19,36 @@ const dayMonth = (isoDate) => {
 
 export const buildDutyOtLimitRows = (warning) => (warning?.weeks || []).map(week => ({
     key: week.week_start,
-    weekLabel: `${dayMonth(week.week_start)} – ${dayMonth(week.week_end)}`,
+    weekLabel: `${dayMonth(week.week_start)} - ${dayMonth(week.week_end)}`,
     counted: fmtSaDkSec(week.counted_seconds),
     existingDuty: fmtSaDkSec(week.existing_duty_seconds),
+    existing: fmtSaDkSec((week.counted_seconds || 0) + (week.existing_duty_seconds || 0)),
     projected: fmtSaDkSec(week.projected_duty_seconds),
     total: fmtSaDkSec(week.total_seconds),
     limit: fmtSaDkSec(week.limit_seconds),
-    over: week.exceeds ? fmtSaDkSec(week.over_seconds) : '—',
+    over: week.exceeds ? fmtSaDkSec(week.over_seconds) : '-',
     exceeds: Boolean(week.exceeds),
     limitExempt: week.limit_exempt !== false,
 }));
 
-const LEAVE_STATUS_LABELS = { APPROVED: 'onaylı', PENDING: 'bekliyor' };
+const LEAVE_STATUS_LABELS = { APPROVED: 'Onaylı', PENDING: 'Bekliyor' };
 
 export const buildLeaveOverlapRows = (warning) => (warning?.leave_overlaps || []).map(item => ({
     key: `${item.date}-${item.leave_request_id}`,
     dateLabel: dayMonth(item.date),
     typeName: item.leave_type_name,
     statusLabel: LEAVE_STATUS_LABELS[item.status] || item.status,
-    timeLabel: item.full_day ? 'tam gün' : `${item.start_time}–${item.end_time}`,
+    timeLabel: item.full_day ? 'Tam gün' : `${item.start_time}-${item.end_time}`,
     pending: item.status === 'PENDING',
 }));
 
 export const dutyWarningTitle = (warning) => {
-    if (warning?.exceeds_limit && warning?.has_leave_overlap) return 'Fazla Mesai Sınırı Aşılıyor ve Çalışan İzinde';
-    if (warning?.has_leave_overlap) return 'Çalışan Görev Günlerinde İzinde';
-    return 'Haftalık Fazla Mesai Sınırı Aşılıyor';
+    if (warning?.exceeds_limit && warning?.has_leave_overlap) return 'Haftalık sınır aşılıyor, çalışan izinli';
+    if (warning?.has_leave_overlap) return 'Çalışan bu tarihlerde izinli';
+    return 'Haftalık fazla mesai sınırı aşılıyor';
 };
 
-// send(extra) isteği gönderir; confirm(warning) → Promise<boolean>.
-// Döner: { cancelled, acknowledged, response }.
+// send(extra) isteği gönderir, confirm(warning) Promise<boolean> döner.
 export const postWithDutyOtLimitAck = async (send, confirm) => {
     try {
         const response = await send({});
