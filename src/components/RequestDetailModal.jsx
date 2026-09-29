@@ -8,6 +8,9 @@ import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
 import NonWorkingDayOvertimeWarning from './requests/NonWorkingDayOvertimeWarning';
 import { buildOverridePayload, getApiErrorMessage } from '../utils/requestActions';
+import { dutyWarningTitle, postWithDutyOtLimitAck } from '../utils/dutyOtLimitWarning';
+import { DutyApprovalWarningBody } from './requests/DutyOtLimitWarning';
+import { confirmDutyOtLimit } from './requests/confirmDutyOtLimit';
 import { fmtSaDkSec } from '../utils/dateUtils';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
@@ -71,6 +74,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
   const [employeeHistory, setEmployeeHistory] = useState([]);
   const [dutyPreview, setDutyPreview] = useState(null);
   const [dutyPreviewLoading, setDutyPreviewLoading] = useState(false);
+  const [dutyOtLimit, setDutyOtLimit] = useState(null);
   const [showFullReason, setShowFullReason] = useState(false);
   const [showFullRejection, setShowFullRejection] = useState(false);
   const [weeklyOtStatus, setWeeklyOtStatus] = useState(null);
@@ -97,7 +101,8 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
     if (!onApprove) return;
     setApproveLoading(true);
     try {
-      await onApprove(request, 'Onaylandı');
+      const result = await onApprove(request, 'Onaylandı');
+      if (result === false) return; // Yönetici FM sınırı uyarısında vazgeçti
       onClose();
     } catch {
       // Error handled by parent
@@ -172,6 +177,22 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       setDutyPreviewLoading(false);
     }
   }, [request?.id]);
+
+  // Dış görev onaylanırsa haftalık FM sınırı aşılır mı? (yönetici görünümü, onaydan önce)
+  useEffect(() => {
+    setDutyOtLimit(null);
+    const requestId = request?.id;
+    const category = request?.request_type_detail?.category;
+    const status = request?.status;
+    if (!isOpen || !requestId || mode !== 'incoming') return;
+    if (category !== 'EXTERNAL_DUTY') return;
+    if (!['PENDING', 'ESCALATED', 'REJECTED'].includes(status)) return;
+    let active = true;
+    api.get(`/leave/requests/${requestId}/duty-ot-limit-preview/`)
+      .then(res => { if (active) setDutyOtLimit(res.data); })
+      .catch(() => { if (active) setDutyOtLimit(null); });
+    return () => { active = false; };
+  }, [isOpen, request?.id, request?.status, request?.request_type_detail?.category, mode]);
 
   useEffect(() => {
     const empId = request?.employee || request?.employee_detail?.id;
@@ -391,10 +412,11 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
         return;
       }
 
-      await api.post(
-        endpoint,
-        buildOverridePayload(request, overrideAction, overrideReason),
+      const result = await postWithDutyOtLimitAck(
+        extra => api.post(endpoint, { ...buildOverridePayload(request, overrideAction, overrideReason), ...extra }),
+        confirmDutyOtLimit,
       );
+      if (result.cancelled) return;
 
       setShowOverrideModal(false);
       setOverrideReason('');
@@ -848,6 +870,20 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
                 )}
               </div>
               )
+            )}
+
+            {/* Dış görev onay uyarıları (FM sınırı / çalışan izinde) — onaydan önce yöneticiye */}
+            {requestType === 'LEAVE' && dutyOtLimit?.requires_ack && (
+              <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-300 space-y-3 text-sm text-amber-900">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-600" />
+                  <h4 className="text-sm font-bold text-amber-800">{dutyWarningTitle(dutyOtLimit)}</h4>
+                </div>
+                <DutyApprovalWarningBody warning={dutyOtLimit} />
+                <p className="text-xs text-amber-800">
+                  Onay engellenmez; onaylarken ayrıca teyit istenir.
+                </p>
+              </div>
             )}
 
             {/* Görev Mesai Bilgisi — External Duty */}

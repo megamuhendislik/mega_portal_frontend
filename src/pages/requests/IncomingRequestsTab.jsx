@@ -13,6 +13,8 @@ import {
     getSubstituteLeaveType,
 } from '../../components/requests/nonWorkingDayOvertimeUtils';
 import { getApiErrorMessage } from '../../utils/requestActions';
+import { postWithDutyOtLimitAck } from '../../utils/dutyOtLimitWarning';
+import { confirmDutyOtLimit } from '../../components/requests/confirmDutyOtLimit';
 import { format } from 'date-fns';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
     // Data states
@@ -226,7 +228,16 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         try {
             if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
                 console.log('[handleApprove] → POST /leave/requests/' + req.id + '/approve_reject/');
-                await api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı' });
+                // Dış görev FM'si haftalık sınırı aşıyorsa backend 409 döner:
+                // yöneticiye hafta hafta uyarı + "Emin misiniz?" sorulur.
+                const result = await postWithDutyOtLimitAck(
+                    extra => api.post(`/leave/requests/${req.id}/approve_reject/`, { action: 'approve', notes: notes || 'Onaylandı', ...extra }),
+                    confirmDutyOtLimit,
+                );
+                if (result.cancelled) {
+                    message.info('Onay yapılmadı; talep bekliyor.');
+                    return false;
+                }
             } else if (req.type === 'OVERTIME') {
                 const applyToBridge = await askBridgeScope(req, 'onayla');
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
@@ -247,6 +258,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             setAllTeamData(prev => prev.map(r => (r.id === req.id && (r._type || r.type) === (req._type || req.type)) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
             message.success('Talep onaylandı');
             onDataChange?.();
+            return true;
         } catch (e) {
             console.error('[handleApprove] Hata:', e.response?.status, e.response?.data, e);
             const errorMsg = e.response?.data?.error || e.response?.data?.detail || 'İşlem başarısız. Lütfen tekrar deneyin.';
@@ -291,9 +303,16 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
     const handleSubstituteApprove = async (req) => {
         try {
             if (req.type === 'LEAVE' || req.type === 'EXTERNAL_DUTY') {
-                await api.post(`/leave/requests/${req.id}/approve_reject/`, {
-                    action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
-                });
+                const result = await postWithDutyOtLimitAck(
+                    extra => api.post(`/leave/requests/${req.id}/approve_reject/`, {
+                        action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id, ...extra,
+                    }),
+                    confirmDutyOtLimit,
+                );
+                if (result.cancelled) {
+                    message.info('Onay yapılmadı; talep bekliyor.');
+                    return false;
+                }
             } else if (req.type === 'OVERTIME') {
                 await api.post(`/overtime-requests/${req.id}/approve_reject/`, {
                     action: 'approve', notes: 'Vekil olarak onaylandı', acting_as_substitute_for: req.principal_id,
@@ -318,6 +337,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             setAllTeamData(prev => prev.map(r => (r.id === req.id && r.type === req.type) ? { ...r, status: 'APPROVED', is_actionable: false } : r));
             message.success('Talep vekil olarak onaylandı');
             onDataChange?.();
+            return true;
         } catch (e) {
             message.error(getApiErrorMessage(e, 'İşlem başarısız'));
             try { await fetchAllData(undefined, { forceRefresh: true }); } catch { /* Ana hata zaten gösterildi. */ }
@@ -935,8 +955,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
                     okButtonProps: { danger: false },
                     onOk: async () => {
                         try {
-                            await performApproval();
-                            resolve();
+                            resolve(await performApproval());
                         } catch (error) {
                             reject(error);
                         }
