@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import ModalOverlay from './ui/ModalOverlay';
+import { AdminApprovalCheck } from './requests/AdminApprovalNotice';
 
 const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) => {
     const [reason, setReason] = useState('');
@@ -92,6 +93,12 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
                             </p>
                         </div>
                     </div>
+
+                    <AdminApprovalCheck
+                        date={attendanceData.work_date}
+                        durationSeconds={(Number(attendanceData.overtime_minutes) || 0) * 60}
+                        className="-mt-3 mb-6"
+                    />
 
                     <form onSubmit={handleSubmit}>
                         {managers.length > 1 && (

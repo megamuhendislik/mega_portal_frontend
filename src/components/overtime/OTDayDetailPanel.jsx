@@ -4,7 +4,7 @@ import {
   AlertTriangle, User, Shield, Briefcase
 } from 'lucide-react';
 import { fmtH, fmtSec } from '../../utils/dateUtils';
-import { Tag, Button, Popconfirm, Input, message } from 'antd';
+import { Tag, Button, Popconfirm, Input, message, Tooltip } from 'antd';
 import api from '../../services/api';
 import {
   ADMIN_PENDING_LABEL,
@@ -14,6 +14,9 @@ import {
   interpretApprovalResponse,
   isAwaitingAdmin,
   resolveStatusKey,
+  ADMIN_REQUIRED_TAG,
+  managerAdminNotice,
+  willNeedAdminApproval,
 } from '../../utils/overtimeApprovalStage';
 
 const STATUS_CONFIG = {
@@ -172,6 +175,13 @@ export default function OTDayDetailPanel({
                         <Tag color={sourceCfg.color} className="!text-[10px] !font-bold !m-0">
                           {sourceCfg.label}
                         </Tag>
+                        {willNeedAdminApproval(req) && (
+                          <Tooltip title={managerAdminNotice(req.admin_approval_preview)}>
+                            <Tag color="blue" className="!text-[10px] !font-bold !m-0">
+                              {ADMIN_REQUIRED_TAG}
+                            </Tag>
+                          </Tooltip>
+                        )}
                         {req.ot_type && (
                           <Tag className="!text-[10px] !font-bold !m-0">
                             {OT_TYPE_LABELS[req.ot_type] || req.ot_type}

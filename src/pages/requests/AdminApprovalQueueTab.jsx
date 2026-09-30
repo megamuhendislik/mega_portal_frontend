@@ -8,8 +8,9 @@ import { getApiErrorMessage } from '../../utils/requestActions';
 import {
     adminQueueTotals,
     buildAdminDecisionPayload,
+    adminQueueReason,
     describeQueueSource,
-    formatAdminLimitSnapshot,
+    formatWeekOverrun,
     normalizeAdminQueue,
     validateAdminDecision,
 } from '../../utils/overtimeApprovalStage';
@@ -125,13 +126,13 @@ const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0
                                     <th className="px-3 py-2 font-bold text-right">Süre</th>
                                     <th className="px-3 py-2 font-bold">Kaynak</th>
                                     <th className="px-3 py-2 font-bold">Yönetici Onayı</th>
-                                    <th className="px-3 py-2 font-bold">Hafta</th>
+                                    <th className="px-3 py-2 font-bold">Neden</th>
                                     <th className="px-3 py-2" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {visible.map(item => (
-                                    <tr key={item.id} className="align-top hover:bg-slate-50/60">
+                                    <tr key={item.id} className="align-top hover:bg-slate-50/60" title={adminQueueReason(item)}>
                                         <td className="px-3 py-3">
                                             <div className="font-bold text-slate-800 text-sm">{employeeName(item)}</div>
                                             <div className="text-[10px] text-slate-400">{employeeDept(item) || '-'}</div>
@@ -155,7 +156,7 @@ const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0
                                             {item.manager_approved_at && <div className="text-slate-400">{fmtDateTime(item.manager_approved_at)}</div>}
                                         </td>
                                         <td className="px-3 py-3 text-xs text-slate-600 min-w-[160px]">
-                                            {formatAdminLimitSnapshot(item.admin_limit_snapshot) || '-'}
+                                            {formatWeekOverrun(item.admin_limit_snapshot) || '-'}
                                         </td>
                                         <td className="px-3 py-3 text-right">
                                             {rejectingId === item.id ? (

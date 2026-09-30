@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertCircle, Clock, Briefcase, Check, ChevronDown, CalendarDays, User, Zap, PenLine, MapPin, Car, Building2, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon, Home, Users, FileText, Copy, Landmark, Info } from 'lucide-react';
 import { getIstanbulToday, getIstanbulDateOffset, toIstanbulParts } from '../../utils/dateUtils';
 import SmartDatePicker from '../common/SmartDatePicker';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import { AdminApprovalCheck, AdminApprovalNotice } from '../requests/AdminApprovalNotice';
+import { dutyFormAdminNotice } from '../../utils/overtimeApprovalStage';
 import api from '../../services/api';
 import {
     calculateOvertimeSeconds,
@@ -425,6 +427,21 @@ export const OvertimeRequestForm = ({
         overtimeForm.end_time,
     ]);
 
+    // Talep edilecek toplam süre (seçili segmentler ya da atamanın gerçekleşen/maks süresi)
+    const claimSeconds = useMemo(() => {
+        if (!claimConfirm) return 0;
+        if (claimConfirm._dayGroup) {
+            const idOf = i => i.overtime_request_id || i.attendance_id;
+            const selected = claimSelectedIds[claimConfirm.date] ?? claimConfirm._dayGroup.items.map(idOf);
+            return claimConfirm._dayGroup.items
+                .filter(i => selected.includes(idOf(i)))
+                .reduce((sum, i) => sum + (Number(i.actual_overtime_seconds) || 0), 0);
+        }
+        const actual = Number(claimConfirm.actual_overtime_seconds) || 0;
+        const cap = Number(claimConfirm.max_duration_hours) > 0 ? claimConfirm.max_duration_hours * 3600 : 0;
+        return cap && actual ? Math.min(actual, cap) : actual;
+    }, [claimConfirm, claimSelectedIds]);
+
     const handleClaimClick = (type, item) => {
         if (type === 'POTENTIAL' && item._dayGroup) {
             // Gün bazlı grup — tüm segment'ler seçili olarak başla
@@ -658,6 +675,12 @@ export const OvertimeRequestForm = ({
                         className="mb-3"
                     />
 
+                    <AdminApprovalCheck
+                        date={claimConfirm.date}
+                        durationSeconds={claimSeconds}
+                        className="mb-3"
+                    />
+
                     {/* Segment checkbox'ları (çoklu segment varsa) */}
                     {claimConfirm._dayGroup && claimConfirm._dayGroup.items.length > 1 && (
                         <div className="mb-3 space-y-1.5">
@@ -827,6 +850,11 @@ export const OvertimeRequestForm = ({
                             ].join('|') ? manualWarning.data : null}
                         />
 
+                        <AdminApprovalCheck
+                            date={overtimeForm.date}
+                            durationSeconds={calculateOvertimeSeconds(overtimeForm.start_time, overtimeForm.end_time)}
+                        />
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Başlangıç <span className="text-red-500">*</span></label>
@@ -943,6 +971,13 @@ export const MealRequestForm = ({ mealForm, setMealForm }) => {
 // DUTY_OT_WEEKLY_LIMIT_EXEMPT_FROM ile aynı; ISO tarih dizgisi karşılaştırılır).
 const DUTY_OT_LIMIT_EXEMPT_FROM = '2026-08-26';
 
+const DutyAdminApprovalNotice = ({ adminApproval, includeOvertime, className = '' }) => {
+    if (!includeOvertime) return null;
+    const notice = dutyFormAdminNotice(adminApproval);
+    if (!notice) return null;
+    return <AdminApprovalNotice text={notice.text} items={notice.items} className={className} />;
+};
+
 export const ExternalDutyForm = ({
     externalDutyForm,
     setExternalDutyForm,
@@ -974,6 +1009,15 @@ export const ExternalDutyForm = ({
             return () => clearTimeout(timer);
         }
     }, [segmentsJson, currentStep]);
+
+    // "Fazla mesai saatlerini talep et" değişince önizleme (sistem yöneticisi notu) yenilensin
+    const includeOvertime = externalDutyForm.include_overtime;
+    const prevIncludeOvertime = useRef(includeOvertime);
+    useEffect(() => {
+        if (prevIncludeOvertime.current === includeOvertime) return;
+        prevIncludeOvertime.current = includeOvertime;
+        if ((currentStep === 1 || currentStep === 7) && fetchDutyHoursPreview) fetchDutyHoursPreview();
+    }, [includeOvertime]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Step definitions (all possible steps)
     const ALL_STEPS = {
@@ -1412,6 +1456,11 @@ export const ExternalDutyForm = ({
                             source={dutyHoursPreview}
                             className="mb-3"
                         />
+                        <DutyAdminApprovalNotice
+                            adminApproval={dutyHoursPreview?.admin_approval}
+                            includeOvertime={externalDutyForm?.include_overtime}
+                            className="mb-3"
+                        />
 
                         {dutyHoursPreview && (
                             <div className="space-y-2">
@@ -1796,6 +1845,10 @@ export const ExternalDutyForm = ({
                     })()}
                 </SummaryCard>
                 <NonWorkingDayOvertimeWarning source={dutyHoursPreview} />
+                <DutyAdminApprovalNotice
+                    adminApproval={dutyHoursPreview?.admin_approval}
+                    includeOvertime={externalDutyForm?.include_overtime}
+                />
                 {/* Tahmini Mesai Hesaplaması */}
                 {dutyHoursPreview ? (
                     <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">

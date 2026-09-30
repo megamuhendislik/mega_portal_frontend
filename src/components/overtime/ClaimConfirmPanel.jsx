@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ArrowLeft, CalendarCheck, Zap, AlertTriangle } from 'lucide-react';
 import WeeklyOTLimitBar from './WeeklyOTLimitBar';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import { AdminApprovalCheck } from '../requests/AdminApprovalNotice';
 import { withNonWorkingDayOvertimeSeconds } from '../requests/nonWorkingDayOvertimeUtils';
 
 function formatDuration(seconds) {
@@ -77,6 +78,7 @@ export default function ClaimConfirmPanel({
   onBack,
   onConfirm,
   submitting,
+  onAdminCheck,
 }) {
   const isIntended = type === 'intended';
   const [reason, setReason] = useState('');
@@ -230,6 +232,12 @@ export default function ClaimConfirmPanel({
         </div>
 
         <NonWorkingDayOvertimeWarning source={selectedWarningSource} />
+
+        <AdminApprovalCheck
+          date={claimTarget?.date || bridge?.first?.date}
+          durationSeconds={totalSeconds}
+          onResult={onAdminCheck}
+        />
 
         {/* Segment checkbox'ları */}
         {displaySegments.length > 0 && (

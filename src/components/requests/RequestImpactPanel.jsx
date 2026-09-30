@@ -11,8 +11,8 @@ import {
     ADMIN_PENDING_STATUS,
     ADMIN_REJECTED_LABEL,
     ADMIN_REJECTED_STATUS,
+    approvalReasonLine,
     buildApprovalStages,
-    formatAdminLimitSnapshot,
     resolveStatusKey,
 } from '../../utils/overtimeApprovalStage';
 
@@ -256,7 +256,7 @@ const ApprovalInfoSection = ({ req }) => {
     };
     const statusKey = resolveStatusKey(req);
     const approvalStages = buildApprovalStages(req);
-    const limitSnapshot = formatAdminLimitSnapshot(req.admin_limit_snapshot);
+    const limitReason = approvalReasonLine(req);
 
     const approverName = req.target_approver_name
         || req.target_approver_detail?.full_name
@@ -288,7 +288,7 @@ const ApprovalInfoSection = ({ req }) => {
                     warning={stage.state === 'rejected'}
                 />
             ))}
-            {limitSnapshot && <InfoRow label="Haftalık Fazla Mesai" value={limitSnapshot} />}
+            {limitReason && <InfoRow label="Neden" value={`Haftalık sınır aşılıyor: ${limitReason}`} />}
 
             {approvalStages.length === 0 && approvedByName && (
                 <InfoRow label={req.status === 'REJECTED' ? 'Reddeden' : 'Onaylayan'} value={approvedByName} />

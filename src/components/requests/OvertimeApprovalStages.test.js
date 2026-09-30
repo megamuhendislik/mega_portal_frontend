@@ -42,7 +42,7 @@ test('iki onay aşaması ve haftalık sınır özeti gösterilir', async () => {
     assert.match(html, /Sabri Özgür Sipahi/);
     assert.match(html, /data-stage="MANAGER" data-state="done"/);
     assert.match(html, /data-stage="ADMIN" data-state="pending"/);
-    assert.match(html, /28\.09-04\.10 haftası: 47sa \(sınır 30sa\)/);
+    assert.match(html, /Haftalık sınır aşılıyor: 28\.09-04\.10 haftası 47sa, sınır 30sa \(17sa fazla\)\./);
     // Sistem yöneticisi değilse karar düğmesi yok
     assert.doesNotMatch(html, />Onayla</);
 });
@@ -69,5 +69,36 @@ test('tamamlanan talepte karar düğmesi yok; ikinci onay veren görünür', asy
 
 test('ikinci onay gerekmeyen talepte bölüm hiç çizilmez', async () => {
     const html = await render({ request: { status: 'APPROVED', requires_admin_approval: false }, isSystemAdmin: true });
+    assert.equal(html, '');
+});
+
+test('yöneticide bekleyen ama sınırı aşacak talepte sistem yöneticisi satırı "Gerekecek" ve neden görünür', async () => {
+    const html = await render({
+        request: {
+            id: 11,
+            status: 'PENDING',
+            requires_admin_approval: false,
+            approval_stage: null,
+            admin_approval_preview: {
+                required: true, applies: true,
+                week_start: '2026-09-21', week_end: '2026-09-27',
+                week_total_seconds: 34 * HOUR, limit_seconds: 30 * HOUR, over_seconds: 4 * HOUR,
+            },
+        },
+        isSystemAdmin: true,
+        onAdminDecision: async () => {},
+    });
+    assert.match(html, /data-stage="MANAGER" data-state="pending"/);
+    assert.match(html, /data-stage="ADMIN" data-state="upcoming"/);
+    assert.match(html, /Gerekecek/);
+    assert.match(html, /Haftalık sınır aşılıyor: 21-27\.09 haftası 34sa, sınır 30sa \(4sa fazla\)\./);
+    // Henüz yöneticide: sistem yöneticisi karar veremez
+    assert.doesNotMatch(html, />Onayla</);
+});
+
+test('önizleme gerekmediğini söylüyorsa bölüm çizilmez', async () => {
+    const html = await render({
+        request: { status: 'PENDING', requires_admin_approval: false, admin_approval_preview: { required: false, applies: true } },
+    });
     assert.equal(html, '');
 });

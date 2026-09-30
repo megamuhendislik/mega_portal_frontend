@@ -5,6 +5,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getIstanbulToday } from '../utils/dateUtils';
 import useCalendarData from '../hooks/useCalendarData';
+import { ADMIN_SUBMIT_NOTE, DUTY_ADMIN_SUBMIT_NOTE, findAdminApprovalPreview } from '../utils/overtimeApprovalStage';
+import { buildDutyHoursPreviewPayload } from '../utils/dutyOtLimitWarning';
 import SmartDatePicker from './common/SmartDatePicker';
 import ModalOverlay from './ui/ModalOverlay';
 import {
@@ -575,7 +577,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             if (selectedApproverId) {
                 claimPayload.target_approver_id = selectedApproverId;
             }
-            await api.post(`/overtime-assignments/${assignmentId}/claim/`, claimPayload);
+            const res = await api.post(`/overtime-assignments/${assignmentId}/claim/`, claimPayload);
+            if (findAdminApprovalPreview(res?.data)?.required) message.info(ADMIN_SUBMIT_NOTE);
             // Remove the claimed item from the list
             setClaimableData(prev => ({
                 ...prev,
@@ -613,7 +616,8 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
             if (selectedApproverId) {
                 payload.target_approver_id = selectedApproverId;
             }
-            await api.post('/overtime-requests/claim-potential/', payload);
+            const res = await api.post('/overtime-requests/claim-potential/', payload);
+            if (findAdminApprovalPreview(res?.data)?.required) message.info(ADMIN_SUBMIT_NOTE);
             // Claim edilen günün tüm item'larını listeden kaldır
             const claimedIds = new Set(selectedIds || []);
             setClaimableData(prev => ({
@@ -938,6 +942,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
                 : isSpecialLeaveSubmit
                     ? 'Özel izin talebiniz oluşturuldu. Muhasebe tarafından onaylanacaktır.'
                     : (response?.data?.target_approver_name || null);
+
+            if (selectedType === 'OVERTIME' && findAdminApprovalPreview(response?.data)?.required) {
+                message.info(ADMIN_SUBMIT_NOTE);
+            }
+            if (selectedType === 'EXTERNAL_DUTY' && externalDutyForm.include_overtime
+                && dutyHoursPreview?.admin_approval?.required) {
+                message.info(DUTY_ADMIN_SUBMIT_NOTE);
+            }
 
             onSuccess(approverLabel);
             onClose();
@@ -1346,13 +1358,14 @@ const CreateRequestModal = ({ isOpen, onClose, onSuccess, requestTypes, initialD
         }
         setDutyHoursLoading(true);
         try {
-            const resp = await api.post('/leave/requests/preview-duty-hours/', {
-                start_date: externalDutyForm.start_date,
-                end_date: externalDutyForm.end_date,
-                start_time: externalDutyForm.start_time || null,
-                end_time: externalDutyForm.end_time || null,
-                date_segments: filledSegments,
-            });
+            const resp = await api.post('/leave/requests/preview-duty-hours/', buildDutyHoursPreviewPayload({
+                startDate: externalDutyForm.start_date,
+                endDate: externalDutyForm.end_date,
+                startTime: externalDutyForm.start_time,
+                endTime: externalDutyForm.end_time,
+                segments: filledSegments,
+                includeOvertime: externalDutyForm.include_overtime,
+            }));
             setDutyHoursPreview(resp.data);
         } catch (err) {
             console.error('Duty hours preview error:', err);

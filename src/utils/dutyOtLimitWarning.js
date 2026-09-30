@@ -12,6 +12,26 @@ export const getDutyOtLimitWarning = (error) => {
     return response.data.ot_limit_warning || null;
 };
 
+// preview-duty-hours gövdesi. include_overtime gönderilmezse backend true sayar
+// (FM istenmeyen görevde yanlış "sistem yöneticisine gidecek" çıkar); kayıtlı
+// görev için leave_request_id kendi FM'sini hafta toplamından çıkarır.
+export const buildDutyHoursPreviewPayload = ({
+    startDate, endDate, startTime, endTime, segments,
+    includeOvertime, employeeId, leaveRequestId,
+}) => {
+    const payload = {
+        start_date: startDate,
+        end_date: endDate,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        date_segments: segments && segments.length > 0 ? segments : null,
+        include_overtime: includeOvertime !== false,
+    };
+    if (employeeId) payload.employee_id = employeeId;
+    if (leaveRequestId) payload.leave_request_id = leaveRequestId;
+    return payload;
+};
+
 const dayMonth = (isoDate) => {
     const [, month, day] = String(isoDate || '').split('-');
     return day && month ? `${day}.${month}` : String(isoDate || '');

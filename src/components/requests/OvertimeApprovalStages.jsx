@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import {
+    approvalReasonLine,
     buildApprovalStages,
     canAdminDecide,
-    formatAdminLimitSnapshot,
     validateAdminDecision,
 } from '../../utils/overtimeApprovalStage';
 
@@ -13,6 +13,7 @@ const STATE_TEXT = {
     rejected: 'text-red-700',
     waiting: 'text-slate-400',
     skipped: 'text-slate-400',
+    upcoming: 'text-blue-700',
 };
 
 const fmtDateTime = (iso) => {
@@ -34,7 +35,7 @@ const OvertimeApprovalStages = ({ request, isSystemAdmin = false, targetName = n
     const stages = buildApprovalStages(request);
     if (stages.length === 0) return null;
 
-    const snapshot = formatAdminLimitSnapshot(request?.admin_limit_snapshot);
+    const limitReason = approvalReasonLine(request);
     const showActions = Boolean(onAdminDecision) && canAdminDecide(request, isSystemAdmin);
 
     const submit = async (action) => {
@@ -81,11 +82,10 @@ const OvertimeApprovalStages = ({ request, isSystemAdmin = false, targetName = n
                         </div>
                     </div>
                 ))}
-                {snapshot && (
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-600">Haftalık Fazla Mesai</span>
-                        <span className="text-sm text-slate-700">{snapshot}</span>
-                    </div>
+                {limitReason && (
+                    <p className="text-xs text-slate-500" data-testid="admin-approval-reason">
+                        Haftalık sınır aşılıyor: {limitReason}.
+                    </p>
                 )}
             </div>
 

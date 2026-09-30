@@ -8,7 +8,7 @@ import DecisionHistoryTimeline from './DecisionHistoryTimeline';
 import ModalOverlay from './ui/ModalOverlay';
 import NonWorkingDayOvertimeWarning from './requests/NonWorkingDayOvertimeWarning';
 import { buildOverridePayload, getApiErrorMessage } from '../utils/requestActions';
-import { dutyWarningTitle, postWithDutyOtLimitAck } from '../utils/dutyOtLimitWarning';
+import { buildDutyHoursPreviewPayload, dutyWarningTitle, postWithDutyOtLimitAck } from '../utils/dutyOtLimitWarning';
 import { DutyApprovalWarningBody } from './requests/DutyOtLimitWarning';
 import { confirmDutyOtLimit } from './requests/confirmDutyOtLimit';
 import OvertimeApprovalStages from './requests/OvertimeApprovalStages';
@@ -21,8 +21,11 @@ import {
   buildAdminDecisionPayload,
   interpretApprovalResponse,
   isAwaitingAdmin,
+  managerAdminNotice,
   resolveStatusKey,
+  willNeedAdminApproval,
 } from '../utils/overtimeApprovalStage';
+import { AdminApprovalNotice } from './requests/AdminApprovalNotice';
 
 const round = (v, d = 1) => { const m = 10 ** d; return Math.round(v * m) / m; };
 const fmtHours = (v) => { const h = Math.floor(v); const m = Math.round((v - h) * 60); return m > 0 ? `${h}sa ${m}dk` : `${h}sa`; };
@@ -167,14 +170,16 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
       const fetchPreview = async () => {
         setDutyPreviewLoading(true);
         try {
-          const resp = await api.post('/leave/requests/preview-duty-hours/', {
-            start_date: request.start_date,
-            end_date: request.end_date,
-            start_time: request.start_time || null,
-            end_time: request.end_time || null,
-            employee_id: getEmployeeId(request),
-            date_segments: normalizeDutySegments(request).length > 0 ? normalizeDutySegments(request) : null,
-          });
+          const resp = await api.post('/leave/requests/preview-duty-hours/', buildDutyHoursPreviewPayload({
+            startDate: request.start_date,
+            endDate: request.end_date,
+            startTime: request.start_time,
+            endTime: request.end_time,
+            segments: normalizeDutySegments(request),
+            includeOvertime: request.include_overtime,
+            employeeId: getEmployeeId(request),
+            leaveRequestId: request.id,
+          }));
           setDutyPreview(resp.data);
         } catch (err) {
           console.error('Duty preview error:', err);
@@ -913,6 +918,10 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               </div>
             )}
 
+            {mode === 'incoming' && requestType === 'OVERTIME' && willNeedAdminApproval(request) && (
+              <AdminApprovalNotice text={managerAdminNotice(request.admin_approval_preview)} size="sm" />
+            )}
+
             {/* Görev Mesai Bilgisi — External Duty */}
             {requestType === 'LEAVE' && request.request_type_detail?.category === 'EXTERNAL_DUTY' && (
               <div className="bg-purple-50/80 rounded-xl p-4 border border-purple-200">
@@ -1462,7 +1471,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               const approvedByName = request.approved_by_name || request.approved_by_detail?.full_name;
               const targetDept = isHealthType ? null : (request.target_approver_detail?.department_name || request.approver_target?.department);
 
-              if (requestType === 'OVERTIME' && request.requires_admin_approval) {
+              if (requestType === 'OVERTIME' && (request.requires_admin_approval || willNeedAdminApproval(request))) {
                 return (
                   <OvertimeApprovalStages
                     request={request}

@@ -13,6 +13,8 @@ import OvertimeClaimModal from '../../components/overtime/OvertimeClaimModal';
 import FiscalMonthPicker from '../../components/FiscalMonthPicker';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import NonWorkingDayOvertimeWarning from '../../components/requests/NonWorkingDayOvertimeWarning';
+import { AdminApprovalCheck } from '../../components/requests/AdminApprovalNotice';
+import { ADMIN_SUBMIT_NOTE, findAdminApprovalPreview } from '../../utils/overtimeApprovalStage';
 import { selectOvertimeWarningSources } from '../../components/requests/nonWorkingDayOvertimeUtils';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
 
@@ -339,7 +341,8 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             } else if (claimManagers.length === 1) {
                 payload.target_approver_id = claimManagers[0].id;
             }
-            await api.post('/overtime-requests/claim-potential/', payload);
+            const res = await api.post('/overtime-requests/claim-potential/', payload);
+            if (findAdminApprovalPreview(res?.data)?.required) message.info(ADMIN_SUBMIT_NOTE);
             await fetchData();
             notifyParent();
         } catch (e) {
@@ -872,6 +875,14 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
                                     claimModal.selectedIds || [],
                                 )
                                 : claimModal.target}
+                        />
+                        <AdminApprovalCheck
+                            date={claimModal.target?.date}
+                            durationSeconds={claimModal.segments?.length
+                                ? claimModal.segments
+                                    .filter(seg => (claimModal.selectedIds || []).includes(seg.id))
+                                    .reduce((sum, seg) => sum + (Number(seg.duration_seconds) || 0), 0)
+                                : Number(claimModal.target?.duration_seconds) || 0}
                         />
                         {/* Segment listesi — checkbox ile seçim */}
                         {claimModal.segments && claimModal.segments.length > 0 && (

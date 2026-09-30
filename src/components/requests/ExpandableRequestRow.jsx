@@ -12,8 +12,12 @@ import {
     ADMIN_PENDING_STATUS,
     ADMIN_REJECTED_LABEL,
     ADMIN_REJECTED_STATUS,
+    ADMIN_REQUIRED_TAG,
+    employeeAdminNotice,
     isAwaitingAdmin,
+    managerAdminNotice,
     resolveStatusKey,
+    willNeedAdminApproval,
 } from '../../utils/overtimeApprovalStage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -648,6 +652,17 @@ const ExpandableRequestRow = ({
                         {mode === 'incoming' && awaitingAdmin && (
                             <span className="px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-[10px] font-bold text-purple-700 whitespace-nowrap">
                                 {ADMIN_PENDING_LABEL}
+                            </span>
+                        )}
+
+                        {willNeedAdminApproval(req) && (
+                            <span
+                                className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap"
+                                title={mode === 'incoming'
+                                    ? managerAdminNotice(req.admin_approval_preview)
+                                    : employeeAdminNotice(req.admin_approval_preview)}
+                            >
+                                {ADMIN_REQUIRED_TAG}
                             </span>
                         )}
 

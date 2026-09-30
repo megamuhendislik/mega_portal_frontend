@@ -10,9 +10,12 @@ import {
   ADMIN_PENDING_STATUS,
   ADMIN_REJECTED_LABEL,
   ADMIN_REJECTED_STATUS,
+  ADMIN_REQUIRED_TAG,
   interpretApprovalResponse,
   isAwaitingAdmin,
+  managerAdminNotice,
   resolveStatusKey,
+  willNeedAdminApproval,
 } from '../../utils/overtimeApprovalStage';
 import { getIstanbulToday, fmtH, fmtSec } from '../../utils/dateUtils';
 
@@ -121,6 +124,14 @@ function RequestCard({ req, isManager, isOwnData, actionLoading, onApprove, onRe
       <div className="flex items-center flex-wrap gap-1.5">
         <StatusPill status={resolveStatusKey(req)} />
         <SourceBadge sourceType={req.source_type} />
+        {willNeedAdminApproval(req) && (
+          <span
+            className="text-[10px] font-bold text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-400/30"
+            title={managerAdminNotice(req.admin_approval_preview)}
+          >
+            {ADMIN_REQUIRED_TAG}
+          </span>
+        )}
         {req.ot_type && (
           <span className="text-[10px] font-bold text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
             {OT_TYPE_LABELS[req.ot_type] || req.ot_type}

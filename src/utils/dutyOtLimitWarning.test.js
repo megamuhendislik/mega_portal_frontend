@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+    buildDutyHoursPreviewPayload,
     DUTY_OT_LIMIT_ACK_FIELD,
     buildDutyOtLimitRows,
     buildLeaveOverlapRows,
@@ -166,4 +167,29 @@ test('yalnız izin çakışması olan 409 da onay penceresini tetikler', async (
     );
     assert.equal(result.acknowledged, true);
     assert.equal(calls.length, 2);
+});
+
+test('preview-duty-hours gövdesi include_overtime ve leave_request_id taşır', () => {
+    const segments = [{ date: '2026-09-26', start_time: '06:00', end_time: '23:00' }];
+    const created = buildDutyHoursPreviewPayload({
+        startDate: '2026-09-26', endDate: '2026-09-26', startTime: '', endTime: undefined,
+        segments, includeOvertime: false,
+    });
+    assert.deepEqual(created, {
+        start_date: '2026-09-26', end_date: '2026-09-26', start_time: null, end_time: null,
+        date_segments: segments, include_overtime: false,
+    });
+    assert.equal('leave_request_id' in created, false);
+
+    const saved = buildDutyHoursPreviewPayload({
+        startDate: '2026-09-26', endDate: '2026-09-27', segments: [],
+        includeOvertime: true, employeeId: 279, leaveRequestId: 1175,
+    });
+    assert.equal(saved.include_overtime, true);
+    assert.equal(saved.leave_request_id, 1175);
+    assert.equal(saved.employee_id, 279);
+    assert.equal(saved.date_segments, null);
+
+    // Eski kayıtta alan yoksa FM dahil sayılır (backend varsayılanıyla aynı)
+    assert.equal(buildDutyHoursPreviewPayload({ startDate: 'a', endDate: 'b' }).include_overtime, true);
 });

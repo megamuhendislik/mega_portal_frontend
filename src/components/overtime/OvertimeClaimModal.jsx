@@ -10,6 +10,8 @@ import PotentialClaimList from './PotentialClaimList';
 import ManualEntryForm from './ManualEntryForm';
 import ClaimConfirmPanel from './ClaimConfirmPanel';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import { AdminApprovalCheck } from '../requests/AdminApprovalNotice';
+import { ADMIN_SUBMIT_NOTE, findAdminApprovalPreview } from '../../utils/overtimeApprovalStage';
 import {
   calculateOvertimeSeconds,
   fetchNonWorkingDayOvertimeWarning,
@@ -38,6 +40,11 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   });
   const [selectedApproverId, setSelectedApproverId] = useState(null);
   const [manualWarning, setManualWarning] = useState({ key: '', data: null });
+  const [adminPreview, setAdminPreview] = useState(null);
+
+  const successText = (text, response) => (
+    (findAdminApprovalPreview(response?.data) || adminPreview)?.required ? `${text}. ${ADMIN_SUBMIT_NOTE}` : text
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -137,8 +144,9 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const handleConfirm = async (payload) => {
     setSubmitting(true);
     try {
+      let response;
       if (payload.type === 'intended') {
-        await api.post(`/overtime-assignments/${payload.claimTarget.assignment_id}/claim/`, {
+        response = await api.post(`/overtime-assignments/${payload.claimTarget.assignment_id}/claim/`, {
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
           send_to_substitute: payload.send_to_substitute,  // #54: vekile de gönder
@@ -146,7 +154,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
       } else if (payload.bridge) {
         // Gece yarısını geçen tek seans: iki gün TEK talepte gönderilir,
         // kayıtlar backend tarafında günlere ayrı yazılır.
-        await api.post('/overtime-requests/claim-bridge/', {
+        response = await api.post('/overtime-requests/claim-bridge/', {
           overtime_request_ids: payload.bridge.request_ids,
           reason: payload.reason,
           target_approver_id: payload.target_approver_id,
@@ -164,9 +172,9 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         if (payload.selected_segments) {
           body.selected_segments = payload.selected_segments;
         }
-        await api.post('/overtime-requests/claim-potential/', body);
+        response = await api.post('/overtime-requests/claim-potential/', body);
       }
-      message.success('Ek mesai talebi gönderildi');
+      message.success(successText('Ek mesai talebi gönderildi', response));
       await fetchData();
       setView('categories');
       setConfirmData(null);
@@ -182,7 +190,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
   const handleManualSubmit = async () => {
     setSubmitting(true);
     try {
-      await api.post('/overtime-requests/manual-entry/', {
+      const response = await api.post('/overtime-requests/manual-entry/', {
         date: manualForm.date,
         start_time: manualForm.start_time,
         end_time: manualForm.end_time,
@@ -190,7 +198,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
         target_approver_id: selectedApproverId,
         send_to_substitute: manualForm.send_to_substitute,
       });
-      message.success('Manuel fazla mesai talebi oluşturuldu');
+      message.success(successText('Manuel fazla mesai talebi oluşturuldu', response));
       setManualForm({ date: getIstanbulToday(), start_time: '', end_time: '', reason: '', send_to_substitute: false });
       await fetchData();
       setView('categories');
@@ -284,6 +292,12 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                     ].join('|') ? manualWarning.data : null}
                     className="mb-4"
                   />
+                  <AdminApprovalCheck
+                    date={manualForm.date}
+                    durationSeconds={calculateOvertimeSeconds(manualForm.start_time, manualForm.end_time)}
+                    onResult={setAdminPreview}
+                    className="mb-4"
+                  />
                   <ManualEntryForm
                     weeklyStatus={weeklyStatus}
                     form={manualForm}
@@ -309,6 +323,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
                     onBack={goBack}
                     onConfirm={handleConfirm}
                     submitting={submitting}
+                    onAdminCheck={setAdminPreview}
                   />
                 </div>
               )}

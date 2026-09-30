@@ -11,11 +11,27 @@ import OTDayDetailPanel from './OTDayDetailPanel';
 import OverrideConfirmModal from './OverrideConfirmModal';
 import CreateAssignmentModal from './CreateAssignmentModal';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
+import { AdminApprovalCheck } from '../requests/AdminApprovalNotice';
+import { ADMIN_SUBMIT_NOTE, findAdminApprovalPreview } from '../../utils/overtimeApprovalStage';
 import {
   calculateOvertimeSeconds,
   fetchNonWorkingDayOvertimeWarning,
   selectOvertimeWarningSources,
 } from '../requests/nonWorkingDayOvertimeUtils';
+
+// Takvim öğesinin süresi (sn): potansiyel/atama öğeleri farklı alanlar taşıyor.
+const itemSeconds = (p) => {
+  if (!p) return 0;
+  if (p.duration_hours) return p.duration_hours * 3600;
+  if (p.actual_overtime_seconds) return p.actual_overtime_seconds;
+  if (p.actual_overtime_hours) return p.actual_overtime_hours * 3600;
+  if (p.duration_seconds) return p.duration_seconds;
+  if (p.hours_per_day) return p.hours_per_day * 3600;
+  if (p.max_duration_hours) return p.max_duration_hours * 3600;
+  return 0;
+};
+
+const withAdminNote = (text, preview) => (preview?.required ? `${text}. ${ADMIN_SUBMIT_NOTE}` : text);
 
 const MONTH_NAMES = [
   'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -188,6 +204,7 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
 
   // Modals
   const [claimModal, setClaimModal] = useState({ open: false, data: null });
+  const [adminPreview, setAdminPreview] = useState(null);
   const [claimReason, setClaimReason] = useState('');
   const [claimLoading, setClaimLoading] = useState(false);
   const [selectedPotentialIds, setSelectedPotentialIds] = useState(new Set());
@@ -364,8 +381,8 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       if (selectedClaimManagerId) {
         payload.target_approver_id = selectedClaimManagerId;
       }
-      await api.post(`/overtime-assignments/${item.assignment_id}/claim/`, payload);
-      message.success('Atanmış mesai başarıyla talep edildi');
+      const res = await api.post(`/overtime-assignments/${item.assignment_id}/claim/`, payload);
+      message.success(withAdminNote('Atanmış mesai başarıyla talep edildi', findAdminApprovalPreview(res?.data) || adminPreview));
       setIntendedClaimModal({ open: false, item: null });
       setIntendedClaimReason('');
       fetchIntendedItems();
@@ -487,8 +504,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         }
       }
 
-      await api.post('/overtime-requests/claim-potential/', payload);
-      message.success(claimModal.multi ? `${selectedPotentialIds.size} mesai birlestirildi ve talep edildi` : 'Talep basariyla gonderildi');
+      const res = await api.post('/overtime-requests/claim-potential/', payload);
+      message.success(withAdminNote(
+        claimModal.multi ? `${selectedPotentialIds.size} mesai birlestirildi ve talep edildi` : 'Talep basariyla gonderildi',
+        findAdminApprovalPreview(res?.data) || adminPreview,
+      ));
       setClaimModal({ open: false, data: null });
       setClaimReason('');
       fetchCalendarData();
@@ -520,8 +540,8 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       } else if (otManagers.length === 1) {
         manualPayload.target_approver_id = otManagers[0].id;
       }
-      await api.post('/overtime-requests/manual-entry/', manualPayload);
-      message.success('Manuel mesai talebi oluşturuldu');
+      const res = await api.post('/overtime-requests/manual-entry/', manualPayload);
+      message.success(withAdminNote('Manuel mesai talebi oluşturuldu', findAdminApprovalPreview(res?.data) || adminPreview));
       setManualModal(false);
       setManualForm({ date: '', start_time: '', end_time: '', reason: '' });
       fetchCalendarData();
@@ -531,6 +551,16 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
       setManualLoading(false);
     }
   };
+
+  const potentialClaimCheck = useMemo(() => {
+    const data = claimModal.data;
+    if (!data) return { date: null, seconds: 0 };
+    if (claimModal.multi && Array.isArray(data)) {
+      const selected = data.filter(p => selectedPotentialIds.has(p.overtime_request_id || p.id));
+      return { date: data[0]?.date || null, seconds: selected.reduce((sum, p) => sum + itemSeconds(p), 0) };
+    }
+    return { date: data.date || null, seconds: itemSeconds(data) };
+  }, [claimModal.data, claimModal.multi, selectedPotentialIds]);
 
   const selectedPotentialWarningSource = useMemo(() => {
     if (!claimModal.data) return null;
@@ -924,6 +954,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         {claimModal.data && (
           <div className="space-y-3">
             <NonWorkingDayOvertimeWarning source={selectedPotentialWarningSource} />
+            <AdminApprovalCheck
+              date={potentialClaimCheck.date}
+              durationSeconds={potentialClaimCheck.seconds}
+              onResult={setAdminPreview}
+            />
 
             {claimModal.multi && Array.isArray(claimModal.data) ? (
               <div className="space-y-2">
@@ -1063,6 +1098,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
               manualForm.end_time,
             ].join('|') ? manualWarning.data : null}
           />
+          <AdminApprovalCheck
+            date={manualForm.date}
+            durationSeconds={calculateOvertimeSeconds(manualForm.start_time, manualForm.end_time)}
+            onResult={setAdminPreview}
+          />
 
           <div className="grid grid-cols-3 gap-3">
             <div>
@@ -1139,6 +1179,11 @@ export default function OvertimeCalendarView({ mode = 'personal' }) {
         {intendedClaimModal.item && (
           <div className="space-y-3">
             <NonWorkingDayOvertimeWarning source={intendedClaimModal.item} />
+            <AdminApprovalCheck
+              date={intendedClaimModal.item.date}
+              durationSeconds={itemSeconds(intendedClaimModal.item)}
+              onResult={setAdminPreview}
+            />
 
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-800">
               <div className="font-medium">{intendedClaimModal.item.task_description || 'Ek mesai görevi'}</div>
