@@ -7,7 +7,6 @@ import {
 import { Modal } from 'antd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import WeeklyScheduleEditor from '../components/WeeklyScheduleEditor';
 import toast, { Toaster } from 'react-hot-toast';
 import ManagerAssignmentSection from '../components/ManagerAssignmentSection';
 import ServiceUsagePeriodsEditor from '../components/ServiceUsagePeriodsEditor';
