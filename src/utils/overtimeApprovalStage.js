@@ -89,18 +89,20 @@ const weekFacts = (preview) => {
 };
 
 // Talep oluşturan çalışana: neden sistem yöneticisi onayı gerekecek.
+// Toplama dış görev FM'si de girer; haftalık limit çubuğu onu saymadığı için ayrıca belirtilir.
 export const employeeAdminNotice = (preview) => {
     if (!needsAdmin(preview)) return null;
     const f = weekFacts(preview);
-    const reason = f ? `${f.range} haftasında fazla mesainiz ${f.total} oluyor, haftalık sınır ${f.limit}. ` : '';
+    const reason = f ? `${f.range} haftasında dış görevler dahil fazla mesainiz ${f.total} oluyor, haftalık sınır ${f.limit}. ` : '';
     return `${reason}Bu yüzden talep, yöneticiniz onayladıktan sonra sistem yöneticisinin de onayına gidecek.`;
 };
 
-// Onaylayan yöneticiye.
-export const managerAdminNotice = (preview) => {
+// Onaylayan yöneticiye. Onaylayan sistem yöneticisiyse iki aşama tek onayla biter.
+export const managerAdminNotice = (preview, { approverIsAdmin = false } = {}) => {
     if (!needsAdmin(preview)) return null;
     const f = weekFacts(preview);
-    const reason = f ? ` ${f.range} haftasında fazla mesai ${f.total} oluyor, sınır ${f.limit}.` : '';
+    const reason = f ? ` ${f.range} haftasında dış görevler dahil fazla mesai ${f.total} oluyor, sınır ${f.limit}.` : '';
+    if (approverIsAdmin) return `Sistem yöneticisi olduğunuz için ikinci onay gerekmez, onayınızla talep tamamlanır.${reason}`;
     return `Onayınızdan sonra bu talep sistem yöneticisine gidecek.${reason}`;
 };
 

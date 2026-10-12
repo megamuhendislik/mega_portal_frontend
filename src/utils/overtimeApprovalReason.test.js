@@ -45,7 +45,7 @@ test('hafta aşımı satırı: aynı ay ve ay geçişi', () => {
 test('çalışana açıklama: nedeni rakamla söyler', () => {
     assert.equal(
         employeeAdminNotice(preview),
-        '21-27.09 haftasında fazla mesainiz 34sa oluyor, haftalık sınır 30sa. '
+        '21-27.09 haftasında dış görevler dahil fazla mesainiz 34sa oluyor, haftalık sınır 30sa. '
         + 'Bu yüzden talep, yöneticiniz onayladıktan sonra sistem yöneticisinin de onayına gidecek.',
     );
     assert.equal(employeeAdminNotice({ ...preview, required: false }), null);
@@ -61,7 +61,11 @@ test('çalışana açıklama: nedeni rakamla söyler', () => {
 test('yöneticiye açıklama', () => {
     assert.equal(
         managerAdminNotice(preview),
-        'Onayınızdan sonra bu talep sistem yöneticisine gidecek. 21-27.09 haftasında fazla mesai 34sa oluyor, sınır 30sa.',
+        'Onayınızdan sonra bu talep sistem yöneticisine gidecek. 21-27.09 haftasında dış görevler dahil fazla mesai 34sa oluyor, sınır 30sa.',
+    );
+    assert.equal(
+        managerAdminNotice(preview, { approverIsAdmin: true }),
+        'Sistem yöneticisi olduğunuz için ikinci onay gerekmez, onayınızla talep tamamlanır. 21-27.09 haftasında dış görevler dahil fazla mesai 34sa oluyor, sınır 30sa.',
     );
     assert.equal(managerAdminNotice({ ...preview, required: false }), null);
     assert.equal(managerAdminNotice(undefined), null);

@@ -919,7 +919,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
             )}
 
             {mode === 'incoming' && requestType === 'OVERTIME' && willNeedAdminApproval(request) && (
-              <AdminApprovalNotice text={managerAdminNotice(request.admin_approval_preview)} size="sm" />
+              <AdminApprovalNotice text={managerAdminNotice(request.admin_approval_preview, { approverIsAdmin: isSystemAdmin })} size="sm" />
             )}
 
             {/* Görev Mesai Bilgisi — External Duty */}

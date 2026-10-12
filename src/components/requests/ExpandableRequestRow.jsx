@@ -6,6 +6,7 @@ import {
     RotateCw
 } from 'lucide-react';
 import RequestImpactPanel from './RequestImpactPanel';
+import { useAuth } from '../../context/AuthContext';
 import { isMidnightBoundary } from '../../utils/midnightWarning';
 import {
     ADMIN_PENDING_LABEL,
@@ -461,6 +462,8 @@ const ExpandableRequestRow = ({
     showEmployeeColumn = true,
     mode = 'incoming',
 }) => {
+    const { hasPermission } = useAuth() || {};
+    const isSystemAdmin = typeof hasPermission === 'function' && hasPermission('SYSTEM_FULL_ACCESS');
     if (!req) return null;
 
     const isPotential = req.status === 'POTENTIAL';
@@ -659,7 +662,7 @@ const ExpandableRequestRow = ({
                             <span
                                 className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-[10px] font-bold text-blue-700 whitespace-nowrap"
                                 title={mode === 'incoming'
-                                    ? managerAdminNotice(req.admin_approval_preview)
+                                    ? managerAdminNotice(req.admin_approval_preview, { approverIsAdmin: isSystemAdmin })
                                     : employeeAdminNotice(req.admin_approval_preview)}
                             >
                                 {ADMIN_REQUIRED_TAG}

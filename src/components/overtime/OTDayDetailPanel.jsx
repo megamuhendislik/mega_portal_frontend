@@ -6,6 +6,7 @@ import {
 import { fmtH, fmtSec } from '../../utils/dateUtils';
 import { Tag, Button, Popconfirm, Input, message, Tooltip } from 'antd';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   ADMIN_PENDING_LABEL,
   ADMIN_PENDING_STATUS,
@@ -15,6 +16,7 @@ import {
   isAwaitingAdmin,
   resolveStatusKey,
   ADMIN_REQUIRED_TAG,
+  employeeAdminNotice,
   managerAdminNotice,
   willNeedAdminApproval,
 } from '../../utils/overtimeApprovalStage';
@@ -75,6 +77,8 @@ export default function OTDayDetailPanel({
 }) {
   const [rejectReason, setRejectReason] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const { hasPermission } = useAuth() || {};
+  const isSystemAdmin = typeof hasPermission === 'function' && hasPermission('SYSTEM_FULL_ACCESS');
 
   if (!dayData) return null;
 
@@ -176,7 +180,9 @@ export default function OTDayDetailPanel({
                           {sourceCfg.label}
                         </Tag>
                         {willNeedAdminApproval(req) && (
-                          <Tooltip title={managerAdminNotice(req.admin_approval_preview)}>
+                          <Tooltip title={isManager && !isOwnData
+                            ? managerAdminNotice(req.admin_approval_preview, { approverIsAdmin: isSystemAdmin })
+                            : employeeAdminNotice(req.admin_approval_preview)}>
                             <Tag color="blue" className="!text-[10px] !font-bold !m-0">
                               {ADMIN_REQUIRED_TAG}
                             </Tag>
