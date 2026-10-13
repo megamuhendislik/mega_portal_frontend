@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import TelegramCard from './profile/TelegramCard';
 import {
     User, Phone, MapPin, Shield, Mail,
     Calendar, Save, Lock, Building, AlertTriangle,
@@ -625,6 +626,8 @@ const Profile = () => {
                                     })}
                                 </div>
                             </div>
+
+                            <TelegramCard />
 
                             {/* Notice */}
                             <div className="flex items-start gap-3 p-4 rounded-xl border border-violet-100 bg-gradient-to-r from-violet-50/80 to-purple-50/50">
