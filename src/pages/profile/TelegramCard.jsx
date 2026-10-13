@@ -6,6 +6,10 @@ import { TELEGRAM_CATEGORIES, mergeTelegramPrefs, setAllCategories } from '../..
 
 const POLL_MS = 3000;
 const POLL_LIMIT_MS = 2 * 60 * 1000;
+// Yemek koordinatörü, muhasebe, satın alma yöneticisi gibi ekibi olmayanlara da
+// talep düşer; bu yüzden iki sütun her zaman gösterilir.
+const DIRECTIONS = [['INCOMING', 'Bana gelen'], ['OWN', 'Kendi taleplerim']];
+const COLUMN = 'w-16 sm:w-28 shrink-0';
 
 const Toggle = ({ checked, onChange, label }) => (
     <label className="relative inline-flex shrink-0 cursor-pointer" aria-label={label}>
@@ -63,9 +67,6 @@ const TelegramCard = () => {
     }, [waitingSince, load]);
 
     if (!state?.enabled || !prefs) return null;
-
-    const showIncoming = !!state.has_team;
-    const directions = showIncoming ? ['INCOMING', 'OWN'] : ['OWN'];
 
     const connect = async () => {
         // Açılır pencere engellenmesin diye sekme tıklama anında açılır, link gelince yönlendirilir
@@ -177,41 +178,45 @@ const TelegramCard = () => {
                         </div>
                     </div>
 
-                    <div className="px-6 md:px-8 py-2 flex items-center justify-end gap-6 text-[11px] font-semibold text-slate-400 border-t border-slate-100/80">
-                        {showIncoming && <span className="w-12 text-center">Bana gelen</span>}
-                        <span className="w-12 text-center">Kendi taleplerim</span>
+                    <div className="px-6 md:px-8 py-2 flex items-center justify-end gap-4 sm:gap-6 text-[11px] font-semibold text-slate-400 border-t border-slate-100/80">
+                        {DIRECTIONS.map(([dir, text]) => (
+                            <span key={dir} className={`${COLUMN} text-center leading-tight`}>{text}</span>
+                        ))}
                     </div>
                     <div className="divide-y divide-slate-100/80">
                         {TELEGRAM_CATEGORIES.map(({ key, label }) => (
-                            <div key={key} className="flex items-center justify-between px-6 md:px-8 py-3">
-                                <p className="text-sm font-semibold text-slate-800">{label}</p>
-                                <div className="flex items-center gap-6">
-                                    {directions.map(dir => (
-                                        <Toggle
-                                            key={dir}
-                                            label={`${label} ${dir === 'INCOMING' ? 'bana gelen' : 'kendi taleplerim'}`}
-                                            checked={prefs.categories[key][dir]}
-                                            onChange={v => setCell(key, dir, v)}
-                                        />
+                            <div key={key} className="flex items-center justify-between gap-3 px-6 md:px-8 py-3">
+                                <p className="min-w-0 text-sm font-semibold text-slate-800">{label}</p>
+                                <div className="flex items-center gap-4 sm:gap-6">
+                                    {DIRECTIONS.map(([dir, text]) => (
+                                        <div key={dir} className={`${COLUMN} flex justify-center`}>
+                                            <Toggle
+                                                label={`${label} ${text.toLocaleLowerCase('tr-TR')}`}
+                                                checked={prefs.categories[key][dir]}
+                                                onChange={v => setCell(key, dir, v)}
+                                            />
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                         ))}
-                        <div className="flex items-center justify-between px-6 md:px-8 py-3">
-                            <div>
+                        <div className="flex items-center justify-between gap-3 px-6 md:px-8 py-3">
+                            <div className="min-w-0">
                                 <p className="text-sm font-semibold text-slate-800">Diğer bildirimler</p>
                                 <p className="text-[11px] text-slate-400 mt-0.5">Duyuru, hatırlatma ve sistem bildirimleri</p>
                             </div>
-                            <Toggle label="Diğer bildirimler" checked={prefs.other} onChange={v => setPrefs(p => ({ ...p, other: v }))} />
+                            <div className={`${COLUMN} flex justify-center`}>
+                                <Toggle label="Diğer bildirimler" checked={prefs.other} onChange={v => setPrefs(p => ({ ...p, other: v }))} />
+                            </div>
                         </div>
                     </div>
 
                     <div className="px-6 md:px-8 pt-3 flex gap-2">
-                        <SecondaryButton onClick={() => setPrefs(p => setAllCategories(p, true, directions))}>Tümünü aç</SecondaryButton>
-                        <SecondaryButton onClick={() => setPrefs(p => setAllCategories(p, false, directions))}>Tümünü kapat</SecondaryButton>
+                        <SecondaryButton onClick={() => setPrefs(p => setAllCategories(p, true))}>Tümünü aç</SecondaryButton>
+                        <SecondaryButton onClick={() => setPrefs(p => setAllCategories(p, false))}>Tümünü kapat</SecondaryButton>
                     </div>
 
-                    {showIncoming && (
+                    {state.has_team && (
                         <div className="px-6 md:px-8 pt-5 space-y-3">
                             <p className="text-sm font-semibold text-slate-800">Ekibimden gelen talepler</p>
                             <div className="flex gap-5 text-sm text-slate-700">
