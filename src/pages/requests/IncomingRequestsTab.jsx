@@ -1002,9 +1002,14 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         () => [pendingActionable, substituteDecided, primaryTeamItems, secondaryTeamItems],
         [pendingActionable, substituteDecided, primaryTeamItems, secondaryTeamItems],
     );
+    // Linkle gelince sunucu önbelleğini atlayarak bir kez tazele (yeni talep listede olsun)
+    const refetchForDeepLink = useCallback(
+        () => fetchAllData(undefined, { forceRefresh: true }),
+        [fetchAllData],
+    );
     useRequestDeepLink({
         deepLink, loading, lists: deepLinkLists,
-        open: handleViewDetails, onConsumed: onDeepLinkConsumed,
+        open: handleViewDetails, onConsumed: onDeepLinkConsumed, refetch: refetchForDeepLink,
     });
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;

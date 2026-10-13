@@ -51,3 +51,18 @@ export function findRequestRow(lists, deepLink) {
 export function deepLinkFor(tab, activeTab, urlTab, deepLink) {
     return activeTab === tab && urlTab === tab ? deepLink : null;
 }
+
+export function deepLinkKey(deepLink) {
+    return deepLink ? `${deepLink.type}-${deepLink.id}` : null;
+}
+
+// Linkin sıradaki adımı. Eski listede arayıp yanlış "bulunamadı" demesin diye
+// sekme verisi link başına bir kez tazelenir, arama taze listede yapılır.
+//   'idle'    : bekle (link yok, liste yükleniyor, link işlendi ya da tazeleme sürüyor)
+//   'refetch' : sekme verisini tazele
+//   'search'  : listede ara
+export function deepLinkStep({ key, loading, handledKey, pendingKey, refreshedKey, canRefetch }) {
+    if (!key || loading || handledKey === key) return 'idle';
+    if (!canRefetch || refreshedKey === key) return 'search';
+    return pendingKey === key ? 'idle' : 'refetch';
+}

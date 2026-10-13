@@ -43,12 +43,6 @@ const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0
     const [rejectReason, setRejectReason] = useState('');
     const [detail, setDetail] = useState(null);
 
-    const deepLinkLists = useMemo(() => [items], [items]);
-    const openFromLink = useCallback((row) => setDetail(row), []);
-    useRequestDeepLink({
-        deepLink, loading, lists: deepLinkLists, open: openFromLink, onConsumed: onDeepLinkConsumed,
-    });
-
     const fetchQueue = useCallback(async () => {
         setLoading(true);
         try {
@@ -66,6 +60,13 @@ const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0
     }, []);
 
     useEffect(() => { fetchQueue(); }, [fetchQueue, refreshTrigger]);
+
+    const deepLinkLists = useMemo(() => [items], [items]);
+    const openFromLink = useCallback((row) => setDetail(row), []);
+    useRequestDeepLink({
+        deepLink, loading, lists: deepLinkLists, open: openFromLink, onConsumed: onDeepLinkConsumed,
+        refetch: fetchQueue,
+    });
 
     useEffect(() => {
         if (onCountChange) onCountChange(items.length);

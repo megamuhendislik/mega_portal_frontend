@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DETAIL_ENDPOINTS, deepLinkFor, findRequestRow, parseRequestDeepLink } from './requestDeepLink.js';
+import { DETAIL_ENDPOINTS, deepLinkFor, deepLinkKey, deepLinkStep, findRequestRow, parseRequestDeepLink } from './requestDeepLink.js';
 
 const qs = (s) => new URLSearchParams(s);
 
@@ -41,4 +41,25 @@ test('link yalnız hem etkin hem URL sekmesi eşleşen sekmeye verilir', () => {
     assert.equal(deepLinkFor('my_requests', 'my_requests', 'incoming_requests', link), null);
     assert.equal(deepLinkFor('incoming_requests', 'my_requests', 'incoming_requests', link), null);
     assert.equal(deepLinkFor('incoming_requests', 'incoming_requests', 'incoming_requests', link), link);
+});
+
+test('link anahtarı', () => {
+    assert.equal(deepLinkKey({ type: 'LEAVE', id: 7 }), 'LEAVE-7');
+    assert.equal(deepLinkKey(null), null);
+});
+
+test('link adımı: önce bir kez tazele, sonra ara', () => {
+    const base = { key: 'OVERTIME-5', loading: false, handledKey: null, pendingKey: null, refreshedKey: null, canRefetch: true };
+    assert.equal(deepLinkStep({ ...base, key: null }), 'idle');
+    assert.equal(deepLinkStep({ ...base, loading: true }), 'idle');
+    assert.equal(deepLinkStep({ ...base, handledKey: 'OVERTIME-5' }), 'idle');
+    assert.equal(deepLinkStep(base), 'refetch');
+    // tazeleme sürerken uyarı/arama yok
+    assert.equal(deepLinkStep({ ...base, pendingKey: 'OVERTIME-5' }), 'idle');
+    // başka linkin tazelemesi bu linki bekletmez
+    assert.equal(deepLinkStep({ ...base, pendingKey: 'LEAVE-1' }), 'refetch');
+    assert.equal(deepLinkStep({ ...base, refreshedKey: 'LEAVE-1' }), 'refetch');
+    assert.equal(deepLinkStep({ ...base, refreshedKey: 'OVERTIME-5' }), 'search');
+    // tazeleme verilmemişse doğrudan aranır
+    assert.equal(deepLinkStep({ ...base, canRefetch: false }), 'search');
 });

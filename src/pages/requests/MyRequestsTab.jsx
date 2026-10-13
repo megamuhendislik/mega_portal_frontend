@@ -556,6 +556,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '', deepLink
     useRequestDeepLink({
         deepLink, loading, lists: deepLinkLists,
         open: handleViewDetails, onConsumed: onDeepLinkConsumed, fetchFallback: fetchDeepLinkRequest,
+        refetch: fetchData,
     });
 
     if (loading) {
