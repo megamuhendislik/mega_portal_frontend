@@ -18,3 +18,10 @@ test('giriş yolu hedefi taşır', () => {
     assert.equal(loginPathFor('/'), '/login');
     assert.equal(loginPathFor('//evil.com'), '/login');
 });
+
+test('ters bölü ve kontrol karakteri içeren yol reddedilir', () => {
+    for (const bad of ['/\t/evil.com', '/\n/evil.com', '/\r//evil.com', '/\u0000x', '/a\u007f', '/requests\\..\\evil', '/x\\y']) {
+        assert.equal(safeNext(bad), '/', JSON.stringify(bad));
+    }
+    assert.equal(loginPathFor('/\t/evil.com'), '/login');
+});
