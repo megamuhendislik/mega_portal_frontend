@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card, Table, Button, Tag, Modal, Form, Input, Select, InputNumber,
   Space, Tabs, message, Popconfirm, Descriptions, Badge, Statistic,
@@ -248,10 +249,35 @@ const Procurement = () => {
     }
   };
 
-  const openDetail = (record) => {
+  const openDetail = useCallback((record) => {
     setSelectedRequest(record);
     setDetailModalOpen(true);
-  };
+  }, []);
+
+  // Bildirim linki: /procurement?id=12 → talebin detayını aç, sonra linki temizle
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepId = /^\d+$/.test(searchParams.get('id') || '') ? Number(searchParams.get('id')) : null;
+  const handledDeepIdRef = useRef(null);
+  useEffect(() => {
+    if (!deepId) {
+      handledDeepIdRef.current = null;
+      return;
+    }
+    if (loading || handledDeepIdRef.current === deepId) return;
+    handledDeepIdRef.current = deepId;
+    const done = (row) => {
+      if (row) openDetail(row);
+      else message.warning('Talep bulunamadı.');
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('id');
+        return next;
+      }, { replace: true });
+    };
+    const found = requests.find(r => r.id === deepId);
+    if (found) Promise.resolve().then(() => done(found));
+    else api.get(`/procurement-requests/${deepId}/`).then(res => done(res.data), () => done(null));
+  }, [deepId, loading, requests, openDetail, setSearchParams]);
 
   // Table columns
   const getColumns = (showEmployee) => {
