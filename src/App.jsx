@@ -1,7 +1,8 @@
 import React, { Suspense } from 'react'; // trigger redeploy
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { lazyRetry } from './utils/lazyRetry';
+import { loginPathFor } from './utils/safeNext';
 import Login from './pages/Login';
 import MainLayout from './layouts/MainLayout';
 
@@ -43,13 +44,14 @@ const PageLoader = () => (
 
 const ProtectedRoute = ({ children, requiredPermission, requireManager }) => {
   const { user, loading, hasPermission } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Yükleniyor...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to={loginPathFor(location.pathname + location.search)} replace />;
   }
 
   // requireManager: PRIMARY ekibi olan kullanıcılar veya superuser/admin görebilir.

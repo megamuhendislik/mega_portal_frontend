@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { loginPathFor } from '../utils/safeNext';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -186,7 +187,7 @@ api.interceptors.response.use(
                 // reddetti) ve zaten /login'de değilsek hard-redirect yap. Aksi halde
                 // (login denemesi başarısız) reject et — Login.jsx hatayı göstersin.
                 if (hadRefreshToken && window.location.pathname !== '/login') {
-                    window.location.href = '/login';
+                    window.location.href = loginPathFor(window.location.pathname + window.location.search);
                 }
                 return Promise.reject(refreshError);
             }

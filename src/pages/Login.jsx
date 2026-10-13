@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, User, ArrowRight, Loader2, Info, X } from 'lucide-react';
 import ModalOverlay from '../components/ui/ModalOverlay';
+import { safeNext } from '../utils/safeNext';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -13,6 +14,7 @@ const Login = () => {
     const [showForgotPassword, setShowForgotPassword] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,7 +22,7 @@ const Login = () => {
         setIsLoading(true);
         try {
             await login(username, password, remember);
-            navigate('/');
+            navigate(safeNext(searchParams.get('next')), { replace: true });
         } catch {
             setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
         } finally {
