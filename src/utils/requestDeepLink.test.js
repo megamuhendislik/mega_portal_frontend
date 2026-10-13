@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DETAIL_ENDPOINTS, findRequestRow, parseRequestDeepLink } from './requestDeepLink.js';
+import { DETAIL_ENDPOINTS, deepLinkFor, findRequestRow, parseRequestDeepLink } from './requestDeepLink.js';
 
 const qs = (s) => new URLSearchParams(s);
 
@@ -34,4 +34,11 @@ test('request_id ve birleştirilmiş FM segmentleri de bulunur', () => {
 test('detay uçları', () => {
     assert.equal(DETAIL_ENDPOINTS.EXTERNAL_DUTY(4), '/leave/requests/4/');
     assert.equal(DETAIL_ENDPOINTS.HOSPITAL_VISIT(4), '/health-reports/4/');
+});
+
+test('link yalnız hem etkin hem URL sekmesi eşleşen sekmeye verilir', () => {
+    const link = { type: 'OVERTIME', id: 5 };
+    assert.equal(deepLinkFor('my_requests', 'my_requests', 'incoming_requests', link), null);
+    assert.equal(deepLinkFor('incoming_requests', 'my_requests', 'incoming_requests', link), null);
+    assert.equal(deepLinkFor('incoming_requests', 'incoming_requests', 'incoming_requests', link), link);
 });

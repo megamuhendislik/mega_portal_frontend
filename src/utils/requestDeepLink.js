@@ -46,3 +46,8 @@ export function findRequestRow(lists, deepLink) {
     }
     return null;
 }
+
+// Link yalnız hem görünen sekme hem URL'deki sekme hedef sekmeyse o sekmeye verilir
+export function deepLinkFor(tab, activeTab, urlTab, deepLink) {
+    return activeTab === tab && urlTab === tab ? deepLink : null;
+}

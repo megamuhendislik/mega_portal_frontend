@@ -18,6 +18,7 @@ export function useRequestDeepLink({ deepLink, loading, lists, open, onConsumed,
         if (handledRef.current === key) return;
         handledRef.current = key;
         const finish = (row, type) => {
+            if (handledRef.current !== key) return; // eski linkin geç kalan sonucu
             if (row) open(row, type);
             else message.warning('Talep bulunamadı ya da artık bu listede değil.');
             onConsumed?.();

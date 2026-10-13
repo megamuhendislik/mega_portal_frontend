@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { parseRequestDeepLink } from '../utils/requestDeepLink';
+import { deepLinkFor, parseRequestDeepLink } from '../utils/requestDeepLink';
 
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
@@ -218,7 +218,7 @@ const Requests = () => {
                             onDataChange={handleDataChange}
                             refreshTrigger={refreshTrigger}
                             searchText={searchText}
-                            deepLink={activeTab === 'my_requests' ? deepLink : null}
+                            deepLink={deepLinkFor('my_requests', activeTab, urlTab, deepLink)}
                             onDeepLinkConsumed={consumeDeepLink}
                         />
                     )}
@@ -236,7 +236,7 @@ const Requests = () => {
                                 parentSearchText={searchText}
                                 sharedPrimarySubordinates={primarySubordinates}
                                 sharedSecondarySubordinates={secondarySubordinates}
-                                deepLink={activeTab === 'incoming_requests' ? deepLink : null}
+                                deepLink={deepLinkFor('incoming_requests', activeTab, urlTab, deepLink)}
                                 onDeepLinkConsumed={consumeDeepLink}
                             />
                         )}
@@ -251,7 +251,7 @@ const Requests = () => {
                                 onDataChange={handleDataChange}
                                 refreshTrigger={refreshTrigger}
                                 searchText={searchText}
-                                deepLink={activeTab === 'admin_approval' ? deepLink : null}
+                                deepLink={deepLinkFor('admin_approval', activeTab, urlTab, deepLink)}
                                 onDeepLinkConsumed={consumeDeepLink}
                             />
                         )}
