@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Tooltip, Modal, message } from 'antd';
 import api from '../../services/api';
+import { useRequestDeepLink } from '../../hooks/useRequestDeepLink';
+import { DETAIL_ENDPOINTS } from '../../utils/requestDeepLink';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
@@ -71,7 +73,7 @@ const StatCard = ({ label, value, icon, color, tooltip }) => (
     </div>
 );
 
-const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
+const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '', deepLink = null, onDeepLinkConsumed }) => {
     // Data states
     const [requests, setRequests] = useState([]);
     const [overtimeRequests, setOvertimeRequests] = useState([]);
@@ -545,6 +547,16 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '' }) => {
             return r;
         });
     }, [paginatedFiltered, handleClaimPotential, claimingId]);
+
+    const deepLinkLists = useMemo(() => [allMyRequests], [allMyRequests]);
+    const fetchDeepLinkRequest = useCallback(async (link) => {
+        const res = await api.get(DETAIL_ENDPOINTS[link.type](link.id));
+        return res.data ? { ...res.data, _type: link.type } : null;
+    }, []);
+    useRequestDeepLink({
+        deepLink, loading, lists: deepLinkLists,
+        open: handleViewDetails, onConsumed: onDeepLinkConsumed, fetchFallback: fetchDeepLinkRequest,
+    });
 
     if (loading) {
         return (

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     Layers, ArrowDownLeft, CalendarCheck, Search, X, ShieldCheck
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { parseRequestDeepLink } from '../utils/requestDeepLink';
 
 import MyRequestsTab from './requests/MyRequestsTab';
 import IncomingRequestsTab from './requests/IncomingRequestsTab';
@@ -51,6 +52,26 @@ const Requests = () => {
     const [activeTab, setActiveTab] = useState(initialTab);
     // rozet sayısı için kuyruk baştan yüklenir
     const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true, admin_approval: true });
+
+    const urlTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
+    const deepLink = useMemo(() => parseRequestDeepLink(searchParams), [searchParams]);
+
+    // Sayfa açıkken zildeki bir linke basılırsa sekmeyi URL'ye uydur
+    useEffect(() => {
+        Promise.resolve().then(() => {
+            setActiveTab(urlTab);
+            setMountedTabs(prev => (prev[urlTab] ? prev : { ...prev, [urlTab]: true }));
+        });
+    }, [urlTab]);
+
+    const consumeDeepLink = useCallback(() => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('type');
+            next.delete('id');
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Global search — shared across all tabs
@@ -197,6 +218,8 @@ const Requests = () => {
                             onDataChange={handleDataChange}
                             refreshTrigger={refreshTrigger}
                             searchText={searchText}
+                            deepLink={activeTab === 'my_requests' ? deepLink : null}
+                            onDeepLinkConsumed={consumeDeepLink}
                         />
                     )}
                 </div>
@@ -213,6 +236,8 @@ const Requests = () => {
                                 parentSearchText={searchText}
                                 sharedPrimarySubordinates={primarySubordinates}
                                 sharedSecondarySubordinates={secondarySubordinates}
+                                deepLink={activeTab === 'incoming_requests' ? deepLink : null}
+                                onDeepLinkConsumed={consumeDeepLink}
                             />
                         )}
                     </div>
@@ -226,6 +251,8 @@ const Requests = () => {
                                 onDataChange={handleDataChange}
                                 refreshTrigger={refreshTrigger}
                                 searchText={searchText}
+                                deepLink={activeTab === 'admin_approval' ? deepLink : null}
+                                onDeepLinkConsumed={consumeDeepLink}
                             />
                         )}
                     </div>

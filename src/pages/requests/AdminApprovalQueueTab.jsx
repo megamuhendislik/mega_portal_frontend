@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShieldCheck, Check, X, Eye, AlertTriangle, Loader2 } from 'lucide-react';
 import { message } from 'antd';
 import api from '../../services/api';
+import { useRequestDeepLink } from '../../hooks/useRequestDeepLink';
 import RequestDetailModal from '../../components/RequestDetailModal';
 import { fmtSaDkSec } from '../../utils/dateUtils';
 import { getApiErrorMessage } from '../../utils/requestActions';
@@ -33,7 +34,7 @@ const employeeName = (item) => item.employee_name || item.employee_detail?.full_
 const employeeDept = (item) => item.employee_department || item.department_name || item.employee_detail?.department_name || '';
 
 // Yöneticisi onaylamış, haftalık sınırı aşan fazla mesailerin son onayı.
-const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0, searchText = '' }) => {
+const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0, searchText = '', deepLink = null, onDeepLinkConsumed }) => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -41,6 +42,12 @@ const AdminApprovalQueueTab = ({ onCountChange, onDataChange, refreshTrigger = 0
     const [rejectingId, setRejectingId] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
     const [detail, setDetail] = useState(null);
+
+    const deepLinkLists = useMemo(() => [items], [items]);
+    const openFromLink = useCallback((row) => setDetail(row), []);
+    useRequestDeepLink({
+        deepLink, loading, lists: deepLinkLists, open: openFromLink, onConsumed: onDeepLinkConsumed,
+    });
 
     const fetchQueue = useCallback(async () => {
         setLoading(true);

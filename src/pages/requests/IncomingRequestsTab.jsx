@@ -17,7 +17,8 @@ import { postWithDutyOtLimitAck } from '../../utils/dutyOtLimitWarning';
 import { confirmDutyOtLimit } from '../../components/requests/confirmDutyOtLimit';
 import { interpretApprovalResponse, isAwaitingAdmin } from '../../utils/overtimeApprovalStage';
 import { format } from 'date-fns';
-const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates }) => {
+import { useRequestDeepLink } from '../../hooks/useRequestDeepLink';
+const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates, deepLink = null, onDeepLinkConsumed }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
     const [teamHistoryRequests, setTeamHistoryRequests] = useState([]);
@@ -996,6 +997,15 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             .finally(() => { setLoadingOlder(false); setLastFetchedAt(new Date()); });
     };
 
+
+    const deepLinkLists = useMemo(
+        () => [pendingActionable, substituteDecided, primaryTeamItems, secondaryTeamItems],
+        [pendingActionable, substituteDecided, primaryTeamItems, secondaryTeamItems],
+    );
+    useRequestDeepLink({
+        deepLink, loading, lists: deepLinkLists,
+        open: handleViewDetails, onConsumed: onDeepLinkConsumed,
+    });
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-50 rounded-3xl" />;
 
