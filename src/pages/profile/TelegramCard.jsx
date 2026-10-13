@@ -38,7 +38,7 @@ const TelegramCard = () => {
             setPrefs(mergeTelegramPrefs(res.data.preferences));
             return res.data;
         } catch {
-            setState({ enabled: false });
+            setState(prev => prev ?? { enabled: false });
             return null;
         }
     }, []);
@@ -95,7 +95,12 @@ const TelegramCard = () => {
             okText: 'Bağlantıyı kes',
             cancelText: 'Vazgeç',
             onOk: async () => {
-                await api.post('/telegram/me/disconnect/');
+                try {
+                    await api.post('/telegram/me/disconnect/');
+                } catch {
+                    message.error('Telegram bağlantısı kesilemedi.');
+                    return;
+                }
                 await load();
                 message.success('Telegram bağlantısı kesildi.');
             },
