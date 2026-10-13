@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { weeklyLimitBlocks } from '../../utils/overtimeApprovalStage';
 
 const getBarColor = (pct) => {
   if (pct >= 85) return { bar: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' };
@@ -7,14 +8,16 @@ const getBarColor = (pct) => {
   return { bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' };
 };
 
-export default function WeeklyOTLimitBar({ weeklyStatus, projectedHours = 0, compact = false }) {
+// date: talebin FM tarihi. 26.09.2026 ve sonrasında sınır engellemediği için kırmızı uyarı çıkmaz;
+// tarih verilmezse uyarı eskisi gibi gösterilir.
+export default function WeeklyOTLimitBar({ weeklyStatus, projectedHours = 0, compact = false, date }) {
   if (!weeklyStatus || weeklyStatus.is_unlimited) return null;
 
   const { limit_hours, used_hours, remaining_hours, window_start, window_end } = weeklyStatus;
   const pctUsed = Math.min(100, Math.round((used_hours / limit_hours) * 100));
   const projected = used_hours + projectedHours;
   const pctProjected = Math.min(100, Math.round((projected / limit_hours) * 100));
-  const willExceed = projected > limit_hours;
+  const willExceed = weeklyLimitBlocks(projected > limit_hours, date);
   const colors = getBarColor(pctUsed);
   const projColors = projectedHours > 0 ? getBarColor(pctProjected) : null;
 

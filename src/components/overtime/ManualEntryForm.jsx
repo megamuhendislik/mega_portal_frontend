@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowLeft, PenLine, AlertTriangle } from 'lucide-react';
 import WeeklyOTLimitBar from './WeeklyOTLimitBar';
+import { weeklyLimitBlocks } from '../../utils/overtimeApprovalStage';
 
 function calcDurationHours(startTime, endTime) {
   if (!startTime || !endTime) return 0;
@@ -29,6 +30,8 @@ export default function ManualEntryForm({
   const durHours = useMemo(() => calcDurationHours(form.start_time, form.end_time), [form.start_time, form.end_time]);
   const projected = (weeklyStatus?.used_hours || 0) + durHours;
   const willExceed = weeklyStatus && !weeklyStatus.is_unlimited && projected > weeklyStatus.limit_hours;
+  // 26.09.2026 ve sonrası: aşan talep engellenmez, sistem yöneticisi onayına gider (mavi not açıklar).
+  const showLimitBlock = weeklyLimitBlocks(willExceed, form.date);
 
   // Denetim 2026-06-10 (#55): willExceed yalnız uyarı; canSubmit'i HARD-BLOCK etmez. Backend
   // per-tarih check_weekly_ot_limit tek otorite (bayat/yanlış-pencere weeklyStatus meşru
@@ -48,7 +51,7 @@ export default function ManualEntryForm({
         <h3 className="font-bold text-slate-800">Manuel Fazla Mesai Girişi</h3>
       </div>
 
-      <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={durHours} />
+      <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={durHours} date={form.date} />
 
       <div className="flex-1 overflow-y-auto mt-4 space-y-4">
         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
@@ -125,7 +128,7 @@ export default function ManualEntryForm({
           Vekil yöneticiye de gönder
         </label>
 
-        {willExceed && (
+        {showLimitBlock && (
           <div className="flex items-center gap-1.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
             <AlertTriangle className="w-4 h-4" />
             Bu talep haftalık limiti aşacak!

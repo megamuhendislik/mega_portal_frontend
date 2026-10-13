@@ -3,11 +3,15 @@ import assert from 'node:assert/strict';
 
 import {
     ADMIN_PENDING_LABEL,
+    ADMIN_RULE_START,
     ADMIN_PENDING_STATUS,
     ADMIN_REJECTED_STATUS,
     ADMIN_SENT_MESSAGE,
+    ADMIN_SUBMIT_NOTE,
     DUTY_ADMIN_APPROVAL_NOTE,
     adminQueueTotals,
+    adminRuleApplies,
+    assignmentNeedsAdmin,
     buildAdminDecisionPayload,
     buildApprovalStages,
     canAdminDecide,
@@ -19,8 +23,10 @@ import {
     isAwaitingAdmin,
     isManagerActionable,
     normalizeAdminQueue,
+    overtimeCreatedMessage,
     resolveStatusKey,
     validateAdminDecision,
+    weeklyLimitBlocks,
 } from './overtimeApprovalStage.js';
 
 const HOUR = 3600;
@@ -163,4 +169,61 @@ test('kuyruk: sayfalı/sayfasız yanıt, kaynak etiketi ve toplamlar', () => {
     assert.deepEqual(adminQueueTotals([{ duration_seconds: 17 * HOUR }, { duration_seconds: 5.5 * HOUR }]), {
         count: 2, totalSeconds: 22.5 * HOUR,
     });
+});
+
+test('sınır kuralı 26.09.2026 ve sonrası FM tarihlerinde geçerli', () => {
+    assert.equal(ADMIN_RULE_START, '2026-09-26');
+    assert.equal(adminRuleApplies('2026-09-25'), false);
+    assert.equal(adminRuleApplies('2026-09-26'), true);
+    assert.equal(adminRuleApplies('2026-10-13'), true);
+    assert.equal(adminRuleApplies('2026-09-26T08:30:00+03:00'), true);
+    assert.equal(adminRuleApplies('2026-09-25T23:59:59+03:00'), false);
+});
+
+test('tarih yoksa ya da geçersizse sınır kuralı uygulanmaz', () => {
+    assert.equal(adminRuleApplies(''), false);
+    assert.equal(adminRuleApplies(null), false);
+    assert.equal(adminRuleApplies(undefined), false);
+    assert.equal(adminRuleApplies('geçersiz'), false);
+});
+
+test('sınırı aşan talep 25.09 FM için engellenir, 26.09 ve sonrası engellenmez', () => {
+    assert.equal(weeklyLimitBlocks(true, '2026-09-25'), true);
+    assert.equal(weeklyLimitBlocks(true, '2026-09-26'), false);
+    assert.equal(weeklyLimitBlocks(true, '2026-10-13'), false);
+});
+
+test('tarih yoksa ya da geçersizse sınırı aşan talep eskisi gibi engellenir', () => {
+    assert.equal(weeklyLimitBlocks(true, undefined), true);
+    assert.equal(weeklyLimitBlocks(true, null), true);
+    assert.equal(weeklyLimitBlocks(true, ''), true);
+    assert.equal(weeklyLimitBlocks(true, 'geçersiz'), true);
+});
+
+test('sınırı aşmayan talep hiçbir tarihte engellenmez', () => {
+    for (const date of ['2026-09-25', '2026-09-26', undefined]) {
+        assert.equal(weeklyLimitBlocks(false, date), false);
+        assert.equal(weeklyLimitBlocks(null, date), false);
+        assert.equal(weeklyLimitBlocks(undefined, date), false);
+    }
+});
+
+test('planlı atama: sınır aşılıyor ve en az bir gün 26.09 ve sonrasındaysa sistem yöneticisi onayı gerekir', () => {
+    assert.equal(assignmentNeedsAdmin(true, ['2026-09-25', '2026-09-26']), true);
+    assert.equal(assignmentNeedsAdmin(true, ['2026-10-13']), true);
+    assert.equal(assignmentNeedsAdmin(true, ['2026-09-24', '2026-09-25']), false);
+    assert.equal(assignmentNeedsAdmin(false, ['2026-09-26', '2026-10-13']), false);
+});
+
+test('planlı atama: gün listesi boş ya da yoksa sistem yöneticisi onayı gerekmez', () => {
+    assert.equal(assignmentNeedsAdmin(true, []), false);
+    assert.equal(assignmentNeedsAdmin(true, undefined), false);
+    assert.equal(assignmentNeedsAdmin(true, null), false);
+});
+
+test('talep oluşturuldu mesajına sistem yöneticisi notu yalnız gerekiyorsa eklenir', () => {
+    assert.equal(overtimeCreatedMessage({ required: true }), `Fazla mesai talebiniz oluşturuldu. ${ADMIN_SUBMIT_NOTE}`);
+    assert.equal(overtimeCreatedMessage({ required: false }), 'Fazla mesai talebiniz oluşturuldu.');
+    assert.equal(overtimeCreatedMessage(null), 'Fazla mesai talebiniz oluşturuldu.');
+    assert.equal(overtimeCreatedMessage(undefined), 'Fazla mesai talebiniz oluşturuldu.');
 });

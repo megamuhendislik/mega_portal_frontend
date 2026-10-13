@@ -45,6 +45,7 @@ import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 import ModalOverlay from '../components/ui/ModalOverlay';
 import SystemMessagePopup from '../components/SystemMessagePopup';
+import { overtimeCreatedMessage } from '../utils/overtimeApprovalStage';
 
 // Module-level cache for today_summary to avoid duplicate calls (MainLayout + Dashboard)
 let _breakSummaryCache = { data: null, fetchedAt: 0 };
@@ -223,8 +224,8 @@ const MainLayout = () => {
                 isOpen={isOvertimeModalOpen}
                 onClose={() => setIsOvertimeModalOpen(false)}
                 attendanceData={lastAttendanceData}
-                onSuccess={() => {
-                    alert('Fazla mesai talebiniz oluşturuldu.');
+                onSuccess={(adminPreview) => {
+                    alert(overtimeCreatedMessage(adminPreview));
                 }}
             />
 

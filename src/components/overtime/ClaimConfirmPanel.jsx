@@ -4,6 +4,7 @@ import WeeklyOTLimitBar from './WeeklyOTLimitBar';
 import NonWorkingDayOvertimeWarning from '../requests/NonWorkingDayOvertimeWarning';
 import { AdminApprovalCheck } from '../requests/AdminApprovalNotice';
 import { withNonWorkingDayOvertimeSeconds } from '../requests/nonWorkingDayOvertimeUtils';
+import { weeklyLimitBlocks } from '../../utils/overtimeApprovalStage';
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '0 dk';
@@ -154,6 +155,9 @@ export default function ClaimConfirmPanel({
     && reason.trim().length > 0;
 
   const date = claimTarget?.date;
+  // 26.09.2026 ve sonrası: aşan talep engellenmez, sistem yöneticisi onayına gider (mavi not açıklar).
+  const otDate = date || bridge?.first?.date;
+  const showLimitBlock = weeklyLimitBlocks(willExceed, otDate);
   const TypeIcon = isIntended ? CalendarCheck : Zap;
   const typeLabel = isIntended ? 'Planlanmış' : 'Planlanmamış';
 
@@ -234,7 +238,7 @@ export default function ClaimConfirmPanel({
         <NonWorkingDayOvertimeWarning source={selectedWarningSource} />
 
         <AdminApprovalCheck
-          date={claimTarget?.date || bridge?.first?.date}
+          date={otDate}
           durationSeconds={totalSeconds}
           onResult={onAdminCheck}
         />
@@ -271,9 +275,9 @@ export default function ClaimConfirmPanel({
           Toplam: <b>{formatDuration(totalSeconds)}</b>
         </div>
 
-        <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={projectedHours} />
+        <WeeklyOTLimitBar weeklyStatus={weeklyStatus} projectedHours={projectedHours} date={otDate} />
 
-        {willExceed && (
+        {showLimitBlock && (
           <div className="flex items-center gap-1.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
             <AlertTriangle className="w-4 h-4" />
             Bu talep haftalık limiti aşacak! Segment seçimini azaltın.

@@ -169,7 +169,7 @@ const DOMAINS = [
     label: '28 Eylül Düzeltmeleri',
     icon: <CalculatorOutlined />,
     color: '#389e0d',
-    description: 'Saatlik izin (Mazeret) ve hastane ziyareti kredisi rapor/puantaj/grafikte motorun kanonik değeriyle; dış görev günü eksiği aylık özette + normal mesai kuralları (görev ∩ vardiya − öğle, vardiya sonrası FM); dış görev FM\'si haftalık FM sınırından muaf, görev dışı FM sınırda engellenir. Mali Eylül 2026 (26.08) öncesi ödenmiş dönem eski kuralla korunur',
+    description: 'Saatlik izin (Mazeret) ve hastane ziyareti kredisi rapor/puantaj/grafikte motorun kanonik değeriyle; dış görev günü eksiği aylık özette + normal mesai kuralları (görev ∩ vardiya − öğle, vardiya sonrası FM); dış görev FM\'si haftalık FM sınırından muaf, sınırı aşan görev dışı FM 26.09.2026\'dan itibaren sistem yöneticisi onayına gider. Mali Eylül 2026 (26.08) öncesi ödenmiş dönem eski kuralla korunur',
   },
 ];
 

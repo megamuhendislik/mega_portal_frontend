@@ -244,7 +244,7 @@ export default function OvertimeClaimModal({ open, onClose, onSuccess }) {
             <>
               {view === 'categories' && (
                 <div className="animate-fadeIn">
-                  <WeeklyOTLimitBar weeklyStatus={weeklyStatus} />
+                  <WeeklyOTLimitBar weeklyStatus={weeklyStatus} date={weeklyStatus?.window_start} />
                   <div className="mt-4">
                     <OTCategoryCards
                       intendedCount={intendedClaimable.length - intendedRejCount}

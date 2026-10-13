@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import { getIstanbulToday, toIstanbulParts, fmtH, fmtSaDk } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { assignmentNeedsAdmin } from '../../utils/overtimeApprovalStage';
 import ModalOverlay from '../ui/ModalOverlay';
 
 // ═══════════════════════════════════════════════════
@@ -499,6 +500,8 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
   const isUnlimited = weeklyOt?.is_unlimited || false;
   const projectedTotal = currentUsed + newHours;
   const isOverLimit = !isUnlimited && projectedTotal > weeklyLimit;
+  // 26.09.2026 ve sonrası: sınırı aşan talep yönetici onayından sonra sistem yöneticisine de gider.
+  const overLimitNeedsAdmin = assignmentNeedsAdmin(isOverLimit, selectedDates);
   const progressPercent = isUnlimited ? 0 : Math.min(100, (projectedTotal / weeklyLimit) * 100);
   const currentPercent = isUnlimited ? 0 : Math.min(100, (currentUsed / weeklyLimit) * 100);
 
@@ -1162,6 +1165,11 @@ export default function OTAssignmentCreator({ onAssignmentCreated, parentTeamTab
                         <p className="text-[10px] text-red-600 ml-6">
                           Haftalık fazla çalışma sınırı aşılacak
                         </p>
+                        {overLimitNeedsAdmin && (
+                          <p className="text-[10px] text-red-600 ml-6">
+                            Çalışan bu mesaiyi talep ettiğinde onayınızdan sonra sistem yöneticisi onayı da gerekecek.
+                          </p>
+                        )}
                       </div>
                     )}
 

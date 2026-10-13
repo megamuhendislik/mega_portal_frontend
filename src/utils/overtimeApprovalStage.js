@@ -24,6 +24,28 @@ export const ADMIN_REQUIRED_TAG = 'Sistem yöneticisi onayı gerekecek';
 export const ADMIN_SUBMIT_NOTE = 'Talebiniz yönetici onayından sonra sistem yöneticisine gidecek.';
 export const DUTY_ADMIN_SUBMIT_NOTE = 'Görevin sınırı aşan fazla mesaisi, yönetici onayından sonra sistem yöneticisine gidecek.';
 
+// Bu tarihten itibaren haftalık sınır talebi engellemez; aşan talep sistem yöneticisine de gider.
+// Öncesindeki FM'de sınır hâlâ engeller (backend 400 döner).
+export const ADMIN_RULE_START = '2026-09-26';
+
+export const adminRuleApplies = (isoDate) => {
+    const day = String(isoDate || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= ADMIN_RULE_START;
+};
+
+// Kırmızı sınır uyarısı yalnız kural öncesi FM'de; tarih yoksa eskisi gibi gösterilir.
+export const weeklyLimitBlocks = (willExceed, isoDate) => Boolean(willExceed) && !adminRuleApplies(isoDate);
+
+// Planlı atama sınırı aşıyor ve en az bir gün kural kapsamındaysa sistem yöneticisi onayı da gerekir.
+export const assignmentNeedsAdmin = (isOverLimit, isoDates) =>
+    Boolean(isOverLimit) && (isoDates || []).some(adminRuleApplies);
+
+// Talep oluşturuldu mesajı; sistem yöneticisi onayı gerekecekse not eklenir.
+export const overtimeCreatedMessage = (adminPreview) => {
+    const text = 'Fazla mesai talebiniz oluşturuldu.';
+    return adminPreview?.required ? `${text} ${ADMIN_SUBMIT_NOTE}` : text;
+};
+
 export const isAwaitingAdmin = (req) =>
     req?.approval_stage === APPROVAL_STAGE.ADMIN && (!req.status || req.status === 'PENDING');
 

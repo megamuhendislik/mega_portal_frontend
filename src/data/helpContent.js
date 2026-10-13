@@ -35,7 +35,7 @@ const helpContent = [
         },
         {
             title: 'Haftalık Fazla Mesai Limit Çubuğu',
-            description: 'Kartların altındaki çubuk, Pazartesi-Pazar sabit takvim haftası içindeki onaylı ve bekleyen fazla mesai toplamınızı limitinize (varsayılan 30 saat) oranlar. Her Pazartesi sıfırlanır; limit dolduğunda yeni fazla mesai talebi oluşturamazsınız.'
+            description: 'Kartların altındaki çubuk, Pazartesi-Pazar sabit takvim haftası içindeki onaylı ve bekleyen fazla mesai toplamınızı limitinize (varsayılan 30 saat) oranlar. Her Pazartesi sıfırlanır. 26 Eylül 2026 ve sonrası tarihli fazla mesaide limit talebi engellemez; limiti aşan talep yönetici onayından sonra sistem yöneticisi onayına da gider. Daha eski tarihlerde limit dolduğunda yeni talep oluşturulamaz.'
         },
         {
             title: 'Puantaj Grafiği',
@@ -264,7 +264,7 @@ const helpContent = [
         { type: 'info', text: 'Kartsız giriş talebi geriye dönük 2 mali ay içindeki tarihler için verilebilir; daha eski tarihler için talep oluşturulamaz.' },
         { type: 'warning', text: 'Aynı gün için bekleyen veya onaylanmış bir kartsız giriş talebiniz varken yeni talep veremezsiniz. Önce mevcut talebin sonuçlanması gerekir.' },
         { type: 'warning', text: 'Kilitli mali dönemdeki tarihler için kartsız giriş talebi oluşturulamaz.' },
-        { type: 'warning', text: 'Talebin oluşturacağı fazla mesai haftalık ek mesai limitini aşarsa onay işlemi yapılmaz.' },
+        { type: 'warning', text: 'Talebin oluşturacağı fazla mesai haftalık ek mesai limitini aşarsa 26 Eylül 2026 öncesi tarihlerde onay işlemi yapılmaz. 26 Eylül 2026 ve sonrasında onay engellenmez; limiti aşan fazla mesai sistem yöneticisi onayına gider.' },
         { type: 'success', text: 'Saatleri gerçeğe uygun girin; onay sonrası gün otomatik yeniden hesaplandığı için doğru saatler doğru puantaj demektir.' }
     ],
     faq: [
@@ -303,7 +303,7 @@ const helpContent = [
         },
         {
             title: 'Haftalık Limit Takibi',
-            description: 'Takvimin üstündeki çubuk haftalık fazla mesai limitinizi gösterir. Limit varsayılan 30 saattir; Pazartesi-Pazar sabit takvim haftasında onaylı ve bekleyen mesai toplamı sayılır ve her Pazartesi sıfırlanır. Limit dolduğunda yeni talep oluşturulamaz. 26 Ağustos 2026 (mali Eylül) ve sonrasında onaylı dış görevden gelen fazla mesai bu limitten muaftır ve kullanıma sayılmaz.'
+            description: 'Takvimin üstündeki çubuk haftalık fazla mesai limitinizi gösterir. Limit varsayılan 30 saattir; Pazartesi-Pazar sabit takvim haftasında onaylı ve bekleyen mesai toplamı sayılır ve her Pazartesi sıfırlanır. 26 Eylül 2026 ve sonrası tarihli fazla mesaide limit talebi engellemez; limiti aşan talep yönetici onayından sonra sistem yöneticisi onayına da gider. Limit içindeki talepleri yalnız yönetici onaylar. Daha eski tarihlerde limit dolduğunda yeni talep oluşturulamaz. 26 Ağustos 2026 (mali Eylül) ve sonrasında onaylı dış görevden gelen fazla mesai bu limitten muaftır ve kullanıma sayılmaz.'
         },
         {
             title: 'Yönetici: Mesai Atama',
@@ -317,14 +317,14 @@ const helpContent = [
     ],
     tips: [
         { type: 'info', text: 'Minimum fazla mesai eşiği (30 dk) küme bazlıdır: aynı gündeki mesai parçaları aralarında 3 saatten büyük boşluk varsa ayrı kümelere ayrılır. Eşiğin altında kalan küme sıfırlanır ve talep edilemez; diğer kümeler etkilenmez.' },
-        { type: 'warning', text: 'Haftalık limit hesabına hem onaylı hem bekleyen talepler dahildir. Bekleyen talepleriniz limiti doldurursa yeni talep veremezsiniz; gereksiz bekleyen talepleri iptal edin.' },
+        { type: 'warning', text: 'Haftalık limit hesabına hem onaylı hem bekleyen talepler dahildir. Bekleyen talepleriniz limiti doldurursa yeni talebiniz sistem yöneticisi onayına da gider (26 Eylül 2026 öncesi tarihlerde hiç verilemez); gereksiz bekleyen talepleri iptal edin.' },
         { type: 'info', text: 'Vardiya sonrası çalışmada önce mesai eksiğiniz kapatılır (30 dk normal tolerans penceresi), kalan süre fazla mesai olur. Eksiğiniz yoksa vardiya sonrası sürenin tamamı mesaidir.' },
         { type: 'success', text: 'Geriye dönük mesai talebi 2 mali ay içindeki tarihler için verilebilir. Onaylanan geçmiş ay mesaileri aylık özetinize otomatik yansır.' }
     ],
     faq: [
         { q: 'Algılanan (potansiyel) mesai nedir?', a: 'Vardiya dışında çalıştığınızda sistemin otomatik tespit ettiği mesaidir. Takvimde "Algılanan" renkte görünür; talep etmeden onaya gitmez, talep ettiğinizde yöneticinize iletilir.' },
         { q: 'Kısa süreli mesaim neden görünmüyor?', a: 'Aynı gündeki mesai parçaları kümelere ayrılır ve 30 dakikanın altında kalan küme sıfırlanır. Örneğin vardiya öncesi 12 dakikalık tek başına bir çalışma mesai olarak sayılmaz.' },
-        { q: 'Haftalık limitim doldu, ne yapabilirim?', a: 'Limit her Pazartesi sıfırlanır. Bekleyen gereksiz talepleriniz varsa iptal ederek alan açabilirsiniz; limit artışı için yöneticinize başvurun.' },
+        { q: 'Haftalık limitim doldu, ne yapabilirim?', a: '26 Eylül 2026 ve sonrası tarihli fazla mesai için yine talep verebilirsiniz; talebiniz yöneticiniz onayladıktan sonra sistem yöneticisi onayına da gider. Daha eski tarihlerde limit talebi engeller. Limit her Pazartesi sıfırlanır; bekleyen gereksiz talepleriniz varsa iptal ederek alan açabilirsiniz, limit artışı için yöneticinize başvurun.' },
         { q: 'Atanan mesaiyi yapmazsam ne olur?', a: 'Atama tek başına mesai kazandırmaz; fiili çalışmanız esas alınır. Çalışmadığınız atamalar süre sonunda geçersiz hale gelir.' },
         { q: 'Mesai talebim kime gider?', a: 'Birincil yöneticinize gider; fazla mesaide ikincil (çapraz) yöneticiler de onay yetkisine sahip olabilir. Onay/red sonucu bildirim olarak iletilir.' }
     ]
@@ -706,7 +706,7 @@ const helpContent = [
             { q: 'Ekip sekmesini neden göremiyorum?', a: 'Ekip sekmesi yalnızca ekibi olan yöneticilere görünür. Size bağlı çalışan tanımlı değilse sadece "Kendi Mesaim" sekmesi listelenir.' },
             { q: 'Dönem neden ayın 26\'sında başlıyor?', a: 'Sistem mali dönem mantığıyla çalışır: varsayılan dönem önceki ayın 26\'sından ilgili ayın 25\'ine kadardır. Bordro hesaplamaları bu döneme göre yapılır.' },
             { q: 'Durum sütununda "Çıkış Bekliyor" ne anlama gelir?', a: 'Giriş kaydı var ancak henüz çıkış kartı okutulmamış demektir. Çıkış yapmazsanız kayıt gece yarısı otomatik görevle kapatılır ve yanlış potansiyel mesai oluşabilir.' },
-            { q: 'Haftalık mesai limitim dolarsa ne olur?', a: 'O hafta için yeni fazla mesai talebi oluşturulamaz. Limit her Pazartesi sıfırlanır; hesaba onaylı ve bekleyen talepler birlikte dahildir.' },
+            { q: 'Haftalık mesai limitim dolarsa ne olur?', a: '26 Eylül 2026 ve sonrası tarihli fazla mesai için talep verebilirsiniz; limiti aşan talep yönetici onayından sonra sistem yöneticisi onayına da gider. Daha eski tarihlerde o hafta için yeni talep oluşturulamaz. Limit her Pazartesi sıfırlanır; hesaba onaylı ve bekleyen talepler birlikte dahildir.' },
             { q: 'Mola sürem nasıl hesaplanıyor?', a: 'Gün içindeki her çıkış-giriş aralığı mola olarak sayılır. Tablodaki Mola sütununda günlük toplam mola süreniz gösterilir; hakkınızı aşan kısım çalışma sürenizden düşülür.' },
             { q: 'Ekibimden bir çalışanın detayına nasıl bakarım?', a: 'Ekip sekmesindeki tabloda ilgili çalışanın satırına tıklayın. Kişinin günlük/aylık detay görünümü açılır; "Ekip Tablosuna Dön" bağlantısıyla tabloya geri dönersiniz.' }
         ]
@@ -810,7 +810,7 @@ const helpContent = [
         ],
         tips: [
             { type: 'warning', text: 'Kendi talebinizi onaylayamazsınız. Kendi oluşturduğunuz talep, hiyerarşide bir üst onaylayıcıya eskalasyon ile yönlendirilir.' },
-            { type: 'info', text: 'Fazla mesai onayı verirken çalışanın haftalık fazla mesai limitini (varsayılan 30 saat, Pazartesi-Pazar sabit takvim haftası) göz önünde bulundurun. Limit, onaylı + bekleyen saatlerin toplamı üzerinden sayılır.' },
+            { type: 'info', text: 'Fazla mesai onayı verirken çalışanın haftalık fazla mesai limitini (varsayılan 30 saat, Pazartesi-Pazar sabit takvim haftası) göz önünde bulundurun. Limit, onaylı + bekleyen saatlerin toplamı üzerinden sayılır. 26 Eylül 2026 ve sonrası tarihli fazla mesaide limiti aşan talep, sizin onayınızdan sonra sistem yöneticisi onayına gider; limit içindeki talepleri yalnız siz onaylarsınız.' },
             { type: 'info', text: 'Tüm talep türleri için geriye dönük pencere 2 mali aydır. Bu pencerenin dışındaki tarihler için yeni talep oluşturulamaz.' },
             { type: 'success', text: 'Ana sayfadaki üst menüde bekleyen onay sayacı (kırmızı rozet) görünür; tıklayarak doğrudan Gelen Talepler sayfasına gidebilirsiniz.' }
         ],

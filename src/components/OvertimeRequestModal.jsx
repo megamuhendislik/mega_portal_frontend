@@ -3,6 +3,7 @@ import { X, Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import ModalOverlay from './ui/ModalOverlay';
 import { AdminApprovalCheck } from './requests/AdminApprovalNotice';
+import { findAdminApprovalPreview } from '../utils/overtimeApprovalStage';
 
 const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) => {
     const [reason, setReason] = useState('');
@@ -10,6 +11,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
     const [error, setError] = useState(null);
     const [managers, setManagers] = useState([]);
     const [selectedManagerId, setSelectedManagerId] = useState(null);
+    const [adminPreview, setAdminPreview] = useState(null);
 
     // Yönetici listesini getir
     useEffect(() => {
@@ -47,8 +49,9 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
             if (selectedManagerId) {
                 payload.target_approver_id = selectedManagerId;
             }
-            await api.post('/overtime-requests/create_from_attendance/', payload);
-            onSuccess();
+            const res = await api.post('/overtime-requests/create_from_attendance/', payload);
+            // Sistem yöneticisi onayı gerekecekse başarı mesajı bunu da söylesin.
+            onSuccess(findAdminApprovalPreview(res?.data) || adminPreview);
             onClose();
         } catch (err) {
             console.error('Error creating overtime request:', err);
@@ -97,6 +100,7 @@ const OvertimeRequestModal = ({ isOpen, onClose, attendanceData, onSuccess }) =>
                     <AdminApprovalCheck
                         date={attendanceData.work_date}
                         durationSeconds={(Number(attendanceData.overtime_minutes) || 0) * 60}
+                        onResult={setAdminPreview}
                         className="-mt-3 mb-6"
                     />
 
