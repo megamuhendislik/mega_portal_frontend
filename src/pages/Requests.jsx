@@ -54,7 +54,11 @@ const Requests = () => {
     const [mountedTabs, setMountedTabs] = useState({ [initialTab]: true, admin_approval: true });
 
     const urlTab = TAB_ALIASES[searchParams.get('tab')] || 'my_requests';
-    const deepLink = useMemo(() => parseRequestDeepLink(searchParams), [searchParams]);
+    const deepLinksOn = !!user?.feature_flags?.request_deep_links;
+    const deepLink = useMemo(
+        () => (deepLinksOn ? parseRequestDeepLink(searchParams) : null),
+        [searchParams, deepLinksOn],
+    );
 
     // Sayfa açıkken zildeki bir linke basılırsa sekmeyi URL'ye uydur
     useEffect(() => {

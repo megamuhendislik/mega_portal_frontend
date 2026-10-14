@@ -256,7 +256,8 @@ const Procurement = () => {
 
   // Bildirim linki: /procurement?id=12 → talebin detayını aç, sonra linki temizle
   const [searchParams, setSearchParams] = useSearchParams();
-  const deepId = /^\d+$/.test(searchParams.get('id') || '') ? Number(searchParams.get('id')) : null;
+  const deepLinksOn = !!user?.feature_flags?.request_deep_links;
+  const deepId = deepLinksOn && /^\d+$/.test(searchParams.get('id') || '') ? Number(searchParams.get('id')) : null;
   const handledDeepIdRef = useRef(null);
   useEffect(() => {
     if (!deepId) {
