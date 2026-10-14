@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import TelegramCard from './profile/TelegramCard';
@@ -48,9 +49,15 @@ const NOTIFICATION_ICONS = {
    Profile Component
    ══════════════════════════════════════════════ */
 
+const PROFILE_TAB_IDS = ['general', 'contact', 'notifications', 'security'];
+
 const Profile = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('general');
+    const [searchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState(() => {
+        const tab = searchParams.get('tab');
+        return PROFILE_TAB_IDS.includes(tab) ? tab : 'general';
+    });
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [showPassword, setShowPassword] = useState({ old: false, new: false, confirm: false });

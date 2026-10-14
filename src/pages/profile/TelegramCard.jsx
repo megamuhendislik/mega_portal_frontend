@@ -60,6 +60,7 @@ const TelegramCard = () => {
             if (data?.connected) {
                 setWaitingUntil(null);
                 setQr(null);
+                window.dispatchEvent(new Event('telegram-status-changed'));
             } else if (Date.now() >= waitingUntil) {
                 setWaitingUntil(null);
                 setQrExpired(true);
@@ -133,6 +134,7 @@ const TelegramCard = () => {
                     return;
                 }
                 await load();
+                window.dispatchEvent(new Event('telegram-status-changed'));
                 message.success('Telegram bağlantısı kesildi.');
             },
         });

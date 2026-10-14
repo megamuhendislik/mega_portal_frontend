@@ -33,7 +33,8 @@ import {
     ShoppingCart,
     BarChart3,
     Calculator,
-    Megaphone
+    Megaphone,
+    Send
 } from 'lucide-react';
 import clsx from 'clsx';
 import { message } from 'antd';
@@ -45,6 +46,8 @@ import OvertimeRequestModal from '../components/OvertimeRequestModal';
 import NotificationBell from '../components/NotificationBell';
 import ModalOverlay from '../components/ui/ModalOverlay';
 import SystemMessagePopup from '../components/SystemMessagePopup';
+import TelegramConnectPrompt from '../components/TelegramConnectPrompt';
+import useTelegramStatus from '../hooks/useTelegramStatus';
 import { overtimeCreatedMessage } from '../utils/overtimeApprovalStage';
 
 // Module-level cache for today_summary to avoid duplicate calls (MainLayout + Dashboard)
@@ -55,6 +58,7 @@ const MainLayout = () => {
     const { user, logout, hasPermission } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const { status: telegramStatus } = useTelegramStatus();
 
     // Sidebar State - Default closed on mobile (< 768px)
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 768);
@@ -232,6 +236,9 @@ const MainLayout = () => {
             {/* Sistem Mesajları Pop-up */}
             <SystemMessagePopup />
 
+            {/* Telegram bağlanma daveti */}
+            {telegramStatus?.prompt?.show && <TelegramConnectPrompt status={telegramStatus} />}
+
             {/* Profile Reminder Popup */}
             <ModalOverlay open={showProfileReminder} onClose={() => setShowProfileReminder(false)} closeOnOverlayClick={false}>
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -373,6 +380,23 @@ const MainLayout = () => {
                             </Link>
                         );
                     })}
+                    {telegramStatus?.enabled && !telegramStatus?.connected && (
+                        <Link
+                            to="/profile?tab=notifications"
+                            title="Telegram bildirimlerini bağla"
+                            className="group flex items-center px-3.5 py-3.5 rounded-xl transition-all duration-300 text-slate-400 hover:bg-white/5 hover:text-white"
+                        >
+                            <Send
+                                size={22}
+                                className="transition-transform duration-300 shrink-0 text-slate-500 group-hover:text-blue-400 group-hover:scale-105"
+                            />
+                            {(isSidebarOpen || isMobile) && (
+                                <span className="ml-3.5 font-medium text-[15px] tracking-wide transition-colors truncate text-slate-400 group-hover:text-white">
+                                    Telegram bildirimlerini bağla
+                                </span>
+                            )}
+                        </Link>
+                    )}
                 </nav>
 
                 {/* User & Toggle Section */}

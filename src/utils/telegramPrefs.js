@@ -49,3 +49,10 @@ export function telegramCodeExpiryMs(expiresAt, now = Date.now()) {
     const ms = Date.parse(expiresAt);
     return Number.isFinite(ms) ? ms : now + TELEGRAM_CODE_TTL_MS;
 }
+
+export const TELEGRAM_PROMPT_SEEN_KEY = 'tgPromptSeen';
+
+// Davet kartı: sunucu "göster" dediyse ve bu oturumda daha önce gösterilmediyse.
+export function shouldShowPrompt(status, seenInSession) {
+    return !!status?.prompt?.show && !seenInSession;
+}
