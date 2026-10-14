@@ -29,3 +29,9 @@ test('tümünü kapat yalnız verilen yönleri ve diğerlerini etkiler', () => {
     assert.equal(p.categories.MEAL.INCOMING, true);
     assert.equal(p.other, false);
 });
+
+test('telegramCodeExpiryMs: gecerli tarihi ms yapar, bozuksa 15 dk verir', async () => {
+    const { telegramCodeExpiryMs, TELEGRAM_CODE_TTL_MS } = await import('./telegramPrefs.js');
+    assert.equal(telegramCodeExpiryMs('2026-10-14T10:15:00Z', 0), Date.parse('2026-10-14T10:15:00Z'));
+    assert.equal(telegramCodeExpiryMs(undefined, 1000), 1000 + TELEGRAM_CODE_TTL_MS);
+});

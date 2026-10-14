@@ -41,3 +41,11 @@ export function setAllCategories(prefs, value, directions = DIRECTIONS) {
     next.other = value;
     return next;
 }
+
+export const TELEGRAM_CODE_TTL_MS = 15 * 60 * 1000;
+
+// Sunucunun verdiği expires_at geçersizse kodun 15 dk geçerli olduğu varsayılır.
+export function telegramCodeExpiryMs(expiresAt, now = Date.now()) {
+    const ms = Date.parse(expiresAt);
+    return Number.isFinite(ms) ? ms : now + TELEGRAM_CODE_TTL_MS;
+}
