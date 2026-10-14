@@ -36,10 +36,10 @@ test('telegramCodeExpiryMs: gecerli tarihi ms yapar, bozuksa 15 dk verir', async
     assert.equal(telegramCodeExpiryMs(undefined, 1000), 1000 + TELEGRAM_CODE_TTL_MS);
 });
 
-test('shouldShowPrompt: sunucu izni ve oturumda ilk gösterim gerekir', async () => {
+test('shouldShowPrompt: yalnız sunucu izin verirse gösterilir', async () => {
     const { shouldShowPrompt } = await import('./telegramPrefs.js');
-    assert.equal(shouldShowPrompt({ prompt: { show: true } }, false), true);
-    assert.equal(shouldShowPrompt({ prompt: { show: true } }, true), false);
-    assert.equal(shouldShowPrompt({ prompt: { show: false } }, false), false);
-    assert.equal(shouldShowPrompt(null, false), false);
+    assert.equal(shouldShowPrompt({ prompt: { show: true } }), true);
+    assert.equal(shouldShowPrompt({ prompt: { show: false } }), false);
+    assert.equal(shouldShowPrompt({}), false);
+    assert.equal(shouldShowPrompt(null), false);
 });

@@ -500,7 +500,7 @@ const MainLayout = () => {
                             );
                         })()}
 
-                        <NotificationBell />
+                        <NotificationBell telegramStatus={telegramStatus} />
 
                         <div className="h-8 w-px bg-slate-200 hidden md:block" />
 

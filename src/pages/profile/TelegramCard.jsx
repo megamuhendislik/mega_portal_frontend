@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, QRCode, Select, message } from 'antd';
-import { Send, Save } from 'lucide-react';
+import { Send, Save, Monitor, QrCode } from 'lucide-react';
 import api from '../../services/api';
 import { formatIstanbulDate } from '../../utils/dateUtils';
 import { TELEGRAM_CATEGORIES, mergeTelegramPrefs, setAllCategories, telegramCodeExpiryMs } from '../../utils/telegramPrefs';
@@ -26,6 +26,21 @@ const SecondaryButton = ({ onClick, disabled, children }) => (
         className="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-60 transition-colors"
     >
         {children}
+    </button>
+);
+
+const OptionTile = ({ icon: Icon, title, text, onClick, disabled }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className="flex-1 flex items-start gap-3 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/40 transition-colors p-4 text-left disabled:opacity-60"
+    >
+        <Icon size={20} className="text-sky-600 shrink-0 mt-0.5" />
+        <span>
+            <span className="block text-sm font-bold text-slate-800">{title}</span>
+            <span className="block text-[12px] text-slate-500 mt-1 leading-relaxed">{text}</span>
+        </span>
     </button>
 );
 
@@ -200,9 +215,21 @@ const TelegramCard = () => {
                             Telegram'da Başlat'a basın. Bağlantı kurulunca bu ekran kendiliğinden güncellenir.
                         </p>
                     )}
-                    <div className="flex flex-wrap gap-2">
-                        <SecondaryButton onClick={connect} disabled={busy}>Telegram uygulamasıyla bağlan</SecondaryButton>
-                        <SecondaryButton onClick={connectWithQr} disabled={busy}>QR kodla bağlan</SecondaryButton>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <OptionTile
+                            icon={Monitor}
+                            title="Masaüstü uygulamasıyla bağlan"
+                            text="Bilgisayarınızda Telegram kuruluysa uygulama açılır, Başlat'a basmanız yeterli."
+                            onClick={connect}
+                            disabled={busy}
+                        />
+                        <OptionTile
+                            icon={QrCode}
+                            title="Telefonla QR okut"
+                            text="Telefonunuzdaki Telegram hesabını bağlamak için kodu kamerayla okutun."
+                            onClick={connectWithQr}
+                            disabled={busy}
+                        />
                     </div>
                     {qr && (
                         <div className="flex flex-col items-start gap-3">
@@ -213,7 +240,7 @@ const TelegramCard = () => {
                                 onRefresh={connectWithQr}
                             />
                             <p className="text-[12px] text-sky-700">
-                                Telefonunuzun kamerasıyla ya da Telegram'ın QR okuyucusuyla okutun, ardından Telegram'da Başlat'a basın. Kod 15 dakika geçerli.
+                                Telefonunuzun kamerasıyla okutun ve açılan Telegram'da Başlat'a basın. Kod 15 dakika geçerli.
                             </p>
                             <div className="flex gap-2">
                                 <SecondaryButton onClick={connectWithQr} disabled={busy}>Yeni kod</SecondaryButton>

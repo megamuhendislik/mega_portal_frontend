@@ -50,9 +50,7 @@ export function telegramCodeExpiryMs(expiresAt, now = Date.now()) {
     return Number.isFinite(ms) ? ms : now + TELEGRAM_CODE_TTL_MS;
 }
 
-export const TELEGRAM_PROMPT_SEEN_KEY = 'tgPromptSeen';
-
-// Davet kartı: sunucu "göster" dediyse ve bu oturumda daha önce gösterilmediyse.
-export function shouldShowPrompt(status, seenInSession) {
-    return !!status?.prompt?.show && !seenInSession;
+// Davet kartı: sunucu "göster" dediyse (en çok 5 kez, kapatılmadı, bağlı değil) her girişte açılır.
+export function shouldShowPrompt(status) {
+    return !!status?.prompt?.show;
 }

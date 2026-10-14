@@ -2,29 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, X } from 'lucide-react';
 import api from '../services/api';
-import { TELEGRAM_PROMPT_SEEN_KEY, shouldShowPrompt } from '../utils/telegramPrefs';
-
-function readSeen() {
-    try {
-        return !!sessionStorage.getItem(TELEGRAM_PROMPT_SEEN_KEY);
-    } catch {
-        return false;
-    }
-}
+import { shouldShowPrompt } from '../utils/telegramPrefs';
 
 const TelegramConnectPrompt = ({ status }) => {
     const navigate = useNavigate();
-    const [visible, setVisible] = useState(() => shouldShowPrompt(status, readSeen()));
+    const [visible, setVisible] = useState(() => shouldShowPrompt(status));
     const reported = useRef(false);
 
     useEffect(() => {
         if (!visible || reported.current) return;
         reported.current = true;
-        try {
-            sessionStorage.setItem(TELEGRAM_PROMPT_SEEN_KEY, '1');
-        } catch {
-            // depolama kapalıysa sunucu sayacı yine de işler
-        }
         api.post('/telegram/prompt/', { action: 'shown' }).catch(() => {});
     }, [visible]);
 

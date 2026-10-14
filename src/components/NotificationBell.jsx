@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Check, Trash2, ExternalLink, Loader2 } from 'lucide-react';
+import { Bell, Check, Trash2, ExternalLink, Loader2, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -20,7 +20,7 @@ const getRelativeTime = (dateStr) => {
     return date.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' });
 };
 
-const NotificationBell = () => {
+const NotificationBell = ({ telegramStatus }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
@@ -185,6 +185,19 @@ const NotificationBell = () => {
                             </button>
                         )}
                     </div>
+
+                    {telegramStatus?.enabled && !telegramStatus?.connected && (
+                        <div className="px-4 py-2 bg-sky-50 border-b border-sky-100 flex items-center gap-2 text-xs text-sky-800">
+                            <Send size={13} className="shrink-0" />
+                            <span className="flex-1">Bildirimleri Telegram'dan da alın</span>
+                            <button
+                                onClick={() => { setIsOpen(false); navigate('/profile?tab=notifications'); }}
+                                className="font-semibold text-sky-700 hover:text-sky-900"
+                            >
+                                Bağla
+                            </button>
+                        </div>
+                    )}
 
                     <div className="max-h-[60vh] md:max-h-[400px] overflow-y-auto">
                         {loading ? (
