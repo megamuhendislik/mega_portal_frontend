@@ -107,10 +107,15 @@
     animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes promptIn {
+@keyframes promptBackdropIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes promptCardIn {
     from {
         opacity: 0;
-        transform: translateY(16px) scale(0.97);
+        transform: translateY(8px) scale(0.95);
     }
 
     to {
@@ -119,8 +124,12 @@
     }
 }
 
-.animate-prompt-in {
-    animation: promptIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+.animate-prompt-backdrop {
+    animation: promptBackdropIn 0.25s ease-out both;
+}
+
+.animate-prompt-card {
+    animation: promptCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-fade-in-delayed {

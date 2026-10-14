@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, QRCode, Select, message } from 'antd';
 import { Send, Save } from 'lucide-react';
 import api from '../../services/api';
+import { formatIstanbulDate } from '../../utils/dateUtils';
 import { TELEGRAM_CATEGORIES, mergeTelegramPrefs, setAllCategories, telegramCodeExpiryMs } from '../../utils/telegramPrefs';
 
 const POLL_MS = 3000;
@@ -122,10 +123,11 @@ const TelegramCard = () => {
 
     const disconnect = () => {
         Modal.confirm({
-            title: 'Telegram bağlantısı kesilsin mi?',
-            content: 'Bildirimler artık Telegram\'a gelmez. İstediğiniz zaman yeniden bağlanabilirsiniz.',
-            okText: 'Bağlantıyı kes',
+            title: 'Bağlı Telegram hesabı kaldırılsın mı?',
+            content: 'Bildirimler artık bu Telegram hesabına gönderilmez. İstediğiniz zaman yeniden bağlayabilirsiniz.',
+            okText: 'Kaldır',
             cancelText: 'Vazgeç',
+            okButtonProps: { danger: true },
             onOk: async () => {
                 try {
                     await api.post('/telegram/me/disconnect/');
@@ -223,12 +225,27 @@ const TelegramCard = () => {
             ) : (
                 <div className="pb-6">
                     <div className="px-6 md:px-8 pb-4 flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm text-slate-700">
-                            <span className="font-semibold">{state.username ? `@${state.username}` : 'Telegram hesabı'}</span> bağlı
-                        </p>
-                        <div className="flex gap-2">
-                            <SecondaryButton onClick={sendTest} disabled={busy}>Test mesajı gönder</SecondaryButton>
-                            <SecondaryButton onClick={disconnect} disabled={busy}>Bağlantıyı kes</SecondaryButton>
+                        <div>
+                            <p className="text-sm text-slate-700">
+                                Bağlı hesap: <span className="font-bold">{state.username ? `@${state.username}` : 'Telegram hesabı'}</span>
+                            </p>
+                            {state.linked_at && formatIstanbulDate(state.linked_at) && (
+                                <p className="text-[11px] text-slate-400 mt-0.5">{formatIstanbulDate(state.linked_at)} tarihinde bağlandı</p>
+                            )}
+                        </div>
+                        <div className="flex flex-col items-start sm:items-end gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                <SecondaryButton onClick={sendTest} disabled={busy}>Test mesajı gönder</SecondaryButton>
+                                <button
+                                    type="button"
+                                    onClick={disconnect}
+                                    disabled={busy}
+                                    className="px-4 py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors"
+                                >
+                                    Bağlı hesabı kaldır
+                                </button>
+                            </div>
+                            <p className="text-[11px] text-slate-400">Telegram'da bota /stop yazarak da bağlantıyı kaldırabilirsiniz.</p>
                         </div>
                     </div>
 

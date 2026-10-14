@@ -28,6 +28,15 @@ const TelegramConnectPrompt = ({ status }) => {
         api.post('/telegram/prompt/', { action: 'shown' }).catch(() => {});
     }, [visible]);
 
+    useEffect(() => {
+        if (!visible) return undefined;
+        const onKey = e => {
+            if (e.key === 'Escape') setVisible(false);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [visible]);
+
     if (!visible) return null;
 
     const close = () => setVisible(false);
@@ -41,8 +50,17 @@ const TelegramConnectPrompt = ({ status }) => {
     };
 
     return (
-        <div className="fixed z-50 bottom-0 inset-x-0 p-3 md:inset-x-auto md:right-6 md:bottom-6 md:p-0 md:w-96 animate-prompt-in">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-5 relative">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-prompt-backdrop"
+            onClick={close}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Telegram bildirimleri"
+                onClick={e => e.stopPropagation()}
+                className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-5 relative animate-prompt-card"
+            >
                 <button
                     onClick={close}
                     aria-label="Kapat"
