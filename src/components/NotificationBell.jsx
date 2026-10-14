@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Check, Trash2, ExternalLink, Loader2, Send } from 'lucide-react';
+import { Bell, Check, Trash2, ExternalLink, Loader2, Send, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import TelegramConnectModal from './telegram/TelegramConnectModal';
 
 import useSmartPolling from '../hooks/useSmartPolling';
 
@@ -25,6 +26,7 @@ const NotificationBell = ({ telegramStatus }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [tgOpen, setTgOpen] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
@@ -176,14 +178,23 @@ const NotificationBell = ({ telegramStatus }) => {
                 <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 md:w-96 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 className="font-semibold text-slate-800">Bildirimler</h3>
-                        {unreadCount > 0 && (
+                        <div className="flex items-center gap-3">
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={markAllAsRead}
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                    Tümünü Okundu İşaretle
+                                </button>
+                            )}
                             <button
-                                onClick={markAllAsRead}
-                                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                onClick={() => { setIsOpen(false); navigate('/profile?tab=notifications'); }}
+                                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-medium"
                             >
-                                Tümünü Okundu İşaretle
+                                <Settings size={12} />
+                                Bildirim ayarları
                             </button>
-                        )}
+                        </div>
                     </div>
 
                     {telegramStatus?.enabled && !telegramStatus?.connected && (
@@ -191,7 +202,7 @@ const NotificationBell = ({ telegramStatus }) => {
                             <Send size={13} className="shrink-0" />
                             <span className="flex-1">Bildirimleri Telegram'dan da alın</span>
                             <button
-                                onClick={() => { setIsOpen(false); navigate('/profile?tab=notifications'); }}
+                                onClick={() => { setIsOpen(false); setTgOpen(true); }}
                                 className="font-semibold text-sky-700 hover:text-sky-900"
                             >
                                 Bağla
@@ -237,6 +248,7 @@ const NotificationBell = ({ telegramStatus }) => {
                     </div>
                 </div>
             )}
+            <TelegramConnectModal open={tgOpen} onClose={() => setTgOpen(false)} />
         </div>
     );
 };

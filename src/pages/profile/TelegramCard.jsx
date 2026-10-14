@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, QRCode, Select, message } from 'antd';
-import { Send, Save, Monitor, QrCode } from 'lucide-react';
+import { Modal, Select, message } from 'antd';
+import { Send, Save } from 'lucide-react';
 import api from '../../services/api';
 import { formatIstanbulDate } from '../../utils/dateUtils';
-import { TELEGRAM_CATEGORIES, mergeTelegramPrefs, setAllCategories, telegramCodeExpiryMs } from '../../utils/telegramPrefs';
+import TelegramConnectFlow from '../../components/telegram/TelegramConnectFlow';
+import { TELEGRAM_CATEGORIES, mergeTelegramPrefs, setAllCategories } from '../../utils/telegramPrefs';
 
-const POLL_MS = 3000;
 // Yemek koordinatörü, muhasebe, satın alma yöneticisi gibi ekibi olmayanlara da
 // talep düşer; bu yüzden iki sütun her zaman gösterilir.
 const DIRECTIONS = [['INCOMING', 'Bana gelen'], ['OWN', 'Kendi taleplerim']];
@@ -29,29 +29,10 @@ const SecondaryButton = ({ onClick, disabled, children }) => (
     </button>
 );
 
-const OptionTile = ({ icon: Icon, title, text, onClick, disabled }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className="flex-1 flex items-start gap-3 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/40 transition-colors p-4 text-left disabled:opacity-60"
-    >
-        <Icon size={20} className="text-sky-600 shrink-0 mt-0.5" />
-        <span>
-            <span className="block text-sm font-bold text-slate-800">{title}</span>
-            <span className="block text-[12px] text-slate-500 mt-1 leading-relaxed">{text}</span>
-        </span>
-    </button>
-);
-
 const TelegramCard = () => {
     const [state, setState] = useState(null);
     const [prefs, setPrefs] = useState(null);
     const [busy, setBusy] = useState(false);
-    const [waitingUntil, setWaitingUntil] = useState(null);
-    const [qr, setQr] = useState(null);
-    const [qrExpired, setQrExpired] = useState(false);
-
     const load = useCallback(async () => {
         try {
             const res = await api.get('/telegram/me/');
@@ -68,73 +49,7 @@ const TelegramCard = () => {
         load();
     }, [load]);
 
-    // Telegram'da "Başlat"a basıldıktan sonra bağlantıyı yakala: 3 sn aralıkla ve sekmeye dönünce, kodun süresi (15 dk) dolana kadar.
-    useEffect(() => {
-        if (!waitingUntil) return undefined;
-        const tick = async () => {
-            const data = await load();
-            if (data?.connected) {
-                setWaitingUntil(null);
-                setQr(null);
-                window.dispatchEvent(new Event('telegram-status-changed'));
-            } else if (Date.now() >= waitingUntil) {
-                setWaitingUntil(null);
-                setQrExpired(true);
-            }
-        };
-        const timer = setInterval(tick, POLL_MS);
-        window.addEventListener('focus', tick);
-        return () => {
-            clearInterval(timer);
-            window.removeEventListener('focus', tick);
-        };
-    }, [waitingUntil, load]);
-
     if (!state?.enabled || !prefs) return null;
-
-    const connect = async () => {
-        // Açılır pencere engellenmesin diye sekme tıklama anında açılır, link gelince yönlendirilir
-        const win = window.open('about:blank', '_blank');
-        setBusy(true);
-        try {
-            const res = await api.post('/telegram/me/connect/');
-            if (win) {
-                win.opener = null;
-                win.location.href = res.data.url;
-            } else {
-                window.location.href = res.data.url;
-            }
-            setQr(null);
-            setQrExpired(false);
-            setWaitingUntil(telegramCodeExpiryMs(res.data.expires_at));
-        } catch {
-            if (win) win.close();
-            message.error('Bağlantı linki oluşturulamadı.');
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const connectWithQr = async () => {
-        setBusy(true);
-        try {
-            const res = await api.post('/telegram/me/connect/');
-            const until = telegramCodeExpiryMs(res.data.expires_at);
-            setQr({ url: res.data.url });
-            setQrExpired(false);
-            setWaitingUntil(until);
-        } catch {
-            message.error('QR kod oluşturulamadı.');
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const cancelQr = () => {
-        setQr(null);
-        setQrExpired(false);
-        setWaitingUntil(null);
-    };
 
     const disconnect = () => {
         Modal.confirm({
@@ -207,47 +122,9 @@ const TelegramCard = () => {
                     <p className="text-[12px] text-slate-500 leading-relaxed">
                         Telegram hesabınızı bağladığınızda seçtiğiniz bildirimler Telegram'a da gönderilir.
                         Bildirim metinleri Telegram üzerinden iletilir.
-                        Hangi Telegram hesabında Başlat'a basarsanız o hesap bağlanır.
                         Birden fazla hesabınız varsa doğru hesabı açtığınızdan emin olun.
                     </p>
-                    {waitingUntil && !qr && (
-                        <p className="text-[12px] text-sky-700">
-                            Telegram'da Başlat'a basın. Bağlantı kurulunca bu ekran kendiliğinden güncellenir.
-                        </p>
-                    )}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <OptionTile
-                            icon={Monitor}
-                            title="Masaüstü uygulamasıyla bağlan"
-                            text="Bilgisayarınızda Telegram kuruluysa uygulama açılır, Başlat'a basmanız yeterli."
-                            onClick={connect}
-                            disabled={busy}
-                        />
-                        <OptionTile
-                            icon={QrCode}
-                            title="Telefonla QR okut"
-                            text="Telefonunuzdaki Telegram hesabını bağlamak için kodu kamerayla okutun."
-                            onClick={connectWithQr}
-                            disabled={busy}
-                        />
-                    </div>
-                    {qr && (
-                        <div className="flex flex-col items-start gap-3">
-                            <QRCode
-                                value={qr.url}
-                                size={180}
-                                status={qrExpired ? 'expired' : 'active'}
-                                onRefresh={connectWithQr}
-                            />
-                            <p className="text-[12px] text-sky-700">
-                                Telefonunuzun kamerasıyla okutun ve açılan Telegram'da Başlat'a basın. Kod 15 dakika geçerli.
-                            </p>
-                            <div className="flex gap-2">
-                                <SecondaryButton onClick={connectWithQr} disabled={busy}>Yeni kod</SecondaryButton>
-                                <SecondaryButton onClick={cancelQr}>Vazgeç</SecondaryButton>
-                            </div>
-                        </div>
-                    )}
+                    <TelegramConnectFlow onConnected={() => load()} />
                 </div>
             ) : (
                 <div className="pb-6">

@@ -81,6 +81,13 @@ const Profile = () => {
 
     const mustChangePassword = user?.must_change_password || false;
 
+    // Sayfa açıkken ?tab= değişirse (zil panelindeki bağlantı) sekmeyi değiştir
+    const tabParam = searchParams.get('tab');
+    useEffect(() => {
+        if (!PROFILE_TAB_IDS.includes(tabParam)) return;
+        Promise.resolve().then(() => setActiveTab(tabParam));
+    }, [tabParam]);
+
     useEffect(() => {
         if (mustChangePassword && activeTab === 'general') {
             setActiveTab('security');
