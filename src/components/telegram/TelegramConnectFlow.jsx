@@ -39,6 +39,7 @@ const TelegramConnectFlow = ({ onConnected, compact = false }) => {
     const [qrUrl, setQrUrl] = useState(null);
     const [expired, setExpired] = useState(false);
     const [waitingUntil, setWaitingUntil] = useState(null);
+    const [pendingRelink, setPendingRelink] = useState(false);
     const onConnectedRef = useRef(onConnected);
     const doneRef = useRef(false);
 
@@ -60,11 +61,13 @@ const TelegramConnectFlow = ({ onConnected, compact = false }) => {
                     onConnectedRef.current?.();
                     return;
                 }
+                setPendingRelink(!!res.data?.pending_relink);
             } catch {
                 // geçici hata: bir sonraki turda tekrar denenir
             }
             if (!doneRef.current && Date.now() >= waitingUntil) {
                 setWaitingUntil(null);
+                setPendingRelink(false);
                 setExpired(true);
             }
         };
@@ -121,6 +124,12 @@ const TelegramConnectFlow = ({ onConnected, compact = false }) => {
         setWaitingUntil(null);
     }, []);
 
+    const relinkNotice = pendingRelink && (
+        <p className="text-[12px] text-amber-700">
+            Bu Telegram hesabı başka bir Mega Portal hesabına bağlı. Devam etmek için Telegram'daki onay mesajında "Evet, bu hesaba bağla"ya basın.
+        </p>
+    );
+
     return (
         <div key={step} className="animate-tg-step space-y-3">
             {step === 'choose' && (
@@ -152,6 +161,7 @@ const TelegramConnectFlow = ({ onConnected, compact = false }) => {
                     <p className="text-[12px] text-sky-700">
                         Telegram açıldı. Başlat'a basın, bağlantı kurulunca burası kendiliğinden güncellenir.
                     </p>
+                    {relinkNotice}
                     {expired && <p className="text-[12px] text-amber-700">Kodun süresi doldu, tekrar açın.</p>}
                     <div className="flex gap-2">
                         <SecondaryButton onClick={openDesktop} disabled={busy}>Tekrar aç</SecondaryButton>
@@ -170,6 +180,7 @@ const TelegramConnectFlow = ({ onConnected, compact = false }) => {
                     <p className="text-[12px] text-sky-700">
                         Telefonunuzun kamerasıyla okutun ve açılan Telegram'da Başlat'a basın. Kod 15 dakika geçerli.
                     </p>
+                    {relinkNotice}
                     <div className="flex gap-2">
                         <SecondaryButton onClick={showQr} disabled={busy}>Yeni kod</SecondaryButton>
                         <SecondaryButton onClick={back}>Geri</SecondaryButton>
