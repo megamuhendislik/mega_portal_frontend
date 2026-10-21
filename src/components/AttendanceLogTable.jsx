@@ -115,6 +115,15 @@ const getStatusBadge = (log) => {
     // overtime_minutes onaylanmamış OT için backend'de daima 0 (overtime_seconds=0) →
     // guard TÜM POTENTIAL rozetlerini gizliyordu (2sa potansiyel bile). Backend serializer
     // _guard_potential takvim minimum_overtime_minutes eşiğini ZATEN uyguluyor (tek kaynak).
+    // Manuel talebin içindeki kart parçası: talebin durumu kendi satırında görünür.
+    if (log.covered_by_manual_ot) {
+        return (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">Talebe Dahil</span>
+            </div>
+        );
+    }
     const effectiveOtStatus = log.ot_status;
     if (effectiveOtStatus) {
         const otStyles = {
@@ -357,7 +366,9 @@ const ProcessedDetailChips = ({ log }) => {
         const leaveCredit = formatDurationSeconds(leaveCreditSeconds(log));
         chips.push({ key: 'leave', label: log.related_leave_type_name || sourceLabel || 'İzin', value: leaveCredit, cls: 'bg-amber-50 text-amber-700 border-amber-200' });
     }
-    if (type === 'overtime' || log.ot_status) {
+    if (log.covered_by_manual_ot) {
+        chips.push({ key: 'ot-status', label: 'Manuel talebe dahil', value: '', cls: 'bg-slate-50 text-slate-600 border-slate-200' });
+    } else if (type === 'overtime' || log.ot_status) {
         const statusLabel = {
             APPROVED: 'Onaylı Mesai',
             PENDING: 'Talep Edildi',
