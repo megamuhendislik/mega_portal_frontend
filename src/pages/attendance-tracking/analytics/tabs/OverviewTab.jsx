@@ -78,15 +78,17 @@ export default function OverviewTab() {
 
     const trendChartData = useMemo(() => {
         if (!trendData) return [];
-        // Faz 3 fix (2026-05-17): Normal + OT ayrı stacked bar görünümü için
-        // worked = normal + ot olduğundan, normal'i çıkarıp ayrı tutuyoruz.
+        // Faz 3 fix (2026-05-17): Normal + OT ayrı stacked bar görünümü için.
+        // worked = normal + dış görev + izin/rapor + ot (aylık özetteki toplam iş).
         return trendData.map(m => {
             const worked = Math.round(m.worked_hours || m.total_worked_hours || 0);
             const ot = Math.round(m.ot_hours || m.overtime_hours || 0);
-            const normal = Math.max(0, worked - ot);
+            const credit = Math.round((m.duty_hours || 0) + (m.leave_credit_hours || 0));
+            const normal = m.normal_hours != null ? Math.round(m.normal_hours) : Math.max(0, worked - ot);
             return {
                 name: (m.label || '').replace(/\d{4}$/, '').trim(),
                 'normal mesai': normal,
+                'dış görev / izin': credit,
                 'fazla mesai': ot,
                 çalışma: worked, // backward compat (eski grafik kullanımı)
                 hedef: Math.round(m.target_hours || 0),
@@ -132,12 +134,14 @@ export default function OverviewTab() {
         normal_completion: {
             title: 'Yapılan Normal Mesai — Detay',
             icon: Target,
-            formula: 'Normal Mesai (W) ÷ Pro-rata Yükümlülük (Y) × 100, cap [0,100]',
-            description: 'Her çalışanın yaptığı normal mesainin (OT hariç) bu döneme kadar olan yükümlülüğüne oranı. Cap 100.',
+            formula: '(Normal + Dış Görev + İzin/Rapor) ÷ Pro-rata Yükümlülük (Y) × 100, cap [0,100]',
+            description: 'Normal mesai, dış görev ve izin/rapor kredisinin (OT hariç) bu döneme kadar olan yükümlülüğe oranı. Cap 100.',
             sortKey: 'normal_completion_pct',
             levelKey: 'normal_completion_pct',
             columns: [
                 { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours' },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours' },
                 { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
                 { key: 'normal_completion_pct', label: 'Yap.M./Y', type: 'percent', highlight: true },
             ],
@@ -145,12 +149,14 @@ export default function OverviewTab() {
         total_completion: {
             title: 'Toplam Yapılan Mesai — Detay',
             icon: TrendingUp,
-            formula: '(Normal + Fazla Mesai) ÷ Yükümlülük × 100, UNCAPPED',
+            formula: '(Normal + Dış Görev + İzin/Rapor + Fazla Mesai) ÷ Yükümlülük × 100, UNCAPPED',
             description: 'Fazla mesai dahil toplam yapılan mesainin yükümlülüğe oranı. >100 = hedef üstüne çıktı.',
             sortKey: 'total_completion_pct',
             levelKey: 'total_completion_pct',
             columns: [
                 { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours' },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours' },
                 { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
                 { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
                 { key: 'total_completion_pct', label: 'Toplam/Y', type: 'percent', highlight: true },
@@ -199,12 +205,14 @@ export default function OverviewTab() {
         normal_hours: {
             title: 'Normal Mesai (saat) — Detay',
             icon: Clock,
-            formula: 'Σ normal_seconds ÷ 3600 (Fazla Mesai HARİÇ)',
-            description: 'Çalışan başına saat cinsinden normal mesai. ABSENT günler 0 sayılır.',
+            formula: 'Σ kart normal_seconds ÷ 3600 (dış görev, izin/rapor ve fazla mesai HARİÇ)',
+            description: 'Çalışan başına kartla yapılan normal mesai, Mesai Takibi ile aynı. Dış görev ve izin/rapor ayrı sütunda. ABSENT günler 0 sayılır.',
             sortKey: 'normal_hours',
             sortDir: 'desc',
             columns: [
                 { key: 'normal_hours', label: 'Normal (sa)', type: 'hours', highlight: true },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours' },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours' },
                 { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
                 { key: 'normal_completion_pct', label: 'Yap.M./Y', type: 'percent' },
             ],
@@ -212,12 +220,14 @@ export default function OverviewTab() {
         worked_hours: {
             title: 'Toplam Çalışma (saat) — Detay',
             icon: Clock,
-            formula: 'Σ (normal_seconds + calculated_overtime_seconds) ÷ 3600',
-            description: 'Çalışan başına toplam çalışma saati (normal + fazla mesai dahil).',
+            formula: 'Normal + Dış Görev + İzin/Rapor + Onaylı Fazla Mesai',
+            description: 'Çalışan başına toplam çalışma saati. Mesai Takibi toplam iş ile aynı.',
             sortKey: 'worked_hours',
             sortDir: 'desc',
             columns: [
                 { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours' },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours' },
                 { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
                 { key: 'worked_hours', label: 'Toplam (sa)', type: 'hours', highlight: true },
                 { key: 'target_hours', label: 'Tam Hedef (sa)', type: 'hours' },
@@ -226,8 +236,8 @@ export default function OverviewTab() {
         ot_hours: {
             title: 'Fazla Mesai (saat) — Detay',
             icon: Zap,
-            formula: 'Σ calculated_overtime_seconds ÷ 3600 (APPROVED + APPROVED auto)',
-            description: 'Çalışan başına onaylı fazla mesai saati (POTENTIAL hariç).',
+            formula: 'Σ onaylı fazla mesai talebi ÷ 3600',
+            description: 'Çalışan başına onaylı fazla mesai saati. Onay bekleyen ve talep edilmemiş süre dahil değil.',
             sortKey: 'ot_hours',
             sortDir: 'desc',
             columns: [
@@ -274,8 +284,8 @@ export default function OverviewTab() {
         ot_to_normal: {
             title: 'Fazla Mesai / Normal — Detay',
             icon: TrendingUp,
-            formula: 'Fazla Mesai ÷ Normal Mesai × 100 (Normal=0 → tanımsız)',
-            description: 'Fazla mesainin normal mesaiye oranı. Normal mesai sıfırsa metrik tanımsız.',
+            formula: 'Fazla Mesai ÷ (Normal + Dış Görev + İzin/Rapor) × 100 (sıfırsa tanımsız)',
+            description: 'Fazla mesainin hedefe katkıya (normal + dış görev + izin/rapor) oranı. Hedefe katkı sıfırsa metrik tanımsız.',
             sortKey: 'ot_to_normal_pct',
             sortDir: 'desc',
             levelFn: (r) => {
@@ -335,8 +345,24 @@ export default function OverviewTab() {
             sortDir: 'asc',
             columns: [
                 { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours' },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours' },
                 { key: 'ot_hours', label: 'Fazla M. (sa)', type: 'hours' },
                 { key: 'missing_hours', label: 'Eksik (sa)', type: 'hours' },
+            ],
+        },
+        credit_hours: {
+            title: 'Dış Görev ve İzin/Rapor (saat) — Detay',
+            icon: Clock,
+            formula: 'Dış görev + izin + rapor + özel izin kredisi (Mesai Takibi ile aynı)',
+            description: 'Normal mesaiye eklenmez, hedefe katkı olarak doluluk oranına girer.',
+            sortKey: 'duty_hours',
+            sortDir: 'desc',
+            columns: [
+                { key: 'normal_hours', label: 'Normal (sa)', type: 'hours' },
+                { key: 'duty_hours', label: 'Dış Görev (sa)', type: 'hours', highlight: true },
+                { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', type: 'hours', highlight: true },
+                { key: 'prorated_target_hours', label: 'Yükümlülük (sa)', type: 'hours' },
             ],
         },
     }), [kpi?.total_meals, kpi?.total_approved_ot_hours, kpi?.ot_hours_per_meal, kpi?.meals_per_ot_hour]);
@@ -495,7 +521,7 @@ export default function OverviewTab() {
                 {/* D4 fix (2026-05-30): yüzde metriği — pp delta (goreli-% değil) */}
                 <KPICard title="Yapılan Normal Mesai" value={`${kpi.avg_normal_completion_pct ?? kpi.avg_efficiency_pct ?? 0}`} suffix="%" icon={Target}
                     gradient="indigo" delta={isComparing ? deltas?.efficiencyPp : null} deltaSuffix="pp"
-                    subtitle="Normal / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
+                    subtitle="Hedefe katkı / Yükümlülük (cap 100)" info={METRIC_EXPLANATIONS.efficiency}
                     onClick={() => openKPI('normal_completion')} />
                 <KPICard title="Toplam Yapılan Mesai" value={`${kpi.avg_total_completion_pct ?? 0}`} suffix="%" icon={TrendingUp}
                     gradient="emerald"
@@ -511,13 +537,16 @@ export default function OverviewTab() {
                     onClick={() => openKPI('missing_to_target')} />
             </div>
 
-            {/* ── Saat Bazlı Toplamlar (4 mini KPI) ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {/* ── Saat Bazlı Toplamlar (5 mini KPI) ── */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
                 {/* Y2 fix (2026-05-17): Backend total_normal_hours her zaman döner; fallback kaldırıldı
                     (eski max(0, worked-ot) OT>worked edge case'inde 0 göstererek yanıltıyordu) */}
                 <KPICard mini title="Normal Mesai" value={Math.round(kpi.total_normal_hours || 0)} suffix="sa" icon={Clock} gradient="indigo"
                     subtitle={`Yükümlülük: ${Math.round(kpi.prorated_target_hours || 0)}sa`}
                     onClick={() => openKPI('normal_hours')} />
+                <KPICard mini title="Dış Görev / İzin" value={Math.round((kpi.total_duty_hours || 0) + (kpi.total_leave_credit_hours || 0))} suffix="sa" icon={Clock} gradient="violet"
+                    subtitle={`Dış görev ${Math.round(kpi.total_duty_hours || 0)}sa · İzin/Rapor ${Math.round(kpi.total_leave_credit_hours || 0)}sa`}
+                    onClick={() => openKPI('credit_hours')} />
                 <KPICard mini title="Toplam Çalışma" value={Math.round(kpi.total_worked_hours || 0)} suffix="sa" icon={Clock} gradient="blue"
                     delta={isComparing ? deltas?.worked : null}
                     subtitle={`Hedef: ${Math.round(kpi.total_target_hours || 0)}sa`} info={METRIC_EXPLANATIONS.worked_hours}

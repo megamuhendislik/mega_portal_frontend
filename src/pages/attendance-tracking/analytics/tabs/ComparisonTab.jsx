@@ -244,6 +244,8 @@ export default function ComparisonTab() {
             { key: 'ot_to_target_pct', label: 'Fazla Mesai/Y %', color: '#f59e0b' },
             { key: 'missing_to_target_pct', label: 'Eksik/Y %', color: '#ef4444' },
             { key: 'normal_hours', label: 'Normal (sa)', color: '#0ea5e9' },
+            { key: 'duty_hours', label: 'Dış Görev (sa)', color: '#818cf8' },
+            { key: 'leave_credit_hours', label: 'İzin/Rapor (sa)', color: '#06b6d4' },
             { key: 'overtime_hours', label: 'Fazla Mesai (sa)', color: '#d97706' },
             { key: 'missing_hours', label: 'Eksik (sa)', color: '#dc2626' },
             { key: 'avg_break_minutes', label: 'Ort. Mola (dk)', color: '#8b5cf6' },
@@ -507,6 +509,8 @@ export default function ComparisonTab() {
             { label: 'Fazla Mesai/Yükümlülük', key: 'ot_to_target_pct', suffix: '%', betterIsHigher: null },
             { label: 'Eksik/Yükümlülük', key: 'missing_to_target_pct', suffix: '%', betterIsHigher: false },
             { label: 'Normal Mesai', key: 'normal_hours', suffix: 'sa', betterIsHigher: true },
+            { label: 'Dış Görev', key: 'duty_hours', suffix: 'sa', betterIsHigher: null },
+            { label: 'İzin/Rapor', key: 'leave_credit_hours', suffix: 'sa', betterIsHigher: null },
             { label: 'Fazla Mesai', key: 'overtime_hours', suffix: 'sa', betterIsHigher: null },
             { label: 'Eksik Saat', key: 'missing_hours', suffix: 'sa', betterIsHigher: false },
         ];

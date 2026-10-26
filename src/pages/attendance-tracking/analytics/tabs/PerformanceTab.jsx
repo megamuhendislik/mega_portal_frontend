@@ -74,7 +74,9 @@ function DailyHoursTooltip({ active, payload }) {
         <div className="rounded-lg bg-white border border-slate-200 shadow-lg px-3 py-2 text-[11px] space-y-1 min-w-[200px]">
             <div className="font-black text-slate-800 mb-1">{d.dayLabel}</div>
             <TipLine c="#6366f1" label="Normal" val={d.normal} />
+            {d.gorev > 0 && <TipLine c="#a5b4fc" label="Dış Görev" val={d.gorev} />}
             {d.izin > 0 && <TipLine c="#06b6d4" label={d.leaveLabel || 'İzin'} val={d.izin} />}
+            {d.rapor > 0 && <TipLine c="#fb923c" label="Rapor" val={d.rapor} />}
             <TipLine c="#f59e0b" label="Fazla Mesai" val={d.ot} />
             <TipLine label="Toplam Çalışma" val={d.worked} bold />
             <TipLine c="#ef4444" label="Eksik" val={d.eksik} />
@@ -179,6 +181,8 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
 
     // Saat dağılımı stacked bar için yüzde
     const normalPct = totalParts > 0 ? ((e.normal_hours || 0) / totalParts) * 100 : 0;
+    const dutyPct = totalParts > 0 ? ((e.duty_hours || 0) / totalParts) * 100 : 0;
+    const leaveCreditPct = totalParts > 0 ? ((e.leave_credit_hours || 0) / totalParts) * 100 : 0;
     const otPct = totalParts > 0 ? ((e.ot_hours || 0) / totalParts) * 100 : 0;
     const missingPct = totalParts > 0 ? ((e.missing_hours || 0) / totalParts) * 100 : 0;
 
@@ -194,11 +198,11 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                     <div className="text-[11px] text-slate-400 text-center py-6">Bu çalışan için bu dönemde ölçülebilir hedef yok.</div>
                 ) : (
                     <div className="space-y-3">
-                        <MetricBar label="Yapılan Normal Mesai" value={nDol} color={levelColor(nDol)} tip="min(100, Yapılan Normal / Yükümlülük × 100) — eksik düşülmez" />
-                        <MetricBar label="Toplam Yapılan Mesai" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(Yapılan Normal + Fazla Mesai) / Yükümlülük × 100" />
+                        <MetricBar label="Yapılan Normal Mesai" value={nDol} color={levelColor(nDol)} tip="min(100, (Normal + Dış Görev + İzin/Rapor) / Yükümlülük × 100) — eksik düşülmez" />
+                        <MetricBar label="Toplam Yapılan Mesai" value={tDol} max={Math.max(100, tDol)} color={tDol >= 100 ? '#7c3aed' : levelColor(tDol)} tip="(Normal + Dış Görev + İzin/Rapor + Fazla Mesai) / Yükümlülük × 100" />
                         <MetricBar label="Fazla Mesai / Yükümlülük" value={otY} max={Math.max(50, otY)} color={intensityColor(otY)} tip="Fazla Mesai / Y" />
                         <MetricBar label="Eksik / Yükümlülük" value={eksY} color={intensityColor(eksY)} tip="M / Y" />
-                        <MetricBar label="Fazla Mesai / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="Fazla Mesai / Normal mesai" />
+                        <MetricBar label="Fazla Mesai / Normal" value={otN} max={otN == null ? 100 : Math.max(50, otN)} color="#8b5cf6" tip="Fazla Mesai / (Normal + Dış Görev + İzin/Rapor)" />
                     </div>
                 )}
             </div>
@@ -215,6 +219,8 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                     <>
                         <div className="h-3 rounded-full overflow-hidden flex bg-slate-100 mb-3">
                             <div className="h-full bg-indigo-500" style={{ width: `${normalPct}%` }} title={`Normal: ${fmtHrs(e.normal_hours)}`} />
+                            <div className="h-full bg-indigo-300" style={{ width: `${dutyPct}%` }} title={`Dış Görev: ${fmtHrs(e.duty_hours)}`} />
+                            <div className="h-full bg-cyan-500" style={{ width: `${leaveCreditPct}%` }} title={`İzin/Rapor: ${fmtHrs(e.leave_credit_hours)}`} />
                             <div className="h-full bg-amber-500" style={{ width: `${otPct}%` }} title={`Fazla Mesai: ${fmtHrs(e.ot_hours)}`} />
                             <div className="h-full bg-red-400" style={{ width: `${missingPct}%` }} title={`Eksik: ${fmtHrs(e.missing_hours)}`} />
                         </div>
@@ -229,6 +235,30 @@ function RowDetailPanel({ employee: e, totalParts, onOpenFullDetail }) {
                                     <span className="text-slate-400 ml-1.5">%{Math.round(normalPct)}</span>
                                 </div>
                             </div>
+                            {(e.duty_hours || 0) > 0 && (
+                                <div className="flex items-center justify-between text-[11px]">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-300" />
+                                        <span className="text-slate-600 font-medium">Dış Görev</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-black text-indigo-600 tabular-nums">{fmtHrs(e.duty_hours)}</span>
+                                        <span className="text-slate-400 ml-1.5">%{Math.round(dutyPct)}</span>
+                                    </div>
+                                </div>
+                            )}
+                            {(e.leave_credit_hours || 0) > 0 && (
+                                <div className="flex items-center justify-between text-[11px]">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                                        <span className="text-slate-600 font-medium">İzin/Rapor</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-black text-cyan-700 tabular-nums">{fmtHrs(e.leave_credit_hours)}</span>
+                                        <span className="text-slate-400 ml-1.5">%{Math.round(leaveCreditPct)}</span>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-center justify-between text-[11px]">
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -698,20 +728,22 @@ function TeamOverviewMode({ onSelectPerson }) {
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 overflow-x-auto">
-                        <table className="w-full text-sm min-w-[1320px]">
+                        <table className="w-full text-sm min-w-[1500px]">
                             <thead className="bg-slate-50/80">
                                 <tr className="border-b border-slate-200">
                                     <th className="py-2.5 px-2 w-8" />
                                     {[
                                         { key: 'name', label: 'Çalışan', align: 'left' },
                                         { key: 'department', label: 'Departman', align: 'left' },
-                                        { key: 'normal', label: 'Normal', align: 'right', tip: 'Net normal mesai (Fazla Mesai hariç)' },
-                                        { key: 'ot', label: 'Fazla Mesai', align: 'right', tip: 'Fazla mesai' },
+                                        { key: 'normal', label: 'Normal', align: 'right', tip: 'Kartla yapılan normal mesai (dış görev, izin/rapor ve fazla mesai hariç)' },
+                                        { key: 'duty', label: 'Dış Görev', align: 'right', tip: 'Dış görev süresi' },
+                                        { key: 'leave_credit', label: 'İzin/Rapor', align: 'right', tip: 'İzin, rapor ve özel izin kredisi' },
+                                        { key: 'ot', label: 'Fazla Mesai', align: 'right', tip: 'Onaylı fazla mesai' },
                                         { key: 'missing', label: 'Eksik', align: 'right', tip: 'Eksik mesai' },
                                         { key: 'real_break', label: 'Gerçek Mola', align: 'right', tip: 'Günlük ort. gerçek mola (öğle hariç), dakika' },
                                         { key: 'counted_break', label: 'Düşülen Mola', align: 'right', tip: 'Günlük ort. iş süresinden düşülen mola, dakika' },
-                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'min(100, Normal / Yükümlülük × 100) — eksik düşülmez' },
-                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Normal + Fazla Mesai) / Yükümlülük × 100' },
+                                        { key: 'normal_completion', label: 'N. Doluluk', align: 'left', tip: 'min(100, (Normal + Dış Görev + İzin/Rapor) / Yükümlülük × 100) — eksik düşülmez' },
+                                        { key: 'total_completion', label: 'T. Doluluk', align: 'left', tip: '(Normal + Dış Görev + İzin/Rapor + Fazla Mesai) / Yükümlülük × 100' },
                                         { key: 'ot_to_target', label: 'FM/Y', align: 'right', tip: 'Fazla Mesai / Yükümlülük' },
                                         { key: 'missing_to_target', label: 'Eksik/Y', align: 'right', tip: 'Eksik / Yükümlülük' },
                                         { key: 'target', label: 'Hedef', align: 'right', tip: 'Aylık tam hedef' },
@@ -734,7 +766,8 @@ function TeamOverviewMode({ onSelectPerson }) {
                                     const eksY = e.missing_to_target_pct ?? 0;
                                     const noTarget = !(e.has_target ?? (e.target_hours > 0));
                                     const isExpanded = expandedRowId === e.employee_id;
-                                    const totalParts = (e.normal_hours || 0) + (e.ot_hours || 0) + (e.missing_hours || 0);
+                                    const totalParts = (e.normal_hours || 0) + (e.duty_hours || 0) + (e.leave_credit_hours || 0)
+                                        + (e.ot_hours || 0) + (e.missing_hours || 0);
                                     // Mola verisi ayrı endpoint'ten employee_id ile merge edilir
                                     const brk = breakMap[e.employee_id];
                                     const realBreak = brk ? Math.round(brk.avg_break_minutes || 0) : null;
@@ -761,6 +794,8 @@ function TeamOverviewMode({ onSelectPerson }) {
                                                 </td>
                                                 <td className="py-2.5 px-3 text-slate-500 text-[11px]">{e.department || '—'}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-700 text-[12px]">{fmtHrs(e.normal_hours)}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-indigo-500 font-semibold text-[12px]">{fmtHrs(e.duty_hours)}</td>
+                                                <td className="py-2.5 px-3 text-right tabular-nums text-cyan-600 font-semibold text-[12px]">{fmtHrs(e.leave_credit_hours)}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums text-amber-600 font-bold text-[12px]">{fmtHrs(e.ot_hours)}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums text-red-500 font-bold text-[12px]">{fmtHrs(e.missing_hours)}</td>
                                                 <td className="py-2.5 px-3 text-right tabular-nums font-bold text-[12px]"
@@ -813,7 +848,7 @@ function TeamOverviewMode({ onSelectPerson }) {
                                             </tr>
                                             {isExpanded && (
                                                 <tr className="bg-gradient-to-br from-indigo-50/40 to-slate-50/40 border-b border-indigo-100">
-                                                    <td colSpan={13} className="py-4 px-4">
+                                                    <td colSpan={15} className="py-4 px-4">
                                                         <RowDetailPanel
                                                             employee={e}
                                                             totalParts={totalParts}
@@ -924,13 +959,16 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
             // Backend artık gün-başına TEK toplam + ayrı alanlar gönderiyor
             // (normal/ot/missing/break_total/break_usage/break_overage).
             // İzin (saatlik/tam gün) normal'e dahil DEĞİL; ayrı 'leave' + 'leave_label'.
+            // Normal yalnız kart mesaisi; dış görev ve rapor ayrı dilim.
             const normal = d.normal != null ? r1(d.normal) : r1((d.worked || 0) - (d.ot || 0));
             return {
                 date: `${d.date?.slice(8)}/${d.date?.slice(5, 7)}`,
                 fullDate: d.date,
                 dayLabel: `${dayName} ${d.date?.slice(8)}`,
                 normal,
+                gorev: r1(d.duty),
                 izin: r1(d.leave),
+                rapor: r1(d.report),
                 leaveLabel: d.leave_label,
                 ot: r1(d.ot),
                 eksik: r1(d.missing),
@@ -1067,7 +1105,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     value={kpi.normal_completion_pct ?? kpi.efficiency_pct ?? 0}
                                     suffix="%" icon={Target}
                                     gradient="indigo" delta={kpi.vs_prev?.efficiency}
-                                    subtitle="Normal / Yükümlülük (cap 100)"
+                                    subtitle="Hedefe katkı / Yükümlülük (cap 100)"
                                     info={METRIC_EXPLANATIONS.efficiency}
                                 />
                                 <KPICard
@@ -1075,7 +1113,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                     value={kpi.total_completion_pct ?? 0}
                                     suffix="%" icon={TrendingUp}
                                     gradient="emerald"
-                                    subtitle="(Normal+Fazla Mesai) / Yükümlülük"
+                                    subtitle="(Hedefe katkı + Fazla Mesai) / Yükümlülük"
                                 />
                                 <KPICard
                                     title="Fazla Mesai / Yükümlülük"
@@ -1101,12 +1139,22 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                 />
                             </div>
 
-                            {/* 4 saat-bazlı mini KPI */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {/* 6 saat-bazlı mini KPI */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                 <KPICard mini
                                     title="Normal Mesai" value={kpi.normal_hours ?? Math.max(0, (kpi.total_worked_hours || 0) - (kpi.overtime_hours || 0))}
                                     suffix="sa" icon={Clock} gradient="indigo"
                                     subtitle={`Yükümlülük: ${kpi.prorated_target_hours || 0}sa`}
+                                />
+                                <KPICard mini
+                                    title="Dış Görev" value={kpi.duty_hours ?? 0}
+                                    suffix="sa" icon={Clock} gradient="violet"
+                                    subtitle="Hedefe katkı sayılır"
+                                />
+                                <KPICard mini
+                                    title="İzin/Rapor" value={kpi.leave_credit_hours ?? 0}
+                                    suffix="sa" icon={Clock} gradient="cyan"
+                                    subtitle="Hedefe katkı sayılır"
                                 />
                                 <KPICard mini
                                     title="Toplam Çalışma" value={kpi.total_worked_hours}
@@ -1143,7 +1191,7 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                     {/* Daily hours composed chart */}
                     <SectionCard
                         title="Günlük Çalışma Saatleri" icon={Clock} iconGradient="from-indigo-500 to-indigo-600"
-                        subtitle="Gün başına toplam: normal + izin + fazla mesai (üst üste) ve eksik — mola kırılımı için üzerine gelin"
+                        subtitle="Gün başına toplam: normal + dış görev + izin + rapor + fazla mesai (üst üste) ve eksik — mola kırılımı için üzerine gelin"
                     >
                         {dailyHours.length > 0 ? (
                             <div className="h-80">
@@ -1154,9 +1202,15 @@ function PersonalDetailMode({ selectedId, setSelectedId, onBack }) {
                                         <YAxis tick={{ fontSize: 10 }} domain={[0, 'auto']} unit="h" />
                                         <Tooltip content={<DailyHoursTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)' }} />
                                         <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                                        {/* Normal + İzin + FM üst üste (stackId a); Eksik ayrı çubuk (stackId b) */}
+                                        {/* Normal + Dış Görev + İzin + Rapor + FM üst üste (stackId a); Eksik ayrı çubuk (stackId b) */}
                                         <Bar dataKey="normal" name="Normal" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
+                                        {dailyHours.some((d) => d.gorev > 0) && (
+                                            <Bar dataKey="gorev" name="Dış Görev" stackId="a" fill="#a5b4fc" radius={[0, 0, 0, 0]} />
+                                        )}
                                         <Bar dataKey="izin" name="İzin" stackId="a" fill="#06b6d4" radius={[0, 0, 0, 0]} />
+                                        {dailyHours.some((d) => d.rapor > 0) && (
+                                            <Bar dataKey="rapor" name="Rapor" stackId="a" fill="#fb923c" radius={[0, 0, 0, 0]} />
+                                        )}
                                         <Bar dataKey="ot" name="Fazla Mesai" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                                         <Bar dataKey="eksik" name="Eksik" stackId="b" fill="#ef4444" radius={[3, 3, 0, 0]} />
                                         {/* Gün bazlı gerçek hedef (takvimden); hedefsiz gün null → çizgi kırılır */}

@@ -32,7 +32,8 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [] })
             .map(e => {
                 const workedTotal = e.total_worked_hours ?? e.worked_hours ?? 0;
                 const otHours = e.overtime_hours ?? e.total_overtime_hours ?? e.ot_hours ?? 0;
-                const normalHours = e.normal_hours ?? Math.max(0, workedTotal - otHours);
+                // Verim paydası hedefe katkı (normal + dış görev + izin/rapor).
+                const normalHours = e.contribution_hours ?? e.normal_hours ?? Math.max(0, workedTotal - otHours);
                 const proratedTarget = e.prorated_target_hours ?? e.target_hours ?? 0;
                 const fullTarget = e.target_hours ?? 0;
                 const hasTarget = (e.has_target ?? false) || fullTarget > 0 || proratedTarget > 0;
@@ -204,7 +205,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [] })
                                         { key: 'department', label: 'Departman' },
                                         { key: 'pureEfficiency', label: 'Salt Verim.' },
                                         { key: 'combinedEfficiency', label: 'Fazla Mesai Dahil' },
-                                        { key: 'normalHours', label: 'Net Mesai' },
+                                        { key: 'normalHours', label: 'Hedefe Katkı' },
                                         { key: 'overtimeHours', label: 'Fazla Mesai (h)' },
                                         { key: 'proratedTarget', label: 'Hedef (Şimdiye)' },
                                         { key: 'targetHours', label: 'Tam Hedef' },
@@ -286,7 +287,7 @@ export default function EfficiencyDetailModal({ open, onClose, employees = [] })
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Çalışan</th>
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">Salt Verim.</th>
                                                             <th className="text-left py-2 px-4 text-[9px] text-slate-400 uppercase font-bold w-32">Fazla Mesai Dahil</th>
-                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Net</th>
+                                                            <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Hedefe Katkı</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Fazla Mesai</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Hedef (Şimdiye)</th>
                                                             <th className="text-center py-2 px-4 text-[9px] text-slate-400 uppercase font-bold">Kayıp</th>

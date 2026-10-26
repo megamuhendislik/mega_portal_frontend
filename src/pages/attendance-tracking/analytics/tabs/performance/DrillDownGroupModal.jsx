@@ -106,6 +106,8 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                                     <th className="py-2 px-3 text-left text-[10px] uppercase font-black text-slate-500 tracking-wider">Çalışan</th>
                                     <th className="py-2 px-3 text-left text-[10px] uppercase font-black text-slate-500 tracking-wider">Departman</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Normal</th>
+                                    <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Dış Görev</th>
+                                    <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">İzin/Rapor</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">FM</th>
                                     <th className="py-2 px-3 text-right text-[10px] uppercase font-black text-slate-500 tracking-wider">Eksik</th>
                                     <th className="py-2 px-3 text-center text-[10px] uppercase font-black text-slate-500 tracking-wider">Yap.M.</th>
@@ -131,6 +133,8 @@ function DrillDownInner({ ids, employeeIndex, group, sortBy, setSortBy, onClose,
                                         </td>
                                         <td className="py-2 px-3 text-slate-500 text-[11px]">{e.department || '—'}</td>
                                         <td className="py-2 px-3 text-right tabular-nums text-[12px] font-bold text-slate-700">{fmtHrs(e.normal_hours)}</td>
+                                        <td className="py-2 px-3 text-right tabular-nums text-[12px] font-semibold text-indigo-500">{fmtHrs(e.duty_hours)}</td>
+                                        <td className="py-2 px-3 text-right tabular-nums text-[12px] font-semibold text-cyan-600">{fmtHrs(e.leave_credit_hours)}</td>
                                         <td className="py-2 px-3 text-right tabular-nums text-[12px] font-bold text-amber-600">{fmtHrs(e.ot_hours)}</td>
                                         <td className="py-2 px-3 text-right tabular-nums text-[12px] font-bold text-red-500">{fmtHrs(e.missing_hours)}</td>
                                         <td className="py-2 px-3 text-center tabular-nums text-[11px] font-black" style={{ color: levelColor(e.normal_completion_pct ?? e.efficiency_pct ?? 0) }}>

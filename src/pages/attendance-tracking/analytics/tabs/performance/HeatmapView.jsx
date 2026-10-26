@@ -140,7 +140,10 @@ export default function HeatmapView({ employees, onSelectPerson }) {
                                         );
                                     })}
                                     <td className="py-1.5 px-2 text-right text-[10px] text-slate-500 tabular-nums whitespace-nowrap">
-                                        N {fmtHrs(e.normal_hours)} · F {fmtHrs(e.ot_hours)} · E {fmtHrs(e.missing_hours)}
+                                        N {fmtHrs(e.normal_hours)}
+                                        {(e.duty_hours || 0) > 0 && ` · G ${fmtHrs(e.duty_hours)}`}
+                                        {(e.leave_credit_hours || 0) > 0 && ` · İ ${fmtHrs(e.leave_credit_hours)}`}
+                                        {' '}· F {fmtHrs(e.ot_hours)} · E {fmtHrs(e.missing_hours)}
                                     </td>
                                 </tr>
                             ))}

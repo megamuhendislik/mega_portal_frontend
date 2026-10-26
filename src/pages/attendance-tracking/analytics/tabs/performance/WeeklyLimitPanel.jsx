@@ -175,7 +175,7 @@ function PersonRow({ row, isPeakHighlight }) {
                 {/* Sağ: Sparkline */}
                 <div className="col-span-12 lg:col-span-5">
                     <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                        Haftalık OT (kırmızı kesik = limit)
+                        Haftalık OT, onaylı + bekleyen (kırmızı kesik = limit)
                     </div>
                     <Sparkline weeks={row.weeks} limit={limit} peakValue={stats.peak_weekly_ot} />
                 </div>
@@ -184,7 +184,7 @@ function PersonRow({ row, isPeakHighlight }) {
             {/* Alt: metric chips */}
             <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap">
                 <MetricChip label="Normal" value={totals.normal_hours} suffix="sa" color="indigo" icon={Clock} />
-                <MetricChip label="OT" value={totals.ot_hours} suffix="sa" color="amber" icon={TrendingUp} />
+                <MetricChip label="Onaylı OT" value={totals.ot_hours} suffix="sa" color="amber" icon={TrendingUp} />
                 <MetricChip label="Eksik" value={totals.missing_hours} suffix="sa" color="red" icon={AlertTriangle} />
                 <MetricChip label="Çalışılan iş günü" value={totals.worked_weekdays} color="slate" />
                 <MetricChip label="Ort. günlük normal" value={stats.avg_daily_normal} suffix="sa" color="emerald" />
@@ -242,7 +242,7 @@ function DepartmentRow({ row }) {
             </div>
             <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap">
                 <MetricChip label="Ort. Normal" value={row.avg_normal_hours} suffix="sa" color="indigo" icon={Clock} />
-                <MetricChip label="Ort. OT" value={row.avg_ot_hours} suffix="sa" color="amber" icon={TrendingUp} />
+                <MetricChip label="Ort. Onaylı OT" value={row.avg_ot_hours} suffix="sa" color="amber" icon={TrendingUp} />
                 <MetricChip label="Ort. Eksik" value={row.avg_missing_hours} suffix="sa" color="red" icon={AlertTriangle} />
                 <MetricChip label="Ort. günlük normal" value={row.avg_daily_normal} suffix="sa" color="emerald" />
             </div>
@@ -449,7 +449,7 @@ function CompareView({ data, weeksList }) {
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-slate-500">Toplam OT</span>
+                                            <span className="text-slate-500">Toplam onaylı OT</span>
                                             <span className="font-bold tabular-nums">
                                                 {(isDept ? r.avg_ot_hours : totals.ot_hours)?.toFixed(1)}sa
                                             </span>

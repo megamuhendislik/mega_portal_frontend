@@ -16,8 +16,10 @@ import {
  *  - onClose: () => void
  *  - day: {
  *      date: 'YYYY-MM-DD',
- *      worked: number,        // normal + ot (izin HARİÇ)
- *      normal?: number,
+ *      worked: number,        // normal + dış görev + rapor + ot (izin HARİÇ)
+ *      normal?: number,       // yalnız kart mesaisi
+ *      duty?: number,         // dış görev satırı (saat)
+ *      report?: number,       // rapor / hastane / özel izin satırı (saat)
  *      ot: number,
  *      missing?: number,
  *      leave?: number,        // saatlik/tam gün izin kredisi (saat)
@@ -84,10 +86,12 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
     const hasTarget = target > 0;
     // Backend gün-başına toplam alanları gönderiyor (normal/missing/break_*)
     const normal = day?.normal != null ? day.normal : Math.max(0, worked - ot);
+    const duty = day?.duty ?? 0;
+    const report = day?.report ?? 0;
     // İzin (saatlik mazeret / tam gün) çalışma değildir ama hedefi karşılar.
     const leave = day?.leave ?? 0;
     const leaveLabel = day?.leave_label || 'İzin';
-    const covered = normal + leave;
+    const covered = normal + duty + report + leave;
     const deficit = day?.missing != null ? day.missing : Math.max(0, target - covered);
     const efficiency = hasTarget ? Math.round((covered / target) * 100) : 0;
     const barTotal = Math.max(target, covered + ot + deficit) || 1;
@@ -173,7 +177,7 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 </p>
                             </div>
 
-                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4" title="(Normal + İzin) / Hedef">
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4" title="(Normal + Dış Görev + İzin + Rapor) / Hedef">
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <Target size={11} className="text-emerald-600" />
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">Doluluk</span>
@@ -251,7 +255,7 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
                                     Çalışma Dağılımı
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-700 tabular-nums" title="(Normal + İzin) / Hedef">
+                                <span className="text-[10px] font-bold text-slate-700 tabular-nums" title="(Normal + Dış Görev + İzin + Rapor) / Hedef">
                                     {formatHours(covered)} / {hasTarget ? formatHours(target) : 'hedef yok'}
                                 </span>
                             </div>
@@ -261,6 +265,20 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                         className="h-full bg-indigo-500 transition-all"
                                         style={{ width: barWidth(normal) }}
                                         title={`Normal: ${formatHours(normal)}`}
+                                    />
+                                )}
+                                {duty > 0 && (
+                                    <div
+                                        className="h-full bg-indigo-300 transition-all"
+                                        style={{ width: barWidth(duty) }}
+                                        title={`Dış Görev: ${formatHours(duty)}`}
+                                    />
+                                )}
+                                {report > 0 && (
+                                    <div
+                                        className="h-full bg-orange-400 transition-all"
+                                        style={{ width: barWidth(report) }}
+                                        title={`Rapor: ${formatHours(report)}`}
                                     />
                                 )}
                                 {leave > 0 && (
@@ -289,6 +307,16 @@ export default function DayDetailDrawer({ open, onClose, day, employeeName, cale
                                 <span className="flex items-center gap-1 text-slate-500">
                                     <span className="w-2 h-2 rounded-sm bg-indigo-500" /> Normal {formatHours(normal)}
                                 </span>
+                                {duty > 0 && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                        <span className="w-2 h-2 rounded-sm bg-indigo-300" /> Dış Görev {formatHours(duty)}
+                                    </span>
+                                )}
+                                {report > 0 && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                        <span className="w-2 h-2 rounded-sm bg-orange-400" /> Rapor {formatHours(report)}
+                                    </span>
+                                )}
                                 {leave > 0 && (
                                     <span className="flex items-center gap-1 text-slate-500">
                                         <span className="w-2 h-2 rounded-sm bg-cyan-500" /> {leaveLabel} {formatHours(leave)}

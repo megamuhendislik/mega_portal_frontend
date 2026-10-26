@@ -432,8 +432,13 @@ const YearlyView = ({ data }) => {
 
     const simplifiedData = useMemo(() => data.map(m => ({
         ...m,
+        // İzin dilimi özel izni de taşır; tooltip ikisini ayrı gösterir
+        leave_bar: parseFloat(((m.leave || 0) + (m.special_leave || 0)).toFixed(2)),
         total_mesai: parseFloat(((m.ot_approved || 0) + (m.ot_pending || 0) + (m.ot_potential || 0)).toFixed(1)),
     })), [data]);
+    // Dış görev / rapor dilimi yalnız yılda bir değer varsa çizilir (lejant kalabalığı olmasın)
+    const hasDuty = simplifiedData.some(m => m.duty > 0);
+    const hasHealthReport = simplifiedData.some(m => m.health_report > 0);
 
     const CustomXTick = ({ x, y, payload: tickPayload }) => {
         const item = simplifiedData.find(d => d.name === tickPayload?.value);
@@ -470,8 +475,10 @@ const YearlyView = ({ data }) => {
         const { x, y, width, index } = props;
         const item = simplifiedData[index];
         if (!item?._isPast && !item?._isCurrent) return null;
-        // İzin eskiden normal içindeydi; ayrı dilim olunca toplam etiketi korunur
-        const totalHours = Math.round((item.normal || 0) + (item.leave || 0) + (item.total_mesai || 0));
+        // İzin, dış görev ve rapor eskiden normal içindeydi; ayrı dilim olunca toplam etiketi korunur
+        const totalHours = Math.round(
+            (item.normal || 0) + (item.duty || 0) + (item.leave_bar || 0) + (item.health_report || 0) + (item.total_mesai || 0)
+        );
         if (totalHours <= 0) return null;
         return (
             <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={isMobile ? 8 : 9} fill="#64748B" fontWeight="700">
@@ -502,10 +509,28 @@ const YearlyView = ({ data }) => {
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Normal</span>
                         <span className="font-bold">{fmtHM(d?.normal)}</span>
                     </div>
+                    {d?.duty > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />Dış Görev</span>
+                            <span className="font-bold">{fmtHM(d.duty)}</span>
+                        </div>
+                    )}
                     {d?.leave > 0 && (
                         <div className="flex items-center justify-between text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />İzin</span>
                             <span className="font-bold">{fmtHM(d.leave)}</span>
+                        </div>
+                    )}
+                    {d?.special_leave > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />Özel İzin</span>
+                            <span className="font-bold">{fmtHM(d.special_leave)}</span>
+                        </div>
+                    )}
+                    {d?.health_report > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-400" />Rapor</span>
+                            <span className="font-bold">{fmtHM(d.health_report)}</span>
                         </div>
                     )}
                     <div className="flex items-center justify-between text-xs">
@@ -548,7 +573,9 @@ const YearlyView = ({ data }) => {
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
 
                     <Bar yAxisId="left" dataKey="normal" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} name="Normal (Sa)" shape={<CustomBar />} label={renderBarLabel} />
-                    <Bar yAxisId="left" dataKey="leave" stackId="a" fill="#06b6d4" name="İzin (Sa)" shape={<CustomBar />} />
+                    {hasDuty && <Bar yAxisId="left" dataKey="duty" stackId="a" fill="#818cf8" name="Dış Görev (Sa)" shape={<CustomBar />} />}
+                    <Bar yAxisId="left" dataKey="leave_bar" stackId="a" fill="#06b6d4" name="İzin (Sa)" shape={<CustomBar />} />
+                    {hasHealthReport && <Bar yAxisId="left" dataKey="health_report" stackId="a" fill="#fb923c" name="Rapor (Sa)" shape={<CustomBar />} />}
                     <Bar yAxisId="left" dataKey="total_mesai" stackId="a" fill="#10b981" name="Mesai (Sa)" shape={<CustomBar />} />
                     <Bar yAxisId="left" dataKey="missing" stackId="a" fill="#fb7185" radius={[4, 4, 0, 0]} name="Eksik (Sa)" shape={<CustomBar />} />
 
@@ -598,6 +625,10 @@ const AttendanceAnalyticsChart = ({ logs, currentYear = Number(getIstanbulToday(
                             normal: isBeforeStart ? 0 : m.normal_hours,
                             // İzin kredisi normal_hours'tan ayrı gelir (eski backend: alan yok → 0, izin normal içinde)
                             leave: isBeforeStart ? 0 : (m.leave_hours ?? 0),
+                            // Dış görev / rapor / özel izin de normal_hours'tan ayrı gelir (eski backend: alan yok → 0)
+                            duty: isBeforeStart ? 0 : (m.duty_hours ?? 0),
+                            health_report: isBeforeStart ? 0 : (m.health_report_hours ?? 0),
+                            special_leave: isBeforeStart ? 0 : (m.special_leave_hours ?? 0),
                             overtime: isBeforeStart ? 0 : m.overtime_hours,
                             ot_approved: isBeforeStart ? 0 : (m.ot_approved_hours || 0),
                             ot_pending: isBeforeStart ? 0 : (m.ot_pending_hours || 0),

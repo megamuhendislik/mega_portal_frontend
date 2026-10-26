@@ -111,8 +111,8 @@ export const METRIC_EXPLANATIONS = {
         title: 'Mesai Doluluğu (Normal)',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> Normal Mesai Saati ÷ Pro-rata Yükümlülük × 100, capped 100</p>
-                <p className="text-slate-400">Fazla Mesai HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
+                <p><strong className="text-white">Formül:</strong> (Normal + Dış Görev + İzin/Rapor) ÷ Pro-rata Yükümlülük × 100, capped 100</p>
+                <p className="text-slate-400">Normal yalnız kart mesaisidir. Dış görev ve izin/rapor hedefe katkı sayılır. Fazla Mesai HARİÇ. Yükümlülük = devam eden dönemde geçen iş günlerinin toplam saat hedefi.</p>
                 <p className="text-slate-400">"Toplam Yapılan Mesai" (N+Fazla Mesai) ve "Fazla Mesai/Yükümlülük", "Eksik/Yükümlülük" ayrı metrikler — Mesai Analizi tabında detay.</p>
             </>
         ),
@@ -121,8 +121,8 @@ export const METRIC_EXPLANATIONS = {
         title: 'Toplam Çalışma',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> Σ (Normal Saat + Onaylı Fazla Mesai Saati)</p>
-                <p className="text-slate-400">Her günkü ilk giriş — son çıkış arasındaki net çalışma süresi.</p>
+                <p><strong className="text-white">Formül:</strong> Normal + Dış Görev + İzin/Rapor + Onaylı Fazla Mesai</p>
+                <p className="text-slate-400">Mesai Takibi'ndeki toplam iş ile aynı.</p>
                 <p className="text-slate-400">Mola süreleri düşülür, fazla mesai ayrıca eklenir.</p>
             </>
         ),
@@ -131,9 +131,9 @@ export const METRIC_EXPLANATIONS = {
         title: 'Fazla Mesai',
         content: (
             <>
-                <p><strong className="text-white">Formül:</strong> Σ (calculated_overtime_seconds ÷ 3600)</p>
-                <p className="text-slate-400">Planlanan mesai saati üstünde geçirilen süre.</p>
-                <p className="text-slate-400">Potansiyel, planlı ve manuel kaynaklar ayrı ayrı hesaplanır.</p>
+                <p><strong className="text-white">Formül:</strong> Σ onaylı fazla mesai talebi süresi ÷ 3600</p>
+                <p className="text-slate-400">Mesai Takibi ve bordro ile aynı kaynak.</p>
+                <p className="text-slate-400">Onay bekleyen ve talep edilmemiş süre dahil değil.</p>
             </>
         ),
     },
