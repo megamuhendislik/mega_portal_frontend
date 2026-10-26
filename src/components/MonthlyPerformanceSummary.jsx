@@ -315,11 +315,13 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                     // MWS chain carry-over (consistent with cumulative balance)
                     prevMonthCarryOver: ((periodSummary.cumulative_balance_seconds || 0) / 3600).toFixed(1),
                     prevMonthCarryOverDisplay: fmtSec(periodSummary.cumulative_balance_seconds || 0),
+                    prevMonthCarryOverSec: periodSummary.cumulative_balance_seconds || 0,
 
                     // TOPLAM BAKİYE = devreden + cari ay OT Dahil (-eksik + onaylı OT)
                     // Ensures mathematical consistency: carry + current month deficit-based balance = total
                     totalNetBalance: (((periodSummary.cumulative_balance_seconds || 0) + (-(periodSummary.missing_seconds || 0) + (periodSummary.overtime_seconds || 0))) / 3600).toFixed(1),
                     totalNetBalanceDisplay: fmtSec((periodSummary.cumulative_balance_seconds || 0) + (-(periodSummary.missing_seconds || 0) + (periodSummary.overtime_seconds || 0))),
+                    totalNetBalanceSec: (periodSummary.cumulative_balance_seconds || 0) + (-(periodSummary.missing_seconds || 0) + (periodSummary.overtime_seconds || 0)),
 
                     // YTD values (ytd_target_to_date uses past_target for current month)
                     ytdTargetHours: ((periodSummary.cumulative.ytd_target_to_date_seconds ?? periodSummary.cumulative.ytd_target_seconds) / 3600).toFixed(1),
@@ -651,11 +653,11 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                         {/* Top Metrics Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 relative z-10">
                             {/* 1. Devreden (Carry Over) -> Modified to "Previous Month" context */}
-                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
+                            <div className={`p-5 rounded-2xl border ${stats.cumulative.prevMonthCarryOverSec < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-emerald-50/50 border-emerald-100'} hover:shadow-lg transition-shadow duration-300`}>
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-widest">BİR ÖNCEKİ AYDAN DEVREDEN</div>
                                 <div className="flex items-baseline gap-1">
-                                    <span className={`text-2xl font-black tracking-tighter ${parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                        {parseFloat(stats.cumulative.prevMonthCarryOver) < 0 ? '' : '+'}{fmtHours(stats.cumulative.prevMonthCarryOver)}
+                                    <span className={`text-2xl font-black tracking-tighter ${stats.cumulative.prevMonthCarryOverSec < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {stats.cumulative.prevMonthCarryOverSec < 0 ? '' : '+'}{stats.cumulative.prevMonthCarryOverDisplay}
                                     </span>
                                 </div>
                             </div>
@@ -681,14 +683,14 @@ const MonthlyPerformanceSummary = ({ logs, periodSummary, onMonthSelect }) => {
                             </div>
 
                             {/* 4. YTD Net Balance (Big Result) */}
-                            <div className={`p-5 rounded-2xl border ${parseFloat(stats.cumulative.totalNetBalance) >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-emerald-500/20 shadow-xl' : 'bg-gradient-to-br from-rose-500 to-red-600 border-rose-500 text-white shadow-rose-500/20 shadow-xl'} flex flex-col justify-between relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}>
+                            <div className={`p-5 rounded-2xl border ${stats.cumulative.totalNetBalanceSec >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-emerald-500/20 shadow-xl' : 'bg-gradient-to-br from-rose-500 to-red-600 border-rose-500 text-white shadow-rose-500/20 shadow-xl'} flex flex-col justify-between relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}>
                                 <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 group-hover:rotate-0 transition-transform duration-500">
                                     <Scale size={64} />
                                 </div>
                                 <div className="text-[10px] uppercase font-bold text-white/80 mb-2 tracking-widest relative z-10">TOPLAM BAKİYE</div>
                                 <div className="flex items-baseline gap-1 relative z-10">
                                     <span className="text-3xl font-black tracking-tighter">
-                                        {parseFloat(stats.cumulative.totalNetBalance) > 0 ? '+' : ''}{fmtHours(stats.cumulative.totalNetBalance)}
+                                        {stats.cumulative.totalNetBalanceSec > 0 ? '+' : ''}{stats.cumulative.totalNetBalanceDisplay}
                                     </span>
                                 </div>
                             </div>
