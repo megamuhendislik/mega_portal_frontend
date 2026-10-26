@@ -39,6 +39,11 @@ export function findRequestRow(lists, deepLink) {
     const table = TABLE_OF[deepLink.type];
     for (const list of lists) {
         for (const row of list || []) {
+            // Dış görev satırının içine alınmış FM talebi
+            if (table === 'overtime') {
+                const nested = (row._dutyOvertime || []).find(c => Number(c?.id ?? c?.request_id) === deepLink.id);
+                if (nested) return nested;
+            }
             if (TABLE_OF[rowType(row)] !== table) continue;
             if (Number(row.id ?? row.request_id) === deepLink.id) return row;
             if ((row._mergedSegments || []).some(s => Number(s?.id) === deepLink.id)) return row;

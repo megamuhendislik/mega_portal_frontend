@@ -8,6 +8,7 @@ import { Tooltip, Modal, message } from 'antd';
 import api from '../../services/api';
 import { useRequestDeepLink } from '../../hooks/useRequestDeepLink';
 import { DETAIL_ENDPOINTS } from '../../utils/requestDeepLink';
+import { nestDutyOvertime } from '../../utils/dutyOvertimeNesting';
 import ModalOverlay from '../../components/ui/ModalOverlay';
 import ExpandableRequestRow from '../../components/requests/ExpandableRequestRow';
 import CreateRequestModal from '../../components/CreateRequestModal';
@@ -450,7 +451,7 @@ const MyRequestsTab = ({ onDataChange, refreshTrigger, searchText = '', deepLink
             total_days: r.total_days,
         }));
         items.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
-        return items;
+        return nestDutyOvertime(items);
     }, [requests, overtimeRequests, mealRequests, cardlessEntryRequests, healthReports, specialLeaves, requestTypes, currentUserInfo, currentUserEmployeeId, handleResubmitOvertime]);
 
     const filtered = useMemo(() => {

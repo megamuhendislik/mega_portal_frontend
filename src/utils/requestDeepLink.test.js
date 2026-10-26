@@ -31,6 +31,14 @@ test('request_id ve birleştirilmiş FM segmentleri de bulunur', () => {
     assert.equal(findRequestRow([null, undefined], { type: 'OVERTIME', id: 1 }), null);
 });
 
+test('dış görev satırının içindeki FM talebi de bulunur', () => {
+    const child = { id: 444826, type: 'OVERTIME', related_leave_request: 1307 };
+    const duty = { id: 1307, type: 'EXTERNAL_DUTY', _dutyOvertime: [child] };
+    assert.equal(findRequestRow([[duty]], { type: 'OVERTIME', id: 444826 }), child);
+    assert.equal(findRequestRow([[duty]], { type: 'EXTERNAL_DUTY', id: 1307 }), duty);
+    assert.equal(findRequestRow([[duty]], { type: 'OVERTIME', id: 1307 }), null);
+});
+
 test('detay uçları', () => {
     assert.equal(DETAIL_ENDPOINTS.EXTERNAL_DUTY(4), '/leave/requests/4/');
     assert.equal(DETAIL_ENDPOINTS.HOSPITAL_VISIT(4), '/health-reports/4/');

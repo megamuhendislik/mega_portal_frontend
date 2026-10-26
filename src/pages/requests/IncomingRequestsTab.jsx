@@ -18,6 +18,7 @@ import { confirmDutyOtLimit } from '../../components/requests/confirmDutyOtLimit
 import { interpretApprovalResponse, isAwaitingAdmin } from '../../utils/overtimeApprovalStage';
 import { format } from 'date-fns';
 import { useRequestDeepLink } from '../../hooks/useRequestDeepLink';
+import { nestDutyOvertime } from '../../utils/dutyOvertimeNesting';
 const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigger, filterType, primaryCount = 0, secondaryCount = 0, parentSearchText = '', sharedPrimarySubordinates, sharedSecondarySubordinates, deepLink = null, onDeepLinkConsumed }) => {
     // Data states
     const [incomingRequests, setIncomingRequests] = useState([]);
@@ -482,7 +483,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
 
     // --- ALL TEAM: normalized data from all_team endpoint ---
     const allTeamNormalized = useMemo(() => {
-        return (allTeamData || []).map(r => ({
+        return nestDutyOvertime((allTeamData || []).map(r => ({
             ...r,
             id: r.request_id || r.id,
             employee_name: r.employee_name || '',
@@ -495,7 +496,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             _source: 'ALL_TEAM',
             _isSubstitute: false,
             _principalName: '',
-        }));
+        })));
     }, [allTeamData]);
 
     // --- PENDING ACTIONABLE: items where I can approve/reject (all_team is_actionable + substitutes) ---
@@ -635,7 +636,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
             items.push(buildItem(r, 'CARDLESS_ENTRY', { start_date: r.date }));
         });
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
-        return items;
+        return nestDutyOvertime(items);
     }, [substituteData]);
 
     // Notify parent about pending count
@@ -714,7 +715,7 @@ const IncomingRequestsTab = ({ onPendingCountChange, onDataChange, refreshTrigge
         });
 
         items.sort((a, b) => new Date(b.start_date || b.date || b.created_at) - new Date(a.start_date || a.date || a.created_at));
-        return items;
+        return nestDutyOvertime(items);
     }, [allTeamNormalized, incomingRequests, substituteData, teamHistoryRequests, secondarySubIds, directSubordinateIds]);
 
     // --- SECONDARY TEAM: Only OVERTIME requests where manager_type is SECONDARY ---

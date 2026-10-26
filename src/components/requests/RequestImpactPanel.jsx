@@ -15,6 +15,12 @@ import {
     buildApprovalStages,
     resolveStatusKey,
 } from '../../utils/overtimeApprovalStage';
+import { overtimeMinutes } from '../../utils/dutyOvertimeNesting';
+
+const NESTED_OT_STATUS_LABELS = {
+    APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', CANCELLED: 'İptal Edildi',
+    [ADMIN_REJECTED_STATUS]: ADMIN_REJECTED_LABEL,
+};
 
 // ─── Static Tailwind color lookup (avoids dynamic class purging) ──────────
 const sectionColors = {
@@ -529,6 +535,31 @@ const RequestImpactPanel = ({ req, mode = 'incoming', onApprove, onReject }) => 
                                     <InfoRow label="Normal Mesai" value={dwi.total_work_minutes > 0 ? `${Math.floor(dwi.total_work_minutes / 60)}s ${dwi.total_work_minutes % 60}dk` : '-'} />
                                     <InfoRow label="Fazla Mesai" value={totalOtMin > 0 ? `${Math.floor(totalOtMin / 60)}s ${totalOtMin % 60}dk` : '-'} />
                                 </>
+                            )}
+
+                            {/* Bu dış görevden doğan FM talepleri (listede ayrı satır olarak gösterilmez) */}
+                            {req._dutyOvertime?.length > 0 && (
+                                <div className="mt-2">
+                                    <span className="text-[10px] font-bold text-amber-600 uppercase mb-1 block">Fazla Mesai Talebi</span>
+                                    <div className="space-y-1">
+                                        {req._dutyOvertime.map((ot, i) => {
+                                            const otMin = overtimeMinutes(ot);
+                                            const statusKey = resolveStatusKey(ot);
+                                            return (
+                                                <div key={ot.id ?? ot.request_id ?? i} className="flex items-center justify-between gap-2 text-xs bg-white p-2 rounded-lg border border-amber-100">
+                                                    <span className="text-slate-600 font-medium">{formatDate(ot.date)}</span>
+                                                    <span className="text-amber-700 font-bold">
+                                                        {String(ot.start_time || '').substring(0, 5) || '--:--'} - {String(ot.end_time || '').substring(0, 5) || '--:--'}
+                                                    </span>
+                                                    <span className="text-amber-700 font-bold">{Math.floor(otMin / 60)}s {otMin % 60}dk</span>
+                                                    <span className={statusKey === 'APPROVED' ? 'text-emerald-600 font-bold' : 'text-slate-500 font-medium'}>
+                                                        {NESTED_OT_STATUS_LABELS[statusKey] || statusKey}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             )}
 
                             {/* Pending: gün-bazlı çalışma — öğle DÜŞÜLMÜŞ net mesai (preview_duty_hours sonucu) */}

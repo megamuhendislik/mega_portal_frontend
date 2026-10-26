@@ -20,6 +20,7 @@ import {
     resolveStatusKey,
     willNeedAdminApproval,
 } from '../../utils/overtimeApprovalStage';
+import { nestedApprovedOvertimeMinutes } from '../../utils/dutyOvertimeNesting';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const formatDate = (dateString) => {
@@ -395,15 +396,25 @@ const DurationCell = ({ req }) => {
             );
         }
         // Fallback for pending requests: show gross from segments
+        // Ekip listesinde duty_work_info gelmez; içine alınmış onaylı FM brüt sürenin yanında gösterilir
+        const nestedOtMin = nestedApprovedOvertimeMinutes(req);
+        const withNestedOt = (gross) => (nestedOtMin > 0 ? (
+            <span className="text-xs text-indigo-700">
+                <span className="font-bold">{gross}</span>
+                <span className="text-slate-300 mx-1">·</span>
+                <span className="font-bold text-amber-600">{formatMinutesLabel(nestedOtMin)}</span>
+                <span className="text-amber-400 font-normal"> Fazla Mesai</span>
+            </span>
+        ) : <span className="text-xs font-bold text-indigo-700">{gross}</span>);
         const segTimes = getSegmentTimes(req);
         if (segTimes?.totalMinutes > 0) {
-            return <span className="text-xs font-bold text-indigo-700">{formatMinutesLabel(segTimes.totalMinutes)}</span>;
+            return withNestedOt(formatMinutesLabel(segTimes.totalMinutes));
         }
         if (segTimes?.start && segTimes?.end) {
-            return <span className="text-xs font-bold text-indigo-700">{calculateDuration(segTimes.start, segTimes.end)}</span>;
+            return withNestedOt(calculateDuration(segTimes.start, segTimes.end));
         }
         if (req.start_time && req.end_time) {
-            return <span className="text-xs font-bold text-indigo-700">{calculateDuration(req.start_time, req.end_time)}</span>;
+            return withNestedOt(calculateDuration(req.start_time, req.end_time));
         }
         return <span className="text-xs text-slate-400">-</span>;
     }
