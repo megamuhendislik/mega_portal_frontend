@@ -1424,6 +1424,13 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               </div>
             )}
 
+            {requestType === 'MEAL' && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-600">Tarih</span>
+                <span className="text-sm text-slate-800">{formatDate(request.date)}</span>
+              </div>
+            )}
+
             {requestType === 'CARDLESS_ENTRY' && (
               <>
                 <div className="flex items-center justify-between">
@@ -1448,7 +1455,7 @@ const RequestDetailModal = ({ isOpen, onClose, request, requestType: rawRequestT
               const isLong = text.length > 200;
               return (
                 <div className="pt-3 border-t border-slate-200">
-                  <span className="text-sm font-medium text-slate-600 block mb-1">Gerekçe</span>
+                  <span className="text-sm font-medium text-slate-600 block mb-1">{requestType === 'MEAL' ? 'Yemek Tercihi / Açıklama' : 'Gerekçe'}</span>
                   <p className={`text-sm text-slate-700 whitespace-pre-wrap break-words ${isLong && !showFullReason ? 'line-clamp-3' : ''}`}>
                     {text}
                   </p>

@@ -477,7 +477,7 @@ const MealPanel = ({ req, mode }) => (
         <Section title="Kapsam" icon={<Utensils size={14} className="text-emerald-600" />} color="emerald">
             <InfoRow label="Tarih" value={formatDate(req.date || req.start_date)} />
             {(req.reason || req.description) && (
-                <InfoRow label="Açıklama" value={req.reason || req.description} />
+                <InfoRow label="Yemek Tercihi / Açıklama" value={req.reason || req.description} />
             )}
         </Section>
 
