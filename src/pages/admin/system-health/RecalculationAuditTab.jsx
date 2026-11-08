@@ -17,6 +17,12 @@ import Phase2IssuePanel from './Phase2IssuePanel';
 import IntegrityFindingsPanel from './IntegrityFindingsPanel';
 import SanityCheckPanel from './SanityCheckPanel';
 import {
+    FrcHardSuggestionPanel,
+    FrcHardSuggestionChecklist,
+    FrcHardApplyResult,
+} from './FrcHardSuggestionPanel';
+import { buildApplyStagedBody, collectFrcHardSuggestions } from './frcHardSuggestions';
+import {
     FRC_POLL_INTERVAL_MS,
     buildFrcGroupStatusPath,
     buildFrcApplyConfirmation,
@@ -227,6 +233,8 @@ export default function RecalculationAuditTab() {
     // Full recalculation state
     const [frcLoading, setFrcLoading] = useState(false);
     const [frcResult, setFrcResult] = useState(null);
+    const [selectedHardIds, setSelectedHardIds] = useState(new Set());
+    const [hardApplyResult, setHardApplyResult] = useState(null);
     const [frcError, setFrcError] = useState(null);
     const [frcProgress, setFrcProgress] = useState(null);  // canlı ilerleme barı (TYR)
     const [frcParallel, setFrcParallel] = useState(null);  // paralel chunk'lar (N grup, N bar)
@@ -655,7 +663,12 @@ export default function RecalculationAuditTab() {
                 }
             }
             const { count: protectedDaysSkipped } = getProtectedDayInfo(frcResult);
-            if (!window.confirm(buildFrcApplyConfirmation(protectedDaysSkipped))) return;
+            const hardSelectedCount = selectedHardIds.size;
+            const confirmText = buildFrcApplyConfirmation(protectedDaysSkipped)
+                + (hardSelectedCount > 0
+                    ? `\n\n${hardSelectedCount} onaylı talep değişikliği de uygulanacak.`
+                    : '');
+            if (!window.confirm(confirmText)) return;
         }
 
         const operationEpoch = frcOperationFence.current.begin();
@@ -666,7 +679,11 @@ export default function RecalculationAuditTab() {
         setFrcError(null);
         setFrcObservationEnded(false);
         setFrcProgress(null);
-        if (mode !== 'apply') setFrcGroupIdentity(null);
+        if (mode !== 'apply') {
+            setFrcGroupIdentity(null);
+            setSelectedHardIds(new Set());
+            setHardApplyResult(null);
+        }
         // Apply: sim sonucunu silme — staged apply
         // frcResult.run_id'ye ihtiyaç duyar; fail durumunda kullanıcı eski raporu görebilsin.
         if (!(mode === 'apply' && frcResult?.run_id)) {
@@ -688,7 +705,7 @@ export default function RecalculationAuditTab() {
                 try {
                     const stagedRes = await api.post(
                         '/system/health-check/apply-staged/',
-                        { run_id: frcResult.run_id },
+                        buildApplyStagedBody(frcResult.run_id, selectedHardIds),
                         { timeout: 60000 });
                     if (!isCurrentOperation()) return;
                     // apply-staged async chunk task'ları döndürür → hepsini izle.
@@ -778,6 +795,18 @@ export default function RecalculationAuditTab() {
                     });
                     setFrcObservationEnded(false);
                     setFrcLoading(false);
+                    if (selectedHardIds.size > 0) {
+                        try {
+                            const hardRes = await api.get(
+                                '/system/health-check/apply-staged-result/',
+                                { params: { run_id: frcResult.run_id }, timeout: 60000 },
+                            );
+                            if (isCurrentOperation()) setHardApplyResult(hardRes.data);
+                        } catch (hardErr) {
+                            setFrcError('Uygulama sonucu alınamadı: '
+                                + (hardErr.response?.data?.error || hardErr.message));
+                        }
+                    }
                     return;
                 } catch (stagedErr) {
                     if (!isCurrentOperation()) return;
@@ -2228,9 +2257,24 @@ export default function RecalculationAuditTab() {
                                     <MagnifyingGlassIcon className="w-4 h-4" />
                                     Değişiklikleri Doğrula (Tekrar Kontrol)
                                 </button>
+                                <FrcHardApplyResult data={hardApplyResult} />
                             </div>
                         )}
                     </div>
+
+                    {frcResult.mode === 'dry_run' && (
+                        <FrcHardSuggestionChecklist
+                            items={collectFrcHardSuggestions(frcResult)}
+                            selectedIds={selectedHardIds}
+                            disabled={frcLoading}
+                            onToggle={(id) => setSelectedHardIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(id)) next.delete(id); else next.add(id);
+                                return next;
+                            })}
+                            onClear={() => setSelectedHardIds(new Set())}
+                        />
+                    )}
 
                     {frcApplyBlockReason && (
                         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-300 rounded-lg text-red-800 text-sm">
@@ -2647,6 +2691,7 @@ export default function RecalculationAuditTab() {
                                                                                     empId={emp.id}
                                                                                     expanded={frcExpandedDays.has(`${emp.id}-${day.date}`)}
                                                                                     onToggle={() => toggleFrcDay(`${emp.id}-${day.date}`)}
+                                                                                    selectedHardIds={selectedHardIds}
                                                                                 />
                                                                             ))}
                                                                         </div>
@@ -3069,7 +3114,7 @@ const SRC_COLORS = {
 };
 
 // Tek gün kartı (Ay → Gün ağacında kullanılır). expanded/onToggle dışarıdan.
-function FrcDayCard({ day, empId, expanded, onToggle }) {
+function FrcDayCard({ day, empId, expanded, onToggle, selectedHardIds }) {
     // Kayıt yok fix (2026-06-24): değişmeyen günler slim snapshot (recs:[]) ile gelir —
     // rc/totaller saklı ama ağır detaylar boş → gün açılınca GERÇEK Attendance ve ham Gate
     // verisini on-demand çek (RAM-güvenli, salt-okunur, tek çalışan-gün).
@@ -3246,6 +3291,11 @@ function FrcDayCard({ day, empId, expanded, onToggle }) {
                             </div>
                         </div>
                     )}
+                    <FrcHardSuggestionPanel
+                        suggestions={day.request_hard_suggestions}
+                        gateEvents={gateEvents}
+                        selectedIds={selectedHardIds}
+                    />
                     {day.reqs?.length > 0 && (
                         <div>
                             <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Talepler</h6>

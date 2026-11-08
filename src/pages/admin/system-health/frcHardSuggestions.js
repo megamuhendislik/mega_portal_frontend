@@ -1,0 +1,87 @@
+// TYR hard mod: onaylı talep önerileri için saf yardımcılar.
+
+export const HARD_REJECT_LABELS = {
+    REQUEST_PINNED: 'Talepte otomatik düzeltme kapalı',
+    SUGGESTION_NOT_FOUND: 'Öneri artık geçerli değil',
+    SUGGESTION_CHANGED: 'Öneri değişti, yeniden simülasyon gerekli',
+    DAY_RECOMPUTED: 'Gün değişmiş, yeniden hesaplandı',
+    SOFT_FALLBACK: 'Gün kart düzeltmesi kapalı hesaplandı',
+    DAY_SKIPPED: 'Gün işlenmedi',
+};
+
+const STATUS_LABELS = { APPROVED: 'Onaylı', PENDING: 'Onay bekliyor' };
+const ACTION_LABELS = { UPDATE: 'Saat düzeltme', CANCEL: 'İptal' };
+
+export function fmtHm(seconds) {
+    const total = Math.round(Math.abs(Number(seconds) || 0));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+function fmtClock(value) {
+    return String(value || '').slice(0, 5);
+}
+
+export function fmtTimeRange(part) {
+    if (!part || !part.start_time) return '';
+    const dur = part.duration_seconds == null ? '' : ` (${fmtHm(part.duration_seconds)})`;
+    return `${fmtClock(part.start_time)}-${fmtClock(part.end_time)}${dur}`;
+}
+
+function fmtSigned(seconds) {
+    const n = Number(seconds) || 0;
+    if (n === 0) return '0:00';
+    return `${n < 0 ? '-' : '+'}${fmtHm(n)}`;
+}
+
+export function describeHardSuggestion(s) {
+    return {
+        statusLabel: STATUS_LABELS[s?.status] || s?.status || '',
+        actionLabel: ACTION_LABELS[s?.action] || s?.action || '',
+        oldText: fmtTimeRange(s?.old),
+        newText: s?.action === 'CANCEL' || !s?.new ? 'İptal' : fmtTimeRange(s.new),
+        effectText: fmtSigned(s?.monthly_effect_seconds),
+    };
+}
+
+export function collectFrcHardSuggestions(result) {
+    const rows = [];
+    const employees = Array.isArray(result?.employees) ? result.employees : [];
+    employees.forEach((emp) => {
+        (Array.isArray(emp?.days) ? emp.days : []).forEach((day) => {
+            (Array.isArray(day?.request_hard_suggestions) ? day.request_hard_suggestions : [])
+                .forEach((suggestion) => {
+                    rows.push({
+                        employeeId: emp.id,
+                        employeeName: emp.name || '',
+                        date: day.date,
+                        suggestion,
+                    });
+                });
+        });
+    });
+    rows.sort((a, b) => (
+        a.employeeName.localeCompare(b.employeeName, 'tr')
+        || String(a.date).localeCompare(String(b.date))
+        || (a.suggestion.request_id - b.suggestion.request_id)
+    ));
+    return rows;
+}
+
+export function buildApplyStagedBody(runId, selectedIds) {
+    const ids = selectedIds ? Array.from(selectedIds).sort() : [];
+    if (ids.length === 0) return { run_id: runId };
+    return { run_id: runId, approved_suggestion_ids: ids };
+}
+
+export function summarizeHardApplyResult(data) {
+    const applied = Array.isArray(data?.applied) ? data.applied : [];
+    const rejected = (Array.isArray(data?.rejected) ? data.rejected : []).map((r) => ({
+        ...r,
+        label: HARD_REJECT_LABELS[r.code] || r.code || '',
+    }));
+    const derivedCount = Array.isArray(data?.derived_request_ids)
+        ? data.derived_request_ids.length : 0;
+    return { applied, rejected, derivedCount };
+}
