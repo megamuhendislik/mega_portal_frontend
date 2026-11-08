@@ -134,3 +134,22 @@ test('describeAutoChangeRow cancel, revert, unpin', () => {
     assert.equal(mod.describeAutoChangeRow({ action: 'UNPIN', mode: 'ADMIN' }).actionLabel, 'Otomatik düzeltme açıldı');
     assert.equal(mod.REVERT_BLOCK_LABELS.NEWER_CHANGE, 'Talepte daha yeni bir değişiklik var');
 });
+
+test('source and reason labels', () => {
+    assert.equal(mod.labelAutoChangeSource('TYR_STAGED_APPLY'), 'TYR (elle uygulama)');
+    assert.equal(mod.labelAutoChangeSource('TYR_NIGHTLY'), 'Gece TYR');
+    assert.equal(mod.labelAutoChangeSource(''), '-');
+    assert.equal(mod.labelAutoChangeSource('YENI'), 'YENI');
+    assert.equal(mod.labelAutoChangeReason('ADMIN_UNPIN'), 'Otomatik düzeltme açıldı');
+    assert.equal(mod.labelAutoChangeReason('X_CODE'), 'X_CODE');
+});
+
+test('newestPinnedRowIds', () => {
+    const rows = [
+        { id: 5, request_id: 1, pinned: true },
+        { id: 9, request_id: 1, pinned: true },
+        { id: 7, request_id: 2, pinned: false },
+        { id: 3, request_id: 4, pinned: true },
+    ];
+    assert.deepEqual([...mod.newestPinnedRowIds(rows)].sort(), [3, 9]);
+});

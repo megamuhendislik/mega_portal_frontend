@@ -123,3 +123,31 @@ export function describeAutoChangeRow(row) {
             : '',
     };
 }
+
+const SOURCE_LABELS = {
+    TYR_STAGED_APPLY: 'TYR (elle uygulama)',
+    TYR_APPLY: 'TYR',
+    TYR_NIGHTLY: 'Gece TYR',
+    DATA_INTEGRITY: 'Veri bütünlüğü',
+    ADMIN: 'Yönetici',
+};
+
+export function labelAutoChangeSource(source) {
+    if (!source) return '-';
+    return SOURCE_LABELS[source] || source;
+}
+
+export function labelAutoChangeReason(reason) {
+    return reason === 'ADMIN_UNPIN' ? 'Otomatik düzeltme açıldı' : (reason || '');
+}
+
+// Sayfadaki her pinli talebin en yeni (en büyük id) satırı.
+export function newestPinnedRowIds(rows) {
+    const newest = new Map();
+    (rows || []).forEach((row) => {
+        if (!row.pinned) return;
+        const cur = newest.get(row.request_id);
+        if (cur === undefined || row.id > cur) newest.set(row.request_id, row.id);
+    });
+    return new Set(newest.values());
+}

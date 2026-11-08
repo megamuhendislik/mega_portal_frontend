@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import api from '../../../services/api';
 import { getIstanbulToday, getIstanbulDateOffset } from '../../../utils/dateUtils';
-import { describeAutoChangeRow } from './frcHardSuggestions';
+import { describeAutoChangeRow, labelAutoChangeSource, labelAutoChangeReason, newestPinnedRowIds } from './frcHardSuggestions';
 
 const PAGE_SIZE = 25;
 
@@ -29,15 +29,20 @@ export default function TyrRequestChangesPanel() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [busyId, setBusyId] = useState(null);
+    const [actionError, setActionError] = useState(null);
+    const [applied, setApplied] = useState(null);
 
-    const load = useCallback(async (targetPage) => {
+    const load = useCallback(async (targetPage, filters) => {
         setLoading(true);
         setError(null);
         try {
-            const params = { date_from: dateFrom, date_to: dateTo, page: targetPage, page_size: PAGE_SIZE };
-            if (employeeId) params.employee_id = employeeId;
-            if (mode) params.mode = mode;
-            if (action) params.action = action;
+            const params = {
+                date_from: filters.dateFrom, date_to: filters.dateTo,
+                page: targetPage, page_size: PAGE_SIZE,
+            };
+            if (filters.employeeId) params.employee_id = filters.employeeId;
+            if (filters.mode) params.mode = filters.mode;
+            if (filters.action) params.action = filters.action;
             const res = await api.get('/system/health-check/request-auto-changes/', { params, timeout: 60000 });
             setData(res.data);
             setPage(targetPage);
@@ -46,10 +51,17 @@ export default function TyrRequestChangesPanel() {
         } finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo, employeeId, mode, action]);
+    }, []);
+
+    const search = () => {
+        const filters = { dateFrom, dateTo, employeeId, mode, action };
+        setApplied(filters);
+        setActionError(null);
+        load(1, filters);
+    };
 
     useEffect(() => {
-        load(1);
+        search();
         // yalnız açılışta; sonrasında Listele düğmesi
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -58,33 +70,34 @@ export default function TyrRequestChangesPanel() {
         const text = `Talep #${row.request_id} bu değişiklikten önceki haline dönecek ve otomatik düzeltme kapanacak. Devam edilsin mi?`;
         if (!window.confirm(row.locked ? `Kilitli dönem. ${text}` : text)) return;
         setBusyId(row.id);
-        setError(null);
+        setActionError(null);
         try {
             await api.post('/system/health-check/request-auto-change-revert/', { change_id: row.id }, { timeout: 120000 });
         } catch (e) {
-            setError(e.response?.data?.error || e.message || 'Geri alınamadı');
+            setActionError(e.response?.data?.error || e.message || 'Geri alınamadı');
         } finally {
             setBusyId(null);
-            load(page);
+            load(page, applied);
         }
     };
 
     const unpin = async (row) => {
         if (!window.confirm(`Talep #${row.request_id} yeniden otomatik düzeltmeye açılacak.`)) return;
         setBusyId(row.id);
-        setError(null);
+        setActionError(null);
         try {
             await api.post('/system/health-check/request-auto-correction-unpin/', { request_id: row.request_id }, { timeout: 60000 });
         } catch (e) {
-            setError(e.response?.data?.error || e.message || 'İşlem yapılamadı');
+            setActionError(e.response?.data?.error || e.message || 'İşlem yapılamadı');
         } finally {
             setBusyId(null);
-            load(page);
+            load(page, applied);
         }
     };
 
     const inputCls = 'px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white';
     const results = data?.results || [];
+    const pinnedNewest = newestPinnedRowIds(results);
     const totalPages = data?.total_pages || 1;
 
     return (
@@ -130,7 +143,7 @@ export default function TyrRequestChangesPanel() {
                 </label>
                 <button
                     type="button"
-                    onClick={() => load(1)}
+                    onClick={search}
                     disabled={loading}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs text-violet-700 bg-violet-50 border border-violet-300 hover:bg-violet-100 disabled:opacity-50"
                 >
@@ -139,8 +152,8 @@ export default function TyrRequestChangesPanel() {
                 </button>
             </div>
 
-            {error && (
-                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">{error}</div>
+            {(actionError || error) && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">{actionError || error}</div>
             )}
 
             <div className="overflow-x-auto">
@@ -172,9 +185,9 @@ export default function TyrRequestChangesPanel() {
                                     <td className="py-1.5 pr-3">{d.modeLabel}</td>
                                     <td className="py-1.5 pr-3 font-mono whitespace-nowrap">{d.beforeText}</td>
                                     <td className="py-1.5 pr-3 font-mono whitespace-nowrap">{d.afterText}</td>
-                                    <td className="py-1.5 pr-3">{row.reason}</td>
+                                    <td className="py-1.5 pr-3">{labelAutoChangeReason(row.reason)}</td>
                                     <td className="py-1.5 pr-3">
-                                        <div>{row.source}{row.actor_name ? ` · ${row.actor_name}` : ''}</div>
+                                        <div>{labelAutoChangeSource(row.source)}{row.actor_name ? ` · ${row.actor_name}` : ''}</div>
                                         <div className="text-gray-500">{fmtStamp(row.created_at)}</div>
                                     </td>
                                     <td className="py-1.5">
@@ -184,7 +197,7 @@ export default function TyrRequestChangesPanel() {
                                                     Geri alındı{row.reverted_by_name ? ` · ${row.reverted_by_name}` : ''}
                                                 </span>
                                             )}
-                                            {row.pinned && (
+                                            {row.pinned && pinnedNewest.has(row.id) && (
                                                 <>
                                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">
                                                         Otomatik düzeltme kapalı
@@ -229,7 +242,7 @@ export default function TyrRequestChangesPanel() {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => load(page - 1)}
+                        onClick={() => load(page - 1, applied)}
                         disabled={loading || page <= 1}
                         className="px-2.5 py-1 rounded border border-gray-300 bg-white font-bold hover:bg-gray-50 disabled:opacity-40"
                     >
@@ -238,7 +251,7 @@ export default function TyrRequestChangesPanel() {
                     <span>Sayfa {page} / {totalPages}</span>
                     <button
                         type="button"
-                        onClick={() => load(page + 1)}
+                        onClick={() => load(page + 1, applied)}
                         disabled={loading || page >= totalPages}
                         className="px-2.5 py-1 rounded border border-gray-300 bg-white font-bold hover:bg-gray-50 disabled:opacity-40"
                     >

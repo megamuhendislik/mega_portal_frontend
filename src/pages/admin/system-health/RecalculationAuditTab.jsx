@@ -666,7 +666,7 @@ export default function RecalculationAuditTab() {
                 }
             }
             const { count: protectedDaysSkipped } = getProtectedDayInfo(frcResult);
-            const hardSelectedCount = selectedHardIds.size;
+            const hardSelectedCount = frcResult?.run_id ? selectedHardIds.size : 0;
             const confirmText = buildFrcApplyConfirmation(protectedDaysSkipped)
                 + (hardSelectedCount > 0
                     ? `\n\n${hardSelectedCount} onaylı talep değişikliği de uygulanacak.`
@@ -798,17 +798,15 @@ export default function RecalculationAuditTab() {
                     });
                     setFrcObservationEnded(false);
                     setFrcLoading(false);
-                    if (selectedHardIds.size > 0) {
-                        try {
-                            const hardRes = await api.get(
-                                '/system/health-check/apply-staged-result/',
-                                { params: { run_id: frcResult.run_id }, timeout: 60000 },
-                            );
-                            if (isCurrentOperation()) setHardApplyResult(hardRes.data);
-                        } catch (hardErr) {
-                            setFrcError('Uygulama sonucu alınamadı: '
-                                + (hardErr.response?.data?.error || hardErr.message));
-                        }
+                    try {
+                        const hardRes = await api.get(
+                            '/system/health-check/apply-staged-result/',
+                            { params: { run_id: frcResult.run_id }, timeout: 60000 },
+                        );
+                        if (isCurrentOperation()) setHardApplyResult(hardRes.data);
+                    } catch (hardErr) {
+                        setFrcError('Uygulama sonucu alınamadı: '
+                            + (hardErr.response?.data?.error || hardErr.message));
                     }
                     return;
                 } catch (stagedErr) {
