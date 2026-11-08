@@ -51,6 +51,7 @@ export function collectFrcHardSuggestions(result) {
     employees.forEach((emp) => {
         (Array.isArray(emp?.days) ? emp.days : []).forEach((day) => {
             (Array.isArray(day?.request_hard_suggestions) ? day.request_hard_suggestions : [])
+                .filter((suggestion) => suggestion?.selectable !== false)
                 .forEach((suggestion) => {
                     rows.push({
                         employeeId: emp.id,

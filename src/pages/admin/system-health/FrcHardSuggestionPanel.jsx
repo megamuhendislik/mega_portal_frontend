@@ -21,7 +21,8 @@ export function FrcHardSuggestionPanel({ suggestions, gateEvents, selectedIds })
             <div className="mt-1.5 space-y-1.5">
                 {suggestions.map((s) => {
                     const d = describeHardSuggestion(s);
-                    const selected = selectedIds?.has(s.suggestion_id);
+                    const selectable = s.selectable !== false;
+                    const selected = selectable && selectedIds?.has(s.suggestion_id);
                     return (
                         <div key={s.suggestion_id} className="text-[11px] flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             <span className="font-bold">#{s.request_id}</span>
@@ -33,6 +34,11 @@ export function FrcHardSuggestionPanel({ suggestions, gateEvents, selectedIds })
                             {s.locked && (
                                 <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">
                                     Kilitli dönem
+                                </span>
+                            )}
+                            {!selectable && (
+                                <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
+                                    Uygulanamaz (gün listeye alınmadı)
                                 </span>
                             )}
                             {selected && (

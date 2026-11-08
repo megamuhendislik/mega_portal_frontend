@@ -163,3 +163,11 @@ test('ADMIN_REVERT label and no block label on admin records', () => {
         assert.equal(d.blockLabel, '');
     }
 });
+
+test('collectFrcHardSuggestions skips non-selectable', () => {
+    const mk = (id, selectable) => ({ ...updateSuggestion, request_id: id, suggestion_id: `${id}:UPDATE:X`, selectable });
+    const rows = collectFrcHardSuggestions({
+        employees: [{ id: 1, name: 'A', days: [{ date: '2026-11-01', request_hard_suggestions: [mk(1, false), mk(2, true), mk(3, undefined)] }] }],
+    });
+    assert.deepEqual(rows.map((r) => r.suggestion.request_id), [2, 3]);
+});
