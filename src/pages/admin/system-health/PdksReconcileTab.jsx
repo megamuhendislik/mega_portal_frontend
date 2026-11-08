@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Upload, Button, Card, Table, Tag, Alert, Statistic, Row, Col, Popconfirm, message, Spin } from 'antd';
 import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
+import GateNightReportPanel from './GateNightReportPanel';
 // PDKS Mutabakat & Tam İçe Aktarma — dry-run mutabakat raporu + onayla→tam import.
 // Backend RECALC YAPMAZ; import sonrası kullanıcı ayrı "Tam Yeniden Hesaplama" çalıştırır.
 
@@ -250,6 +251,7 @@ export default function PdksReconcileTab() {
 
   return (
     <div className="space-y-4">
+      <GateNightReportPanel />
       <Card size="small" title="PDKS Mutabakat & Tam İçe Aktarma" className="shadow-sm">
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen log CSV&apos;sini yükleyin. Önce <strong>Ön İzleme</strong> ile mutabakat raporunu inceleyin
