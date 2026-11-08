@@ -30,6 +30,7 @@ export default function TyrRequestChangesPanel() {
     const [error, setError] = useState(null);
     const [busyId, setBusyId] = useState(null);
     const [actionError, setActionError] = useState(null);
+    const [notice, setNotice] = useState(null);
     const [applied, setApplied] = useState(null);
 
     const load = useCallback(async (targetPage, filters) => {
@@ -57,6 +58,7 @@ export default function TyrRequestChangesPanel() {
         const filters = { dateFrom, dateTo, employeeId, mode, action };
         setApplied(filters);
         setActionError(null);
+        setNotice(null);
         load(1, filters);
     };
 
@@ -71,8 +73,10 @@ export default function TyrRequestChangesPanel() {
         if (!window.confirm(row.locked ? `Kilitli dönem. ${text}` : text)) return;
         setBusyId(row.id);
         setActionError(null);
+        setNotice(null);
         try {
-            await api.post('/system/health-check/request-auto-change-revert/', { change_id: row.id }, { timeout: 120000 });
+            const res = await api.post('/system/health-check/request-auto-change-revert/', { change_id: row.id }, { timeout: 120000 });
+            if (res.data?.locked) setNotice('Kilitli dönemde geri alındı.');
         } catch (e) {
             setActionError(e.response?.data?.error || e.message || 'Geri alınamadı');
         } finally {
@@ -85,6 +89,7 @@ export default function TyrRequestChangesPanel() {
         if (!window.confirm(`Talep #${row.request_id} yeniden otomatik düzeltmeye açılacak.`)) return;
         setBusyId(row.id);
         setActionError(null);
+        setNotice(null);
         try {
             await api.post('/system/health-check/request-auto-correction-unpin/', { request_id: row.request_id }, { timeout: 60000 });
         } catch (e) {
@@ -156,6 +161,10 @@ export default function TyrRequestChangesPanel() {
                 <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">{actionError || error}</div>
             )}
 
+            {notice && !actionError && !error && (
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700">{notice}</div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full text-[11px] text-left">
                     <thead className="text-gray-500 uppercase text-[10px] border-b border-gray-200">
@@ -212,6 +221,7 @@ export default function TyrRequestChangesPanel() {
                                                     </button>
                                                 </>
                                             )}
+                                            {row.action !== 'REVERT' && row.action !== 'UNPIN' && (
                                             <button
                                                 type="button"
                                                 onClick={() => revert(row)}
@@ -221,6 +231,7 @@ export default function TyrRequestChangesPanel() {
                                             >
                                                 Geri al
                                             </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

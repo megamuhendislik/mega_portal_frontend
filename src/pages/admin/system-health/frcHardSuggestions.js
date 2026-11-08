@@ -112,7 +112,8 @@ export function describeAutoChangeRow(row) {
     if (row?.action === 'DELETE') afterText = 'Silindi';
     else if (row?.action === 'CANCEL') afterText = 'İptal';
     else afterText = fmtTimeRange(after) || '-';
-    const blocked = row && !row.revertable && row.revert_block_reason;
+    const adminRecord = row?.action === 'REVERT' || row?.action === 'UNPIN';
+    const blocked = row && !adminRecord && !row.revertable && row.revert_block_reason;
     return {
         actionLabel: CHANGE_ACTION_LABELS[row?.action] || row?.action || '',
         modeLabel: CHANGE_MODE_LABELS[row?.mode] || row?.mode || '',
@@ -138,7 +139,9 @@ export function labelAutoChangeSource(source) {
 }
 
 export function labelAutoChangeReason(reason) {
-    return reason === 'ADMIN_UNPIN' ? 'Otomatik düzeltme açıldı' : (reason || '');
+    if (reason === 'ADMIN_UNPIN') return 'Otomatik düzeltme açıldı';
+    if (reason === 'ADMIN_REVERT') return 'Geri alındı';
+    return reason || '';
 }
 
 // Sayfadaki her pinli talebin en yeni (en büyük id) satırı.

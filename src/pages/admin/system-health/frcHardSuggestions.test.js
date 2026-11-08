@@ -153,3 +153,13 @@ test('newestPinnedRowIds', () => {
     ];
     assert.deepEqual([...mod.newestPinnedRowIds(rows)].sort(), [3, 9]);
 });
+
+test('ADMIN_REVERT label and no block label on admin records', () => {
+    assert.equal(mod.labelAutoChangeReason('ADMIN_REVERT'), 'Geri alındı');
+    for (const action of ['REVERT', 'UNPIN']) {
+        const d = mod.describeAutoChangeRow({
+            action, mode: 'ADMIN', revertable: false, revert_block_reason: 'NOT_A_CHANGE',
+        });
+        assert.equal(d.blockLabel, '');
+    }
+});
