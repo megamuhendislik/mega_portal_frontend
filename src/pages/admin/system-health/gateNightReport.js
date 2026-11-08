@@ -42,6 +42,11 @@ export function countsText(row) {
 
 const hhmm = (t) => (t ? String(t).slice(0, 5) : '?');
 
+const hMM = (seconds) => {
+    const min = Math.floor(seconds / 60);
+    return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+};
+
 export function mismatchText(m) {
     const [, month, day] = String(m.date || '').split('-');
     const status = REQUEST_STATUS_LABELS[m.status] || m.status || '-';
@@ -49,7 +54,16 @@ export function mismatchText(m) {
     const oldPart = `${hhmm(old.start_time)}-${hhmm(old.end_time)}`;
     const cancelled = !m.new || m.action === 'CANCEL' || m.action === 'DELETE';
     const newPart = cancelled ? 'iptal' : `${hhmm(m.new.start_time)}-${hhmm(m.new.end_time)}`;
-    const tail = m.locked ? ' (kilitli dönem)' : '';
+    let durationPart = '';
+    if (
+        !cancelled
+        && oldPart === newPart
+        && Number.isFinite(old.duration_seconds)
+        && Number.isFinite(m.new.duration_seconds)
+    ) {
+        durationPart = ` (süre ${hMM(old.duration_seconds)} → ${hMM(m.new.duration_seconds)})`;
+    }
+    const tail = durationPart + (m.locked ? ' (kilitli dönem)' : '');
     return `${m.employee_name || m.employee_id}, ${day}.${month}: #${m.request_id} ${status}, ${oldPart}, karta göre ${newPart}${tail}`;
 }
 

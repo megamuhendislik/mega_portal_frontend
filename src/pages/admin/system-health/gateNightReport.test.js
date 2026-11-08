@@ -73,6 +73,24 @@ test('uyuşmazlık: iptal işlemi ve eksik saat', () => {
     assert.match(m.mismatchText({ ...base, action: 'UPDATE', new: { duration_seconds: 60 } }), /karta göre \?-\?$/);
 });
 
+test('uyuşmazlık: saatler aynıysa süre farkı', () => {
+    const row = {
+        employee_name: 'Ali Veli',
+        date: '2026-11-05',
+        request_id: 9,
+        status: 'APPROVED',
+        old: { start_time: '18:00:00', end_time: '22:33:41', duration_seconds: 21540 },
+        new: { start_time: '18:00:00', end_time: '22:33:41', duration_seconds: 16380 },
+    };
+    assert.equal(
+        m.mismatchText(row),
+        'Ali Veli, 05.11: #9 onaylı, 18:00-22:33, karta göre 18:00-22:33 (süre 5:59 → 4:33)',
+    );
+    assert.match(m.mismatchText({ ...row, locked: true }), /\(süre 5:59 → 4:33\) \(kilitli dönem\)$/);
+    assert.doesNotMatch(m.mismatchText({ ...row, new: { ...row.new, end_time: '22:00:00' } }), /süre/);
+    assert.doesNotMatch(m.mismatchText({ ...row, old: { ...row.old, duration_seconds: undefined } }), /süre/);
+});
+
 test('süre biçimi', () => {
     assert.equal(m.formatDuration(3900), '1 sa 5 dk');
     assert.equal(m.formatDuration(420), '7 dk');
