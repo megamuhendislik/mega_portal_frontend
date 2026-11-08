@@ -60,6 +60,19 @@ test('uyuşmazlık metni', () => {
     assert.match(m.mismatchText({ ...base, locked: true }), / \(kilitli dönem\)$/);
 });
 
+test('uyuşmazlık: iptal işlemi ve eksik saat', () => {
+    const base = {
+        employee_name: 'Ali Veli',
+        date: '2026-11-05',
+        request_id: 7,
+        status: 'APPROVED',
+        old: { start_time: '18:00:00', end_time: '20:00:00' },
+    };
+    assert.match(m.mismatchText({ ...base, action: 'CANCEL', new: { start_time: '18:00:00', end_time: '19:00:00' } }), /karta göre iptal$/);
+    assert.match(m.mismatchText({ ...base, action: 'DELETE', new: {} }), /karta göre iptal$/);
+    assert.match(m.mismatchText({ ...base, action: 'UPDATE', new: { duration_seconds: 60 } }), /karta göre \?-\?$/);
+});
+
 test('süre biçimi', () => {
     assert.equal(m.formatDuration(3900), '1 sa 5 dk');
     assert.equal(m.formatDuration(420), '7 dk');
@@ -67,4 +80,5 @@ test('süre biçimi', () => {
     assert.equal(m.formatDuration(null), '-');
     assert.equal(m.formatDuration(undefined), '-');
     assert.equal(m.formatDuration(0), '-');
+    assert.equal(m.formatDuration(30), '0 dk');
 });

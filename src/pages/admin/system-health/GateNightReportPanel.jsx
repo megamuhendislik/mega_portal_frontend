@@ -113,7 +113,7 @@ export default function GateNightReportPanel() {
     {
       title: 'Uyuşmazlık',
       key: 'mismatch',
-      render: (_, r) => r.night_report?.mismatch_count ?? 0,
+      render: (_, r) => r.night_report?.mismatch_count ?? '-',
     },
     {
       title: 'İşlenen',
@@ -203,7 +203,10 @@ export default function GateNightReportPanel() {
         dataSource={rows}
         loading={loading}
         pagination={false}
-        expandable={{ expandedRowRender }}
+        expandable={{
+          expandedRowRender,
+          rowExpandable: (r) => !!r.night_report && Object.keys(r.night_report).length > 0,
+        }}
         scroll={{ x: 'max-content' }}
       />
     </Card>

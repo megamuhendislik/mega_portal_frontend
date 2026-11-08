@@ -40,15 +40,17 @@ export function countsText(row) {
     return `${c.received ?? 0} alındı, ${c.added ?? 0} eklendi, ${c.deleted ?? 0} silindi, ${c.replaced ?? 0} düzeltildi`;
 }
 
-const hhmm = (t) => (t ? String(t).slice(0, 5) : '');
+const hhmm = (t) => (t ? String(t).slice(0, 5) : '?');
 
 export function mismatchText(m) {
     const [, month, day] = String(m.date || '').split('-');
-    const status = REQUEST_STATUS_LABELS[m.status] || m.status;
-    const oldPart = `${hhmm(m.old?.start_time)}-${hhmm(m.old?.end_time)}`;
-    const newPart = m.new ? `${hhmm(m.new.start_time)}-${hhmm(m.new.end_time)}` : 'iptal';
+    const status = REQUEST_STATUS_LABELS[m.status] || m.status || '-';
+    const old = m.old || {};
+    const oldPart = `${hhmm(old.start_time)}-${hhmm(old.end_time)}`;
+    const cancelled = !m.new || m.action === 'CANCEL' || m.action === 'DELETE';
+    const newPart = cancelled ? 'iptal' : `${hhmm(m.new.start_time)}-${hhmm(m.new.end_time)}`;
     const tail = m.locked ? ' (kilitli dönem)' : '';
-    return `${m.employee_name}, ${day}.${month}: #${m.request_id} ${status}, ${oldPart}, karta göre ${newPart}${tail}`;
+    return `${m.employee_name || m.employee_id}, ${day}.${month}: #${m.request_id} ${status}, ${oldPart}, karta göre ${newPart}${tail}`;
 }
 
 export function formatDuration(seconds) {
