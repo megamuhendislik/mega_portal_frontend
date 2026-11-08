@@ -42,9 +42,12 @@ export function countsText(row) {
 
 const hhmm = (t) => (t ? String(t).slice(0, 5) : '?');
 
-const hMM = (seconds) => {
-    const min = Math.floor(seconds / 60);
-    return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+const hMM = (seconds, withSeconds) => {
+    const total = Math.floor(seconds);
+    const h = Math.floor(total / 3600);
+    const min = Math.floor((total % 3600) / 60);
+    const base = `${h}:${String(min).padStart(2, '0')}`;
+    return withSeconds ? `${base}:${String(total % 60).padStart(2, '0')}` : base;
 };
 
 export function mismatchText(m) {
@@ -61,7 +64,8 @@ export function mismatchText(m) {
         && Number.isFinite(old.duration_seconds)
         && Number.isFinite(m.new.duration_seconds)
     ) {
-        durationPart = ` (süre ${hMM(old.duration_seconds)} → ${hMM(m.new.duration_seconds)})`;
+        const sameMinute = Math.floor(old.duration_seconds / 60) === Math.floor(m.new.duration_seconds / 60);
+        durationPart = ` (süre ${hMM(old.duration_seconds, sameMinute)} → ${hMM(m.new.duration_seconds, sameMinute)})`;
     }
     const tail = durationPart + (m.locked ? ' (kilitli dönem)' : '');
     return `${m.employee_name || m.employee_id}, ${day}.${month}: #${m.request_id} ${status}, ${oldPart}, karta göre ${newPart}${tail}`;

@@ -91,6 +91,18 @@ test('uyuşmazlık: saatler aynıysa süre farkı', () => {
     assert.doesNotMatch(m.mismatchText({ ...row, old: { ...row.old, duration_seconds: undefined } }), /süre/);
 });
 
+test('uyuşmazlık: aynı dakikada süre saniyeli', () => {
+    const row = {
+        employee_name: 'Ali Veli',
+        date: '2026-11-05',
+        request_id: 9,
+        status: 'APPROVED',
+        old: { start_time: '18:00:00', end_time: '22:33:41', duration_seconds: 16421 },
+        new: { start_time: '18:00:00', end_time: '22:33:41', duration_seconds: 16392 },
+    };
+    assert.match(m.mismatchText(row), /\(süre 4:33:41 → 4:33:12\)$/);
+});
+
 test('süre biçimi', () => {
     assert.equal(m.formatDuration(3900), '1 sa 5 dk');
     assert.equal(m.formatDuration(420), '7 dk');
