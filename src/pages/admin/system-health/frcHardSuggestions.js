@@ -85,3 +85,41 @@ export function summarizeHardApplyResult(data) {
         ? data.derived_request_ids.length : 0;
     return { applied, rejected, derivedCount };
 }
+
+export const REVERT_BLOCK_LABELS = {
+    POTENTIAL_DELETED: 'Silinen aday geri alınamaz',
+    NOT_A_CHANGE: 'Bu satır bir geri alma kaydı',
+    ALREADY_REVERTED: 'Daha önce geri alındı',
+    NEWER_CHANGE: 'Talepte daha yeni bir değişiklik var',
+    REQUEST_MISSING: 'Talep bulunamadı',
+    STATE_CHANGED: 'Talep bu değişiklikten sonra değişti',
+    ASSIGNMENT_CHANGED: 'Atama yeniden talep edilmiş',
+    DAY_RECOMPUTE_FAILED: 'Gün yeniden hesaplanamadı',
+};
+
+const CHANGE_ACTION_LABELS = {
+    UPDATE: 'Güncelleme',
+    DELETE: 'Silme',
+    CANCEL: 'İptal',
+    REVERT: 'Geri alma',
+    UNPIN: 'Otomatik düzeltme açıldı',
+};
+const CHANGE_MODE_LABELS = { SOFT: 'Soft', HARD: 'Hard', ADMIN: 'Yönetici' };
+
+export function describeAutoChangeRow(row) {
+    const after = row?.after;
+    let afterText;
+    if (row?.action === 'DELETE') afterText = 'Silindi';
+    else if (row?.action === 'CANCEL') afterText = 'İptal';
+    else afterText = fmtTimeRange(after) || '-';
+    const blocked = row && !row.revertable && row.revert_block_reason;
+    return {
+        actionLabel: CHANGE_ACTION_LABELS[row?.action] || row?.action || '',
+        modeLabel: CHANGE_MODE_LABELS[row?.mode] || row?.mode || '',
+        beforeText: fmtTimeRange(row?.before) || '-',
+        afterText,
+        blockLabel: blocked
+            ? (REVERT_BLOCK_LABELS[row.revert_block_reason] || row.revert_block_reason)
+            : '',
+    };
+}

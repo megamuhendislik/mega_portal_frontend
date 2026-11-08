@@ -103,3 +103,34 @@ test('summarizeHardApplyResult labels', () => {
     assert.deepEqual(summarizeHardApplyResult(null), { applied: [], rejected: [], derivedCount: 0 });
 });
 
+
+test('describeAutoChangeRow delete', () => {
+    const d = mod.describeAutoChangeRow({
+        action: 'DELETE',
+        mode: 'SOFT',
+        before: { status: 'POTENTIAL', start_time: '18:00:00', end_time: '19:00:00', duration_seconds: 3600 },
+        after: null,
+        revertable: false,
+        revert_block_reason: 'POTENTIAL_DELETED',
+    });
+    assert.equal(d.afterText, 'Silindi');
+    assert.equal(d.beforeText, '18:00-19:00 (1:00)');
+    assert.equal(d.actionLabel, 'Silme');
+    assert.equal(d.modeLabel, 'Soft');
+    assert.equal(d.blockLabel, 'Silinen aday geri alınamaz');
+});
+
+test('describeAutoChangeRow cancel, revert, unpin', () => {
+    const c = mod.describeAutoChangeRow({
+        action: 'CANCEL', mode: 'HARD', revertable: true,
+        before: { start_time: '18:00:00', end_time: '19:00:00', duration_seconds: 3600 },
+        after: { status: 'CANCELLED' },
+    });
+    assert.equal(c.afterText, 'İptal');
+    assert.equal(c.modeLabel, 'Hard');
+    assert.equal(c.blockLabel, '');
+    assert.equal(mod.describeAutoChangeRow({ action: 'REVERT', mode: 'ADMIN' }).actionLabel, 'Geri alma');
+    assert.equal(mod.describeAutoChangeRow({ action: 'REVERT', mode: 'ADMIN' }).modeLabel, 'Yönetici');
+    assert.equal(mod.describeAutoChangeRow({ action: 'UNPIN', mode: 'ADMIN' }).actionLabel, 'Otomatik düzeltme açıldı');
+    assert.equal(mod.REVERT_BLOCK_LABELS.NEWER_CHANGE, 'Talepte daha yeni bir değişiklik var');
+});

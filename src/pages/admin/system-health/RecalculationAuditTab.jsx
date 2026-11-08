@@ -21,6 +21,8 @@ import {
     FrcHardSuggestionChecklist,
     FrcHardApplyResult,
 } from './FrcHardSuggestionPanel';
+import TyrRequestChangesPanel from './TyrRequestChangesPanel';
+import { useAuth } from '../../../context/AuthContext';
 import { buildApplyStagedBody, collectFrcHardSuggestions } from './frcHardSuggestions';
 import {
     FRC_POLL_INTERVAL_MS,
@@ -211,6 +213,7 @@ const ROOT_CAUSE_COLORS = {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function RecalculationAuditTab() {
+    const { hasPermission } = useAuth();
     const [startDate, setStartDate] = useState(getIstanbulDateOffset(-30));
     const [endDate, setEndDate] = useState(getIstanbulToday());
     const [employeeId, setEmployeeId] = useState('');
@@ -2728,6 +2731,8 @@ export default function RecalculationAuditTab() {
                     employeeId={employeeId || null}
                 />
             )}
+
+            {hasPermission('SYSTEM_FULL_ACCESS') && <TyrRequestChangesPanel />}
 
             {/* ══════════ BAĞIMSIZ HESAP DOĞRULAMA ══════════ */}
             {(verifyError || verifyResult || verifyLoading) && (
