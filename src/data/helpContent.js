@@ -1236,7 +1236,7 @@ const helpContent = [
         steps: [
             {
                 title: 'Sekme Düzeni',
-                description: 'Sayfa "Sistem Kontrol Merkezi" başlığıyla açılır ve 21 sekmeye ayrılır. Ana paneller: Genel Bakış, TYR + Veri Bütünlüğü, Talep Denetimi, Gate Event Analizi. Uzman hub sekmeleri: Mesai Denetim, Fazla Mesai, RBAC & Yetki, Kişi-Gün Tanılama, Talep & İzin, Onarım & Recovery, Test & Doğrulama, Sistem & Bakım. Özel araçlar: Kalıntı Çalışanlar, PDKS Raw Import, PDKS Mutabakat, Takvim Temizliği, Stres Testi, Sentetik Veri, Sistem Sıfırlama, Potansiyel Denetimi, Yanlış İptal Kurtarma.',
+                description: 'Sayfa "Sistem Kontrol Merkezi" başlığıyla açılır ve 21 sekmeye ayrılır. Ana paneller: Genel Bakış, TYR + Veri Bütünlüğü, Talep Denetimi, Gate Event Analizi. Uzman hub sekmeleri: Mesai Denetim, Fazla Mesai, RBAC & Yetki, Kişi-Gün Tanılama, Talep & İzin, Onarım & Recovery, Test & Doğrulama, Sistem & Bakım. Özel araçlar: Kalıntı Çalışanlar, PDKS Yükleme, Takvim Temizliği, Stres Testi, Sentetik Veri, Sistem Sıfırlama, Potansiyel Denetimi, Yanlış İptal Kurtarma.',
                 image: { src: '/help-images/help-sistem-01.png', caption: 'Genel Bakış — sistem ayarları ve servis durumu' }
             },
             {

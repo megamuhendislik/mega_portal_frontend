@@ -20,7 +20,6 @@ import {
     ChartBarIcon,
     UsersIcon,
     BuildingOfficeIcon,
-    CreditCardIcon,
     UserGroupIcon,
     CakeIcon,
     BeakerIcon,
@@ -46,7 +45,6 @@ import RequestAuditTab from './system-health/RequestAuditTab';
 import SettlementCarryAuditTab from './system-health/SettlementCarryAuditTab';
 import GateEventPatternTab from './system-health/GateEventPatternTab';
 import GhostEmployeesTab from './system-health/GhostEmployeesTab';
-import PdksRawImportTab from './system-health/PdksRawImportTab';
 import PdksReconcileTab from './system-health/PdksReconcileTab';
 import AnnualLeaveAccrualAuditTab from './system-health/AnnualLeaveAccrualAuditTab';
 
@@ -124,8 +122,7 @@ export default function SystemHealth() {
                         { id: 'system_maintenance_hub', name: 'Sistem & Bakım', icon: ServerStackIcon },
                         // ─── 🔧 Stand-alone (özel araçlar) ───
                         { id: 'ghost_employees', name: 'Kalıntı Çalışanlar', icon: UserGroupIcon },
-                        { id: 'pdks_raw_import', name: 'PDKS Raw Import', icon: CreditCardIcon },
-                        { id: 'pdks_reconcile', name: 'PDKS Mutabakat', icon: IdentificationIcon },
+                        { id: 'pdks_reconcile', name: 'PDKS Yükleme', icon: IdentificationIcon },
                         { id: 'calendar_cleanup', name: 'Takvim Temizliği', icon: TrashIcon },
                         { id: 'stress_test', name: 'Stres Testi', icon: CommandLineIcon },
                         { id: 'synthetic', name: 'Sentetik Veri', icon: SparklesIcon },
@@ -168,7 +165,6 @@ export default function SystemHealth() {
                 {activeTab === 'system_maintenance_hub' && <SystemMaintenanceHubTab />}
                 {/* 🔧 Stand-alone */}
                 {activeTab === 'ghost_employees' && <GhostEmployeesTab />}
-                {activeTab === 'pdks_raw_import' && <PdksRawImportTab />}
                 {activeTab === 'pdks_reconcile' && <PdksReconcileTab />}
                 {activeTab === 'calendar_cleanup' && <CalendarCleanupTab />}
                 {activeTab === 'stress_test' && <StressTestTab />}

@@ -3,7 +3,7 @@ import { Upload, Button, Card, Table, Tag, Alert, Statistic, Row, Col, Popconfir
 import { InboxOutlined, CloudUploadOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, DownloadOutlined, DeleteOutlined, LockOutlined, ReloadOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import api from '../../../services/api';
 import GateNightReportPanel from './GateNightReportPanel';
-// PDKS Mutabakat & Tam İçe Aktarma — dry-run mutabakat raporu + onayla→tam import.
+// PDKS Yükleme — Sistem Sağlığı'ndaki tek PDKS CSV yükleme aracı: ön izleme (mutabakat raporu) + onayla→uygula.
 // Backend RECALC YAPMAZ; import sonrası kullanıcı ayrı "Tam Yeniden Hesaplama" çalıştırır.
 
 const { Dragger } = Upload;
@@ -252,11 +252,11 @@ export default function PdksReconcileTab() {
   return (
     <div className="space-y-4">
       <GateNightReportPanel />
-      <Card size="small" title="PDKS Mutabakat & Tam İçe Aktarma" className="shadow-sm">
+      <Card size="small" title="PDKS Yükleme" className="shadow-sm">
         <p className="text-gray-500 text-sm mb-3">
           PDKS cihazından export edilen log CSV&apos;sini yükleyin. Önce <strong>Ön İzleme</strong> ile mutabakat raporunu inceleyin
           (eklenecek, aynı EventID ile düzeltilecek, cihazda fazla CARD kayıtları ve eşleşmeyen siciller), ardından <strong>Tam İçe Aktar</strong> ile uygulayın.
-          Eklenen event&apos;ler en geç ~15 dakika içinde otomatik işlenmeye başlar; <strong>silmeler dahil tüm çalışma saatlerini hemen ve eksiksiz güncellemek için &quot;Tam Yeniden Hesaplama&quot; çalıştırın.</strong>
+          Yükleme çalışma saatlerini kendisi güncellemez; <strong>uyguladıktan sonra ilgili tarihler için &quot;Tam Yeniden Hesaplama&quot; çalıştırın.</strong>
         </p>
 
         <Dragger {...uploadProps} className="mb-3">
@@ -405,7 +405,7 @@ export default function PdksReconcileTab() {
               showIcon
               icon={<ReloadOutlined />}
               message="Veri güncellendi. Çalışma saatlerini güncellemek için şimdi 'Tam Yeniden Hesaplama' çalıştırın."
-              description="Eklenen ve düzeltilen event'ler arka planda ~15 dk içinde otomatik işlenmeye başlar; silmeler ve eksiksiz/anlık güncelleme için 'Tam Yeniden Hesaplama' çalıştırın."
+              description="Yükleme yalnız kart okutmalarını değiştirdi; eklenen, düzeltilen ve silinen okutmalar Tam Yeniden Hesaplama çalışınca çalışma saatlerine yansır."
             />
           )}
 
