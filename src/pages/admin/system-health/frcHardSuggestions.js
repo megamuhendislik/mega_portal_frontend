@@ -9,8 +9,14 @@ export const HARD_REJECT_LABELS = {
     DAY_SKIPPED: 'Gün işlenmedi',
 };
 
-const STATUS_LABELS = { APPROVED: 'Onaylı', PENDING: 'Onay bekliyor' };
-const ACTION_LABELS = { UPDATE: 'Saat düzeltme', CANCEL: 'İptal' };
+const STATUS_LABELS = { APPROVED: 'Onaylı', PENDING: 'Onay bekliyor', POTENTIAL: 'Aday' };
+const ACTION_LABELS = { UPDATE: 'Saat düzeltme', CANCEL: 'İptal', DELETE: 'Silme' };
+
+function newRangeText(s) {
+    if (s?.action === 'DELETE') return 'Silinir';
+    if (s?.action === 'CANCEL' || !s?.new) return 'İptal';
+    return fmtTimeRange(s.new);
+}
 
 export function fmtHm(seconds) {
     const total = Math.round(Math.abs(Number(seconds) || 0));
@@ -40,7 +46,7 @@ export function describeHardSuggestion(s) {
         statusLabel: STATUS_LABELS[s?.status] || s?.status || '',
         actionLabel: ACTION_LABELS[s?.action] || s?.action || '',
         oldText: fmtTimeRange(s?.old),
-        newText: s?.action === 'CANCEL' || !s?.new ? 'İptal' : fmtTimeRange(s.new),
+        newText: newRangeText(s),
         effectText: fmtSigned(s?.monthly_effect_seconds),
     };
 }

@@ -30,6 +30,19 @@ test('describeHardSuggestion', () => {
     });
 });
 
+test('stale potential delete text', () => {
+    const d = describeHardSuggestion({
+        ...updateSuggestion,
+        status: 'POTENTIAL',
+        action: 'DELETE',
+        new: null,
+        monthly_effect_seconds: 0,
+    });
+    assert.equal(d.statusLabel, 'Aday');
+    assert.equal(d.actionLabel, 'Silme');
+    assert.equal(d.newText, 'Silinir');
+});
+
 test('cancel newText', () => {
     const d = describeHardSuggestion({
         ...updateSuggestion,
